@@ -1,9 +1,9 @@
 {
-  "version": "0.2.1",
-  "tag": "v0.2.1",
-  "releaseDate": "2025-07-25T11:20:25Z",
-  "downloadUrl": "https://github.com/rishson/tiny-brain-releases/releases/download/v0.2.1/tiny-brain-0.2.1.dxt",
+  "version": "0.2.2",
+  "tag": "v0.2.2",
+  "releaseDate": "2025-07-25T11:40:21Z",
+  "downloadUrl": "https://github.com/rishson/tiny-brain-releases/releases/download/v0.2.2/tiny-brain-0.2.2.dxt",
   "sourceRepository": "rishson/tiny-brain",
-  "commit": "e78712712d87d708642faab9826345aa93e4890e",
-  "buildWorkflow": "16520712364"
+  "commit": "e05f042f5009d7280509c5dfdcd908402175afe3",
+  "buildWorkflow": "16521059189"
 }
