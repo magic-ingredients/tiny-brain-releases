@@ -22,8 +22,8 @@ tiny-brain solves this by implementing:
 ## Where is the code
 
 the tiny-brain source code will be published as soon as the codebase is less embarrasing. There is still some
-AI generated gloop in there. In addition, the locally installed tiny-brain core will be open source, but the
-remote version will not be. The remmote version will simply be the tiny-brain core, but with cloud hosting, i/e/ multi-tennant SaaS version. This will cost money to run so the aim will be a fremium model.
+AI-generated gloop in there. In addition, the locally installed tiny-brain core will be open source, but the
+remote version will not be. The remote version will be the tiny-brain core, but with cloud hosting, i.e. multi-tenant SaaS version. This will cost money to run, so the aim will be a freemium model.
 
 ## Technical Architecture
 
@@ -64,16 +64,6 @@ All tiny-brain data is stored locally in the user's home directory:
   - `memory/` - Exclusively managed by the memory manager subsystem
   - `plans/` - Exclusively managed by the plan manager subsystem
 - **Simple Path Construction**: Uses straightforward path concatenation for reliability
-
-#### Remote Storage Support
-
-tiny-brain also supports cloud storage for team deployments (when we offer it):
-
-- **AWS S3**: With user isolation under `{bucket}/users/{userId}/`
-- **Vercel Blob**: For serverless deployments
-- **Local**: Default filesystem storage
-
-All remote deployments maintain the same directory structure with additional user isolation.
 
 ### Key Features
 
