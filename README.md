@@ -1,4 +1,4 @@
-# tiny-brain
+# 🧠 `tiny-brain`
 
 ## Overview
 
