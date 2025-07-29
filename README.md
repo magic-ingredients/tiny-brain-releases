@@ -4,6 +4,8 @@
 
 tiny-brain is an intelligent context management system for Claude Desktop that fundamentally changes how AI assistants maintain context across conversations. Built as an MCP (Model Context Protocol) server, it provides persistent memory, persona management, and dynamic planning capabilities that survive between chat sessions.
 
+Available for easy installation **[here](https://tiny-brain.com)**.
+
 ## Why tiny-brain?
 
 ### The Problem
