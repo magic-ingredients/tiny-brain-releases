@@ -1,0 +1,37 @@
+{
+  "name": "tiny-brain-marketplace",
+  "description": "Official tiny-brain plugins for Claude Code",
+  "owner": {
+    "name": "Magic Ingredients",
+    "email": "hello@magic-ingredients.io",
+    "url": "https://github.com/magic-ingredients"
+  },
+  "plugins": [
+    {
+      "name": "tiny-brain",
+      "source": "./plugins/tiny-brain",
+      "description": "AI-powered development workflows with TDD enforcement, planning, and quality tracking",
+      "version": "0.14.12",
+      "keywords": [
+        "tdd",
+        "planning",
+        "prd",
+        "quality",
+        "workflows"
+      ],
+      "featured": true
+    },
+    {
+      "name": "tiny-brain-agents-extended",
+      "source": "./plugins/tiny-brain-agents-extended",
+      "description": "Extended agents for tiny-brain: architect, tdd-validator, security-reviewer",
+      "version": "1.0.0",
+      "keywords": [
+        "agents",
+        "architect",
+        "tdd",
+        "security"
+      ]
+    }
+  ]
+}

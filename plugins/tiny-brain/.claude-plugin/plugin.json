@@ -1,0 +1,25 @@
+{
+  "name": "tiny-brain",
+  "version": "0.14.12",
+  "description": "AI-powered development workflows with TDD enforcement, planning, and quality tracking",
+  "author": {
+    "name": "Magic Ingredients",
+    "email": "hello@magic-ingredients.io",
+    "url": "https://github.com/magic-ingredients"
+  },
+  "homepage": "https://github.com/magic-ingredients/tiny-brain-local",
+  "repository": "https://github.com/magic-ingredients/tiny-brain-local",
+  "license": "MIT",
+  "keywords": [
+    "tdd",
+    "test-driven-development",
+    "planning",
+    "prd",
+    "quality",
+    "workflows"
+  ],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json"
+}
