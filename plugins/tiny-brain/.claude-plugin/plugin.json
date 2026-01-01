@@ -1,10 +1,10 @@
 {
   "name": "tiny-brain",
-  "version": "0.14.13",
+  "version": "0.14.14",
   "description": "AI-powered development workflows with TDD enforcement, planning, and quality tracking",
   "author": {
     "name": "Magic Ingredients",
-    "email": "hello@magic-ingredients.io",
+    "email": "andy@magic-ingredients.com",
     "url": "https://github.com/magic-ingredients"
   },
   "homepage": "https://github.com/magic-ingredients/tiny-brain-local",
