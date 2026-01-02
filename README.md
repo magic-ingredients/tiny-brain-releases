@@ -17,7 +17,7 @@ This repository contains public releases of tiny-brain for Claude Code.
 
 ## Available Plugins
 
-### tiny-brain (v0.14.14)
+### tiny-brain (v0.14.15)
 AI-powered development workflows with TDD enforcement, planning, and quality tracking.
 
 **Includes:**

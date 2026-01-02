@@ -1,5 +1,13 @@
 # @magic-ingredients/tiny-brain-plugin
 
+## 0.14.15
+
+### Patch Changes
+
+- 3f8f96f: fix(plugin): preserve agents array format in assemble script
+
+  The assemble-plugin.js script was overwriting the agents array with a directory path string which fails Claude Code validation. Now preserves the array format.
+
 ## 0.14.2
 
 ### Patch Changes
