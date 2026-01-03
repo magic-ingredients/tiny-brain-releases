@@ -18671,7 +18671,11 @@ function createApp(context, sse) {
       async start(controller) {
         const encoder = new TextEncoder();
         const activePersonaId = bridge.getActivePersonaId();
-        const plans = await bridge.planning.listPlans();
+        let plans = [];
+        try {
+          plans = await bridge.planning.listPlans();
+        } catch {
+        }
         const initialData = {
           personaId: activePersonaId,
           plans,
