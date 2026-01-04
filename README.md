@@ -8,27 +8,20 @@ This repository contains public releases of tiny-brain for Claude Code.
 # Add the marketplace (once)
 /plugin marketplace add magic-ingredients/tiny-brain-releases
 
-# Install tiny-brain
+# Install tiny-brain (includes all 7 agents)
 /plugin install tiny-brain@magic-ingredients
-
-# Optional: Extended agents
-/plugin install tiny-brain-agents-extended@magic-ingredients
 ```
 
-## Available Plugins
+## tiny-brain (v0.15.0)
 
-### tiny-brain (v0.14.19)
 AI-powered development workflows with TDD enforcement, planning, and quality tracking.
 
 **Includes:**
 - Skills: /plan, /feature, /fix, /adr
-- Agents: developer, planner, reviewer
+- Agents (7 bundled): developer, planner, reviewer, architect, tdd-validator, security-reviewer, performance-engineer
 - MCP tools for personas, planning, analysis
 - TDD enforcement hooks
 - Real-time dashboard
-
-### tiny-brain-agents-extended
-Extended agents for advanced workflows: architect, tdd-validator, security-reviewer.
 
 ## Alternative Installation Methods
 
