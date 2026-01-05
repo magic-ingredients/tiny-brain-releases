@@ -22,10 +22,17 @@ AI-powered development workflows with TDD enforcement, planning, and quality tra
 ## Installation
 
 ```bash
-# Install via Claude Code plugin manager
-claude plugin install tiny-brain
+# 1. Add the tiny-brain marketplace (once)
+/plugin marketplace add https://github.com/magic-ingredients/tiny-brain-releases
 
-# Or via npm
+# 2. Install the plugin
+/plugin install tiny-brain@magic-ingredients
+```
+
+### Alternative Installation
+
+```bash
+# Via npm (for CLI usage)
 npm install -g @magic-ingredients/tiny-brain-plugin
 ```
 

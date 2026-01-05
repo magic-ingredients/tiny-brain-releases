@@ -44149,13 +44149,14 @@ var StdioServerTransport = class {
 };
 
 // packages/tiny-brain-mcp/src/index.ts
-import { readFileSync as readFileSync4, appendFileSync, existsSync as existsSync11, mkdirSync as mkdirSync2 } from "fs";
+import { readFileSync as readFileSync4, appendFileSync, existsSync as existsSync12, mkdirSync as mkdirSync2 } from "fs";
 import { fileURLToPath as fileURLToPath9 } from "url";
 import { dirname as dirname11, join as join25 } from "path";
 import { homedir as homedir4 } from "os";
 
 // packages/tiny-brain-mcp/src/core/mcp-server.ts
 import * as path19 from "path";
+import { existsSync as existsSync11, cpSync, readdirSync as readdirSync3 } from "fs";
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s) {
@@ -60053,6 +60054,7 @@ var MCPServer = class {
       await this.initializeStorage();
       await this.initializeRepository();
       await this.initializeRemoteAuth();
+      await this.initializeBundledPersonas();
       await this.initializePersonas();
       await this.initializeRemotePersonas();
       await this.initializeDashboard();
@@ -60135,8 +60137,8 @@ var MCPServer = class {
     try {
       const cwd = process.cwd();
       const gitDir = path19.join(cwd, ".git");
-      const { existsSync: existsSync12 } = await import("fs");
-      if (!existsSync12(gitDir)) {
+      const { existsSync: existsSync13 } = await import("fs");
+      if (!existsSync13(gitDir)) {
         this.logger.debug("Not in a git repository, skipping repo registration");
         return;
       }
@@ -60214,6 +60216,48 @@ var MCPServer = class {
       }
     } catch (error2) {
       this.logger.error("Unexpected error during remote authentication", error2);
+    }
+  }
+  /**
+   * Initialize bundled personas by copying to user directory if not present
+   *
+   * Bundled personas are included with the plugin at ${CLAUDE_PLUGIN_ROOT}/personas/
+   * and are copied to ~/.tiny-brain/personas/ on first init if they don't exist locally.
+   * Local personas take precedence (user can override bundled by creating their own).
+   */
+  async initializeBundledPersonas() {
+    const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+    if (!pluginRoot) {
+      this.logger.debug("CLAUDE_PLUGIN_ROOT not set, skipping bundled personas");
+      return;
+    }
+    const bundledPersonasDir = path19.join(pluginRoot, "personas");
+    if (!existsSync11(bundledPersonasDir)) {
+      this.logger.debug("No bundled personas directory found");
+      return;
+    }
+    this.logger.info("Checking bundled personas...");
+    try {
+      const bundledPersonas = readdirSync3(bundledPersonasDir);
+      for (const personaName of bundledPersonas) {
+        if (personaName.startsWith(".")) continue;
+        const bundledPath = path19.join(bundledPersonasDir, personaName);
+        const localStorage = this.storage;
+        const localPath = path19.join(localStorage.personasDir, personaName);
+        if (existsSync11(bundledPath) && !existsSync11(localPath)) {
+          this.logger.info(`Copying bundled persona '${personaName}' to local storage`);
+          try {
+            cpSync(bundledPath, localPath, { recursive: true });
+            this.logger.info(`\u2713 Installed bundled persona: ${personaName}`);
+          } catch (copyError) {
+            this.logger.warn(`Failed to copy bundled persona '${personaName}'`, copyError);
+          }
+        } else if (existsSync11(localPath)) {
+          this.logger.debug(`Bundled persona '${personaName}' already exists locally, skipping`);
+        }
+      }
+    } catch (error2) {
+      this.logger.warn("Failed to initialize bundled personas", error2);
     }
   }
   /**
@@ -60580,7 +60624,7 @@ function startupLog(message, data) {
       dataDir = join25(homedir4(), dataDir.slice(1));
     }
     const logPath = join25(dataDir, "debug.log");
-    if (!existsSync11(dataDir)) {
+    if (!existsSync12(dataDir)) {
       mkdirSync2(dataDir, { recursive: true });
     }
     appendFileSync(logPath, JSON.stringify(logEntry) + "\n");
@@ -60595,7 +60639,7 @@ async function main() {
   const __filename = fileURLToPath9(import.meta.url);
   const __dirname2 = dirname11(__filename);
   const envPath = join25(__dirname2, "../.env.local");
-  if (existsSync11(envPath)) {
+  if (existsSync12(envPath)) {
     try {
       const { config: config2 } = await Promise.resolve().then(() => __toESM(require_main(), 1));
       const result = config2({ path: envPath, debug: false });
