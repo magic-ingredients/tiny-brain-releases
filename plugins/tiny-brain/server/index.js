@@ -53108,7 +53108,7 @@ var RepoService = class _RepoService {
       contextFilePath,
       fullPath
     });
-    const repoBlock = this.formatRepoBlock(analysis, agents, version2);
+    const repoBlock = await this.formatRepoBlock(analysis, agents, version2);
     let existingContent = "";
     try {
       existingContent = await fs15.readFile(fullPath, "utf-8");
@@ -53233,9 +53233,9 @@ ${_RepoService.ANALYSIS_IGNORE_PREFIX}${JSON.stringify(analysis)}${_RepoService.
     return block;
   }
   /**
-   * Format the complete repository block with subagent context protocol (legacy compact format)
+   * Format the complete repository block with simplified structure
    */
-  formatRepoBlock(analysis, agents, version2) {
+  async formatRepoBlock(analysis, agents, version2) {
     let block = `${_RepoService.REPO_BLOCK_START}
 `;
     if (version2) {
@@ -53246,46 +53246,18 @@ ${_RepoService.ANALYSIS_IGNORE_PREFIX}${JSON.stringify(analysis)}${_RepoService.
 `;
       block += "---\n\n";
     }
-    const developerWorkflow = this.formatDeveloperWorkflowSection();
-    if (developerWorkflow) {
-      block += developerWorkflow;
+    const prdWorkflow = await this.formatPRDWorkflowSection();
+    if (prdWorkflow) {
+      block += prdWorkflow;
     }
-    block += `${_RepoService.SUBAGENT_PROTOCOL_HEADER}
-
-`;
-    block += `${_RepoService.AGENT_USAGE_HEADER}
-
-`;
-    block += this.formatAgentsCompact(agents);
-    block += `${_RepoService.REPO_CONTEXT_HEADER}
-`;
+    block += "## Tech Stack & Agents\n\n";
+    block += this.formatAgentTable(agents, analysis);
+    block += "\n## Repository Context\n";
     block += this.formatRepositoryContextYaml(analysis);
     const docTemplatesSection = this.formatDocumentationTemplatesSection();
     if (docTemplatesSection) {
       block += docTemplatesSection;
     }
-    block += `
-${_RepoService.USAGE_TEMPLATE_HEADER}
-
-`;
-    block += "```\n";
-    block += "Repository Context: [paste the yaml above]\n\n";
-    block += "AGENT: [choose from list above]\n";
-    block += "TASK: [specific task description]\n";
-    block += "CONSTRAINTS: [requirements/limitations]\n";
-    block += "EXPECTED OUTPUT: [what you need back]\n";
-    block += "```\n";
-    block += `
-${_RepoService.EXAMPLE_HEADER}
-`;
-    block += "```\n";
-    block += "Repository Context: [repo context yaml]\n\n";
-    block += "AGENT: component-developer\n";
-    block += "TASK: Create a UserProfile component with avatar, name, and email\n";
-    block += "CONSTRAINTS: Must be accessible, use TypeScript, follow TDD\n";
-    block += "EXPECTED OUTPUT: Component file with tests and usage example\n";
-    block += "```\n";
-    block += this.formatPRDCommitHeadersSection();
     block += `
 ${_RepoService.ANALYSIS_IGNORE_PREFIX}${JSON.stringify(analysis)}${_RepoService.ANALYSIS_IGNORE_SUFFIX}
 `;
@@ -53409,51 +53381,58 @@ ${_RepoService.ANALYSIS_IGNORE_PREFIX}${JSON.stringify(analysis)}${_RepoService.
     return output;
   }
   /**
-   * Format agents in compact style with categories
+   * Format agents as a simple table with tech-stack specific "Use for" descriptions
    */
-  formatAgentsCompact(agents) {
-    const categories = {
-      "Planning & Architecture": [],
-      "Development": [],
-      "Testing & Quality": [],
-      "Operations & Analysis": []
-    };
-    agents.forEach((agent) => {
-      const compactDesc = this.getCompactDescription(agent.description);
-      const line = `\`${agent.name}\` - ${compactDesc}`;
-      const searchText = `${agent.name} ${agent.description}`.toLowerCase();
-      if (searchText.includes("architect") || searchText.includes("researcher") || searchText.includes("planner") || searchText.includes("design") || searchText.includes("prd") || searchText.includes("requirement")) {
-        categories["Planning & Architecture"].push(line);
-      } else if (searchText.includes("test") || searchText.includes("validator") || searchText.includes("quality") || searchText.includes("refactor") || searchText.includes("tdd")) {
-        categories["Testing & Quality"].push(line);
-      } else if (searchText.includes("metrics") || searchText.includes("analyst") || searchText.includes("monitor") || searchText.includes("observ") || searchText.includes("collector") || searchText.includes("root-cause")) {
-        categories["Operations & Analysis"].push(line);
-      } else {
-        categories["Development"].push(line);
-      }
-    });
-    let output = "";
-    for (const [category, agentList] of Object.entries(categories)) {
-      if (agentList.length > 0) {
-        output += `**${category}**
-`;
-        agentList.forEach((line) => output += `- ${line}
-`);
-        output += "\n";
-      }
+  formatAgentTable(agents, analysis) {
+    if (agents.length === 0) {
+      return "No agents installed for this repository.\n";
     }
+    const techParts = [];
+    if (analysis.languages.length > 0) {
+      techParts.push(analysis.languages.join("/"));
+    }
+    if (analysis.frameworks.length > 0) {
+      techParts.push(analysis.frameworks.join(", "));
+    }
+    const testingTool = analysis.testingTools[0];
+    if (testingTool) {
+      techParts.push(`${testingTool} testing`);
+    }
+    let output = "";
+    if (techParts.length > 0) {
+      output += `${techParts.join(" repository with ")}.
+
+`;
+    }
+    output += "| Agent | Use for |\n";
+    output += "|-------|--------|\n";
+    agents.forEach((agent) => {
+      const useCase = agent.usage || this.generateAgentUseCase(agent);
+      output += `| \`${agent.name}\` | ${useCase} |
+`;
+    });
+    output += "\nSkills automatically select appropriate agents. Use Task tool for direct invocation.\n";
     return output;
   }
   /**
-   * Get compact description by removing common phrases and truncating if needed
+   * Generate generic "Use for" description based on agent name
+   * This is a fallback when TBR doesn't provide contextual usage
    */
-  getCompactDescription(description) {
-    let compact2 = description.replace(/^(A |An |The )/i, "").replace(/specialist (who|that) /gi, "").replace(/focused on /gi, "").replace(/development specialist /gi, "");
-    compact2 = compact2.charAt(0).toUpperCase() + compact2.slice(1);
-    if (compact2.length > 80) {
-      compact2 = compact2.substring(0, 77) + "...";
-    }
-    return compact2;
+  generateAgentUseCase(agent) {
+    const name = agent.name.toLowerCase();
+    if (name.includes("typescript")) return "TypeScript files";
+    if (name.includes("react")) return "React components";
+    if (name.includes("component")) return "UI components";
+    if (name.includes("tdd") || name.includes("test")) return "Test files";
+    if (name.includes("backend")) return "Backend code";
+    if (name.includes("frontend")) return "Frontend code";
+    if (name.includes("architect")) return "Architecture decisions";
+    if (name.includes("refactor")) return "Refactoring";
+    if (name.includes("security")) return "Security";
+    if (name.includes("performance")) return "Performance";
+    if (name.includes("quality")) return "Code review";
+    if (name.includes("validator")) return "Validation";
+    return agent.name.replace(/-/g, " ");
   }
   /**
    * Format repository context as clean YAML
@@ -53522,54 +53501,6 @@ ${_RepoService.ANALYSIS_IGNORE_PREFIX}${JSON.stringify(analysis)}${_RepoService.
     const versionRegex = /## tiny-brain - start\n---\nversion: ([0-9]+\.[0-9]+\.[0-9]+)/;
     const match3 = content.match(versionRegex);
     return match3 ? match3[1] : null;
-  }
-  /**
-   * Format Developer Workflow section with PRD and ADR information
-   * This section appears before the Subagent Context Protocol
-   */
-  formatDeveloperWorkflowSection() {
-    const repoRoot = getRepoRoot();
-    const prdPath = path15.join(repoRoot, "docs", "prd");
-    const adrPath = path15.join(repoRoot, "docs", "adr");
-    const hasPRD = existsSync7(prdPath);
-    const hasADR = existsSync7(adrPath);
-    if (!hasPRD && !hasADR) {
-      return "";
-    }
-    let section = "## Developer Workflow\n\n";
-    section += "This repository uses structured documentation for technical decisions and feature planning.\n\n";
-    if (hasPRD) {
-      section += "**Product Requirements Documents (PRDs):**\n";
-      section += `- Location: \`docs/prd/{prd-id}/prd.md\`
-`;
-      section += `- Features: \`docs/prd/{prd-id}/features/{feature-id}.md\`
-`;
-      section += `- Skills: \`.claude/skills/plan/\`, \`.claude/skills/feature/\`, \`.claude/skills/fix/\`
-
-`;
-    }
-    if (hasADR) {
-      section += "**Architecture Decision Records (ADRs):**\n";
-      section += `- Location: \`docs/adr/NNNN-decision-title.md\`
-`;
-      section += `- Skill: \`.claude/skills/adr/\`
-
-`;
-    }
-    if (hasPRD && hasADR) {
-      section += "**PRD Commit Workflow:**\n\n";
-      section += "After committing PRD-tracked code, ALWAYS check for ADR suggestions:\n\n";
-      section += "1. After successful git commit (via Bash tool)\n";
-      section += "2. Immediately call: `plan operation=check-adrs`\n";
-      section += "3. If suggestions exist, present them to user\n";
-      section += "4. Wait for user decision before proceeding\n\n";
-      section += "**When to Suggest ADRs:**\n\n";
-      section += "Commit messages containing:\n";
-      section += "- adopt, migrate, implement, choose, replace, select\n";
-      section += "- + technology names (PostgreSQL, Redis, GraphQL, OAuth2, Kubernetes, etc.)\n";
-      section += "- + architecture patterns (microservices, event-driven, CQRS, etc.)\n\n";
-    }
-    return section;
   }
   /**
    * Format documentation templates section for PRDs and ADRs
@@ -54134,171 +54065,83 @@ ${endMarker}
     return descriptions[agentName] || `${agentName.replace(/-/g, " ")} specialist`;
   }
   /**
-   * Format PRD Workflow section (appears FIRST in tiny-brain block)
-   * Combines PRD locations, ADR locations, workflow instructions, and commit headers
+   * Format workflow sections for CLAUDE.md
+   * Each section is independent - enabled features appear regardless of other settings
    */
   async formatPRDWorkflowSection() {
-    const enableSDD = await this.configService.isSDDEnabled();
-    if (!enableSDD) {
-      this.context.logger.debug("SDD disabled, skipping PRD Workflow section");
-      return "";
-    }
+    let section = "";
     const repoRoot = getRepoRoot();
     const prdPath = path15.join(repoRoot, "docs", "prd");
     const adrPath = path15.join(repoRoot, "docs", "adr");
     const hasPRD = existsSync7(prdPath);
     const hasADR = existsSync7(adrPath);
-    if (!hasPRD) {
-      return "";
-    }
-    let section = "## PRD Workflow\n\n";
-    section += "IMPORTANT: Skills at `.claude/skills/` are **model-invoked** - describe your intent and Claude will use them automatically.\n";
-    section += 'Examples: "I want to plan a new feature", "track this bug fix", "add a feature to the PRD"\n';
-    section += 'Check available skills: ask "What Skills are available?"\n\n';
-    section += "**First-time Setup:** Run `npx tiny-brain analyse` from terminal before starting Claude Code to install skills.\n";
-    section += "If skills were installed mid-session, restart Claude Code to activate them.\n\n";
-    section += "**Product Requirements Documents (PRDs):**\n";
-    section += `- Location: \`docs/prd/{prd-id}/prd.md\`
+    const enableSDD = await this.configService.isSDDEnabled();
+    const enableADR = await this.configService.isADREnabled();
+    const enableQuality = await this.configService.isQualityEnabled();
+    const enableTDD = await this.configService.isTDDEnabled();
+    if (enableSDD && hasPRD) {
+      section += "## PRD Workflow\n\n";
+      section += "IMPORTANT: Skills at `.claude/skills/` are **model-invoked** - describe your intent and Claude will use them automatically.\n";
+      section += 'Examples: "I want to plan a new feature", "track this bug fix", "add a feature to the PRD"\n\n';
+      section += "**Product Requirements Documents (PRDs):**\n";
+      section += `- Location: \`docs/prd/{prd-id}/prd.md\`
 `;
-    section += `- Features: \`docs/prd/{prd-id}/features/{feature-id}.md\`
+      section += `- Features: \`docs/prd/{prd-id}/features/{feature-id}.md\`
 `;
-    section += `- Skills: plan (create PRDs), feature (add features), fix (track fixes)
+      section += `- Skills: plan (create PRDs), feature (add features), fix (track fixes)
 
 `;
-    const enableADR = await this.configService.isADREnabled();
-    if (hasADR && enableADR) {
-      section += "**Architecture Decision Records (ADRs):**\n";
+      section += "## Commit Message Format\n\n";
+      section += "This project uses **Conventional Commits** for PRD-tracked tasks.\n\n";
+      section += "**Format:**\n";
+      section += "```\n";
+      section += "{type}({scope}): commit title\n\n";
+      section += "PRD: {prd-id}\n";
+      section += "Feature: {feature-id}\n";
+      section += "Task: {exact-task-description}\n\n";
+      section += "Description of changes...\n\n";
+      section += "\u{1F916} Generated with [Claude Code](https://claude.com/claude-code)\n";
+      section += "```\n\n";
+      section += "**Quick Reference:**\n";
+      section += "- PRD ID = directory name in `docs/prd/`\n";
+      section += "- Feature ID = feature's `id` field\n";
+      section += "- Task = EXACT description from progress.json\n";
+      section += "- Type = `test`, `feat`, or `refactor` (for TDD tracking)\n\n";
+    }
+    if (enableADR && hasADR) {
+      section += "## Architecture Decision Records\n\n";
       section += `- Location: \`docs/adr/NNNN-decision-title.md\`
 `;
       section += `- Use \`/adr\` skill to create ADRs
-`;
-      section += `- Skill and template at \`.claude/skills/adr/\`
 
 `;
+      if (enableSDD && hasPRD) {
+        section += "**ADR Suggestions:** After PRD commits, check for ADR suggestions with `plan operation=check-adrs`\n\n";
+      }
     }
-    const enableQuality = await this.configService.isQualityEnabled();
     if (enableQuality) {
-      section += "**Code Quality Analysis:**\n";
+      section += "## Code Quality Analysis\n\n";
       section += `- Use \`/quality\` skill to run comprehensive quality analysis
 `;
-      section += `- Runs parallel analysis across 8 quality categories
-`;
-      section += `- Categories: Security (15pts), Reliability (10pts), Performance (10pts), Maintainability (5pts), Testing (5pts), Architecture (5pts), Documentation (3pts), Operations (3pts)
+      section += `- Categories: Security, Reliability, Performance, Maintainability, Testing, Architecture, Documentation, Operations
 `;
       section += `- Grades: A (90-100), B (80-89), C (70-79), D (60-69), F (<60)
-`;
-      section += `- Run history stored in \`docs/quality/runs/\`
-`;
-      section += `- Skill and templates at \`.claude/skills/quality/\`
 
 `;
     }
-    if (hasADR && enableADR) {
-      section += "**PRD Commit Workflow:**\n\n";
-      section += "After committing PRD-tracked code, ALWAYS check for ADR suggestions:\n\n";
-      section += "1. After successful git commit (via Bash tool)\n";
-      section += "2. Immediately call: `plan operation=check-adrs`\n";
-      section += "3. If suggestions exist, present them to user\n";
-      section += "4. Wait for user decision before proceeding\n\n";
-      section += "**When to Suggest ADRs:**\n\n";
-      section += "Commit messages containing:\n";
-      section += "- adopt, migrate, implement, choose, replace, select\n";
-      section += "- + technology names (PostgreSQL, Redis, GraphQL, OAuth2, Kubernetes, etc.)\n";
-      section += "- + architecture patterns (microservices, event-driven, CQRS, etc.)\n\n";
-    }
-    section += "## Commit Message Format\n\n";
-    section += "This project uses **Conventional Commits** (https://www.conventionalcommits.org/en/v1.0.0/).\n\n";
-    section += "When working on PRD-tracked tasks, ALWAYS add these headers immediately after the commit title.\n\n";
-    section += "**Format:**\n";
-    section += "```\n";
-    section += "{type}({scope}): commit title\n\n";
-    section += "PRD: {prd-id}\n";
-    section += "Feature: {feature-id}\n";
-    section += "Task: {exact-task-description}\n\n";
-    section += "Detailed description of what changed, why, and how.\n";
-    section += "This section is REQUIRED - explain implementation details,\n";
-    section += "technical decisions, and any important context.\n\n";
-    section += "\u{1F916} Generated with [Claude Code](https://claude.com/claude-code)\n";
-    section += "```\n\n";
-    section += "**Example:**\n";
-    section += "```\n";
-    section += "feat(dashboard): add SSE events for plan changes\n\n";
-    section += "PRD: plan-system-refactoring-implementation\n";
-    section += "Feature: dashboard-integration\n";
-    section += "Task: Add real-time SSE updates for plan changes\n\n";
-    section += "Implement server-sent events to notify dashboard clients\n";
-    section += "when progress.json files are updated. Uses EventEmitter\n";
-    section += "pattern to broadcast changes. Clients automatically\n";
-    section += "reconnect on connection loss.\n\n";
-    section += "\u{1F916} Generated with [Claude Code](https://claude.com/claude-code)\n";
-    section += "```\n\n";
-    section += "**Quick Reference:**\n";
-    section += "- Use conventional commit format: `type(scope):` or `type:`\n";
-    section += "- Scope is optional but recommended\n";
-    section += "- PRD ID = directory name in `docs/prd/`\n";
-    section += "- Feature ID = feature's `id` field (NOT `number`)\n";
-    section += "- Task = EXACT description from progress.json\n";
-    section += "- Type = `test`, `feat`, or `refactor` (for TDD tracking)\n";
-    section += "- Order: Title \u2192 PRD headers \u2192 Description (REQUIRED) \u2192 Claude footer (LAST)\n\n";
-    section += '\u{1F4D6} **Full documentation**: See `docs/prd/README.md` \u2192 "Task Tracking with Git Commits" section\n\n';
-    const enableTDD = await this.configService.isTDDEnabled();
     if (enableTDD) {
       section += "## TDD Workflow\n\n";
-      section += "**MANDATORY:** This repository follows strict Test-Driven Development (TDD) with a 3-phase commit workflow.\n\n";
-      section += "### \u26A0\uFE0F CRITICAL RULE: One Task = One Commit Cycle\n\n";
-      section += "**NEVER implement multiple tasks in a single commit.**\n\n";
-      section += "Each PRD task MUST have its own complete TDD cycle:\n";
-      section += "- **1 task** = **1 test commit** (RED phase) + **1 feat commit** (GREEN phase) + optionally **1 refactor commit**\n";
-      section += "- Multiple tasks cannot share commits - even if the implementation is related\n";
-      section += "- This ensures accurate progress tracking and proper task completion detection\n";
-      section += "- Violation of this rule will cause incorrect task tracking in progress.json\n\n";
-      section += "\u274C **WRONG**: One commit implements tasks 1-1, 1-4, 1-5, and 1-6\n";
-      section += "\u2705 **CORRECT**: Four separate commit cycles, one for each task\n\n";
-      section += "**CRITICAL RULES - NO EXCEPTIONS:**\n";
-      section += "1. **NEVER** commit test files and implementation files together\n";
-      section += "2. **ALWAYS** commit in this exact order: Red \u2192 Green \u2192 (optional) Refactor\n";
-      section += "3. **RED PHASE MUST FAIL** - If tests pass in red phase, you did it wrong\n";
-      section += "4. **GREEN PHASE MUST PASS** - If tests fail in green phase, you did it wrong\n\n";
+      section += "**MANDATORY:** This repository follows strict Test-Driven Development (TDD).\n\n";
       section += "**Red \u2192 Green \u2192 Refactor Cycle:**\n\n";
-      section += "1. **Red Phase** (`test:` or `test(scope):` commits):\n";
-      section += "   - **ONLY commit test files** (e.g., `*.test.ts`, `*.test.tsx`)\n";
-      section += "   - **DO NOT commit implementation files** in this commit\n";
-      section += "   - Tests MUST fail when you commit them (that's the point!)\n";
-      section += "   - Run tests BEFORE committing to verify they fail\n";
-      section += '   - Use: `git commit -m "test: ..."` or `git commit -m "test(api): ..."`\n';
-      section += "   - Git hook automatically runs typecheck + lint but SKIPS tests\n";
-      section += "   - Tracked in: `testCommitSha` field\n";
-      section += '   - **Example:** `git add src/**/*.test.ts && git commit -m "test: add preference integration tests"`\n\n';
-      section += "2. **Green Phase** (`feat:` or `feat(scope):` commits):\n";
-      section += "   - **ONLY commit implementation files** (e.g., service files, components)\n";
-      section += "   - **DO NOT commit test files** in this commit\n";
-      section += "   - Implement minimum code to make tests pass\n";
-      section += "   - Run tests BEFORE committing to verify they pass\n";
-      section += '   - Use: `git commit -m "feat: ..."` or `git commit -m "feat(auth): ..."`\n';
-      section += "   - Git hook automatically runs full checks (typecheck + lint + test)\n";
-      section += "   - Tracked in: `commitSha` field\n";
-      section += "   - **Marks task as COMPLETED**\n";
-      section += '   - **Example:** `git add src/services/*.ts && git commit -m "feat: implement preference integration"`\n\n';
-      section += "3. **Refactor Phase** (`refactor:` or `refactor(scope):` commits - optional):\n";
-      section += "   - Improve code quality without changing behavior\n";
-      section += "   - All tests must still pass\n";
-      section += '   - Use: `git commit -m "refactor: ..."` or `git commit -m "refactor(plan): ..."`\n';
-      section += "   - Git hook automatically runs full checks (typecheck + lint + test)\n";
-      section += "   - Tracked in: `refactorCommitSha` field\n\n";
-      section += "**Workflow Checklist:**\n";
-      section += "- [ ] Write tests first (Red phase)\n";
-      section += "- [ ] Run tests to verify they FAIL\n";
-      section += "- [ ] Commit ONLY test files with `test:` prefix\n";
-      section += "- [ ] Write implementation (Green phase)\n";
-      section += "- [ ] Run tests to verify they PASS\n";
-      section += "- [ ] Commit ONLY implementation files with `feat:` prefix\n";
-      section += "- [ ] (Optional) Refactor and commit with `refactor:` prefix\n\n";
-      section += "**Why This Matters:**\n";
-      section += "- Git hooks automatically detect commit type and run appropriate checks\n";
-      section += "- Separate commit tracking enables Feature 9 (TDD phase tracking in dashboard)\n";
-      section += "- Provides audit trail of development process\n";
-      section += "- Only `feat:` or `feat(scope):` commits mark tasks as completed\n";
-      section += "- **Bundling phases together breaks the tracking system**\n\n";
+      section += "| Phase | Commit Type | What to Commit | Tests Must |\n";
+      section += "|-------|-------------|----------------|------------|\n";
+      section += "| RED | `test:` | Test files only | FAIL |\n";
+      section += "| GREEN | `feat:` or `fix:` | Implementation only | PASS |\n";
+      section += "| REFACTOR | `refactor:` | Any (optional) | PASS |\n\n";
+      section += "**Critical Rules:**\n";
+      section += "- NEVER commit test + implementation files together\n";
+      section += "- One task = one complete TDD cycle\n";
+      section += "- Git hooks enforce: `test:` skips test run, `feat:`/`fix:` runs full checks\n\n";
     }
     return section;
   }
@@ -54307,47 +54150,6 @@ ${endMarker}
    */
   formatADRSection() {
     return "";
-  }
-  /**
-   * Format the PRD Commit Headers section
-   */
-  formatPRDCommitHeadersSection() {
-    let section = "\n## Commit Message Format\n\n";
-    section += "This project uses **Conventional Commits** (https://www.conventionalcommits.org/en/v1.0.0/).\n\n";
-    section += "When working on PRD-tracked tasks, ALWAYS add these headers immediately after the commit title.\n\n";
-    section += "**Format:**\n";
-    section += "```\n";
-    section += "{type}({scope}): commit title\n\n";
-    section += "PRD: {prd-id}\n";
-    section += "Feature: {feature-id}\n";
-    section += "Task: {exact-task-description}\n\n";
-    section += "Detailed description of what changed, why, and how.\n";
-    section += "This section is REQUIRED - explain implementation details,\n";
-    section += "technical decisions, and any important context.\n\n";
-    section += "\u{1F916} Generated with [Claude Code](https://claude.com/claude-code)\n";
-    section += "```\n\n";
-    section += "**Example:**\n";
-    section += "```\n";
-    section += "feat(dashboard): add SSE events for plan changes\n\n";
-    section += "PRD: plan-system-refactoring-implementation\n";
-    section += "Feature: dashboard-integration\n";
-    section += "Task: Add real-time SSE updates for plan changes\n\n";
-    section += "Implement server-sent events to notify dashboard clients\n";
-    section += "when progress.json files are updated. Uses EventEmitter\n";
-    section += "pattern to broadcast changes. Clients automatically\n";
-    section += "reconnect on connection loss.\n\n";
-    section += "\u{1F916} Generated with [Claude Code](https://claude.com/claude-code)\n";
-    section += "```\n\n";
-    section += "**Quick Reference:**\n";
-    section += "- Use conventional commit format: `type(scope):` or `type:`\n";
-    section += "- Scope is optional but recommended\n";
-    section += "- PRD ID = directory name in `docs/prd/`\n";
-    section += "- Feature ID = feature's `id` field (NOT `number`)\n";
-    section += "- Task = EXACT description from progress.json\n";
-    section += "- Type = `test`, `feat`, or `refactor` (for TDD tracking)\n";
-    section += "- Order: Title \u2192 PRD headers \u2192 Description (REQUIRED) \u2192 Claude footer (LAST)\n\n";
-    section += '\u{1F4D6} **Full documentation**: See `docs/prd/README.md` \u2192 "Task Tracking with Git Commits" section\n';
-    return section;
   }
 };
 

@@ -2,7 +2,7 @@
   "id": "developer",
   "name": "developer",
   "description": "TDD-focused software developer using tiny-brain workflows",
-  "version": "3.0.0",
+  "version": "3.1.1",
   "created": "2025-01-05T00:00:00.000Z",
   "lastUpdated": "2025-01-05T00:00:00.000Z",
   "source": "bundled"
