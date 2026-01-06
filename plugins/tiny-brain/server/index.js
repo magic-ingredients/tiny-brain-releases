@@ -27229,7 +27229,7 @@ var init_planning_service = __esm({
             id: planName,
             title: plan.title,
             type: "active",
-            status: features.length === 0 ? "defined" : percentComplete === 100 ? "complete" : "in_progress",
+            status: percentComplete === 100 ? "complete" : completedTasks > 0 ? "in_progress" : "not_started",
             prdId: planName,
             prdDirPath: prdPath,
             overview: plan.overview || "",
@@ -50813,6 +50813,76 @@ function createRepoRoutes(bridge) {
       return c.json({ error: message }, 500);
     }
   });
+  app.get("/:repoId/quality", async (c) => {
+    try {
+      const repoId = c.req.param("repoId");
+      const repo = await bridge.repoConfig.getRepo(repoId);
+      if (!repo) {
+        return c.json({ error: "Repository not found" }, 404);
+      }
+      const qualityRunsPath = join12(repo.path, "docs", "quality", "runs");
+      const runs = [];
+      try {
+        const files = await readdir6(qualityRunsPath);
+        const qualityFiles = files.filter((f) => f.endsWith("-quality.md"));
+        qualityFiles.sort((a, b) => b.localeCompare(a));
+        for (const file of qualityFiles) {
+          const content = await readFile7(join12(qualityRunsPath, file), "utf-8");
+          const frontmatter = parseFrontmatter(content);
+          const runId = file.replace(".md", "");
+          runs.push({
+            runId,
+            date: frontmatter.run_date || "",
+            score: parseInt(frontmatter.score || "0", 10),
+            grade: frontmatter.grade || "",
+            issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10)
+          });
+        }
+      } catch (err) {
+        if (err.code !== "ENOENT") {
+          throw err;
+        }
+      }
+      const latestGrade = runs.length > 0 ? runs[0].grade : null;
+      const latestScore = runs.length > 0 ? runs[0].score : null;
+      return c.json({ runs, latestGrade, latestScore });
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
+  app.get("/:repoId/quality/:runId", async (c) => {
+    try {
+      const repoId = c.req.param("repoId");
+      const runId = c.req.param("runId");
+      const repo = await bridge.repoConfig.getRepo(repoId);
+      if (!repo) {
+        return c.json({ error: "Repository not found" }, 404);
+      }
+      const runPath = join12(repo.path, "docs", "quality", "runs", `${runId}.md`);
+      try {
+        const content = await readFile7(runPath, "utf-8");
+        const frontmatter = parseFrontmatter(content);
+        const run = {
+          runId,
+          date: frontmatter.run_date || "",
+          score: parseInt(frontmatter.score || "0", 10),
+          grade: frontmatter.grade || "",
+          issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10),
+          rawContent: content
+        };
+        return c.json({ run });
+      } catch (err) {
+        if (err.code === "ENOENT") {
+          return c.json({ error: "Quality run not found" }, 404);
+        }
+        throw err;
+      }
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
   return app;
 }
 
@@ -51291,6 +51361,8 @@ var FileWatcher = class {
   plansCache = /* @__PURE__ */ new Map();
   // Cache for fixes per repo: Map<repoId, fixes>
   fixesCache = /* @__PURE__ */ new Map();
+  // Cache for quality runs per repo: Map<repoId, Map<runId, run>>
+  qualityCache = /* @__PURE__ */ new Map();
   // RepoConfigService instance
   repoConfigService;
   // Track if running
@@ -51326,6 +51398,7 @@ var FileWatcher = class {
     const watchers = {
       prdWatcher: null,
       fixesWatcher: null,
+      qualityWatcher: null,
       repoId,
       repoPath
     };
@@ -51368,6 +51441,28 @@ var FileWatcher = class {
         this.context.logger.info(`[FileWatcher] Fixes watcher started for repo ${repoId}: ${fixesPath}`);
       } catch (error2) {
         this.context.logger.error(`[FileWatcher] Failed to start fixes watcher for ${repoId}:`, error2);
+      }
+    }
+    const qualityPath = path13.join(repoPath, "docs/quality/runs");
+    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs13.existsSync(qualityPath)}`);
+    if (fs13.existsSync(qualityPath)) {
+      try {
+        if (!this.qualityCache.has(repoId)) {
+          this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
+        }
+        watchers.qualityWatcher = new FileWatcherService(this.context.logger);
+        watchers.qualityWatcher.on("change", (change) => {
+          this.context.logger.info(`[FileWatcher] Quality change detected in ${repoId}: ${change.type} ${change.relativePath}`);
+          this.handleQualityChange(repoId, change);
+        });
+        await watchers.qualityWatcher.start(qualityPath, {
+          pollInterval: 1e3,
+          recursive: false,
+          fileFilter: (filePath) => filePath.endsWith(".md")
+        });
+        this.context.logger.info(`[FileWatcher] Quality watcher started for repo ${repoId}: ${qualityPath}`);
+      } catch (error2) {
+        this.context.logger.error(`[FileWatcher] Failed to start quality watcher for ${repoId}:`, error2);
       }
     }
     this.repoWatchers.set(repoId, watchers);
@@ -51427,6 +51522,9 @@ var FileWatcher = class {
       if (watchers.fixesWatcher) {
         watchers.fixesWatcher.stop();
       }
+      if (watchers.qualityWatcher) {
+        watchers.qualityWatcher.stop();
+      }
       this.context.logger.info(`[FileWatcher] Stopped watchers for repo: ${repoId}`);
     }
     this.repoWatchers.clear();
@@ -51436,6 +51534,7 @@ var FileWatcher = class {
     }
     this.plansCache.clear();
     this.fixesCache.clear();
+    this.qualityCache.clear();
     this.running = false;
   }
   isRunning() {
@@ -51783,6 +51882,74 @@ var FileWatcher = class {
       }
     }
     return events;
+  }
+  /**
+   * Handle changes to quality run files in docs/quality/runs/
+   */
+  async handleQualityChange(repoId, change) {
+    try {
+      this.context.logger.info(`[FileWatcher] Detected quality change in repo ${repoId}: ${change.type} - ${change.relativePath}`);
+      const connectionCount = this.sse.getConnectionCount();
+      if (connectionCount === 0) {
+        this.context.logger.info(`[FileWatcher] No SSE clients connected - skipping quality processing`);
+        return;
+      }
+      if (!change.relativePath.endsWith(".md")) {
+        return;
+      }
+      const fileName = path13.basename(change.relativePath);
+      const runId = fileName.replace(/\.md$/, "");
+      let repoCache = this.qualityCache.get(repoId);
+      if (!repoCache) {
+        repoCache = /* @__PURE__ */ new Map();
+        this.qualityCache.set(repoId, repoCache);
+      }
+      if (change.type === "deleted") {
+        repoCache.delete(runId);
+        await this.sse.broadcast("quality-change", {
+          eventType: "quality:deleted",
+          repoId,
+          runId,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        });
+        return;
+      }
+      let runData = { runId };
+      try {
+        const content = await fs13.promises.readFile(change.filePath, "utf-8");
+        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        if (frontmatterMatch) {
+          const frontmatter = frontmatterMatch[1];
+          for (const line of frontmatter.split("\n")) {
+            const colonIndex = line.indexOf(":");
+            if (colonIndex > 0) {
+              const key = line.slice(0, colonIndex).trim();
+              const value = line.slice(colonIndex + 1).trim();
+              if (/^\d+$/.test(value)) {
+                runData[key] = parseInt(value, 10);
+              } else {
+                runData[key] = value;
+              }
+            }
+          }
+        }
+      } catch (error2) {
+        this.context.logger.error(`Error reading quality file ${change.filePath}:`, error2);
+        return;
+      }
+      const isNew = !repoCache.has(runId);
+      repoCache.set(runId, runData);
+      await this.sse.broadcast("quality-change", {
+        eventType: isNew ? "quality:created" : "quality:updated",
+        repoId,
+        runId,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        run: runData
+      });
+      this.context.logger.info(`[FileWatcher] \u2705 Broadcast quality:${isNew ? "created" : "updated"} for run: ${runId} in repo: ${repoId}`);
+    } catch (error2) {
+      this.context.logger.error("Error handling quality change:", error2);
+    }
   }
 };
 
