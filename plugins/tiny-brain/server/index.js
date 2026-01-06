@@ -38503,7 +38503,7 @@ var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
     var fs18 = __require("fs");
     var path20 = __require("path");
-    var os3 = __require("os");
+    var os4 = __require("os");
     var crypto4 = __require("crypto");
     var packageJson = require_package();
     var version2 = packageJson.version;
@@ -38656,7 +38656,7 @@ var require_main = __commonJS({
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path20.join(os3.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path20.join(os4.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -44158,7 +44158,7 @@ var StdioServerTransport = class {
 import { readFileSync as readFileSync4, appendFileSync, existsSync as existsSync12, mkdirSync as mkdirSync2 } from "fs";
 import { fileURLToPath as fileURLToPath9 } from "url";
 import { dirname as dirname11, join as join25 } from "path";
-import { homedir as homedir4 } from "os";
+import { homedir as homedir5 } from "os";
 
 // packages/tiny-brain-mcp/src/core/mcp-server.ts
 import * as path19 from "path";
@@ -51104,8 +51104,10 @@ data: ${JSON.stringify(data)}
 };
 
 // packages/tiny-brain-dashboard/server/services/file-watcher.service.ts
+init_src();
 import * as path13 from "path";
 import * as fs13 from "fs";
+import * as os2 from "os";
 
 // packages/tiny-brain-dashboard/server/services/generic-file-watcher.ts
 import * as fs12 from "fs";
@@ -51279,73 +51281,169 @@ var FileWatcher = class {
   constructor(context, sse) {
     this.context = context;
     this.sse = sse;
+    this.repoConfigService = new RepoConfigService(context);
   }
-  fileWatcher = null;
-  fixesWatcher = null;
-  prdPath = null;
-  fixesPath = null;
+  // Map of repoId -> watchers for that repo
+  repoWatchers = /* @__PURE__ */ new Map();
+  // Watcher for repos.json to detect new repo registrations
+  reposConfigWatcher = null;
+  // Cache for plans per repo: Map<repoId, Map<prdId, plan>>
   plansCache = /* @__PURE__ */ new Map();
-  fixesCache = null;
+  // Cache for fixes per repo: Map<repoId, fixes>
+  fixesCache = /* @__PURE__ */ new Map();
+  // RepoConfigService instance
+  repoConfigService;
+  // Track if running
+  running = false;
   async start() {
-    if (this.isRunning()) {
+    if (this.running) {
       return;
     }
-    if (!this.context.repositoryRoot) {
-      this.context.logger.warn("No repository root in context - file watcher cannot start");
+    this.running = true;
+    this.context.logger.info("[FileWatcher] Starting multi-repo file watcher...");
+    try {
+      const repos = await this.repoConfigService.listRepos();
+      this.context.logger.info(`[FileWatcher] Found ${repos.length} registered repos`);
+      for (const repo of repos) {
+        await this.startRepoWatchers(repo);
+      }
+    } catch (error2) {
+      this.context.logger.warn("[FileWatcher] Failed to get repos list, will watch for registration:", error2);
+    }
+    await this.startReposConfigWatcher();
+  }
+  /**
+   * Start watchers for a single repo's progress and fixes directories
+   */
+  async startRepoWatchers(repo) {
+    const repoId = repo.id;
+    const repoPath = repo.path;
+    this.context.logger.info(`[FileWatcher] Setting up watchers for repo: ${repoId} at ${repoPath}`);
+    if (this.repoWatchers.has(repoId)) {
+      this.context.logger.info(`[FileWatcher] Already watching repo: ${repoId}`);
       return;
     }
-    this.prdPath = path13.join(this.context.repositoryRoot, ".tiny-brain/progress");
-    if (!fs13.existsSync(this.prdPath)) {
-      this.context.logger.info(`Progress directory does not exist: ${this.prdPath} - skipping file watcher`);
+    const watchers = {
+      prdWatcher: null,
+      fixesWatcher: null,
+      repoId,
+      repoPath
+    };
+    if (!this.plansCache.has(repoId)) {
+      this.plansCache.set(repoId, /* @__PURE__ */ new Map());
+    }
+    const prdPath = path13.join(repoPath, ".tiny-brain/progress");
+    this.context.logger.info(`[FileWatcher] Checking PRD path: ${prdPath} exists: ${fs13.existsSync(prdPath)}`);
+    if (fs13.existsSync(prdPath)) {
+      try {
+        watchers.prdWatcher = new FileWatcherService(this.context.logger);
+        watchers.prdWatcher.on("change", (change) => {
+          this.context.logger.info(`[FileWatcher] PRD change detected in ${repoId}: ${change.type} ${change.relativePath}`);
+          this.handleFileChange(repoId, change);
+        });
+        await watchers.prdWatcher.start(prdPath, {
+          pollInterval: 1e3,
+          recursive: false,
+          fileFilter: (filePath) => filePath.endsWith(".json")
+        });
+        this.context.logger.info(`[FileWatcher] PRD watcher started for repo ${repoId}: ${prdPath}`);
+      } catch (error2) {
+        this.context.logger.error(`[FileWatcher] Failed to start PRD watcher for ${repoId}:`, error2);
+      }
+    }
+    const fixesPath = path13.join(repoPath, ".tiny-brain/fixes");
+    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs13.existsSync(fixesPath)}`);
+    if (fs13.existsSync(fixesPath)) {
+      try {
+        watchers.fixesWatcher = new FileWatcherService(this.context.logger);
+        watchers.fixesWatcher.on("change", (change) => {
+          this.context.logger.info(`[FileWatcher] Fixes change detected in ${repoId}: ${change.type} ${change.relativePath}`);
+          this.handleFixesChange(repoId, change);
+        });
+        await watchers.fixesWatcher.start(fixesPath, {
+          pollInterval: 1e3,
+          recursive: false,
+          fileFilter: (filePath) => filePath.endsWith("progress.json")
+        });
+        this.context.logger.info(`[FileWatcher] Fixes watcher started for repo ${repoId}: ${fixesPath}`);
+      } catch (error2) {
+        this.context.logger.error(`[FileWatcher] Failed to start fixes watcher for ${repoId}:`, error2);
+      }
+    }
+    this.repoWatchers.set(repoId, watchers);
+    this.context.logger.info(`[FileWatcher] Repo watchers setup complete for: ${repoId}`);
+  }
+  /**
+   * Start watching ~/.tiny-brain/repos/repos.json for new repo registrations
+   */
+  async startReposConfigWatcher() {
+    const reposDir = path13.join(os2.homedir(), ".tiny-brain", "repos");
+    if (!fs13.existsSync(reposDir)) {
+      this.context.logger.info(`[FileWatcher] Repos config directory does not exist: ${reposDir}`);
       return;
     }
-    this.fileWatcher = new FileWatcherService(this.context.logger);
-    this.fileWatcher.on("change", (change) => {
-      this.handleFileChange(change);
-    });
-    await this.fileWatcher.start(this.prdPath, {
-      pollInterval: 1e3,
-      recursive: false,
-      // Files are directly in .tiny-brain/progress/
-      fileFilter: (filePath) => {
-        return filePath.endsWith(".json");
+    this.reposConfigWatcher = new FileWatcherService(this.context.logger);
+    this.reposConfigWatcher.on("change", async (change) => {
+      if (change.relativePath.endsWith("repos.json")) {
+        this.context.logger.info("[FileWatcher] Detected repos.json change, checking for new repos...");
+        await this.handleReposConfigChange();
       }
     });
-    this.context.logger.info(`File watcher started for: ${this.prdPath}`);
-    this.fixesPath = path13.join(this.context.repositoryRoot, ".tiny-brain/fixes");
-    if (fs13.existsSync(this.fixesPath)) {
-      this.fixesWatcher = new FileWatcherService(this.context.logger);
-      this.fixesWatcher.on("change", (change) => {
-        this.handleFixesChange(change);
-      });
-      await this.fixesWatcher.start(this.fixesPath, {
-        pollInterval: 1e3,
-        recursive: false,
-        fileFilter: (filePath) => filePath.endsWith("progress.json")
-      });
-      this.context.logger.info(`Fixes watcher started for: ${this.fixesPath}`);
+    await this.reposConfigWatcher.start(reposDir, {
+      pollInterval: 2e3,
+      // Check less frequently for config changes
+      recursive: false,
+      fileFilter: (filePath) => filePath.endsWith("repos.json")
+    });
+    this.context.logger.info(`[FileWatcher] Repos config watcher started for: ${reposDir}`);
+  }
+  /**
+   * Handle repos.json change - start watchers for any new repos
+   */
+  async handleReposConfigChange() {
+    try {
+      const repos = await this.repoConfigService.listRepos();
+      for (const repo of repos) {
+        if (!this.repoWatchers.has(repo.id)) {
+          this.context.logger.info(`[FileWatcher] New repo registered: ${repo.id} (${repo.path})`);
+          await this.startRepoWatchers(repo);
+          await this.sse.broadcast("repo-registered", {
+            repoId: repo.id,
+            repoPath: repo.path,
+            repoName: repo.name,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          });
+        }
+      }
+    } catch (error2) {
+      this.context.logger.error("[FileWatcher] Error handling repos config change:", error2);
     }
   }
   async stop() {
-    if (this.fileWatcher) {
-      this.fileWatcher.stop();
-      this.fileWatcher = null;
+    for (const [repoId, watchers] of this.repoWatchers) {
+      if (watchers.prdWatcher) {
+        watchers.prdWatcher.stop();
+      }
+      if (watchers.fixesWatcher) {
+        watchers.fixesWatcher.stop();
+      }
+      this.context.logger.info(`[FileWatcher] Stopped watchers for repo: ${repoId}`);
     }
-    if (this.fixesWatcher) {
-      this.fixesWatcher.stop();
-      this.fixesWatcher = null;
+    this.repoWatchers.clear();
+    if (this.reposConfigWatcher) {
+      this.reposConfigWatcher.stop();
+      this.reposConfigWatcher = null;
     }
     this.plansCache.clear();
-    this.fixesCache = null;
-    this.prdPath = null;
-    this.fixesPath = null;
+    this.fixesCache.clear();
+    this.running = false;
   }
   isRunning() {
-    return this.fileWatcher !== null && this.fileWatcher.isRunning();
+    return this.running;
   }
-  async handleFileChange(change) {
+  async handleFileChange(repoId, change) {
     try {
-      this.context.logger.info(`[FileWatcher] Detected file change: ${change.type} - ${change.relativePath}`);
+      this.context.logger.info(`[FileWatcher] Detected file change in repo ${repoId}: ${change.type} - ${change.relativePath}`);
       const connectionCount = this.sse.getConnectionCount();
       this.context.logger.info(`[FileWatcher] SSE connections: ${connectionCount}`);
       if (connectionCount === 0) {
@@ -51359,20 +51457,26 @@ var FileWatcher = class {
         return;
       }
       const prdId = fileName.replace(/\.json$/, "");
-      this.context.logger.info(`[FileWatcher] Processing PRD change for: ${prdId}`);
-      await this.handleProgressChange(prdId, change);
+      this.context.logger.info(`[FileWatcher] Processing PRD change for: ${prdId} in repo: ${repoId}`);
+      await this.handleProgressChange(repoId, prdId, change);
     } catch (error2) {
       this.context.logger.error("Error handling file change:", error2);
     }
   }
-  async handleProgressChange(prdId, change) {
+  async handleProgressChange(repoId, prdId, change) {
     try {
-      this.context.logger.info(`[FileWatcher] handleProgressChange called for PRD: ${prdId}`);
+      this.context.logger.info(`[FileWatcher] handleProgressChange called for PRD: ${prdId} in repo: ${repoId}`);
+      let repoCache = this.plansCache.get(repoId);
+      if (!repoCache) {
+        repoCache = /* @__PURE__ */ new Map();
+        this.plansCache.set(repoId, repoCache);
+      }
       if (change.type === "deleted") {
-        this.plansCache.delete(prdId);
+        repoCache.delete(prdId);
         this.context.logger.info(`[FileWatcher] Broadcasting SSE event: removed for PRD: ${prdId}`);
         await this.sse.broadcast("plan-change", {
           type: "removed",
+          repoId,
           prdId,
           plan: null
         });
@@ -51387,29 +51491,30 @@ var FileWatcher = class {
         this.context.logger.error(`Error reading progress file ${change.filePath}:`, error2);
         return;
       }
-      const oldPlan = this.plansCache.get(prdId);
+      const oldPlan = repoCache.get(prdId);
       const isNew = !oldPlan;
       if (isNew) {
-        this.context.logger.info(`[FileWatcher] New PRD detected: ${prdId}`);
-        this.plansCache.set(prdId, newPlan);
+        this.context.logger.info(`[FileWatcher] New PRD detected: ${prdId} in repo: ${repoId}`);
+        repoCache.set(prdId, newPlan);
         await this.sse.broadcast("plan-change", {
           eventType: "prd:created",
+          repoId,
           prdId: newPlan.id,
           prdPath: newPlan.prdDirPath || `docs/prd/${prdId}`,
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
           plan: newPlan
         });
-        this.context.logger.info(`[FileWatcher] \u2705 Broadcast prd:created for: ${prdId}`);
+        this.context.logger.info(`[FileWatcher] \u2705 Broadcast prd:created for: ${prdId} in repo: ${repoId}`);
         return;
       }
-      const events = this.diffPlans(oldPlan, newPlan);
+      const events = this.diffPlans(repoId, oldPlan, newPlan);
       this.context.logger.info(`[FileWatcher] Detected ${events.length} granular changes in PRD: ${prdId}`);
-      this.plansCache.set(prdId, newPlan);
+      repoCache.set(prdId, newPlan);
       for (const event of events) {
         this.context.logger.debug(`[FileWatcher] Broadcasting ${event.eventType} for PRD: ${prdId}`);
         await this.sse.broadcast("plan-change", event);
       }
-      this.context.logger.info(`[FileWatcher] \u2705 Successfully broadcast ${events.length} events for PRD: ${prdId}`);
+      this.context.logger.info(`[FileWatcher] \u2705 Successfully broadcast ${events.length} events for PRD: ${prdId} in repo: ${repoId}`);
     } catch (error2) {
       this.context.logger.error("Error handling progress change:", error2);
     }
@@ -51418,7 +51523,7 @@ var FileWatcher = class {
    * Diff old and new plan to generate granular PRDChangeEvents
    * Detects task and feature updates
    */
-  diffPlans(oldPlan, newPlan) {
+  diffPlans(repoId, oldPlan, newPlan) {
     const events = [];
     const timestamp = (/* @__PURE__ */ new Date()).toISOString();
     const prdPath = newPlan.prdDirPath || `docs/prd/${newPlan.id}`;
@@ -51429,6 +51534,7 @@ var FileWatcher = class {
       if (!oldFeature) {
         events.push({
           eventType: "prd:feature:added",
+          repoId,
           prdId: newPlan.id,
           prdPath,
           timestamp,
@@ -51444,6 +51550,7 @@ var FileWatcher = class {
       if (oldFeature.status !== newFeature.status) {
         events.push({
           eventType: "prd:feature:updated",
+          repoId,
           prdId: newPlan.id,
           prdPath,
           timestamp,
@@ -51467,6 +51574,7 @@ var FileWatcher = class {
         if (!oldTask) {
           events.push({
             eventType: "prd:feature:tasks:added",
+            repoId,
             prdId: newPlan.id,
             prdPath,
             timestamp,
@@ -51492,6 +51600,7 @@ var FileWatcher = class {
           if (oldTask.status !== "completed" && newTask.status === "completed") {
             events.push({
               eventType: "prd:feature:task:completed",
+              repoId,
               prdId: newPlan.id,
               prdPath,
               timestamp,
@@ -51522,6 +51631,7 @@ var FileWatcher = class {
           } else {
             events.push({
               eventType: "prd:feature:task:updated",
+              repoId,
               prdId: newPlan.id,
               prdPath,
               timestamp,
@@ -51557,9 +51667,9 @@ var FileWatcher = class {
   /**
    * Handle changes to the fixes progress.json file
    */
-  async handleFixesChange(change) {
+  async handleFixesChange(repoId, change) {
     try {
-      this.context.logger.info(`[FileWatcher] Detected fixes change: ${change.type} - ${change.relativePath}`);
+      this.context.logger.info(`[FileWatcher] Detected fixes change in repo ${repoId}: ${change.type} - ${change.relativePath}`);
       const connectionCount = this.sse.getConnectionCount();
       if (connectionCount === 0) {
         this.context.logger.info(`[FileWatcher] No SSE clients connected - skipping fixes processing`);
@@ -51569,9 +51679,10 @@ var FileWatcher = class {
         return;
       }
       if (change.type === "deleted") {
-        this.fixesCache = null;
+        this.fixesCache.delete(repoId);
         await this.sse.broadcast("fix-change", {
           eventType: "fixes:cleared",
+          repoId,
           timestamp: (/* @__PURE__ */ new Date()).toISOString()
         });
         return;
@@ -51584,14 +51695,14 @@ var FileWatcher = class {
         this.context.logger.error(`Error reading fixes progress file ${change.filePath}:`, error2);
         return;
       }
-      const oldFixes = this.fixesCache;
-      this.fixesCache = newFixes;
-      const events = this.diffFixes(oldFixes, newFixes);
+      const oldFixes = this.fixesCache.get(repoId);
+      this.fixesCache.set(repoId, newFixes);
+      const events = this.diffFixes(repoId, oldFixes, newFixes);
       for (const event of events) {
         this.context.logger.debug(`[FileWatcher] Broadcasting ${event.eventType} for fix: ${event.fixId}`);
         await this.sse.broadcast("fix-change", event);
       }
-      this.context.logger.info(`[FileWatcher] \u2705 Successfully broadcast ${events.length} fix events`);
+      this.context.logger.info(`[FileWatcher] \u2705 Successfully broadcast ${events.length} fix events for repo: ${repoId}`);
     } catch (error2) {
       this.context.logger.error("Error handling fixes change:", error2);
     }
@@ -51599,7 +51710,7 @@ var FileWatcher = class {
   /**
    * Diff old and new fixes to generate granular events
    */
-  diffFixes(oldData, newData) {
+  diffFixes(repoId, oldData, newData) {
     const events = [];
     const timestamp = (/* @__PURE__ */ new Date()).toISOString();
     const oldFixes = oldData?.fixes || [];
@@ -51609,6 +51720,7 @@ var FileWatcher = class {
       if (!oldFix) {
         events.push({
           eventType: "fix:created",
+          repoId,
           fixId: newFix.id,
           timestamp,
           fix: newFix
@@ -51618,6 +51730,7 @@ var FileWatcher = class {
       if (oldFix.status !== newFix.status) {
         events.push({
           eventType: "fix:updated",
+          repoId,
           fixId: newFix.id,
           timestamp,
           fix: newFix,
@@ -51635,6 +51748,7 @@ var FileWatcher = class {
         if (!oldTask) {
           events.push({
             eventType: "fix:task:added",
+            repoId,
             fixId: newFix.id,
             timestamp,
             task: newTask
@@ -51646,6 +51760,7 @@ var FileWatcher = class {
           if (oldTask.status !== "completed" && newTask.status === "completed") {
             events.push({
               eventType: "fix:task:completed",
+              repoId,
               fixId: newFix.id,
               timestamp,
               task: newTask
@@ -51653,6 +51768,7 @@ var FileWatcher = class {
           } else {
             events.push({
               eventType: "fix:task:updated",
+              repoId,
               fixId: newFix.id,
               timestamp,
               task: newTask,
@@ -54470,7 +54586,7 @@ ${exampleSections.join("\n\n")}`;
 };
 
 // packages/tiny-brain-mcp/src/storage/platform-path-builder.ts
-import * as os2 from "os";
+import * as os3 from "os";
 import * as path16 from "path";
 var PlatformPathBuilder = class {
   /**
@@ -54481,7 +54597,7 @@ var PlatformPathBuilder = class {
       case "project":
         return ".mcp.json";
       case "user":
-        return path16.join(os2.homedir(), ".config", "claude", "mcp.json");
+        return path16.join(os3.homedir(), ".config", "claude", "mcp.json");
       case "local":
       default:
         return ".mcp.json";
@@ -54491,44 +54607,44 @@ var PlatformPathBuilder = class {
    * Get Claude Desktop configuration file path (OS-specific)
    */
   getClaudeDesktopConfig() {
-    const platform2 = os2.platform();
+    const platform2 = os3.platform();
     switch (platform2) {
       case "darwin":
         return path16.join(
-          os2.homedir(),
+          os3.homedir(),
           "Library",
           "Application Support",
           "Claude",
           "claude_desktop_config.json"
         );
       case "win32": {
-        const appData = process.env.APPDATA || path16.join(os2.homedir(), "AppData", "Roaming");
+        const appData = process.env.APPDATA || path16.join(os3.homedir(), "AppData", "Roaming");
         return path16.join(appData, "Claude", "claude_desktop_config.json");
       }
       default:
-        return path16.join(os2.homedir(), ".config", "Claude", "claude_desktop_config.json");
+        return path16.join(os3.homedir(), ".config", "Claude", "claude_desktop_config.json");
     }
   }
   /**
    * Get Cursor IDE configuration file path
    */
   getCursorConfig() {
-    return path16.join(os2.homedir(), ".cursor", "mcp", "config.json");
+    return path16.join(os3.homedir(), ".cursor", "mcp", "config.json");
   }
   /**
    * Get ChatGPT Desktop configuration file path
    */
   getChatGPTConfig() {
-    const platform2 = os2.platform();
+    const platform2 = os3.platform();
     switch (platform2) {
       case "darwin":
-        return path16.join(os2.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
+        return path16.join(os3.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
       case "win32": {
-        const appData = process.env.APPDATA || path16.join(os2.homedir(), "AppData", "Roaming");
+        const appData = process.env.APPDATA || path16.join(os3.homedir(), "AppData", "Roaming");
         return path16.join(appData, "ChatGPT", "config.json");
       }
       default:
-        return path16.join(os2.homedir(), ".config", "ChatGPT", "config.json");
+        return path16.join(os3.homedir(), ".config", "ChatGPT", "config.json");
     }
   }
   /**
@@ -54552,7 +54668,7 @@ var PlatformPathBuilder = class {
    * Normalize path for the current platform
    */
   normalizePathForPlatform(filePath) {
-    if (os2.platform() === "win32") {
+    if (os3.platform() === "win32") {
       return filePath.replace(/\//g, "\\");
     }
     return filePath;
@@ -54561,7 +54677,7 @@ var PlatformPathBuilder = class {
    * Get backup directory for platform configs
    */
   getBackupDirectory() {
-    return path16.join(os2.homedir(), ".tiny-brain", "backups");
+    return path16.join(os3.homedir(), ".tiny-brain", "backups");
   }
 };
 
@@ -60539,7 +60655,7 @@ function startupLog(message, data) {
   try {
     let dataDir = process.env.DATADIR || process.env.TINY_BRAIN_DATA_DIR || "~/.tiny-brain";
     if (dataDir.startsWith("~")) {
-      dataDir = join25(homedir4(), dataDir.slice(1));
+      dataDir = join25(homedir5(), dataDir.slice(1));
     }
     const logPath = join25(dataDir, "debug.log");
     if (!existsSync12(dataDir)) {
