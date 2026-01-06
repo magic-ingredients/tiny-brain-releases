@@ -19206,10 +19206,12 @@ async function applyFeatureUpdate(plan, update, bulkChanges) {
   }
 }
 function calculateCurrentState(plan) {
-  const completedFeatures = plan.features.filter((f) => f.status === "completed").length;
+  const isTaskDone = (status) => status === "completed" || status === "superseded";
+  const isFeatureDone = (status) => status === "completed" || status === "superseded";
+  const completedFeatures = plan.features.filter((f) => isFeatureDone(f.status)).length;
   const totalFeatures = plan.features.length;
   const completedTasks = plan.features.reduce(
-    (sum, feature) => sum + feature.tasks.filter((t) => t.status === "completed").length,
+    (sum, feature) => sum + feature.tasks.filter((t) => isTaskDone(t.status)).length,
     0
   );
   const totalTasks = plan.features.reduce((sum, feature) => sum + feature.tasks.length, 0);
@@ -19219,7 +19221,7 @@ function calculateCurrentState(plan) {
   const currentFeatureTitle = currentFeature?.title || "";
   let nextAction;
   if (currentFeature) {
-    const nextTask = currentFeature.tasks.find((t) => t.status !== "completed");
+    const nextTask = currentFeature.tasks.find((t) => !isTaskDone(t.status));
     if (nextTask) {
       nextAction = {
         featureId: currentFeature.id,
@@ -27208,19 +27210,21 @@ var init_planning_service = __esm({
           const progressDir = path2.join(repoRoot, ".tiny-brain", "progress");
           await fs.mkdir(progressDir, { recursive: true });
           const progressFilePath = path2.join(progressDir, `${planName}.json`);
+          const isTaskDone = (status) => status === "completed" || status === "superseded";
+          const isFeatureDone = (status) => status === "completed" || status === "superseded";
           const features = plan.features || [];
           const totalFeatures = features.length;
-          const completedFeatures = features.filter((f) => f.status === "completed").length;
+          const completedFeatures = features.filter((f) => isFeatureDone(f.status)).length;
           const totalTasks = features.reduce((sum, f) => sum + (f.tasks?.length || 0), 0);
           const completedTasks = features.reduce(
-            (sum, f) => sum + (f.tasks?.filter((t) => t.status === "completed").length || 0),
+            (sum, f) => sum + (f.tasks?.filter((t) => isTaskDone(t.status)).length || 0),
             0
           );
           const percentComplete = totalTasks > 0 ? Math.round(completedTasks / totalTasks * 100) : 0;
-          const pendingFeatures = features.filter((f) => f.status !== "completed").map((f) => f.title);
-          const currentFeature = features.find((f) => f.status !== "completed");
-          const currentFeatureTasks = currentFeature?.tasks?.filter((t) => t.status !== "completed").length || 0;
-          const futureFeatureTasks = features.filter((f) => f !== currentFeature && f.status !== "completed").reduce((sum, f) => sum + (f.tasks?.filter((t) => t.status !== "completed").length || 0), 0);
+          const pendingFeatures = features.filter((f) => !isFeatureDone(f.status)).map((f) => f.title);
+          const currentFeature = features.find((f) => !isFeatureDone(f.status));
+          const currentFeatureTasks = currentFeature?.tasks?.filter((t) => !isTaskDone(t.status)).length || 0;
+          const futureFeatureTasks = features.filter((f) => f !== currentFeature && !isFeatureDone(f.status)).reduce((sum, f) => sum + (f.tasks?.filter((t) => !isTaskDone(t.status)).length || 0), 0);
           const progressData = {
             id: planName,
             title: plan.title,
@@ -27538,10 +27542,12 @@ var init_planning_service = __esm({
        * This mirrors the logic from plan-updater.ts
        */
       calculateCurrentState(plan) {
-        const completedFeatures = plan.features.filter((f) => f.status === "completed").length;
+        const isTaskDone = (status) => status === "completed" || status === "superseded";
+        const isFeatureDone = (status) => status === "completed" || status === "superseded";
+        const completedFeatures = plan.features.filter((f) => isFeatureDone(f.status)).length;
         const totalFeatures = plan.features.length;
         const completedTasks = plan.features.reduce(
-          (sum, feature) => sum + feature.tasks.filter((t) => t.status === "completed").length,
+          (sum, feature) => sum + feature.tasks.filter((t) => isTaskDone(t.status)).length,
           0
         );
         const totalTasks = plan.features.reduce((sum, feature) => sum + feature.tasks.length, 0);
@@ -27551,7 +27557,7 @@ var init_planning_service = __esm({
         const currentFeatureTitle = currentFeature?.title || "";
         let nextAction;
         if (currentFeature) {
-          const nextTask = currentFeature.tasks.find((t) => t.status !== "completed");
+          const nextTask = currentFeature.tasks.find((t) => !isTaskDone(t.status));
           if (nextTask) {
             nextAction = {
               featureId: currentFeature.id,
@@ -50558,6 +50564,85 @@ function createSettingsRoutes(bridge) {
 // packages/tiny-brain-dashboard/server/routes/repos.routes.ts
 import { readdir as readdir6, readFile as readFile7 } from "fs/promises";
 import { join as join12 } from "path";
+function parseTasksFromMarkdown(content) {
+  const tasks = [];
+  const taskRegex = /###\s+(\d+)\.\s+([^\n]+)\n([\s\S]*?)(?=###\s+\d+\.|## |$)/g;
+  let match3;
+  while ((match3 = taskRegex.exec(content)) !== null) {
+    const taskNumber = parseInt(match3[1], 10);
+    const taskTitle = match3[2].trim();
+    const taskBody = match3[3].trim();
+    const filesToModify = [];
+    const modifyMatch = taskBody.match(/\*\*Files to modify:?\*\*\s*\n((?:- [^\n]+\n?)+)/i);
+    if (modifyMatch) {
+      const fileLines = modifyMatch[1].match(/- `([^`]+)`/g);
+      if (fileLines) {
+        fileLines.forEach((line) => {
+          const fileMatch = line.match(/- `([^`]+)`/);
+          if (fileMatch) filesToModify.push(fileMatch[1]);
+        });
+      }
+    }
+    const filesToCreate = [];
+    const createMatch = taskBody.match(/\*\*Files to (?:create|modify\/create):?\*\*\s*\n((?:- [^\n]+\n?)+)/i);
+    if (createMatch) {
+      const fileLines = createMatch[1].match(/- `([^`]+)`/g);
+      if (fileLines) {
+        fileLines.forEach((line) => {
+          const fileMatch = line.match(/- `([^`]+)`/);
+          if (fileMatch) filesToCreate.push(fileMatch[1]);
+        });
+      }
+    }
+    const expectedChanges = [];
+    const changesMatch = taskBody.match(/\*\*Expected changes:?\*\*\s*\n((?:- [^\n]+\n?)+)/i);
+    if (changesMatch) {
+      const changeLines = changesMatch[1].split("\n").filter((l) => l.startsWith("-"));
+      changeLines.forEach((line) => {
+        const change = line.replace(/^-\s*/, "").trim();
+        if (change) expectedChanges.push(change);
+      });
+    }
+    let description = taskBody;
+    const firstSectionIndex = taskBody.search(/\*\*Files|`\*\*Expected/i);
+    if (firstSectionIndex > 0) {
+      description = taskBody.substring(0, firstSectionIndex).trim();
+    }
+    tasks.push({
+      id: `task-${taskNumber}`,
+      number: taskNumber,
+      title: taskTitle,
+      description,
+      filesToModify: filesToModify.length > 0 ? filesToModify : void 0,
+      filesToCreate: filesToCreate.length > 0 ? filesToCreate : void 0,
+      expectedChanges: expectedChanges.length > 0 ? expectedChanges : void 0
+    });
+  }
+  return tasks;
+}
+function parseFeatureMarkdown(content) {
+  const frontmatter = parseFrontmatter(content);
+  const descMatch = content.match(/## Description\s*\n\n([\s\S]*?)(?=\n## )/);
+  const description = descMatch ? descMatch[1].trim() : void 0;
+  const acceptanceCriteria = [];
+  const criteriaMatch = content.match(/## Acceptance Criteria\s*\n\n([\s\S]*?)(?=\n## )/);
+  if (criteriaMatch) {
+    const criteriaLines = criteriaMatch[1].split("\n").filter((l) => l.startsWith("-"));
+    criteriaLines.forEach((line) => {
+      const criteria = line.replace(/^-\s*/, "").trim();
+      if (criteria) acceptanceCriteria.push(criteria);
+    });
+  }
+  const tasks = parseTasksFromMarkdown(content);
+  return {
+    id: frontmatter.id || "",
+    title: frontmatter.title || "",
+    description,
+    acceptanceCriteria: acceptanceCriteria.length > 0 ? acceptanceCriteria : void 0,
+    tasks,
+    rawContent: content
+  };
+}
 function parseFrontmatter(content) {
   const match3 = content.match(/^---\s*\n([\s\S]*?)\n---/);
   if (!match3) return {};
@@ -50594,6 +50679,37 @@ function createRepoRoutes(bridge) {
       return c.json({ repo });
     } catch (error2) {
       const message = error2 instanceof Error ? error2.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
+  app.get("/:repoId/plans/:planId/features/:featureId", async (c) => {
+    try {
+      const repoId = c.req.param("repoId");
+      const planId = c.req.param("planId");
+      const featureId = c.req.param("featureId");
+      console.log("[Feature API] Request:", { repoId, planId, featureId });
+      const repo = await bridge.repoConfig.getRepo(repoId);
+      if (!repo) {
+        console.log("[Feature API] Repository not found:", repoId);
+        return c.json({ error: "Repository not found" }, 404);
+      }
+      const featurePath = join12(repo.path, "docs", "prd", planId, "features", `${featureId}.md`);
+      console.log("[Feature API] Looking for file:", featurePath);
+      try {
+        const content = await readFile7(featurePath, "utf-8");
+        const feature = parseFeatureMarkdown(content);
+        console.log("[Feature API] Success - found", feature.tasks.length, "tasks");
+        return c.json({ feature });
+      } catch (err) {
+        if (err.code === "ENOENT") {
+          console.log("[Feature API] Feature file not found:", featurePath);
+          return c.json({ error: "Feature not found" }, 404);
+        }
+        throw err;
+      }
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : "Unknown error";
+      console.log("[Feature API] Error:", message);
       return c.json({ error: message }, 500);
     }
   });
