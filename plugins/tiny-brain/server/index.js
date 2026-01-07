@@ -32519,7 +32519,7 @@ var init_config_service = __esm({
         if (!this.context.repositoryRoot) {
           throw new Error("Cannot save repo config: not in a repository");
         }
-        const { writeFile: writeFile4, mkdir: mkdir5 } = await import("fs/promises");
+        const { writeFile: writeFile5, mkdir: mkdir5 } = await import("fs/promises");
         const configPath = join2(this.context.repositoryRoot, REPO_CONFIG_PATH);
         const configDir = join2(this.context.repositoryRoot, ".tiny-brain");
         const existing = await this.loadRepoConfig();
@@ -32540,7 +32540,7 @@ var init_config_service = __esm({
           version: CONFIG_VERSION2,
           preferences: merged
         };
-        await writeFile4(configPath, JSON.stringify(config2, null, 2), "utf-8");
+        await writeFile5(configPath, JSON.stringify(config2, null, 2), "utf-8");
       }
       /**
        * Create default config
@@ -51405,23 +51405,46 @@ var FileWatcher = class {
     if (!this.plansCache.has(repoId)) {
       this.plansCache.set(repoId, /* @__PURE__ */ new Map());
     }
-    const prdPath = path13.join(repoPath, ".tiny-brain/progress");
-    this.context.logger.info(`[FileWatcher] Checking PRD path: ${prdPath} exists: ${fs13.existsSync(prdPath)}`);
-    if (fs13.existsSync(prdPath)) {
+    const tinyBrainPath = path13.join(repoPath, ".tiny-brain");
+    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs13.existsSync(tinyBrainPath)}`);
+    if (fs13.existsSync(tinyBrainPath)) {
       try {
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
-          this.context.logger.info(`[FileWatcher] PRD change detected in ${repoId}: ${change.type} ${change.relativePath}`);
-          this.handleFileChange(repoId, change);
+          if (change.relativePath.startsWith("progress/") || change.relativePath.startsWith("progress\\")) {
+            this.context.logger.info(`[FileWatcher] PRD change detected in ${repoId}: ${change.type} ${change.relativePath}`);
+            this.handleFileChange(repoId, change);
+          }
         });
-        await watchers.prdWatcher.start(prdPath, {
+        await watchers.prdWatcher.start(tinyBrainPath, {
           pollInterval: 1e3,
-          recursive: false,
-          fileFilter: (filePath) => filePath.endsWith(".json")
+          recursive: true,
+          // Watch recursively to detect progress/ directory creation
+          fileFilter: (filePath) => filePath.endsWith(".json") && filePath.includes("progress")
         });
-        this.context.logger.info(`[FileWatcher] PRD watcher started for repo ${repoId}: ${prdPath}`);
+        this.context.logger.info(`[FileWatcher] PRD watcher started for repo ${repoId}: ${tinyBrainPath}`);
       } catch (error2) {
         this.context.logger.error(`[FileWatcher] Failed to start PRD watcher for ${repoId}:`, error2);
+      }
+    } else {
+      try {
+        await fs13.promises.mkdir(tinyBrainPath, { recursive: true });
+        this.context.logger.info(`[FileWatcher] Created .tiny-brain directory for repo ${repoId}`);
+        watchers.prdWatcher = new FileWatcherService(this.context.logger);
+        watchers.prdWatcher.on("change", (change) => {
+          if (change.relativePath.startsWith("progress/") || change.relativePath.startsWith("progress\\")) {
+            this.context.logger.info(`[FileWatcher] PRD change detected in ${repoId}: ${change.type} ${change.relativePath}`);
+            this.handleFileChange(repoId, change);
+          }
+        });
+        await watchers.prdWatcher.start(tinyBrainPath, {
+          pollInterval: 1e3,
+          recursive: true,
+          fileFilter: (filePath) => filePath.endsWith(".json") && filePath.includes("progress")
+        });
+        this.context.logger.info(`[FileWatcher] PRD watcher started for repo ${repoId}: ${tinyBrainPath}`);
+      } catch (error2) {
+        this.context.logger.error(`[FileWatcher] Failed to create .tiny-brain and start PRD watcher for ${repoId}:`, error2);
       }
     }
     const fixesPath = path13.join(repoPath, ".tiny-brain/fixes");
@@ -57014,7 +57037,7 @@ init_src();
 import { fileURLToPath as fileURLToPath8 } from "url";
 import { dirname as dirname10, join as join23 } from "path";
 import { existsSync as existsSync10 } from "fs";
-import { mkdir as mkdir4, copyFile, readFile as readFile10, readdir as readdir8, chmod as chmod2, stat as stat2 } from "fs/promises";
+import { mkdir as mkdir4, copyFile, readFile as readFile10, readdir as readdir8, chmod as chmod2, stat as stat2, writeFile as writeFile4 } from "fs/promises";
 
 // packages/tiny-brain-mcp/src/utils/package-version.ts
 import { readFileSync as readFileSync3 } from "fs";
@@ -57055,6 +57078,7 @@ var AnalyseService = class {
     const adrInitialized = await this.initializeADRSkill();
     const qualityInitialized = await this.initializeQualitySkill();
     const gitHooksInstalled = await this.initializeGitHooks();
+    const skillPermissionsAdded = await this.injectSkillPermissions();
     const existingContent = await this.repoService.readRepoBlockFromContextFile(contextPath);
     const isInitialized = existingContent ? this.repoService.isRepoInitialized(existingContent) : false;
     const currentVersion = getPackageVersion();
@@ -57080,7 +57104,8 @@ var AnalyseService = class {
         qualityInitialized,
         gitHooksInstalled,
         contextBlockVersion,
-        contextBlockUpdated
+        contextBlockUpdated,
+        skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0
       };
     }
     const previousAnalysis = existingContent ? this.repoService.extractTBStatus(existingContent) : null;
@@ -57099,7 +57124,8 @@ var AnalyseService = class {
         qualityInitialized,
         gitHooksInstalled,
         contextBlockVersion,
-        contextBlockUpdated
+        contextBlockUpdated,
+        skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0
       };
     }
     const techStackDiff = this.repoService.compareTechStack(previousAnalysis, currentAnalysis);
@@ -57118,7 +57144,8 @@ var AnalyseService = class {
         qualityInitialized,
         gitHooksInstalled,
         contextBlockVersion,
-        contextBlockUpdated
+        contextBlockUpdated,
+        skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0
       };
     }
     this.context.logger.info(`Tech stack changes detected: +${techStackDiff.added.length} -${techStackDiff.removed.length}`);
@@ -57142,7 +57169,8 @@ var AnalyseService = class {
         agentsSuggestedNew: [],
         // Agents are now handled by TBR service
         agentsSuggestedRemove: []
-      }
+      },
+      skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0
     };
   }
   /**
@@ -57414,6 +57442,63 @@ var AnalyseService = class {
     }
   }
   /**
+   * Inject skill permissions into .claude/settings.json
+   * These permissions allow skills to read/write to specific directories without prompts
+   * @returns Array of permissions that were added (empty if none added)
+   */
+  async injectSkillPermissions() {
+    const SKILL_PERMISSIONS = [
+      "Write(.tiny-brain/**)",
+      "Write(docs/prd/**)",
+      "Write(docs/adr/**)",
+      "Write(docs/quality/**)",
+      "Read(.tiny-brain/**)",
+      "Read(docs/prd/**)",
+      "Read(docs/adr/**)",
+      "Read(docs/quality/**)",
+      "Read(.claude/skills/**/templates/**)"
+    ];
+    try {
+      const repoRoot = process.cwd();
+      const settingsDir = join23(repoRoot, ".claude");
+      const settingsPath = join23(settingsDir, "settings.json");
+      await mkdir4(settingsDir, { recursive: true });
+      let settings = {};
+      if (existsSync10(settingsPath)) {
+        try {
+          const content = await readFile10(settingsPath, "utf-8");
+          settings = JSON.parse(content);
+        } catch {
+          this.context.logger.warn("Failed to parse existing settings.json, will create new one");
+          settings = {};
+        }
+      }
+      if (!settings.permissions) {
+        settings.permissions = {};
+      }
+      const permissions = settings.permissions;
+      if (!Array.isArray(permissions.allow)) {
+        permissions.allow = [];
+      }
+      const allowList = permissions.allow;
+      const addedPermissions = [];
+      for (const perm of SKILL_PERMISSIONS) {
+        if (!allowList.includes(perm)) {
+          allowList.push(perm);
+          addedPermissions.push(perm);
+        }
+      }
+      if (addedPermissions.length > 0) {
+        await writeFile4(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+        this.context.logger.info(`Added ${addedPermissions.length} skill permissions to .claude/settings.json`);
+      }
+      return addedPermissions;
+    } catch (error2) {
+      this.context.logger.warn(`Failed to inject skill permissions: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
+      return [];
+    }
+  }
+  /**
    * Get installed skills with their versions from .claude/skills/
    * @returns Array of installed skills with name and version
    */
@@ -57548,6 +57633,10 @@ var AnalyseService = class {
       if (result.gitHooksInstalled) {
         lines.push("\n\u{1FA9D} Git Hooks: Installed");
         lines.push("  TDD workflow hooks in .git/hooks/");
+      }
+      if (result.skillPermissionsAdded && result.skillPermissionsAdded.length > 0) {
+        lines.push("\n\u{1F510} Skill Permissions: Added to .claude/settings.json");
+        lines.push(`  ${result.skillPermissionsAdded.length} permissions added for skill file operations`);
       }
       lines.push("\n\u{1F916} Current Agents:");
       if (result.currentAgents && result.currentAgents.length > 0) {

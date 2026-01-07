@@ -19337,23 +19337,46 @@ var FileWatcher = class {
     if (!this.plansCache.has(repoId)) {
       this.plansCache.set(repoId, /* @__PURE__ */ new Map());
     }
-    const prdPath = path11.join(repoPath, ".tiny-brain/progress");
-    this.context.logger.info(`[FileWatcher] Checking PRD path: ${prdPath} exists: ${fs10.existsSync(prdPath)}`);
-    if (fs10.existsSync(prdPath)) {
+    const tinyBrainPath = path11.join(repoPath, ".tiny-brain");
+    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs10.existsSync(tinyBrainPath)}`);
+    if (fs10.existsSync(tinyBrainPath)) {
       try {
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
-          this.context.logger.info(`[FileWatcher] PRD change detected in ${repoId}: ${change.type} ${change.relativePath}`);
-          this.handleFileChange(repoId, change);
+          if (change.relativePath.startsWith("progress/") || change.relativePath.startsWith("progress\\")) {
+            this.context.logger.info(`[FileWatcher] PRD change detected in ${repoId}: ${change.type} ${change.relativePath}`);
+            this.handleFileChange(repoId, change);
+          }
         });
-        await watchers.prdWatcher.start(prdPath, {
+        await watchers.prdWatcher.start(tinyBrainPath, {
           pollInterval: 1e3,
-          recursive: false,
-          fileFilter: (filePath) => filePath.endsWith(".json")
+          recursive: true,
+          // Watch recursively to detect progress/ directory creation
+          fileFilter: (filePath) => filePath.endsWith(".json") && filePath.includes("progress")
         });
-        this.context.logger.info(`[FileWatcher] PRD watcher started for repo ${repoId}: ${prdPath}`);
+        this.context.logger.info(`[FileWatcher] PRD watcher started for repo ${repoId}: ${tinyBrainPath}`);
       } catch (error) {
         this.context.logger.error(`[FileWatcher] Failed to start PRD watcher for ${repoId}:`, error);
+      }
+    } else {
+      try {
+        await fs10.promises.mkdir(tinyBrainPath, { recursive: true });
+        this.context.logger.info(`[FileWatcher] Created .tiny-brain directory for repo ${repoId}`);
+        watchers.prdWatcher = new FileWatcherService(this.context.logger);
+        watchers.prdWatcher.on("change", (change) => {
+          if (change.relativePath.startsWith("progress/") || change.relativePath.startsWith("progress\\")) {
+            this.context.logger.info(`[FileWatcher] PRD change detected in ${repoId}: ${change.type} ${change.relativePath}`);
+            this.handleFileChange(repoId, change);
+          }
+        });
+        await watchers.prdWatcher.start(tinyBrainPath, {
+          pollInterval: 1e3,
+          recursive: true,
+          fileFilter: (filePath) => filePath.endsWith(".json") && filePath.includes("progress")
+        });
+        this.context.logger.info(`[FileWatcher] PRD watcher started for repo ${repoId}: ${tinyBrainPath}`);
+      } catch (error) {
+        this.context.logger.error(`[FileWatcher] Failed to create .tiny-brain and start PRD watcher for ${repoId}:`, error);
       }
     }
     const fixesPath = path11.join(repoPath, ".tiny-brain/fixes");

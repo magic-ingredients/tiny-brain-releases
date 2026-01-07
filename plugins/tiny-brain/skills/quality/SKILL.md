@@ -2,7 +2,7 @@
 name: quality
 version: 1.0.0
 description: Run comprehensive code quality analysis on the repository. Performs weighted scoring across 8 categories using specialist agents.
-allowed-tools: Read, mcp__plugin_tiny-brain_mcp__quality
+allowed-tools: Read, Write, Bash(mkdir:*), mcp__plugin_tiny-brain_mcp__quality
 ---
 
 # Quality Analysis Skill

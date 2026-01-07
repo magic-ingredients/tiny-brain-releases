@@ -2,6 +2,7 @@
 name: adr
 version: 1.0.0
 description: Create an Architecture Decision Record. Use when making significant architectural or technical decisions that should be documented.
+allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*)
 ---
 
 # ADR Creation Skill

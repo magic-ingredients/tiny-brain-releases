@@ -2,6 +2,7 @@
 name: fix
 version: 1.0.0
 description: Create a fix document for bug tracking. Use when user reports a bug or wants to track a fix with full test plan.
+allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*)
 ---
 
 # Fix Creation Skill
@@ -222,6 +223,22 @@ Commits with `Fix:` and `Task:` headers are automatically tracked in `.tiny-brai
 - `test:` commits update `testCommitSha` and set status to `tested`
 - `fix:` commits update `commitSha` and set status to `completed`
 - `refactor:` commits update `refactorCommitSha`
+
+### Task Status Values
+
+When updating `.tiny-brain/fixes/progress.json` manually, use these statuses:
+
+| Status | When to Use | Requirements |
+|--------|-------------|--------------|
+| `defined` | Task created but not started | None |
+| `tested` | Tests written (RED phase) | `testCommitSha` required |
+| `completed` | Implementation done (GREEN phase) | `commitSha` required |
+| `superseded` | Task no longer needed (work done elsewhere or obsolete) | No commit required |
+
+**Important:**
+- `completed` MUST have a `commitSha` - this is how we verify work was done
+- `superseded` is for tasks that were resolved by other work (e.g., a refactoring that fixed multiple issues) or are no longer relevant
+- When marking a fix as `resolved`, all tasks should be either `completed` (with commit) or `superseded`
 
 ## Quality Checklist
 

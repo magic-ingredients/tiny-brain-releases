@@ -2,39 +2,61 @@
 
 AI-powered development workflows with TDD enforcement, planning, and quality tracking.
 
-## Features
-
-### Free Tier (Full Local Functionality)
-
-- **MCP Server** - Full Model Context Protocol integration
-- **Dashboard** - Real-time progress tracking and visualization
-- **Skills** - `/plan`, `/feature`, `/fix`, `/adr` commands
-- **Hooks** - TDD enforcement and dev enhancement hooks
-- **Agents** - Core bundled agents for development workflows
-
-### Pro Tier (Cloud Features)
-
-- **Cloud Sync** - Sync personas, agents, and skills across machines
-- **Quality Trends** - Historical quality analysis and regression alerts
-- **Cross-Machine History** - Access your work from anywhere
-- **Team Features** - Collaboration and shared configurations
-
 ## Installation
 
 ```bash
-# 1. Add the tiny-brain marketplace (once)
-/plugin marketplace add https://github.com/magic-ingredients/tiny-brain-releases
+# 1. Add the marketplace (once)
+/plugin marketplace add magic-ingredients/tiny-brain-releases
 
 # 2. Install the plugin
-/plugin install tiny-brain@magic-ingredients
+/plugin install tiny-brain@tiny-brain-marketplace
 ```
 
-### Alternative Installation
+## What's Included
 
-```bash
-# Via npm (for CLI usage)
-npm install -g @magic-ingredients/tiny-brain-plugin
-```
+### Skills (5)
+
+| Skill | Command | Description |
+|-------|---------|-------------|
+| Plan | `/plan` | Create Product Requirements Documents with features and tasks |
+| Feature | `/feature` | Add features to an existing PRD |
+| Fix | `/fix` | Document and track bug fixes with TDD workflow |
+| ADR | `/adr` | Create Architecture Decision Records |
+| Quality | `/quality` | Run comprehensive code quality analysis |
+
+### Agents (8)
+
+| Agent | Description |
+|-------|-------------|
+| `tiny-brain:developer` | TDD workflow specialist for phased development |
+| `tiny-brain:planner` | PRD and feature planning specialist |
+| `tiny-brain:reviewer` | Code review and quality feedback (read-only) |
+| `tiny-brain:architect` | System design, ADRs, and technical decisions |
+| `tiny-brain:tdd-validator` | TDD compliance validation and enforcement |
+| `tiny-brain:security-reviewer` | Security analysis and vulnerability detection |
+| `tiny-brain:performance-engineer` | Performance optimization and analysis |
+| `tiny-brain:quality-coordinator` | Orchestrates quality analysis across categories |
+
+### MCP Tools
+
+- **Persona Management** - Switch contexts, manage personas, sync with cloud
+- **Repository Analysis** - Detect tech stack, recommend agents
+- **Planning Tools** - PRD creation, feature management, progress tracking
+- **Quality Tools** - Save and retrieve quality analysis results
+- **Rules Management** - Configure golden rules across personas
+
+### Hooks
+
+- **TDD Enforcement** - Validates commit messages follow TDD phases (test/feat/refactor)
+- **Pre-commit Checks** - Runs typecheck, lint, and tests based on commit type
+
+### Dashboard
+
+Real-time visualization of:
+- PRD progress and feature status
+- Fix tracking and task completion
+- Quality analysis trends
+- Agent and skill inventory
 
 ## Quick Start
 
@@ -42,7 +64,7 @@ npm install -g @magic-ingredients/tiny-brain-plugin
    ```
    /analyse
    ```
-   This detects your tech stack and recommends agents.
+   Detects your tech stack and recommends agents to install.
 
 2. **Create a PRD**
    ```
@@ -50,66 +72,59 @@ npm install -g @magic-ingredients/tiny-brain-plugin
    ```
    Interactively plan a new feature or product.
 
-3. **Add features**
+3. **Run quality analysis**
    ```
-   /feature
+   /quality
    ```
-   Add features to an existing PRD.
+   Comprehensive code quality check across 8 categories.
 
-4. **Track fixes**
-   ```
-   /fix
-   ```
-   Document and track bug fixes with TDD workflow.
+## TDD Workflow
 
-## Skills
+Tiny Brain enforces Test-Driven Development through commit tracking:
 
-| Skill | Description |
-|-------|-------------|
-| `/plan` | Create Product Requirements Documents |
-| `/feature` | Add features to existing PRDs |
-| `/fix` | Track bug fixes with test plans |
-| `/adr` | Create Architecture Decision Records |
+| Phase | Commit Prefix | Description |
+|-------|---------------|-------------|
+| Red | `test:` | Write failing tests first |
+| Green | `feat:` | Implement to pass tests |
+| Refactor | `refactor:` | Clean up without changing behavior |
 
-## Dashboard
-
-Access the dashboard to visualize your progress:
-
-```bash
-# Opens automatically when using plan operations
-# Or manually:
-tiny-brain dashboard
-```
+Progress is automatically tracked in `.tiny-brain/progress/` files.
 
 ## Configuration
-
-### Activate Pro Features
-
-```
-/setup-pro
-```
-
-Follow the prompts to connect your account and enable cloud sync.
 
 ### Preferences
 
 ```bash
 # Enable auto-commit for progress tracking
-tiny-brain config preferences set autoCommitProgress true
+npx tiny-brain config preferences set autoCommitProgress true
 
 # Check current preferences
-tiny-brain config preferences list
+npx tiny-brain config preferences list
 ```
 
-## TDD Workflow
+### Managing the Plugin
 
-Tiny Brain enforces Test-Driven Development:
+```bash
+# Update to latest version
+/plugin update tiny-brain@tiny-brain-marketplace
 
-1. **Red Phase** (`test:` commits) - Write failing tests first
-2. **Green Phase** (`feat:` commits) - Implement to pass tests
-3. **Refactor Phase** (`refactor:` commits) - Clean up code
+# List installed plugins
+/plugin list
 
-Commits are automatically tracked in progress.json files.
+# Remove plugin
+/plugin uninstall tiny-brain
+```
+
+## Pro Features (Coming Soon)
+
+- Cloud sync for personas, agents, and skills
+- Quality trend analysis and regression alerts
+- Team collaboration features
+- Cross-machine history
+
+## Documentation
+
+Visit [github.com/magic-ingredients/tiny-brain-local](https://github.com/magic-ingredients/tiny-brain-local) for full documentation.
 
 ## License
 

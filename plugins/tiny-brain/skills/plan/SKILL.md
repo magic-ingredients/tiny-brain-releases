@@ -2,6 +2,7 @@
 name: plan
 version: 1.0.0
 description: Create a new PRD (Product Requirements Document). Use when user wants to plan a new feature, product, or initiative.
+allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*)
 ---
 
 # PRD Creation Skill

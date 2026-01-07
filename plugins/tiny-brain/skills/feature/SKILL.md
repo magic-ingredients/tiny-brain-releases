@@ -2,6 +2,7 @@
 name: feature
 version: 1.0.0
 description: Add a feature to an existing PRD. Use when user wants to add functionality to an existing product plan.
+allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*)
 ---
 
 # Feature Creation Skill
