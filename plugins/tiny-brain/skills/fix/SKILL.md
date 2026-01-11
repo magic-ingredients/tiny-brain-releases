@@ -51,8 +51,8 @@ id: fix-kebab-case-id
 title: Brief Description of the Fix
 status: investigating | in_progress | resolved
 severity: low | medium | high | critical
-reported: YYYY-MM-DD
-resolved: null
+reported: 2026-01-07T15:30:00.000Z  # Use new Date().toISOString()
+resolved: null  # Set to ISO timestamp when resolved
 ---
 ```
 

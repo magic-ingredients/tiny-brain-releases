@@ -3,7 +3,7 @@ id: fix-id-here
 title: Brief Description of the Fix
 status: investigating
 severity: medium
-reported: YYYY-MM-DD
+reported: YYYY-MM-DDTHH:MM:SS.sssZ
 resolved: null
 ---
 
