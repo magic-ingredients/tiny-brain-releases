@@ -1,10 +1,19 @@
 ---
 id: fix-id-here
 title: Brief Description of the Fix
-status: investigating
+status: documented
 severity: medium
 reported: YYYY-MM-DDTHH:MM:SS.sssZ
 resolved: null
+# When resolved, add:
+# resolution:
+#   rootCause: Brief description of what caused the issue
+#   fix:
+#     - First fix action taken
+#     - Second fix action taken
+#   filesModified:
+#     - path/to/file1.ts
+#     - path/to/file2.ts
 ---
 
 # Fix: [Title]
@@ -13,7 +22,7 @@ resolved: null
 
 **Reported:** [Date]
 **Severity:** [low | medium | high | critical]
-**Status:** [investigating | in_progress | resolved]
+**Status:** [documented | in_progress | resolved]
 
 ### Reproduction Steps
 1. Step to reproduce
@@ -54,6 +63,9 @@ resolved: null
 ## Tasks
 
 ### 1. Write failing test
+status: pending
+commitSha: null
+
 Add test that reproduces the bug.
 
 **Files to modify/create:**
@@ -64,6 +76,9 @@ Add test that reproduces the bug.
 - Test should pass after fix
 
 ### 2. Implement fix
+status: pending
+commitSha: null
+
 Fix the root cause.
 
 **Files to modify/create:**
@@ -74,6 +89,9 @@ Fix the root cause.
 - Ensure backward compatibility
 
 ### 3. Verify regression tests
+status: pending
+commitSha: null
+
 Run full test suite.
 
 **Expected outcome:**
@@ -83,11 +101,11 @@ Run full test suite.
 
 ## Resolution
 
-[Fill in after fix is complete]
-
-**Fix Commit:** [SHA]
-**Resolution Date:** [Date]
-**Verified By:** [Name or "automated tests"]
+When all tasks are complete, update the YAML frontmatter:
+1. Set `status: resolved`
+2. Set `resolved:` to ISO timestamp (e.g., `2026-01-21T15:30:00.000Z`)
+3. Add `resolution:` object with `rootCause`, `fix` (array), and `filesModified` (array)
+4. Run `npx tiny-brain sync-file .tiny-brain/fixes/{fix-id}.md`
 
 ## Lessons Learned
 

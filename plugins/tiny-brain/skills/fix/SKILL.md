@@ -49,7 +49,7 @@ Save to: `.tiny-brain/fixes/{fix-id}.md`
 ---
 id: fix-kebab-case-id
 title: Brief Description of the Fix
-status: investigating | in_progress | resolved
+status: documented
 severity: low | medium | high | critical
 reported: 2026-01-07T15:30:00.000Z  # Use new Date().toISOString()
 resolved: null  # Set to ISO timestamp when resolved
@@ -139,10 +139,13 @@ Fix the root cause.
 
 ### Step 7: Sync Progress
 
-After creating the fix document, call:
+After creating the fix document, sync it to progress.json:
+
+```bash
+npx tiny-brain sync-file .tiny-brain/fixes/{fix-id}.md
 ```
-plan sync
-```
+
+This updates `.tiny-brain/fixes/progress.json` with the fix tasks.
 
 ### Step 8: Confirm and Offer Implementation
 
@@ -258,6 +261,50 @@ When updating `.tiny-brain/fixes/progress.json` manually, use these statuses:
 - `superseded` is for tasks that were resolved by other work (e.g., a refactoring that fixed multiple issues) or are no longer relevant
 - When marking a fix as `resolved`, all tasks should be either `completed` (with commit) or `superseded`
 
+## Resolving a Fix
+
+When all tasks are complete (either `completed` with commit SHA or `superseded`), mark the fix as resolved:
+
+### Step 1: Update Frontmatter
+
+Edit the fix document's YAML frontmatter:
+
+```yaml
+---
+id: dashboard-sse-fix
+title: Dashboard SSE connection fails
+status: resolved  # Change from in_progress
+severity: medium
+reported: 2026-01-07T15:30:00.000Z
+resolved: 2026-01-21T15:30:00.000Z  # Add ISO timestamp
+resolution:
+  rootCause: The SSE endpoint path changed in v2.0 but the client was not updated
+  fix:
+    - Updated SSE client to use new endpoint path
+    - Added retry logic for connection failures
+    - Fixed timeout handling
+  filesModified:
+    - packages/dashboard/src/services/SSEClient.ts
+    - packages/dashboard/src/hooks/useSSE.ts
+---
+```
+
+### Step 2: Sync Progress
+
+Run sync-file to update progress.json:
+
+```bash
+npx tiny-brain sync-file .tiny-brain/fixes/{fix-id}.md
+```
+
+### Resolution Fields
+
+| Field | Description |
+|-------|-------------|
+| `rootCause` | Brief explanation of what caused the bug |
+| `fix` | Array of actions taken to fix the issue |
+| `filesModified` | Array of file paths that were changed |
+
 ## Quality Checklist
 
 - [ ] Root cause is clearly documented
@@ -282,7 +329,7 @@ Claude:
 3. Create:
    - .tiny-brain/fixes/dashboard-sse-endpoint-changed.md
    - Document root cause, test plan, fix tasks
-4. Call `plan sync`
+4. Run `npx tiny-brain sync-file .tiny-brain/fixes/dashboard-sse-endpoint-changed.md`
 5. Confirm: "Created fix document with 3 tasks"
 6. Ask: "Would you like me to implement this fix now?"
 

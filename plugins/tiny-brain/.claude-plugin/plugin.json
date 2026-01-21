@@ -1,6 +1,6 @@
 {
   "name": "tiny-brain",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "description": "AI-powered development workflows with TDD enforcement, planning, and quality tracking",
   "author": {
     "name": "Magic Ingredients",
