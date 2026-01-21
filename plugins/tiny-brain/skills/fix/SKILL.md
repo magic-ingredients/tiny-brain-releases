@@ -171,6 +171,24 @@ Description of changes...
 🤖 Generated with Claude Code
 ```
 
+**Multi-Task Fix Commits:**
+Related fix tasks that are naturally implemented together can be grouped in a single commit. Each task needs its own `Task:` header:
+
+```
+fix(dashboard): resolve SSE reconnection issues
+
+Fix: dashboard-sse-fix
+Task: Add retry logic
+Task: Fix timeout handling
+Task: Update error messages
+
+All SSE-related fixes implemented together...
+
+🤖 Generated with Claude Code
+```
+
+All tasks in the commit get the same commit SHA in progress tracking.
+
 ### TDD Phases
 
 | Phase | Commit Prefix | Description |

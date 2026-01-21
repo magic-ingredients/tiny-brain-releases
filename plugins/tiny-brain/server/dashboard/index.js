@@ -241,7 +241,7 @@ import { createServer as createServerHTTP } from "http";
 import { Http2ServerRequest as Http2ServerRequest2 } from "http2";
 import { Http2ServerRequest } from "http2";
 import { Readable } from "stream";
-import crypto from "crypto";
+import crypto2 from "crypto";
 var RequestError = class extends Error {
   constructor(message, options) {
     super(message, options);
@@ -527,13 +527,13 @@ function writeFromReadableStreamDefaultReader(reader, writable, currentReadPromi
     }
   }
 }
-function writeFromReadableStream(stream2, writable) {
-  if (stream2.locked) {
+function writeFromReadableStream(stream3, writable) {
+  if (stream3.locked) {
     throw new TypeError("ReadableStream is locked.");
   } else if (writable.destroyed) {
     return;
   }
-  return writeFromReadableStreamDefaultReader(stream2.getReader(), writable);
+  return writeFromReadableStreamDefaultReader(stream3.getReader(), writable);
 }
 var buildOutgoingHttpHeaders = (headers) => {
   const res = {};
@@ -557,7 +557,7 @@ var buildOutgoingHttpHeaders = (headers) => {
 var X_ALREADY_SENT = "x-hono-already-sent";
 var webFetch = global.fetch;
 if (typeof global.crypto === "undefined") {
-  global.crypto = crypto;
+  global.crypto = crypto2;
 }
 global.fetch = (info, init) => {
   init = {
@@ -655,7 +655,7 @@ var responseViaResponseObject = async (res, outgoing, options = {}) => {
         });
         if (!chunk2) {
           if (i === 1) {
-            await new Promise((resolve2) => setTimeout(resolve2));
+            await new Promise((resolve3) => setTimeout(resolve3));
             maxReadCount = 3;
             continue;
           }
@@ -915,26 +915,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path12) => {
-  const paths = path12.split("/");
+var splitPath = (path15) => {
+  const paths = path15.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path12 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path12);
+  const { groups, path: path15 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path15);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path12) => {
+var extractGroupsFromPath = (path15) => {
   const groups = [];
-  path12 = path12.replace(/\{[^}]+\}/g, (match3, index) => {
+  path15 = path15.replace(/\{[^}]+\}/g, (match3, index) => {
     const mark = `@${index}`;
     groups.push([mark, match3]);
     return mark;
   });
-  return { groups, path: path12 };
+  return { groups, path: path15 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -989,8 +989,8 @@ var getPath = (request) => {
     const charCode = url.charCodeAt(i);
     if (charCode === 37) {
       const queryIndex = url.indexOf("?", i);
-      const path12 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
-      return tryDecodeURI(path12.includes("%25") ? path12.replace(/%25/g, "%2525") : path12);
+      const path15 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
+      return tryDecodeURI(path15.includes("%25") ? path15.replace(/%25/g, "%2525") : path15);
     } else if (charCode === 63) {
       break;
     }
@@ -1007,11 +1007,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path12) => {
-  if (path12.charCodeAt(path12.length - 1) !== 63 || !path12.includes(":")) {
+var checkOptionalParameter = (path15) => {
+  if (path15.charCodeAt(path15.length - 1) !== 63 || !path15.includes(":")) {
     return null;
   }
-  const segments = path12.split("/");
+  const segments = path15.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -1152,9 +1152,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path12 = "/", matchResult = [[]]) {
+  constructor(request, path15 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path12;
+    this.path = path15;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -1890,8 +1890,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path12, ...handlers) => {
-      for (const p of [path12].flat()) {
+    this.on = (method, path15, ...handlers) => {
+      for (const p of [path15].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -1948,8 +1948,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path12, app) {
-    const subApp = this.basePath(path12);
+  route(path15, app) {
+    const subApp = this.basePath(path15);
     app.routes.map((r) => {
       let handler;
       if (app.errorHandler === errorHandler) {
@@ -1975,9 +1975,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path12) {
+  basePath(path15) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path12);
+    subApp._basePath = mergePath(this._basePath, path15);
     return subApp;
   }
   /**
@@ -2051,7 +2051,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path12, applicationHandler, options) {
+  mount(path15, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -2078,7 +2078,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path12);
+      const mergedPath = mergePath(this._basePath, path15);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -2093,14 +2093,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path12, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path15, "*"), handler);
     return this;
   }
-  #addRoute(method, path12, handler) {
+  #addRoute(method, path15, handler) {
     method = method.toUpperCase();
-    path12 = mergePath(this._basePath, path12);
-    const r = { basePath: this._basePath, path: path12, method, handler };
-    this.router.add(method, path12, [handler, r]);
+    path15 = mergePath(this._basePath, path15);
+    const r = { basePath: this._basePath, path: path15, method, handler };
+    this.router.add(method, path15, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -2113,10 +2113,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path12 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path12);
+    const path15 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path15);
     const c = new Context(request, {
-      path: path12,
+      path: path15,
       matchResult,
       env,
       executionCtx,
@@ -2216,7 +2216,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path12) {
+function match(method, path15) {
   const matchers = this.buildAllMatchers();
   const match22 = (method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -2232,7 +2232,7 @@ function match(method, path12) {
     return [matcher[1][index], match3];
   };
   this.match = match22;
-  return match22(method, path12);
+  return match22(method, path15);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -2347,12 +2347,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path12, index, pathErrorCheckOnly) {
+  insert(path15, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path12 = path12.replace(/\{[^}]+\}/g, (m) => {
+      path15 = path15.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -2363,7 +2363,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path12.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path15.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -2402,9 +2402,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path12) {
-  return wildcardRegExpCache[path12] ??= new RegExp(
-    path12 === "*" ? "" : `^${path12.replace(
+function buildWildcardRegExp(path15) {
+  return wildcardRegExpCache[path15] ??= new RegExp(
+    path15 === "*" ? "" : `^${path15.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -2426,17 +2426,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path12, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path15, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path12] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path15] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path12, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path15, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path12) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path15) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -2470,12 +2470,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path12) {
+function findMiddleware(middleware, path15) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path12)) {
+    if (buildWildcardRegExp(k).test(path15)) {
       return [...middleware[k]];
     }
   }
@@ -2489,7 +2489,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path12, handler) {
+  add(method, path15, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -2504,18 +2504,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path12 === "/*") {
-      path12 = "*";
+    if (path15 === "/*") {
+      path15 = "*";
     }
-    const paramCount = (path12.match(/\/:/g) || []).length;
-    if (/\*$/.test(path12)) {
-      const re = buildWildcardRegExp(path12);
+    const paramCount = (path15.match(/\/:/g) || []).length;
+    if (/\*$/.test(path15)) {
+      const re = buildWildcardRegExp(path15);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path12] ||= findMiddleware(middleware[m], path12) || findMiddleware(middleware[METHOD_NAME_ALL], path12) || [];
+          middleware[m][path15] ||= findMiddleware(middleware[m], path15) || findMiddleware(middleware[METHOD_NAME_ALL], path15) || [];
         });
       } else {
-        middleware[method][path12] ||= findMiddleware(middleware[method], path12) || findMiddleware(middleware[METHOD_NAME_ALL], path12) || [];
+        middleware[method][path15] ||= findMiddleware(middleware[method], path15) || findMiddleware(middleware[METHOD_NAME_ALL], path15) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -2533,7 +2533,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path12) || [path12];
+    const paths = checkOptionalParameter(path15) || [path15];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path22 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -2560,13 +2560,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path12) => [path12, r[method][path12]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path15) => [path15, r[method][path15]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path12) => [path12, r[METHOD_NAME_ALL][path12]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path15) => [path15, r[METHOD_NAME_ALL][path15]])
         );
       }
     });
@@ -2586,13 +2586,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path12, handler) {
+  add(method, path15, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path12, handler]);
+    this.#routes.push([method, path15, handler]);
   }
-  match(method, path12) {
+  match(method, path15) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -2607,7 +2607,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path12);
+        res = router.match(method, path15);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -2651,10 +2651,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path12, handler) {
+  insert(method, path15, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path12);
+    const parts = splitRoutingPath(path15);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -2705,12 +2705,12 @@ var Node2 = class _Node2 {
     }
     return handlerSets;
   }
-  search(method, path12) {
+  search(method, path15) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path12);
+    const parts = splitPath(path15);
     const curNodesQueue = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const part = parts[i];
@@ -2798,18 +2798,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path12, handler) {
-    const results = checkOptionalParameter(path12);
+  add(method, path15, handler) {
+    const results = checkOptionalParameter(path15);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path12, handler);
+    this.#node.insert(method, path15, handler);
   }
-  match(method, path12) {
-    return this.#node.search(method, path12);
+  match(method, path15) {
+    return this.#node.search(method, path15);
   }
 };
 
@@ -2996,29 +2996,29 @@ var ENCODINGS = {
   gzip: ".gz"
 };
 var ENCODINGS_ORDERED_KEYS = Object.keys(ENCODINGS);
-var createStreamBody = (stream2) => {
+var createStreamBody = (stream3) => {
   const body = new ReadableStream({
     start(controller) {
-      stream2.on("data", (chunk2) => {
+      stream3.on("data", (chunk2) => {
         controller.enqueue(chunk2);
       });
-      stream2.on("error", (err) => {
+      stream3.on("error", (err) => {
         controller.error(err);
       });
-      stream2.on("end", () => {
+      stream3.on("end", () => {
         controller.close();
       });
     },
     cancel() {
-      stream2.destroy();
+      stream3.destroy();
     }
   });
   return body;
 };
-var getStats = (path12) => {
+var getStats = (path15) => {
   let stats;
   try {
-    stats = statSync(path12);
+    stats = statSync(path15);
   } catch {
   }
   return stats;
@@ -3047,21 +3047,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path12 = join(
+    let path15 = join(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path12);
+    let stats = getStats(path15);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path12 = join(path12, indexFile);
-      stats = getStats(path12);
+      path15 = join(path15, indexFile);
+      stats = getStats(path15);
     }
     if (!stats) {
-      await options.onNotFound?.(path12, c);
+      await options.onNotFound?.(path15, c);
       return next();
     }
-    const mimeType = getMimeType(path12);
+    const mimeType = getMimeType(path15);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -3071,12 +3071,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path12 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path15 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path12 = path12 + ENCODINGS[encoding];
+          path15 = path15 + ENCODINGS[encoding];
           break;
         }
       }
@@ -3090,7 +3090,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path12)), 200);
+      result = c.body(createStreamBody(createReadStream(path15)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -3101,20 +3101,20 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream2 = createReadStream(path12, { start, end });
+      const stream3 = createReadStream(path15, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
-      result = c.body(createStreamBody(stream2), 206);
+      result = c.body(createStreamBody(stream3), 206);
     }
-    await options.onFound?.(path12, c);
+    await options.onFound?.(path15, c);
     return result;
   };
 };
 
 // packages/tiny-brain-dashboard/server/app.ts
-import path9 from "node:path";
+import path12 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
-import fs8 from "node:fs";
+import fs10 from "node:fs";
 
 // packages/tiny-brain-core/src/types/result.ts
 var ResultHelpers = {
@@ -3634,8 +3634,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path12, errorMaps, issueData } = params;
-  const fullPath = [...path12, ...issueData.path || []];
+  const { data, path: path15, errorMaps, issueData } = params;
+  const fullPath = [...path15, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -3751,11 +3751,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path12, key) {
+  constructor(parent, value, path15, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path12;
+    this._path = path15;
     this._key = key;
   }
   get path() {
@@ -5946,9 +5946,9 @@ var ZodUnion = class extends ZodType {
     return this._def.options;
   }
 };
-ZodUnion.create = (types2, params) => {
+ZodUnion.create = (types3, params) => {
   return new ZodUnion({
-    options: types2,
+    options: types3,
     typeName: ZodFirstPartyTypeKind.ZodUnion,
     ...processCreateParams(params)
   });
@@ -12250,10 +12250,10 @@ var Minipass = class extends EventEmitter {
    * Return a void Promise that resolves once the stream ends.
    */
   async promise() {
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       this.on(DESTROYED, () => reject(new Error("stream destroyed")));
       this.on("error", (er) => reject(er));
-      this.on("end", () => resolve2());
+      this.on("end", () => resolve3());
     });
   }
   /**
@@ -12277,7 +12277,7 @@ var Minipass = class extends EventEmitter {
         return Promise.resolve({ done: false, value: res });
       if (this[EOF])
         return stop();
-      let resolve2;
+      let resolve3;
       let reject;
       const onerr = (er) => {
         this.off("data", ondata);
@@ -12291,19 +12291,19 @@ var Minipass = class extends EventEmitter {
         this.off("end", onend);
         this.off(DESTROYED, ondestroy);
         this.pause();
-        resolve2({ value, done: !!this[EOF] });
+        resolve3({ value, done: !!this[EOF] });
       };
       const onend = () => {
         this.off("error", onerr);
         this.off("data", ondata);
         this.off(DESTROYED, ondestroy);
         stop();
-        resolve2({ done: true, value: void 0 });
+        resolve3({ done: true, value: void 0 });
       };
       const ondestroy = () => onerr(new Error("stream destroyed"));
       return new Promise((res2, rej) => {
         reject = rej;
-        resolve2 = res2;
+        resolve3 = res2;
         this.once(DESTROYED, ondestroy);
         this.once("error", onerr);
         this.once("end", onend);
@@ -12662,12 +12662,12 @@ var PathBase = class {
   /**
    * Get the Path object referenced by the string path, resolved from this Path
    */
-  resolve(path12) {
-    if (!path12) {
+  resolve(path15) {
+    if (!path15) {
       return this;
     }
-    const rootPath = this.getRootString(path12);
-    const dir = path12.substring(rootPath.length);
+    const rootPath = this.getRootString(path15);
+    const dir = path15.substring(rootPath.length);
     const dirParts = dir.split(this.splitSep);
     const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
     return result;
@@ -13271,9 +13271,9 @@ var PathBase = class {
     if (this.#asyncReaddirInFlight) {
       await this.#asyncReaddirInFlight;
     } else {
-      let resolve2 = () => {
+      let resolve3 = () => {
       };
-      this.#asyncReaddirInFlight = new Promise((res) => resolve2 = res);
+      this.#asyncReaddirInFlight = new Promise((res) => resolve3 = res);
       try {
         for (const e of await this.#fs.promises.readdir(fullpath, {
           withFileTypes: true
@@ -13286,7 +13286,7 @@ var PathBase = class {
         children.provisional = 0;
       }
       this.#asyncReaddirInFlight = void 0;
-      resolve2();
+      resolve3();
     }
     return children.slice(0, children.provisional);
   }
@@ -13419,8 +13419,8 @@ var PathWin32 = class _PathWin32 extends PathBase {
   /**
    * @internal
    */
-  getRootString(path12) {
-    return win32.parse(path12).root;
+  getRootString(path15) {
+    return win32.parse(path15).root;
   }
   /**
    * @internal
@@ -13466,8 +13466,8 @@ var PathPosix = class _PathPosix extends PathBase {
   /**
    * @internal
    */
-  getRootString(path12) {
-    return path12.startsWith("/") ? "/" : "";
+  getRootString(path15) {
+    return path15.startsWith("/") ? "/" : "";
   }
   /**
    * @internal
@@ -13516,8 +13516,8 @@ var PathScurryBase = class {
    *
    * @internal
    */
-  constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs11 = defaultFS } = {}) {
-    this.#fs = fsFromOption(fs11);
+  constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs13 = defaultFS } = {}) {
+    this.#fs = fsFromOption(fs13);
     if (cwd instanceof URL || cwd.startsWith("file://")) {
       cwd = fileURLToPath(cwd);
     }
@@ -13556,11 +13556,11 @@ var PathScurryBase = class {
   /**
    * Get the depth of a provided path, string, or the cwd
    */
-  depth(path12 = this.cwd) {
-    if (typeof path12 === "string") {
-      path12 = this.cwd.resolve(path12);
+  depth(path15 = this.cwd) {
+    if (typeof path15 === "string") {
+      path15 = this.cwd.resolve(path15);
     }
-    return path12.depth();
+    return path15.depth();
   }
   /**
    * Return the cache of child entries.  Exposed so subclasses can create
@@ -14047,9 +14047,9 @@ var PathScurryBase = class {
     process2();
     return results;
   }
-  chdir(path12 = this.cwd) {
+  chdir(path15 = this.cwd) {
     const oldCwd = this.cwd;
-    this.cwd = typeof path12 === "string" ? this.cwd.resolve(path12) : path12;
+    this.cwd = typeof path15 === "string" ? this.cwd.resolve(path15) : path15;
     this.cwd[setAsCwd](oldCwd);
   }
 };
@@ -14075,8 +14075,8 @@ var PathScurryWin32 = class extends PathScurryBase {
   /**
    * @internal
    */
-  newRoot(fs11) {
-    return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs11 });
+  newRoot(fs13) {
+    return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs13 });
   }
   /**
    * Return true if the provided path string is an absolute path
@@ -14104,8 +14104,8 @@ var PathScurryPosix = class extends PathScurryBase {
   /**
    * @internal
    */
-  newRoot(fs11) {
-    return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs11 });
+  newRoot(fs13) {
+    return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs13 });
   }
   /**
    * Return true if the provided path string is an absolute path
@@ -14405,8 +14405,8 @@ var MatchRecord = class {
   }
   // match, absolute, ifdir
   entries() {
-    return [...this.store.entries()].map(([path12, n]) => [
-      path12,
+    return [...this.store.entries()].map(([path15, n]) => [
+      path15,
       !!(n & 2),
       !!(n & 1)
     ]);
@@ -14611,9 +14611,9 @@ var GlobUtil = class {
   signal;
   maxDepth;
   includeChildMatches;
-  constructor(patterns, path12, opts) {
+  constructor(patterns, path15, opts) {
     this.patterns = patterns;
-    this.path = path12;
+    this.path = path15;
     this.opts = opts;
     this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
     this.includeChildMatches = opts.includeChildMatches !== false;
@@ -14632,11 +14632,11 @@ var GlobUtil = class {
       });
     }
   }
-  #ignored(path12) {
-    return this.seen.has(path12) || !!this.#ignore?.ignored?.(path12);
+  #ignored(path15) {
+    return this.seen.has(path15) || !!this.#ignore?.ignored?.(path15);
   }
-  #childrenIgnored(path12) {
-    return !!this.#ignore?.childrenIgnored?.(path12);
+  #childrenIgnored(path15) {
+    return !!this.#ignore?.childrenIgnored?.(path15);
   }
   // backpressure mechanism
   pause() {
@@ -14851,8 +14851,8 @@ var GlobUtil = class {
 };
 var GlobWalker = class extends GlobUtil {
   matches = /* @__PURE__ */ new Set();
-  constructor(patterns, path12, opts) {
-    super(patterns, path12, opts);
+  constructor(patterns, path15, opts) {
+    super(patterns, path15, opts);
   }
   matchEmit(e) {
     this.matches.add(e);
@@ -14889,8 +14889,8 @@ var GlobWalker = class extends GlobUtil {
 };
 var GlobStream = class extends GlobUtil {
   results;
-  constructor(patterns, path12, opts) {
-    super(patterns, path12, opts);
+  constructor(patterns, path15, opts) {
+    super(patterns, path15, opts);
     this.results = new Minipass({
       signal: this.signal,
       objectMode: true
@@ -17762,12 +17762,50 @@ function renamed(from, to) {
     throw new Error("Function yaml." + from + " is removed in js-yaml 4. Use yaml." + to + " instead, which is now safe by default.");
   };
 }
+var Type = type;
+var Schema = schema;
+var FAILSAFE_SCHEMA = failsafe;
+var JSON_SCHEMA = json;
+var CORE_SCHEMA = core;
+var DEFAULT_SCHEMA = _default;
 var load = loader.load;
 var loadAll = loader.loadAll;
 var dump = dumper.dump;
+var YAMLException = exception;
+var types2 = {
+  binary,
+  float,
+  map,
+  null: _null,
+  pairs,
+  set,
+  timestamp,
+  bool,
+  int,
+  merge,
+  omap,
+  seq,
+  str
+};
 var safeLoad = renamed("safeLoad", "load");
 var safeLoadAll = renamed("safeLoadAll", "loadAll");
 var safeDump = renamed("safeDump", "dump");
+var jsYaml = {
+  Type,
+  Schema,
+  FAILSAFE_SCHEMA,
+  JSON_SCHEMA,
+  CORE_SCHEMA,
+  DEFAULT_SCHEMA,
+  load,
+  loadAll,
+  dump,
+  YAMLException,
+  types: types2,
+  safeLoad,
+  safeLoadAll,
+  safeDump
+};
 
 // packages/tiny-brain-core/src/services/planning/planning-service.ts
 import { exec } from "child_process";
@@ -19836,8 +19874,8 @@ var RepoConfigService = class {
   /**
    * Generate a unique repo ID from path
    */
-  generateRepoId(path12) {
-    const hash = createHash("sha256").update(path12).digest("hex");
+  generateRepoId(path15) {
+    const hash = createHash("sha256").update(path15).digest("hex");
     return `repo-${hash.substring(0, 12)}`;
   }
   /**
@@ -20321,6 +20359,147 @@ var PluginDiscoveryService = class {
 import { promises as fs4 } from "fs";
 import path5 from "path";
 
+// packages/tiny-brain-core/src/services/hooks/hooks-service.ts
+import { existsSync as existsSync3 } from "fs";
+import { readFile as readFile4, readdir as readdir4 } from "fs/promises";
+import { join as join5 } from "path";
+var HooksService = class {
+  repoRoot;
+  constructor(repoRoot) {
+    this.repoRoot = repoRoot;
+  }
+  /**
+   * Get all plugin hooks from hooks.json
+   */
+  async getPluginHooks() {
+    const hooksJsonPath = this.getPluginHooksPath();
+    if (!existsSync3(hooksJsonPath)) {
+      return [];
+    }
+    try {
+      const content = await readFile4(hooksJsonPath, "utf-8");
+      const hooksJson = JSON.parse(content);
+      const hooks = [];
+      for (const [event, groups] of Object.entries(hooksJson.hooks || {})) {
+        const matcherGroup = groups.find((g) => g.matcher);
+        hooks.push({
+          name: event,
+          event,
+          type: "plugin",
+          path: hooksJsonPath,
+          matcher: matcherGroup?.matcher
+        });
+      }
+      return hooks;
+    } catch {
+      return [];
+    }
+  }
+  /**
+   * Get all git hooks from .git/hooks/
+   */
+  async getGitHooks() {
+    const gitHooksDir = join5(this.repoRoot, ".git", "hooks");
+    if (!existsSync3(gitHooksDir)) {
+      return [];
+    }
+    try {
+      const entries = await readdir4(gitHooksDir, { withFileTypes: true });
+      const hooks = [];
+      for (const entry of entries) {
+        if (!entry.isFile() || entry.name.endsWith(".sample")) {
+          continue;
+        }
+        hooks.push({
+          name: entry.name,
+          event: entry.name,
+          type: "git",
+          path: join5(gitHooksDir, entry.name)
+        });
+      }
+      return hooks;
+    } catch {
+      return [];
+    }
+  }
+  /**
+   * Get all hooks (both plugin and git)
+   */
+  async getAllHooks() {
+    const [pluginHooks, gitHooks] = await Promise.all([
+      this.getPluginHooks(),
+      this.getGitHooks()
+    ]);
+    return { pluginHooks, gitHooks };
+  }
+  /**
+   * Get the content of a specific hook
+   */
+  async getHookContent(type2, hookName) {
+    if (type2 === "git") {
+      return this.getGitHookContent(hookName);
+    } else {
+      return this.getPluginHookContent(hookName);
+    }
+  }
+  async getGitHookContent(hookName) {
+    const hookPath = join5(this.repoRoot, ".git", "hooks", hookName);
+    if (!existsSync3(hookPath)) {
+      return null;
+    }
+    try {
+      return await readFile4(hookPath, "utf-8");
+    } catch {
+      return null;
+    }
+  }
+  async getPluginHookContent(hookName) {
+    const hooksJsonPath = this.getPluginHooksPath();
+    if (!existsSync3(hooksJsonPath)) {
+      return null;
+    }
+    try {
+      const content = await readFile4(hooksJsonPath, "utf-8");
+      const hooksJson = JSON.parse(content);
+      const hookGroups = hooksJson.hooks?.[hookName];
+      if (!hookGroups || hookGroups.length === 0) {
+        return null;
+      }
+      const lines = [`# ${hookName} Hook`, ""];
+      for (const group of hookGroups) {
+        if (group.matcher) {
+          lines.push(`## Matcher: ${group.matcher}`);
+        } else {
+          lines.push("## Default");
+        }
+        lines.push("");
+        for (const hook of group.hooks) {
+          lines.push(`### ${hook.type}`);
+          lines.push("```bash");
+          lines.push(hook.command);
+          lines.push("```");
+          lines.push("");
+        }
+      }
+      return lines.join("\n");
+    } catch {
+      return null;
+    }
+  }
+  getPluginHooksPath() {
+    const possiblePaths = [
+      join5(this.repoRoot, ".claude-plugin", "hooks", "hooks.json"),
+      join5(this.repoRoot, "hooks", "hooks.json")
+    ];
+    for (const p of possiblePaths) {
+      if (existsSync3(p)) {
+        return p;
+      }
+    }
+    return possiblePaths[0];
+  }
+};
+
 // packages/tiny-brain-core/src/services/api/library-client.ts
 var LibraryClient = class {
   apiUrl;
@@ -20522,8 +20701,8 @@ var LibraryClient = class {
   /**
    * Get agent by path (new agent system)
    */
-  async getAgentByPath(token, path12) {
-    const response = await fetch(`${this.apiUrl}/api/agents/${path12}`, {
+  async getAgentByPath(token, path15) {
+    const response = await fetch(`${this.apiUrl}/api/agents/${path15}`, {
       method: "GET",
       headers: {
         "Accept": "application/json",
@@ -20539,8 +20718,8 @@ var LibraryClient = class {
   /**
    * Store agent at specified path (new agent system)
    */
-  async storeAgent(token, path12, agent) {
-    const response = await fetch(`${this.apiUrl}/api/agents/${path12}`, {
+  async storeAgent(token, path15, agent) {
+    const response = await fetch(`${this.apiUrl}/api/agents/${path15}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -20555,8 +20734,8 @@ var LibraryClient = class {
   /**
    * Archive agent at specified path (new agent system)
    */
-  async archiveAgent(token, path12) {
-    const response = await fetch(`${this.apiUrl}/api/agents/${path12}`, {
+  async archiveAgent(token, path15) {
+    const response = await fetch(`${this.apiUrl}/api/agents/${path15}`, {
       method: "DELETE",
       headers: {
         "Authorization": `Bearer ${token}`
@@ -20643,17 +20822,5542 @@ var LibraryClient = class {
   }
 };
 
-// packages/tiny-brain-core/src/analyser/index.ts
-import * as fs7 from "fs/promises";
-import * as path8 from "path";
-
-// packages/tiny-brain-core/src/analyser/detectors/base-detector.ts
+// packages/tiny-brain-core/src/services/api/skill-loader.ts
 import * as fs5 from "fs/promises";
 import * as path6 from "path";
+var SkillLoader = class {
+  skillsPath;
+  cache = /* @__PURE__ */ new Map();
+  constructor(skillsPath) {
+    this.skillsPath = skillsPath;
+  }
+  async loadSkill(skillName) {
+    const cached = this.cache.get(skillName);
+    if (cached) {
+      return cached;
+    }
+    const skillPath = path6.join(this.skillsPath, skillName);
+    const skillFile = path6.join(skillPath, "SKILL.md");
+    const content = await fs5.readFile(skillFile, "utf-8");
+    const { metadata, body } = this.parseFrontmatter(content);
+    const templates = await this.loadTemplates(skillPath);
+    const skill = {
+      name: metadata.name || skillName,
+      version: metadata.version || "1.0.0",
+      description: metadata.description || "",
+      systemPrompt: body.trim(),
+      templates
+    };
+    this.cache.set(skillName, skill);
+    return skill;
+  }
+  parseFrontmatter(content) {
+    if (!content.startsWith("---")) {
+      return {
+        metadata: {},
+        body: content
+      };
+    }
+    const endIndex = content.indexOf("---", 3);
+    if (endIndex === -1) {
+      return {
+        metadata: {},
+        body: content
+      };
+    }
+    const yamlContent = content.slice(3, endIndex).trim();
+    const body = content.slice(endIndex + 3).trim();
+    let metadata = {};
+    if (yamlContent) {
+      try {
+        metadata = jsYaml.load(yamlContent);
+      } catch {
+        metadata = {};
+      }
+    }
+    return { metadata, body };
+  }
+  async loadTemplates(skillPath) {
+    const templatesPath = path6.join(skillPath, "templates");
+    const templates = {};
+    try {
+      const entries = await fs5.readdir(templatesPath, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.endsWith(".md")) {
+          const templatePath = path6.join(templatesPath, entry.name);
+          const content = await fs5.readFile(templatePath, "utf-8");
+          templates[entry.name] = content;
+        }
+      }
+    } catch (error) {
+      const err = error;
+      if (err.code === "ENOENT") {
+        return {};
+      }
+      throw error;
+    }
+    return templates;
+  }
+  /**
+   * Clear the skill cache
+   */
+  clearCache() {
+    this.cache.clear();
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/internal/tslib.mjs
+function __classPrivateFieldSet(receiver, state, value, kind, f) {
+  if (kind === "m")
+    throw new TypeError("Private method is not writable");
+  if (kind === "a" && !f)
+    throw new TypeError("Private accessor was defined without a setter");
+  if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver))
+    throw new TypeError("Cannot write private member to an object whose class did not declare it");
+  return kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value), value;
+}
+function __classPrivateFieldGet(receiver, state, kind, f) {
+  if (kind === "a" && !f)
+    throw new TypeError("Private accessor was defined without a getter");
+  if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver))
+    throw new TypeError("Cannot read private member from an object whose class did not declare it");
+  return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+}
+
+// node_modules/@anthropic-ai/sdk/internal/utils/uuid.mjs
+var uuid4 = function() {
+  const { crypto: crypto3 } = globalThis;
+  if (crypto3?.randomUUID) {
+    uuid4 = crypto3.randomUUID.bind(crypto3);
+    return crypto3.randomUUID();
+  }
+  const u8 = new Uint8Array(1);
+  const randomByte = crypto3 ? () => crypto3.getRandomValues(u8)[0] : () => Math.random() * 255 & 255;
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (+c ^ randomByte() & 15 >> +c / 4).toString(16));
+};
+
+// node_modules/@anthropic-ai/sdk/internal/errors.mjs
+function isAbortError(err) {
+  return typeof err === "object" && err !== null && // Spec-compliant fetch implementations
+  ("name" in err && err.name === "AbortError" || // Expo fetch
+  "message" in err && String(err.message).includes("FetchRequestCanceledException"));
+}
+var castToError = (err) => {
+  if (err instanceof Error)
+    return err;
+  if (typeof err === "object" && err !== null) {
+    try {
+      if (Object.prototype.toString.call(err) === "[object Error]") {
+        const error = new Error(err.message, err.cause ? { cause: err.cause } : {});
+        if (err.stack)
+          error.stack = err.stack;
+        if (err.cause && !error.cause)
+          error.cause = err.cause;
+        if (err.name)
+          error.name = err.name;
+        return error;
+      }
+    } catch {
+    }
+    try {
+      return new Error(JSON.stringify(err));
+    } catch {
+    }
+  }
+  return new Error(err);
+};
+
+// node_modules/@anthropic-ai/sdk/core/error.mjs
+var AnthropicError = class extends Error {
+};
+var APIError = class _APIError extends AnthropicError {
+  constructor(status, error, message, headers) {
+    super(`${_APIError.makeMessage(status, error, message)}`);
+    this.status = status;
+    this.headers = headers;
+    this.requestID = headers?.get("request-id");
+    this.error = error;
+  }
+  static makeMessage(status, error, message) {
+    const msg = error?.message ? typeof error.message === "string" ? error.message : JSON.stringify(error.message) : error ? JSON.stringify(error) : message;
+    if (status && msg) {
+      return `${status} ${msg}`;
+    }
+    if (status) {
+      return `${status} status code (no body)`;
+    }
+    if (msg) {
+      return msg;
+    }
+    return "(no status code or body)";
+  }
+  static generate(status, errorResponse, message, headers) {
+    if (!status || !headers) {
+      return new APIConnectionError({ message, cause: castToError(errorResponse) });
+    }
+    const error = errorResponse;
+    if (status === 400) {
+      return new BadRequestError(status, error, message, headers);
+    }
+    if (status === 401) {
+      return new AuthenticationError(status, error, message, headers);
+    }
+    if (status === 403) {
+      return new PermissionDeniedError(status, error, message, headers);
+    }
+    if (status === 404) {
+      return new NotFoundError(status, error, message, headers);
+    }
+    if (status === 409) {
+      return new ConflictError(status, error, message, headers);
+    }
+    if (status === 422) {
+      return new UnprocessableEntityError(status, error, message, headers);
+    }
+    if (status === 429) {
+      return new RateLimitError(status, error, message, headers);
+    }
+    if (status >= 500) {
+      return new InternalServerError(status, error, message, headers);
+    }
+    return new _APIError(status, error, message, headers);
+  }
+};
+var APIUserAbortError = class extends APIError {
+  constructor({ message } = {}) {
+    super(void 0, void 0, message || "Request was aborted.", void 0);
+  }
+};
+var APIConnectionError = class extends APIError {
+  constructor({ message, cause }) {
+    super(void 0, void 0, message || "Connection error.", void 0);
+    if (cause)
+      this.cause = cause;
+  }
+};
+var APIConnectionTimeoutError = class extends APIConnectionError {
+  constructor({ message } = {}) {
+    super({ message: message ?? "Request timed out." });
+  }
+};
+var BadRequestError = class extends APIError {
+};
+var AuthenticationError = class extends APIError {
+};
+var PermissionDeniedError = class extends APIError {
+};
+var NotFoundError = class extends APIError {
+};
+var ConflictError = class extends APIError {
+};
+var UnprocessableEntityError = class extends APIError {
+};
+var RateLimitError = class extends APIError {
+};
+var InternalServerError = class extends APIError {
+};
+
+// node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
+var startsWithSchemeRegexp = /^[a-z][a-z0-9+.-]*:/i;
+var isAbsoluteURL = (url) => {
+  return startsWithSchemeRegexp.test(url);
+};
+var isArray = (val) => (isArray = Array.isArray, isArray(val));
+var isReadonlyArray = isArray;
+function maybeObj(x) {
+  if (typeof x !== "object") {
+    return {};
+  }
+  return x ?? {};
+}
+function isEmptyObj(obj) {
+  if (!obj)
+    return true;
+  for (const _k in obj)
+    return false;
+  return true;
+}
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+var validatePositiveInteger = (name, n) => {
+  if (typeof n !== "number" || !Number.isInteger(n)) {
+    throw new AnthropicError(`${name} must be an integer`);
+  }
+  if (n < 0) {
+    throw new AnthropicError(`${name} must be a positive integer`);
+  }
+  return n;
+};
+var safeJSON = (text) => {
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    return void 0;
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/internal/utils/sleep.mjs
+var sleep = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
+
+// node_modules/@anthropic-ai/sdk/version.mjs
+var VERSION = "0.71.2";
+
+// node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
+var isRunningInBrowser = () => {
+  return (
+    // @ts-ignore
+    typeof window !== "undefined" && // @ts-ignore
+    typeof window.document !== "undefined" && // @ts-ignore
+    typeof navigator !== "undefined"
+  );
+};
+function getDetectedPlatform() {
+  if (typeof Deno !== "undefined" && Deno.build != null) {
+    return "deno";
+  }
+  if (typeof EdgeRuntime !== "undefined") {
+    return "edge";
+  }
+  if (Object.prototype.toString.call(typeof globalThis.process !== "undefined" ? globalThis.process : 0) === "[object process]") {
+    return "node";
+  }
+  return "unknown";
+}
+var getPlatformProperties = () => {
+  const detectedPlatform = getDetectedPlatform();
+  if (detectedPlatform === "deno") {
+    return {
+      "X-Stainless-Lang": "js",
+      "X-Stainless-Package-Version": VERSION,
+      "X-Stainless-OS": normalizePlatform(Deno.build.os),
+      "X-Stainless-Arch": normalizeArch(Deno.build.arch),
+      "X-Stainless-Runtime": "deno",
+      "X-Stainless-Runtime-Version": typeof Deno.version === "string" ? Deno.version : Deno.version?.deno ?? "unknown"
+    };
+  }
+  if (typeof EdgeRuntime !== "undefined") {
+    return {
+      "X-Stainless-Lang": "js",
+      "X-Stainless-Package-Version": VERSION,
+      "X-Stainless-OS": "Unknown",
+      "X-Stainless-Arch": `other:${EdgeRuntime}`,
+      "X-Stainless-Runtime": "edge",
+      "X-Stainless-Runtime-Version": globalThis.process.version
+    };
+  }
+  if (detectedPlatform === "node") {
+    return {
+      "X-Stainless-Lang": "js",
+      "X-Stainless-Package-Version": VERSION,
+      "X-Stainless-OS": normalizePlatform(globalThis.process.platform ?? "unknown"),
+      "X-Stainless-Arch": normalizeArch(globalThis.process.arch ?? "unknown"),
+      "X-Stainless-Runtime": "node",
+      "X-Stainless-Runtime-Version": globalThis.process.version ?? "unknown"
+    };
+  }
+  const browserInfo = getBrowserInfo();
+  if (browserInfo) {
+    return {
+      "X-Stainless-Lang": "js",
+      "X-Stainless-Package-Version": VERSION,
+      "X-Stainless-OS": "Unknown",
+      "X-Stainless-Arch": "unknown",
+      "X-Stainless-Runtime": `browser:${browserInfo.browser}`,
+      "X-Stainless-Runtime-Version": browserInfo.version
+    };
+  }
+  return {
+    "X-Stainless-Lang": "js",
+    "X-Stainless-Package-Version": VERSION,
+    "X-Stainless-OS": "Unknown",
+    "X-Stainless-Arch": "unknown",
+    "X-Stainless-Runtime": "unknown",
+    "X-Stainless-Runtime-Version": "unknown"
+  };
+};
+function getBrowserInfo() {
+  if (typeof navigator === "undefined" || !navigator) {
+    return null;
+  }
+  const browserPatterns = [
+    { key: "edge", pattern: /Edge(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "ie", pattern: /MSIE(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "ie", pattern: /Trident(?:.*rv\:(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "chrome", pattern: /Chrome(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "firefox", pattern: /Firefox(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "safari", pattern: /(?:Version\W+(\d+)\.(\d+)(?:\.(\d+))?)?(?:\W+Mobile\S*)?\W+Safari/ }
+  ];
+  for (const { key, pattern } of browserPatterns) {
+    const match3 = pattern.exec(navigator.userAgent);
+    if (match3) {
+      const major = match3[1] || 0;
+      const minor = match3[2] || 0;
+      const patch = match3[3] || 0;
+      return { browser: key, version: `${major}.${minor}.${patch}` };
+    }
+  }
+  return null;
+}
+var normalizeArch = (arch) => {
+  if (arch === "x32")
+    return "x32";
+  if (arch === "x86_64" || arch === "x64")
+    return "x64";
+  if (arch === "arm")
+    return "arm";
+  if (arch === "aarch64" || arch === "arm64")
+    return "arm64";
+  if (arch)
+    return `other:${arch}`;
+  return "unknown";
+};
+var normalizePlatform = (platform) => {
+  platform = platform.toLowerCase();
+  if (platform.includes("ios"))
+    return "iOS";
+  if (platform === "android")
+    return "Android";
+  if (platform === "darwin")
+    return "MacOS";
+  if (platform === "win32")
+    return "Windows";
+  if (platform === "freebsd")
+    return "FreeBSD";
+  if (platform === "openbsd")
+    return "OpenBSD";
+  if (platform === "linux")
+    return "Linux";
+  if (platform)
+    return `Other:${platform}`;
+  return "Unknown";
+};
+var _platformHeaders;
+var getPlatformHeaders = () => {
+  return _platformHeaders ?? (_platformHeaders = getPlatformProperties());
+};
+
+// node_modules/@anthropic-ai/sdk/internal/shims.mjs
+function getDefaultFetch() {
+  if (typeof fetch !== "undefined") {
+    return fetch;
+  }
+  throw new Error("`fetch` is not defined as a global; Either pass `fetch` to the client, `new Anthropic({ fetch })` or polyfill the global, `globalThis.fetch = fetch`");
+}
+function makeReadableStream(...args) {
+  const ReadableStream2 = globalThis.ReadableStream;
+  if (typeof ReadableStream2 === "undefined") {
+    throw new Error("`ReadableStream` is not defined as a global; You will need to polyfill it, `globalThis.ReadableStream = ReadableStream`");
+  }
+  return new ReadableStream2(...args);
+}
+function ReadableStreamFrom(iterable) {
+  let iter = Symbol.asyncIterator in iterable ? iterable[Symbol.asyncIterator]() : iterable[Symbol.iterator]();
+  return makeReadableStream({
+    start() {
+    },
+    async pull(controller) {
+      const { done, value } = await iter.next();
+      if (done) {
+        controller.close();
+      } else {
+        controller.enqueue(value);
+      }
+    },
+    async cancel() {
+      await iter.return?.();
+    }
+  });
+}
+function ReadableStreamToAsyncIterable(stream3) {
+  if (stream3[Symbol.asyncIterator])
+    return stream3;
+  const reader = stream3.getReader();
+  return {
+    async next() {
+      try {
+        const result = await reader.read();
+        if (result?.done)
+          reader.releaseLock();
+        return result;
+      } catch (e) {
+        reader.releaseLock();
+        throw e;
+      }
+    },
+    async return() {
+      const cancelPromise = reader.cancel();
+      reader.releaseLock();
+      await cancelPromise;
+      return { done: true, value: void 0 };
+    },
+    [Symbol.asyncIterator]() {
+      return this;
+    }
+  };
+}
+async function CancelReadableStream(stream3) {
+  if (stream3 === null || typeof stream3 !== "object")
+    return;
+  if (stream3[Symbol.asyncIterator]) {
+    await stream3[Symbol.asyncIterator]().return?.();
+    return;
+  }
+  const reader = stream3.getReader();
+  const cancelPromise = reader.cancel();
+  reader.releaseLock();
+  await cancelPromise;
+}
+
+// node_modules/@anthropic-ai/sdk/internal/request-options.mjs
+var FallbackEncoder = ({ headers, body }) => {
+  return {
+    bodyHeaders: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  };
+};
+
+// node_modules/@anthropic-ai/sdk/internal/utils/bytes.mjs
+function concatBytes(buffers) {
+  let length = 0;
+  for (const buffer of buffers) {
+    length += buffer.length;
+  }
+  const output = new Uint8Array(length);
+  let index = 0;
+  for (const buffer of buffers) {
+    output.set(buffer, index);
+    index += buffer.length;
+  }
+  return output;
+}
+var encodeUTF8_;
+function encodeUTF8(str2) {
+  let encoder;
+  return (encodeUTF8_ ?? (encoder = new globalThis.TextEncoder(), encodeUTF8_ = encoder.encode.bind(encoder)))(str2);
+}
+var decodeUTF8_;
+function decodeUTF8(bytes) {
+  let decoder;
+  return (decodeUTF8_ ?? (decoder = new globalThis.TextDecoder(), decodeUTF8_ = decoder.decode.bind(decoder)))(bytes);
+}
+
+// node_modules/@anthropic-ai/sdk/internal/decoders/line.mjs
+var _LineDecoder_buffer;
+var _LineDecoder_carriageReturnIndex;
+var LineDecoder = class {
+  constructor() {
+    _LineDecoder_buffer.set(this, void 0);
+    _LineDecoder_carriageReturnIndex.set(this, void 0);
+    __classPrivateFieldSet(this, _LineDecoder_buffer, new Uint8Array(), "f");
+    __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, null, "f");
+  }
+  decode(chunk2) {
+    if (chunk2 == null) {
+      return [];
+    }
+    const binaryChunk = chunk2 instanceof ArrayBuffer ? new Uint8Array(chunk2) : typeof chunk2 === "string" ? encodeUTF8(chunk2) : chunk2;
+    __classPrivateFieldSet(this, _LineDecoder_buffer, concatBytes([__classPrivateFieldGet(this, _LineDecoder_buffer, "f"), binaryChunk]), "f");
+    const lines = [];
+    let patternIndex;
+    while ((patternIndex = findNewlineIndex(__classPrivateFieldGet(this, _LineDecoder_buffer, "f"), __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f"))) != null) {
+      if (patternIndex.carriage && __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") == null) {
+        __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, patternIndex.index, "f");
+        continue;
+      }
+      if (__classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") != null && (patternIndex.index !== __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") + 1 || patternIndex.carriage)) {
+        lines.push(decodeUTF8(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(0, __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") - 1)));
+        __classPrivateFieldSet(this, _LineDecoder_buffer, __classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(__classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f")), "f");
+        __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, null, "f");
+        continue;
+      }
+      const endIndex = __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") !== null ? patternIndex.preceding - 1 : patternIndex.preceding;
+      const line = decodeUTF8(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(0, endIndex));
+      lines.push(line);
+      __classPrivateFieldSet(this, _LineDecoder_buffer, __classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(patternIndex.index), "f");
+      __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, null, "f");
+    }
+    return lines;
+  }
+  flush() {
+    if (!__classPrivateFieldGet(this, _LineDecoder_buffer, "f").length) {
+      return [];
+    }
+    return this.decode("\n");
+  }
+};
+_LineDecoder_buffer = /* @__PURE__ */ new WeakMap(), _LineDecoder_carriageReturnIndex = /* @__PURE__ */ new WeakMap();
+LineDecoder.NEWLINE_CHARS = /* @__PURE__ */ new Set(["\n", "\r"]);
+LineDecoder.NEWLINE_REGEXP = /\r\n|[\n\r]/g;
+function findNewlineIndex(buffer, startIndex) {
+  const newline = 10;
+  const carriage = 13;
+  for (let i = startIndex ?? 0; i < buffer.length; i++) {
+    if (buffer[i] === newline) {
+      return { preceding: i, index: i + 1, carriage: false };
+    }
+    if (buffer[i] === carriage) {
+      return { preceding: i, index: i + 1, carriage: true };
+    }
+  }
+  return null;
+}
+function findDoubleNewlineIndex(buffer) {
+  const newline = 10;
+  const carriage = 13;
+  for (let i = 0; i < buffer.length - 1; i++) {
+    if (buffer[i] === newline && buffer[i + 1] === newline) {
+      return i + 2;
+    }
+    if (buffer[i] === carriage && buffer[i + 1] === carriage) {
+      return i + 2;
+    }
+    if (buffer[i] === carriage && buffer[i + 1] === newline && i + 3 < buffer.length && buffer[i + 2] === carriage && buffer[i + 3] === newline) {
+      return i + 4;
+    }
+  }
+  return -1;
+}
+
+// node_modules/@anthropic-ai/sdk/internal/utils/log.mjs
+var levelNumbers = {
+  off: 0,
+  error: 200,
+  warn: 300,
+  info: 400,
+  debug: 500
+};
+var parseLogLevel = (maybeLevel, sourceName, client) => {
+  if (!maybeLevel) {
+    return void 0;
+  }
+  if (hasOwn(levelNumbers, maybeLevel)) {
+    return maybeLevel;
+  }
+  loggerFor(client).warn(`${sourceName} was set to ${JSON.stringify(maybeLevel)}, expected one of ${JSON.stringify(Object.keys(levelNumbers))}`);
+  return void 0;
+};
+function noop() {
+}
+function makeLogFn(fnLevel, logger, logLevel) {
+  if (!logger || levelNumbers[fnLevel] > levelNumbers[logLevel]) {
+    return noop;
+  } else {
+    return logger[fnLevel].bind(logger);
+  }
+}
+var noopLogger = {
+  error: noop,
+  warn: noop,
+  info: noop,
+  debug: noop
+};
+var cachedLoggers = /* @__PURE__ */ new WeakMap();
+function loggerFor(client) {
+  const logger = client.logger;
+  const logLevel = client.logLevel ?? "off";
+  if (!logger) {
+    return noopLogger;
+  }
+  const cachedLogger = cachedLoggers.get(logger);
+  if (cachedLogger && cachedLogger[0] === logLevel) {
+    return cachedLogger[1];
+  }
+  const levelLogger = {
+    error: makeLogFn("error", logger, logLevel),
+    warn: makeLogFn("warn", logger, logLevel),
+    info: makeLogFn("info", logger, logLevel),
+    debug: makeLogFn("debug", logger, logLevel)
+  };
+  cachedLoggers.set(logger, [logLevel, levelLogger]);
+  return levelLogger;
+}
+var formatRequestDetails = (details) => {
+  if (details.options) {
+    details.options = { ...details.options };
+    delete details.options["headers"];
+  }
+  if (details.headers) {
+    details.headers = Object.fromEntries((details.headers instanceof Headers ? [...details.headers] : Object.entries(details.headers)).map(([name, value]) => [
+      name,
+      name.toLowerCase() === "x-api-key" || name.toLowerCase() === "authorization" || name.toLowerCase() === "cookie" || name.toLowerCase() === "set-cookie" ? "***" : value
+    ]));
+  }
+  if ("retryOfRequestLogID" in details) {
+    if (details.retryOfRequestLogID) {
+      details.retryOf = details.retryOfRequestLogID;
+    }
+    delete details.retryOfRequestLogID;
+  }
+  return details;
+};
+
+// node_modules/@anthropic-ai/sdk/core/streaming.mjs
+var _Stream_client;
+var Stream2 = class _Stream {
+  constructor(iterator, controller, client) {
+    this.iterator = iterator;
+    _Stream_client.set(this, void 0);
+    this.controller = controller;
+    __classPrivateFieldSet(this, _Stream_client, client, "f");
+  }
+  static fromSSEResponse(response, controller, client) {
+    let consumed = false;
+    const logger = client ? loggerFor(client) : console;
+    async function* iterator() {
+      if (consumed) {
+        throw new AnthropicError("Cannot iterate over a consumed stream, use `.tee()` to split the stream.");
+      }
+      consumed = true;
+      let done = false;
+      try {
+        for await (const sse of _iterSSEMessages(response, controller)) {
+          if (sse.event === "completion") {
+            try {
+              yield JSON.parse(sse.data);
+            } catch (e) {
+              logger.error(`Could not parse message into JSON:`, sse.data);
+              logger.error(`From chunk:`, sse.raw);
+              throw e;
+            }
+          }
+          if (sse.event === "message_start" || sse.event === "message_delta" || sse.event === "message_stop" || sse.event === "content_block_start" || sse.event === "content_block_delta" || sse.event === "content_block_stop") {
+            try {
+              yield JSON.parse(sse.data);
+            } catch (e) {
+              logger.error(`Could not parse message into JSON:`, sse.data);
+              logger.error(`From chunk:`, sse.raw);
+              throw e;
+            }
+          }
+          if (sse.event === "ping") {
+            continue;
+          }
+          if (sse.event === "error") {
+            throw new APIError(void 0, safeJSON(sse.data) ?? sse.data, void 0, response.headers);
+          }
+        }
+        done = true;
+      } catch (e) {
+        if (isAbortError(e))
+          return;
+        throw e;
+      } finally {
+        if (!done)
+          controller.abort();
+      }
+    }
+    return new _Stream(iterator, controller, client);
+  }
+  /**
+   * Generates a Stream from a newline-separated ReadableStream
+   * where each item is a JSON value.
+   */
+  static fromReadableStream(readableStream, controller, client) {
+    let consumed = false;
+    async function* iterLines() {
+      const lineDecoder = new LineDecoder();
+      const iter = ReadableStreamToAsyncIterable(readableStream);
+      for await (const chunk2 of iter) {
+        for (const line of lineDecoder.decode(chunk2)) {
+          yield line;
+        }
+      }
+      for (const line of lineDecoder.flush()) {
+        yield line;
+      }
+    }
+    async function* iterator() {
+      if (consumed) {
+        throw new AnthropicError("Cannot iterate over a consumed stream, use `.tee()` to split the stream.");
+      }
+      consumed = true;
+      let done = false;
+      try {
+        for await (const line of iterLines()) {
+          if (done)
+            continue;
+          if (line)
+            yield JSON.parse(line);
+        }
+        done = true;
+      } catch (e) {
+        if (isAbortError(e))
+          return;
+        throw e;
+      } finally {
+        if (!done)
+          controller.abort();
+      }
+    }
+    return new _Stream(iterator, controller, client);
+  }
+  [(_Stream_client = /* @__PURE__ */ new WeakMap(), Symbol.asyncIterator)]() {
+    return this.iterator();
+  }
+  /**
+   * Splits the stream into two streams which can be
+   * independently read from at different speeds.
+   */
+  tee() {
+    const left = [];
+    const right = [];
+    const iterator = this.iterator();
+    const teeIterator = (queue) => {
+      return {
+        next: () => {
+          if (queue.length === 0) {
+            const result = iterator.next();
+            left.push(result);
+            right.push(result);
+          }
+          return queue.shift();
+        }
+      };
+    };
+    return [
+      new _Stream(() => teeIterator(left), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
+      new _Stream(() => teeIterator(right), this.controller, __classPrivateFieldGet(this, _Stream_client, "f"))
+    ];
+  }
+  /**
+   * Converts this stream to a newline-separated ReadableStream of
+   * JSON stringified values in the stream
+   * which can be turned back into a Stream with `Stream.fromReadableStream()`.
+   */
+  toReadableStream() {
+    const self = this;
+    let iter;
+    return makeReadableStream({
+      async start() {
+        iter = self[Symbol.asyncIterator]();
+      },
+      async pull(ctrl) {
+        try {
+          const { value, done } = await iter.next();
+          if (done)
+            return ctrl.close();
+          const bytes = encodeUTF8(JSON.stringify(value) + "\n");
+          ctrl.enqueue(bytes);
+        } catch (err) {
+          ctrl.error(err);
+        }
+      },
+      async cancel() {
+        await iter.return?.();
+      }
+    });
+  }
+};
+async function* _iterSSEMessages(response, controller) {
+  if (!response.body) {
+    controller.abort();
+    if (typeof globalThis.navigator !== "undefined" && globalThis.navigator.product === "ReactNative") {
+      throw new AnthropicError(`The default react-native fetch implementation does not support streaming. Please use expo/fetch: https://docs.expo.dev/versions/latest/sdk/expo/#expofetch-api`);
+    }
+    throw new AnthropicError(`Attempted to iterate over a response with no body`);
+  }
+  const sseDecoder = new SSEDecoder();
+  const lineDecoder = new LineDecoder();
+  const iter = ReadableStreamToAsyncIterable(response.body);
+  for await (const sseChunk of iterSSEChunks(iter)) {
+    for (const line of lineDecoder.decode(sseChunk)) {
+      const sse = sseDecoder.decode(line);
+      if (sse)
+        yield sse;
+    }
+  }
+  for (const line of lineDecoder.flush()) {
+    const sse = sseDecoder.decode(line);
+    if (sse)
+      yield sse;
+  }
+}
+async function* iterSSEChunks(iterator) {
+  let data = new Uint8Array();
+  for await (const chunk2 of iterator) {
+    if (chunk2 == null) {
+      continue;
+    }
+    const binaryChunk = chunk2 instanceof ArrayBuffer ? new Uint8Array(chunk2) : typeof chunk2 === "string" ? encodeUTF8(chunk2) : chunk2;
+    let newData = new Uint8Array(data.length + binaryChunk.length);
+    newData.set(data);
+    newData.set(binaryChunk, data.length);
+    data = newData;
+    let patternIndex;
+    while ((patternIndex = findDoubleNewlineIndex(data)) !== -1) {
+      yield data.slice(0, patternIndex);
+      data = data.slice(patternIndex);
+    }
+  }
+  if (data.length > 0) {
+    yield data;
+  }
+}
+var SSEDecoder = class {
+  constructor() {
+    this.event = null;
+    this.data = [];
+    this.chunks = [];
+  }
+  decode(line) {
+    if (line.endsWith("\r")) {
+      line = line.substring(0, line.length - 1);
+    }
+    if (!line) {
+      if (!this.event && !this.data.length)
+        return null;
+      const sse = {
+        event: this.event,
+        data: this.data.join("\n"),
+        raw: this.chunks
+      };
+      this.event = null;
+      this.data = [];
+      this.chunks = [];
+      return sse;
+    }
+    this.chunks.push(line);
+    if (line.startsWith(":")) {
+      return null;
+    }
+    let [fieldname, _, value] = partition(line, ":");
+    if (value.startsWith(" ")) {
+      value = value.substring(1);
+    }
+    if (fieldname === "event") {
+      this.event = value;
+    } else if (fieldname === "data") {
+      this.data.push(value);
+    }
+    return null;
+  }
+};
+function partition(str2, delimiter) {
+  const index = str2.indexOf(delimiter);
+  if (index !== -1) {
+    return [str2.substring(0, index), delimiter, str2.substring(index + delimiter.length)];
+  }
+  return [str2, "", ""];
+}
+
+// node_modules/@anthropic-ai/sdk/internal/parse.mjs
+async function defaultParseResponse(client, props) {
+  const { response, requestLogID, retryOfRequestLogID, startTime } = props;
+  const body = await (async () => {
+    if (props.options.stream) {
+      loggerFor(client).debug("response", response.status, response.url, response.headers, response.body);
+      if (props.options.__streamClass) {
+        return props.options.__streamClass.fromSSEResponse(response, props.controller);
+      }
+      return Stream2.fromSSEResponse(response, props.controller);
+    }
+    if (response.status === 204) {
+      return null;
+    }
+    if (props.options.__binaryResponse) {
+      return response;
+    }
+    const contentType = response.headers.get("content-type");
+    const mediaType = contentType?.split(";")[0]?.trim();
+    const isJSON = mediaType?.includes("application/json") || mediaType?.endsWith("+json");
+    if (isJSON) {
+      const json2 = await response.json();
+      return addRequestID(json2, response);
+    }
+    const text = await response.text();
+    return text;
+  })();
+  loggerFor(client).debug(`[${requestLogID}] response parsed`, formatRequestDetails({
+    retryOfRequestLogID,
+    url: response.url,
+    status: response.status,
+    body,
+    durationMs: Date.now() - startTime
+  }));
+  return body;
+}
+function addRequestID(value, response) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+  return Object.defineProperty(value, "_request_id", {
+    value: response.headers.get("request-id"),
+    enumerable: false
+  });
+}
+
+// node_modules/@anthropic-ai/sdk/core/api-promise.mjs
+var _APIPromise_client;
+var APIPromise = class _APIPromise extends Promise {
+  constructor(client, responsePromise, parseResponse = defaultParseResponse) {
+    super((resolve3) => {
+      resolve3(null);
+    });
+    this.responsePromise = responsePromise;
+    this.parseResponse = parseResponse;
+    _APIPromise_client.set(this, void 0);
+    __classPrivateFieldSet(this, _APIPromise_client, client, "f");
+  }
+  _thenUnwrap(transform) {
+    return new _APIPromise(__classPrivateFieldGet(this, _APIPromise_client, "f"), this.responsePromise, async (client, props) => addRequestID(transform(await this.parseResponse(client, props), props), props.response));
+  }
+  /**
+   * Gets the raw `Response` instance instead of parsing the response
+   * data.
+   *
+   * If you want to parse the response body but still get the `Response`
+   * instance, you can use {@link withResponse()}.
+   *
+   * 👋 Getting the wrong TypeScript type for `Response`?
+   * Try setting `"moduleResolution": "NodeNext"` or add `"lib": ["DOM"]`
+   * to your `tsconfig.json`.
+   */
+  asResponse() {
+    return this.responsePromise.then((p) => p.response);
+  }
+  /**
+   * Gets the parsed response data, the raw `Response` instance and the ID of the request,
+   * returned via the `request-id` header which is useful for debugging requests and resporting
+   * issues to Anthropic.
+   *
+   * If you just want to get the raw `Response` instance without parsing it,
+   * you can use {@link asResponse()}.
+   *
+   * 👋 Getting the wrong TypeScript type for `Response`?
+   * Try setting `"moduleResolution": "NodeNext"` or add `"lib": ["DOM"]`
+   * to your `tsconfig.json`.
+   */
+  async withResponse() {
+    const [data, response] = await Promise.all([this.parse(), this.asResponse()]);
+    return { data, response, request_id: response.headers.get("request-id") };
+  }
+  parse() {
+    if (!this.parsedPromise) {
+      this.parsedPromise = this.responsePromise.then((data) => this.parseResponse(__classPrivateFieldGet(this, _APIPromise_client, "f"), data));
+    }
+    return this.parsedPromise;
+  }
+  then(onfulfilled, onrejected) {
+    return this.parse().then(onfulfilled, onrejected);
+  }
+  catch(onrejected) {
+    return this.parse().catch(onrejected);
+  }
+  finally(onfinally) {
+    return this.parse().finally(onfinally);
+  }
+};
+_APIPromise_client = /* @__PURE__ */ new WeakMap();
+
+// node_modules/@anthropic-ai/sdk/core/pagination.mjs
+var _AbstractPage_client;
+var AbstractPage = class {
+  constructor(client, response, body, options) {
+    _AbstractPage_client.set(this, void 0);
+    __classPrivateFieldSet(this, _AbstractPage_client, client, "f");
+    this.options = options;
+    this.response = response;
+    this.body = body;
+  }
+  hasNextPage() {
+    const items = this.getPaginatedItems();
+    if (!items.length)
+      return false;
+    return this.nextPageRequestOptions() != null;
+  }
+  async getNextPage() {
+    const nextOptions = this.nextPageRequestOptions();
+    if (!nextOptions) {
+      throw new AnthropicError("No next page expected; please check `.hasNextPage()` before calling `.getNextPage()`.");
+    }
+    return await __classPrivateFieldGet(this, _AbstractPage_client, "f").requestAPIList(this.constructor, nextOptions);
+  }
+  async *iterPages() {
+    let page = this;
+    yield page;
+    while (page.hasNextPage()) {
+      page = await page.getNextPage();
+      yield page;
+    }
+  }
+  async *[(_AbstractPage_client = /* @__PURE__ */ new WeakMap(), Symbol.asyncIterator)]() {
+    for await (const page of this.iterPages()) {
+      for (const item of page.getPaginatedItems()) {
+        yield item;
+      }
+    }
+  }
+};
+var PagePromise = class extends APIPromise {
+  constructor(client, request, Page2) {
+    super(client, request, async (client2, props) => new Page2(client2, props.response, await defaultParseResponse(client2, props), props.options));
+  }
+  /**
+   * Allow auto-paginating iteration on an unawaited list call, eg:
+   *
+   *    for await (const item of client.items.list()) {
+   *      console.log(item)
+   *    }
+   */
+  async *[Symbol.asyncIterator]() {
+    const page = await this;
+    for await (const item of page) {
+      yield item;
+    }
+  }
+};
+var Page = class extends AbstractPage {
+  constructor(client, response, body, options) {
+    super(client, response, body, options);
+    this.data = body.data || [];
+    this.has_more = body.has_more || false;
+    this.first_id = body.first_id || null;
+    this.last_id = body.last_id || null;
+  }
+  getPaginatedItems() {
+    return this.data ?? [];
+  }
+  hasNextPage() {
+    if (this.has_more === false) {
+      return false;
+    }
+    return super.hasNextPage();
+  }
+  nextPageRequestOptions() {
+    if (this.options.query?.["before_id"]) {
+      const first_id = this.first_id;
+      if (!first_id) {
+        return null;
+      }
+      return {
+        ...this.options,
+        query: {
+          ...maybeObj(this.options.query),
+          before_id: first_id
+        }
+      };
+    }
+    const cursor = this.last_id;
+    if (!cursor) {
+      return null;
+    }
+    return {
+      ...this.options,
+      query: {
+        ...maybeObj(this.options.query),
+        after_id: cursor
+      }
+    };
+  }
+};
+var PageCursor = class extends AbstractPage {
+  constructor(client, response, body, options) {
+    super(client, response, body, options);
+    this.data = body.data || [];
+    this.has_more = body.has_more || false;
+    this.next_page = body.next_page || null;
+  }
+  getPaginatedItems() {
+    return this.data ?? [];
+  }
+  hasNextPage() {
+    if (this.has_more === false) {
+      return false;
+    }
+    return super.hasNextPage();
+  }
+  nextPageRequestOptions() {
+    const cursor = this.next_page;
+    if (!cursor) {
+      return null;
+    }
+    return {
+      ...this.options,
+      query: {
+        ...maybeObj(this.options.query),
+        page: cursor
+      }
+    };
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/internal/uploads.mjs
+var checkFileSupport = () => {
+  if (typeof File === "undefined") {
+    const { process: process2 } = globalThis;
+    const isOldNode = typeof process2?.versions?.node === "string" && parseInt(process2.versions.node.split(".")) < 20;
+    throw new Error("`File` is not defined as a global, which is required for file uploads." + (isOldNode ? " Update to Node 20 LTS or newer, or set `globalThis.File` to `import('node:buffer').File`." : ""));
+  }
+};
+function makeFile(fileBits, fileName, options) {
+  checkFileSupport();
+  return new File(fileBits, fileName ?? "unknown_file", options);
+}
+function getName(value) {
+  return (typeof value === "object" && value !== null && ("name" in value && value.name && String(value.name) || "url" in value && value.url && String(value.url) || "filename" in value && value.filename && String(value.filename) || "path" in value && value.path && String(value.path)) || "").split(/[\\/]/).pop() || void 0;
+}
+var isAsyncIterable = (value) => value != null && typeof value === "object" && typeof value[Symbol.asyncIterator] === "function";
+var multipartFormRequestOptions = async (opts, fetch2) => {
+  return { ...opts, body: await createForm(opts.body, fetch2) };
+};
+var supportsFormDataMap = /* @__PURE__ */ new WeakMap();
+function supportsFormData(fetchObject) {
+  const fetch2 = typeof fetchObject === "function" ? fetchObject : fetchObject.fetch;
+  const cached = supportsFormDataMap.get(fetch2);
+  if (cached)
+    return cached;
+  const promise = (async () => {
+    try {
+      const FetchResponse = "Response" in fetch2 ? fetch2.Response : (await fetch2("data:,")).constructor;
+      const data = new FormData();
+      if (data.toString() === await new FetchResponse(data).text()) {
+        return false;
+      }
+      return true;
+    } catch {
+      return true;
+    }
+  })();
+  supportsFormDataMap.set(fetch2, promise);
+  return promise;
+}
+var createForm = async (body, fetch2) => {
+  if (!await supportsFormData(fetch2)) {
+    throw new TypeError("The provided fetch function does not support file uploads with the current global FormData class.");
+  }
+  const form = new FormData();
+  await Promise.all(Object.entries(body || {}).map(([key, value]) => addFormValue(form, key, value)));
+  return form;
+};
+var isNamedBlob = (value) => value instanceof Blob && "name" in value;
+var addFormValue = async (form, key, value) => {
+  if (value === void 0)
+    return;
+  if (value == null) {
+    throw new TypeError(`Received null for "${key}"; to pass null in FormData, you must use the string 'null'`);
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    form.append(key, String(value));
+  } else if (value instanceof Response) {
+    let options = {};
+    const contentType = value.headers.get("Content-Type");
+    if (contentType) {
+      options = { type: contentType };
+    }
+    form.append(key, makeFile([await value.blob()], getName(value), options));
+  } else if (isAsyncIterable(value)) {
+    form.append(key, makeFile([await new Response(ReadableStreamFrom(value)).blob()], getName(value)));
+  } else if (isNamedBlob(value)) {
+    form.append(key, makeFile([value], getName(value), { type: value.type }));
+  } else if (Array.isArray(value)) {
+    await Promise.all(value.map((entry) => addFormValue(form, key + "[]", entry)));
+  } else if (typeof value === "object") {
+    await Promise.all(Object.entries(value).map(([name, prop]) => addFormValue(form, `${key}[${name}]`, prop)));
+  } else {
+    throw new TypeError(`Invalid value given to form, expected a string, number, boolean, object, Array, File or Blob but got ${value} instead`);
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/internal/to-file.mjs
+var isBlobLike = (value) => value != null && typeof value === "object" && typeof value.size === "number" && typeof value.type === "string" && typeof value.text === "function" && typeof value.slice === "function" && typeof value.arrayBuffer === "function";
+var isFileLike = (value) => value != null && typeof value === "object" && typeof value.name === "string" && typeof value.lastModified === "number" && isBlobLike(value);
+var isResponseLike = (value) => value != null && typeof value === "object" && typeof value.url === "string" && typeof value.blob === "function";
+async function toFile(value, name, options) {
+  checkFileSupport();
+  value = await value;
+  name || (name = getName(value));
+  if (isFileLike(value)) {
+    if (value instanceof File && name == null && options == null) {
+      return value;
+    }
+    return makeFile([await value.arrayBuffer()], name ?? value.name, {
+      type: value.type,
+      lastModified: value.lastModified,
+      ...options
+    });
+  }
+  if (isResponseLike(value)) {
+    const blob = await value.blob();
+    name || (name = new URL(value.url).pathname.split(/[\\/]/).pop());
+    return makeFile(await getBytes(blob), name, options);
+  }
+  const parts = await getBytes(value);
+  if (!options?.type) {
+    const type2 = parts.find((part) => typeof part === "object" && "type" in part && part.type);
+    if (typeof type2 === "string") {
+      options = { ...options, type: type2 };
+    }
+  }
+  return makeFile(parts, name, options);
+}
+async function getBytes(value) {
+  let parts = [];
+  if (typeof value === "string" || ArrayBuffer.isView(value) || // includes Uint8Array, Buffer, etc.
+  value instanceof ArrayBuffer) {
+    parts.push(value);
+  } else if (isBlobLike(value)) {
+    parts.push(value instanceof Blob ? value : await value.arrayBuffer());
+  } else if (isAsyncIterable(value)) {
+    for await (const chunk2 of value) {
+      parts.push(...await getBytes(chunk2));
+    }
+  } else {
+    const constructor = value?.constructor?.name;
+    throw new Error(`Unexpected data type: ${typeof value}${constructor ? `; constructor: ${constructor}` : ""}${propsForError(value)}`);
+  }
+  return parts;
+}
+function propsForError(value) {
+  if (typeof value !== "object" || value === null)
+    return "";
+  const props = Object.getOwnPropertyNames(value);
+  return `; props: [${props.map((p) => `"${p}"`).join(", ")}]`;
+}
+
+// node_modules/@anthropic-ai/sdk/core/resource.mjs
+var APIResource = class {
+  constructor(client) {
+    this._client = client;
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/internal/headers.mjs
+var brand_privateNullableHeaders = Symbol.for("brand.privateNullableHeaders");
+function* iterateHeaders(headers) {
+  if (!headers)
+    return;
+  if (brand_privateNullableHeaders in headers) {
+    const { values, nulls } = headers;
+    yield* values.entries();
+    for (const name of nulls) {
+      yield [name, null];
+    }
+    return;
+  }
+  let shouldClear = false;
+  let iter;
+  if (headers instanceof Headers) {
+    iter = headers.entries();
+  } else if (isReadonlyArray(headers)) {
+    iter = headers;
+  } else {
+    shouldClear = true;
+    iter = Object.entries(headers ?? {});
+  }
+  for (let row of iter) {
+    const name = row[0];
+    if (typeof name !== "string")
+      throw new TypeError("expected header name to be a string");
+    const values = isReadonlyArray(row[1]) ? row[1] : [row[1]];
+    let didClear = false;
+    for (const value of values) {
+      if (value === void 0)
+        continue;
+      if (shouldClear && !didClear) {
+        didClear = true;
+        yield [name, null];
+      }
+      yield [name, value];
+    }
+  }
+}
+var buildHeaders = (newHeaders) => {
+  const targetHeaders = new Headers();
+  const nullHeaders = /* @__PURE__ */ new Set();
+  for (const headers of newHeaders) {
+    const seenHeaders = /* @__PURE__ */ new Set();
+    for (const [name, value] of iterateHeaders(headers)) {
+      const lowerName = name.toLowerCase();
+      if (!seenHeaders.has(lowerName)) {
+        targetHeaders.delete(name);
+        seenHeaders.add(lowerName);
+      }
+      if (value === null) {
+        targetHeaders.delete(name);
+        nullHeaders.add(lowerName);
+      } else {
+        targetHeaders.append(name, value);
+        nullHeaders.delete(lowerName);
+      }
+    }
+  }
+  return { [brand_privateNullableHeaders]: true, values: targetHeaders, nulls: nullHeaders };
+};
+
+// node_modules/@anthropic-ai/sdk/internal/utils/path.mjs
+function encodeURIPath(str2) {
+  return str2.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
+}
+var EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
+var createPathTagFunction = (pathEncoder = encodeURIPath) => function path15(statics, ...params) {
+  if (statics.length === 1)
+    return statics[0];
+  let postPath = false;
+  const invalidSegments = [];
+  const path16 = statics.reduce((previousValue, currentValue, index) => {
+    if (/[?#]/.test(currentValue)) {
+      postPath = true;
+    }
+    const value = params[index];
+    let encoded = (postPath ? encodeURIComponent : pathEncoder)("" + value);
+    if (index !== params.length && (value == null || typeof value === "object" && // handle values from other realms
+    value.toString === Object.getPrototypeOf(Object.getPrototypeOf(value.hasOwnProperty ?? EMPTY) ?? EMPTY)?.toString)) {
+      encoded = value + "";
+      invalidSegments.push({
+        start: previousValue.length + currentValue.length,
+        length: encoded.length,
+        error: `Value of type ${Object.prototype.toString.call(value).slice(8, -1)} is not a valid path parameter`
+      });
+    }
+    return previousValue + currentValue + (index === params.length ? "" : encoded);
+  }, "");
+  const pathOnly = path16.split(/[?#]/, 1)[0];
+  const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
+  let match3;
+  while ((match3 = invalidSegmentPattern.exec(pathOnly)) !== null) {
+    invalidSegments.push({
+      start: match3.index,
+      length: match3[0].length,
+      error: `Value "${match3[0]}" can't be safely passed as a path parameter`
+    });
+  }
+  invalidSegments.sort((a, b) => a.start - b.start);
+  if (invalidSegments.length > 0) {
+    let lastEnd = 0;
+    const underline = invalidSegments.reduce((acc, segment) => {
+      const spaces = " ".repeat(segment.start - lastEnd);
+      const arrows = "^".repeat(segment.length);
+      lastEnd = segment.start + segment.length;
+      return acc + spaces + arrows;
+    }, "");
+    throw new AnthropicError(`Path parameters result in path with invalid segments:
+${invalidSegments.map((e) => e.error).join("\n")}
+${path16}
+${underline}`);
+  }
+  return path16;
+};
+var path7 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+
+// node_modules/@anthropic-ai/sdk/resources/beta/files.mjs
+var Files = class extends APIResource {
+  /**
+   * List Files
+   *
+   * @example
+   * ```ts
+   * // Automatically fetches more pages as needed.
+   * for await (const fileMetadata of client.beta.files.list()) {
+   *   // ...
+   * }
+   * ```
+   */
+  list(params = {}, options) {
+    const { betas, ...query } = params ?? {};
+    return this._client.getAPIList("/v1/files", Page, {
+      query,
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * Delete File
+   *
+   * @example
+   * ```ts
+   * const deletedFile = await client.beta.files.delete(
+   *   'file_id',
+   * );
+   * ```
+   */
+  delete(fileID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.delete(path7`/v1/files/${fileID}`, {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * Download File
+   *
+   * @example
+   * ```ts
+   * const response = await client.beta.files.download(
+   *   'file_id',
+   * );
+   *
+   * const content = await response.blob();
+   * console.log(content);
+   * ```
+   */
+  download(fileID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.get(path7`/v1/files/${fileID}/content`, {
+      ...options,
+      headers: buildHeaders([
+        {
+          "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString(),
+          Accept: "application/binary"
+        },
+        options?.headers
+      ]),
+      __binaryResponse: true
+    });
+  }
+  /**
+   * Get File Metadata
+   *
+   * @example
+   * ```ts
+   * const fileMetadata =
+   *   await client.beta.files.retrieveMetadata('file_id');
+   * ```
+   */
+  retrieveMetadata(fileID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.get(path7`/v1/files/${fileID}`, {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * Upload File
+   *
+   * @example
+   * ```ts
+   * const fileMetadata = await client.beta.files.upload({
+   *   file: fs.createReadStream('path/to/file'),
+   * });
+   * ```
+   */
+  upload(params, options) {
+    const { betas, ...body } = params;
+    return this._client.post("/v1/files", multipartFormRequestOptions({
+      body,
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
+        options?.headers
+      ])
+    }, this._client));
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/resources/beta/models.mjs
+var Models = class extends APIResource {
+  /**
+   * Get a specific model.
+   *
+   * The Models API response can be used to determine information about a specific
+   * model or resolve a model alias to a model ID.
+   *
+   * @example
+   * ```ts
+   * const betaModelInfo = await client.beta.models.retrieve(
+   *   'model_id',
+   * );
+   * ```
+   */
+  retrieve(modelID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.get(path7`/v1/models/${modelID}?beta=true`, {
+      ...options,
+      headers: buildHeaders([
+        { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * List available models.
+   *
+   * The Models API response can be used to determine which models are available for
+   * use in the API. More recently released models are listed first.
+   *
+   * @example
+   * ```ts
+   * // Automatically fetches more pages as needed.
+   * for await (const betaModelInfo of client.beta.models.list()) {
+   *   // ...
+   * }
+   * ```
+   */
+  list(params = {}, options) {
+    const { betas, ...query } = params ?? {};
+    return this._client.getAPIList("/v1/models?beta=true", Page, {
+      query,
+      ...options,
+      headers: buildHeaders([
+        { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+        options?.headers
+      ])
+    });
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/internal/constants.mjs
+var MODEL_NONSTREAMING_TOKENS = {
+  "claude-opus-4-20250514": 8192,
+  "claude-opus-4-0": 8192,
+  "claude-4-opus-20250514": 8192,
+  "anthropic.claude-opus-4-20250514-v1:0": 8192,
+  "claude-opus-4@20250514": 8192,
+  "claude-opus-4-1-20250805": 8192,
+  "anthropic.claude-opus-4-1-20250805-v1:0": 8192,
+  "claude-opus-4-1@20250805": 8192
+};
+
+// node_modules/@anthropic-ai/sdk/lib/beta-parser.mjs
+function maybeParseBetaMessage(message, params, opts) {
+  if (!params || !("parse" in (params.output_format ?? {}))) {
+    return {
+      ...message,
+      content: message.content.map((block) => {
+        if (block.type === "text") {
+          const parsedBlock = Object.defineProperty({ ...block }, "parsed_output", {
+            value: null,
+            enumerable: false
+          });
+          return Object.defineProperty(parsedBlock, "parsed", {
+            get() {
+              opts.logger.warn("The `parsed` property on `text` blocks is deprecated, please use `parsed_output` instead.");
+              return null;
+            },
+            enumerable: false
+          });
+        }
+        return block;
+      }),
+      parsed_output: null
+    };
+  }
+  return parseBetaMessage(message, params, opts);
+}
+function parseBetaMessage(message, params, opts) {
+  let firstParsedOutput = null;
+  const content = message.content.map((block) => {
+    if (block.type === "text") {
+      const parsedOutput = parseBetaOutputFormat(params, block.text);
+      if (firstParsedOutput === null) {
+        firstParsedOutput = parsedOutput;
+      }
+      const parsedBlock = Object.defineProperty({ ...block }, "parsed_output", {
+        value: parsedOutput,
+        enumerable: false
+      });
+      return Object.defineProperty(parsedBlock, "parsed", {
+        get() {
+          opts.logger.warn("The `parsed` property on `text` blocks is deprecated, please use `parsed_output` instead.");
+          return parsedOutput;
+        },
+        enumerable: false
+      });
+    }
+    return block;
+  });
+  return {
+    ...message,
+    content,
+    parsed_output: firstParsedOutput
+  };
+}
+function parseBetaOutputFormat(params, content) {
+  if (params.output_format?.type !== "json_schema") {
+    return null;
+  }
+  try {
+    if ("parse" in params.output_format) {
+      return params.output_format.parse(content);
+    }
+    return JSON.parse(content);
+  } catch (error) {
+    throw new AnthropicError(`Failed to parse structured output: ${error}`);
+  }
+}
+
+// node_modules/@anthropic-ai/sdk/_vendor/partial-json-parser/parser.mjs
+var tokenize = (input) => {
+  let current = 0;
+  let tokens = [];
+  while (current < input.length) {
+    let char = input[current];
+    if (char === "\\") {
+      current++;
+      continue;
+    }
+    if (char === "{") {
+      tokens.push({
+        type: "brace",
+        value: "{"
+      });
+      current++;
+      continue;
+    }
+    if (char === "}") {
+      tokens.push({
+        type: "brace",
+        value: "}"
+      });
+      current++;
+      continue;
+    }
+    if (char === "[") {
+      tokens.push({
+        type: "paren",
+        value: "["
+      });
+      current++;
+      continue;
+    }
+    if (char === "]") {
+      tokens.push({
+        type: "paren",
+        value: "]"
+      });
+      current++;
+      continue;
+    }
+    if (char === ":") {
+      tokens.push({
+        type: "separator",
+        value: ":"
+      });
+      current++;
+      continue;
+    }
+    if (char === ",") {
+      tokens.push({
+        type: "delimiter",
+        value: ","
+      });
+      current++;
+      continue;
+    }
+    if (char === '"') {
+      let value = "";
+      let danglingQuote = false;
+      char = input[++current];
+      while (char !== '"') {
+        if (current === input.length) {
+          danglingQuote = true;
+          break;
+        }
+        if (char === "\\") {
+          current++;
+          if (current === input.length) {
+            danglingQuote = true;
+            break;
+          }
+          value += char + input[current];
+          char = input[++current];
+        } else {
+          value += char;
+          char = input[++current];
+        }
+      }
+      char = input[++current];
+      if (!danglingQuote) {
+        tokens.push({
+          type: "string",
+          value
+        });
+      }
+      continue;
+    }
+    let WHITESPACE = /\s/;
+    if (char && WHITESPACE.test(char)) {
+      current++;
+      continue;
+    }
+    let NUMBERS = /[0-9]/;
+    if (char && NUMBERS.test(char) || char === "-" || char === ".") {
+      let value = "";
+      if (char === "-") {
+        value += char;
+        char = input[++current];
+      }
+      while (char && NUMBERS.test(char) || char === ".") {
+        value += char;
+        char = input[++current];
+      }
+      tokens.push({
+        type: "number",
+        value
+      });
+      continue;
+    }
+    let LETTERS = /[a-z]/i;
+    if (char && LETTERS.test(char)) {
+      let value = "";
+      while (char && LETTERS.test(char)) {
+        if (current === input.length) {
+          break;
+        }
+        value += char;
+        char = input[++current];
+      }
+      if (value == "true" || value == "false" || value === "null") {
+        tokens.push({
+          type: "name",
+          value
+        });
+      } else {
+        current++;
+        continue;
+      }
+      continue;
+    }
+    current++;
+  }
+  return tokens;
+};
+var strip = (tokens) => {
+  if (tokens.length === 0) {
+    return tokens;
+  }
+  let lastToken = tokens[tokens.length - 1];
+  switch (lastToken.type) {
+    case "separator":
+      tokens = tokens.slice(0, tokens.length - 1);
+      return strip(tokens);
+      break;
+    case "number":
+      let lastCharacterOfLastToken = lastToken.value[lastToken.value.length - 1];
+      if (lastCharacterOfLastToken === "." || lastCharacterOfLastToken === "-") {
+        tokens = tokens.slice(0, tokens.length - 1);
+        return strip(tokens);
+      }
+    case "string":
+      let tokenBeforeTheLastToken = tokens[tokens.length - 2];
+      if (tokenBeforeTheLastToken?.type === "delimiter") {
+        tokens = tokens.slice(0, tokens.length - 1);
+        return strip(tokens);
+      } else if (tokenBeforeTheLastToken?.type === "brace" && tokenBeforeTheLastToken.value === "{") {
+        tokens = tokens.slice(0, tokens.length - 1);
+        return strip(tokens);
+      }
+      break;
+    case "delimiter":
+      tokens = tokens.slice(0, tokens.length - 1);
+      return strip(tokens);
+      break;
+  }
+  return tokens;
+};
+var unstrip = (tokens) => {
+  let tail = [];
+  tokens.map((token) => {
+    if (token.type === "brace") {
+      if (token.value === "{") {
+        tail.push("}");
+      } else {
+        tail.splice(tail.lastIndexOf("}"), 1);
+      }
+    }
+    if (token.type === "paren") {
+      if (token.value === "[") {
+        tail.push("]");
+      } else {
+        tail.splice(tail.lastIndexOf("]"), 1);
+      }
+    }
+  });
+  if (tail.length > 0) {
+    tail.reverse().map((item) => {
+      if (item === "}") {
+        tokens.push({
+          type: "brace",
+          value: "}"
+        });
+      } else if (item === "]") {
+        tokens.push({
+          type: "paren",
+          value: "]"
+        });
+      }
+    });
+  }
+  return tokens;
+};
+var generate = (tokens) => {
+  let output = "";
+  tokens.map((token) => {
+    switch (token.type) {
+      case "string":
+        output += '"' + token.value + '"';
+        break;
+      default:
+        output += token.value;
+        break;
+    }
+  });
+  return output;
+};
+var partialParse = (input) => JSON.parse(generate(unstrip(strip(tokenize(input)))));
+
+// node_modules/@anthropic-ai/sdk/lib/BetaMessageStream.mjs
+var _BetaMessageStream_instances;
+var _BetaMessageStream_currentMessageSnapshot;
+var _BetaMessageStream_params;
+var _BetaMessageStream_connectedPromise;
+var _BetaMessageStream_resolveConnectedPromise;
+var _BetaMessageStream_rejectConnectedPromise;
+var _BetaMessageStream_endPromise;
+var _BetaMessageStream_resolveEndPromise;
+var _BetaMessageStream_rejectEndPromise;
+var _BetaMessageStream_listeners;
+var _BetaMessageStream_ended;
+var _BetaMessageStream_errored;
+var _BetaMessageStream_aborted;
+var _BetaMessageStream_catchingPromiseCreated;
+var _BetaMessageStream_response;
+var _BetaMessageStream_request_id;
+var _BetaMessageStream_logger;
+var _BetaMessageStream_getFinalMessage;
+var _BetaMessageStream_getFinalText;
+var _BetaMessageStream_handleError;
+var _BetaMessageStream_beginRequest;
+var _BetaMessageStream_addStreamEvent;
+var _BetaMessageStream_endRequest;
+var _BetaMessageStream_accumulateMessage;
+var JSON_BUF_PROPERTY = "__json_buf";
+function tracksToolInput(content) {
+  return content.type === "tool_use" || content.type === "server_tool_use" || content.type === "mcp_tool_use";
+}
+var BetaMessageStream = class _BetaMessageStream {
+  constructor(params, opts) {
+    _BetaMessageStream_instances.add(this);
+    this.messages = [];
+    this.receivedMessages = [];
+    _BetaMessageStream_currentMessageSnapshot.set(this, void 0);
+    _BetaMessageStream_params.set(this, null);
+    this.controller = new AbortController();
+    _BetaMessageStream_connectedPromise.set(this, void 0);
+    _BetaMessageStream_resolveConnectedPromise.set(this, () => {
+    });
+    _BetaMessageStream_rejectConnectedPromise.set(this, () => {
+    });
+    _BetaMessageStream_endPromise.set(this, void 0);
+    _BetaMessageStream_resolveEndPromise.set(this, () => {
+    });
+    _BetaMessageStream_rejectEndPromise.set(this, () => {
+    });
+    _BetaMessageStream_listeners.set(this, {});
+    _BetaMessageStream_ended.set(this, false);
+    _BetaMessageStream_errored.set(this, false);
+    _BetaMessageStream_aborted.set(this, false);
+    _BetaMessageStream_catchingPromiseCreated.set(this, false);
+    _BetaMessageStream_response.set(this, void 0);
+    _BetaMessageStream_request_id.set(this, void 0);
+    _BetaMessageStream_logger.set(this, void 0);
+    _BetaMessageStream_handleError.set(this, (error) => {
+      __classPrivateFieldSet(this, _BetaMessageStream_errored, true, "f");
+      if (isAbortError(error)) {
+        error = new APIUserAbortError();
+      }
+      if (error instanceof APIUserAbortError) {
+        __classPrivateFieldSet(this, _BetaMessageStream_aborted, true, "f");
+        return this._emit("abort", error);
+      }
+      if (error instanceof AnthropicError) {
+        return this._emit("error", error);
+      }
+      if (error instanceof Error) {
+        const anthropicError = new AnthropicError(error.message);
+        anthropicError.cause = error;
+        return this._emit("error", anthropicError);
+      }
+      return this._emit("error", new AnthropicError(String(error)));
+    });
+    __classPrivateFieldSet(this, _BetaMessageStream_connectedPromise, new Promise((resolve3, reject) => {
+      __classPrivateFieldSet(this, _BetaMessageStream_resolveConnectedPromise, resolve3, "f");
+      __classPrivateFieldSet(this, _BetaMessageStream_rejectConnectedPromise, reject, "f");
+    }), "f");
+    __classPrivateFieldSet(this, _BetaMessageStream_endPromise, new Promise((resolve3, reject) => {
+      __classPrivateFieldSet(this, _BetaMessageStream_resolveEndPromise, resolve3, "f");
+      __classPrivateFieldSet(this, _BetaMessageStream_rejectEndPromise, reject, "f");
+    }), "f");
+    __classPrivateFieldGet(this, _BetaMessageStream_connectedPromise, "f").catch(() => {
+    });
+    __classPrivateFieldGet(this, _BetaMessageStream_endPromise, "f").catch(() => {
+    });
+    __classPrivateFieldSet(this, _BetaMessageStream_params, params, "f");
+    __classPrivateFieldSet(this, _BetaMessageStream_logger, opts?.logger ?? console, "f");
+  }
+  get response() {
+    return __classPrivateFieldGet(this, _BetaMessageStream_response, "f");
+  }
+  get request_id() {
+    return __classPrivateFieldGet(this, _BetaMessageStream_request_id, "f");
+  }
+  /**
+   * Returns the `MessageStream` data, the raw `Response` instance and the ID of the request,
+   * returned vie the `request-id` header which is useful for debugging requests and resporting
+   * issues to Anthropic.
+   *
+   * This is the same as the `APIPromise.withResponse()` method.
+   *
+   * This method will raise an error if you created the stream using `MessageStream.fromReadableStream`
+   * as no `Response` is available.
+   */
+  async withResponse() {
+    __classPrivateFieldSet(this, _BetaMessageStream_catchingPromiseCreated, true, "f");
+    const response = await __classPrivateFieldGet(this, _BetaMessageStream_connectedPromise, "f");
+    if (!response) {
+      throw new Error("Could not resolve a `Response` object");
+    }
+    return {
+      data: this,
+      response,
+      request_id: response.headers.get("request-id")
+    };
+  }
+  /**
+   * Intended for use on the frontend, consuming a stream produced with
+   * `.toReadableStream()` on the backend.
+   *
+   * Note that messages sent to the model do not appear in `.on('message')`
+   * in this context.
+   */
+  static fromReadableStream(stream3) {
+    const runner = new _BetaMessageStream(null);
+    runner._run(() => runner._fromReadableStream(stream3));
+    return runner;
+  }
+  static createMessage(messages, params, options, { logger } = {}) {
+    const runner = new _BetaMessageStream(params, { logger });
+    for (const message of params.messages) {
+      runner._addMessageParam(message);
+    }
+    __classPrivateFieldSet(runner, _BetaMessageStream_params, { ...params, stream: true }, "f");
+    runner._run(() => runner._createMessage(messages, { ...params, stream: true }, { ...options, headers: { ...options?.headers, "X-Stainless-Helper-Method": "stream" } }));
+    return runner;
+  }
+  _run(executor) {
+    executor().then(() => {
+      this._emitFinal();
+      this._emit("end");
+    }, __classPrivateFieldGet(this, _BetaMessageStream_handleError, "f"));
+  }
+  _addMessageParam(message) {
+    this.messages.push(message);
+  }
+  _addMessage(message, emit = true) {
+    this.receivedMessages.push(message);
+    if (emit) {
+      this._emit("message", message);
+    }
+  }
+  async _createMessage(messages, params, options) {
+    const signal = options?.signal;
+    let abortHandler;
+    if (signal) {
+      if (signal.aborted)
+        this.controller.abort();
+      abortHandler = this.controller.abort.bind(this.controller);
+      signal.addEventListener("abort", abortHandler);
+    }
+    try {
+      __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_beginRequest).call(this);
+      const { response, data: stream3 } = await messages.create({ ...params, stream: true }, { ...options, signal: this.controller.signal }).withResponse();
+      this._connected(response);
+      for await (const event of stream3) {
+        __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_addStreamEvent).call(this, event);
+      }
+      if (stream3.controller.signal?.aborted) {
+        throw new APIUserAbortError();
+      }
+      __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_endRequest).call(this);
+    } finally {
+      if (signal && abortHandler) {
+        signal.removeEventListener("abort", abortHandler);
+      }
+    }
+  }
+  _connected(response) {
+    if (this.ended)
+      return;
+    __classPrivateFieldSet(this, _BetaMessageStream_response, response, "f");
+    __classPrivateFieldSet(this, _BetaMessageStream_request_id, response?.headers.get("request-id"), "f");
+    __classPrivateFieldGet(this, _BetaMessageStream_resolveConnectedPromise, "f").call(this, response);
+    this._emit("connect");
+  }
+  get ended() {
+    return __classPrivateFieldGet(this, _BetaMessageStream_ended, "f");
+  }
+  get errored() {
+    return __classPrivateFieldGet(this, _BetaMessageStream_errored, "f");
+  }
+  get aborted() {
+    return __classPrivateFieldGet(this, _BetaMessageStream_aborted, "f");
+  }
+  abort() {
+    this.controller.abort();
+  }
+  /**
+   * Adds the listener function to the end of the listeners array for the event.
+   * No checks are made to see if the listener has already been added. Multiple calls passing
+   * the same combination of event and listener will result in the listener being added, and
+   * called, multiple times.
+   * @returns this MessageStream, so that calls can be chained
+   */
+  on(event, listener) {
+    const listeners = __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] = []);
+    listeners.push({ listener });
+    return this;
+  }
+  /**
+   * Removes the specified listener from the listener array for the event.
+   * off() will remove, at most, one instance of a listener from the listener array. If any single
+   * listener has been added multiple times to the listener array for the specified event, then
+   * off() must be called multiple times to remove each instance.
+   * @returns this MessageStream, so that calls can be chained
+   */
+  off(event, listener) {
+    const listeners = __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event];
+    if (!listeners)
+      return this;
+    const index = listeners.findIndex((l) => l.listener === listener);
+    if (index >= 0)
+      listeners.splice(index, 1);
+    return this;
+  }
+  /**
+   * Adds a one-time listener function for the event. The next time the event is triggered,
+   * this listener is removed and then invoked.
+   * @returns this MessageStream, so that calls can be chained
+   */
+  once(event, listener) {
+    const listeners = __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] = []);
+    listeners.push({ listener, once: true });
+    return this;
+  }
+  /**
+   * This is similar to `.once()`, but returns a Promise that resolves the next time
+   * the event is triggered, instead of calling a listener callback.
+   * @returns a Promise that resolves the next time given event is triggered,
+   * or rejects if an error is emitted.  (If you request the 'error' event,
+   * returns a promise that resolves with the error).
+   *
+   * Example:
+   *
+   *   const message = await stream.emitted('message') // rejects if the stream errors
+   */
+  emitted(event) {
+    return new Promise((resolve3, reject) => {
+      __classPrivateFieldSet(this, _BetaMessageStream_catchingPromiseCreated, true, "f");
+      if (event !== "error")
+        this.once("error", reject);
+      this.once(event, resolve3);
+    });
+  }
+  async done() {
+    __classPrivateFieldSet(this, _BetaMessageStream_catchingPromiseCreated, true, "f");
+    await __classPrivateFieldGet(this, _BetaMessageStream_endPromise, "f");
+  }
+  get currentMessage() {
+    return __classPrivateFieldGet(this, _BetaMessageStream_currentMessageSnapshot, "f");
+  }
+  /**
+   * @returns a promise that resolves with the the final assistant Message response,
+   * or rejects if an error occurred or the stream ended prematurely without producing a Message.
+   * If structured outputs were used, this will be a ParsedMessage with a `parsed` field.
+   */
+  async finalMessage() {
+    await this.done();
+    return __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_getFinalMessage).call(this);
+  }
+  /**
+   * @returns a promise that resolves with the the final assistant Message's text response, concatenated
+   * together if there are more than one text blocks.
+   * Rejects if an error occurred or the stream ended prematurely without producing a Message.
+   */
+  async finalText() {
+    await this.done();
+    return __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_getFinalText).call(this);
+  }
+  _emit(event, ...args) {
+    if (__classPrivateFieldGet(this, _BetaMessageStream_ended, "f"))
+      return;
+    if (event === "end") {
+      __classPrivateFieldSet(this, _BetaMessageStream_ended, true, "f");
+      __classPrivateFieldGet(this, _BetaMessageStream_resolveEndPromise, "f").call(this);
+    }
+    const listeners = __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event];
+    if (listeners) {
+      __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] = listeners.filter((l) => !l.once);
+      listeners.forEach(({ listener }) => listener(...args));
+    }
+    if (event === "abort") {
+      const error = args[0];
+      if (!__classPrivateFieldGet(this, _BetaMessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
+        Promise.reject(error);
+      }
+      __classPrivateFieldGet(this, _BetaMessageStream_rejectConnectedPromise, "f").call(this, error);
+      __classPrivateFieldGet(this, _BetaMessageStream_rejectEndPromise, "f").call(this, error);
+      this._emit("end");
+      return;
+    }
+    if (event === "error") {
+      const error = args[0];
+      if (!__classPrivateFieldGet(this, _BetaMessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
+        Promise.reject(error);
+      }
+      __classPrivateFieldGet(this, _BetaMessageStream_rejectConnectedPromise, "f").call(this, error);
+      __classPrivateFieldGet(this, _BetaMessageStream_rejectEndPromise, "f").call(this, error);
+      this._emit("end");
+    }
+  }
+  _emitFinal() {
+    const finalMessage = this.receivedMessages.at(-1);
+    if (finalMessage) {
+      this._emit("finalMessage", __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_getFinalMessage).call(this));
+    }
+  }
+  async _fromReadableStream(readableStream, options) {
+    const signal = options?.signal;
+    let abortHandler;
+    if (signal) {
+      if (signal.aborted)
+        this.controller.abort();
+      abortHandler = this.controller.abort.bind(this.controller);
+      signal.addEventListener("abort", abortHandler);
+    }
+    try {
+      __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_beginRequest).call(this);
+      this._connected(null);
+      const stream3 = Stream2.fromReadableStream(readableStream, this.controller);
+      for await (const event of stream3) {
+        __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_addStreamEvent).call(this, event);
+      }
+      if (stream3.controller.signal?.aborted) {
+        throw new APIUserAbortError();
+      }
+      __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_endRequest).call(this);
+    } finally {
+      if (signal && abortHandler) {
+        signal.removeEventListener("abort", abortHandler);
+      }
+    }
+  }
+  [(_BetaMessageStream_currentMessageSnapshot = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_params = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_connectedPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_resolveConnectedPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_rejectConnectedPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_endPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_resolveEndPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_rejectEndPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_listeners = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_ended = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_errored = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_aborted = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_catchingPromiseCreated = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_response = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_request_id = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_logger = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_handleError = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_instances = /* @__PURE__ */ new WeakSet(), _BetaMessageStream_getFinalMessage = function _BetaMessageStream_getFinalMessage2() {
+    if (this.receivedMessages.length === 0) {
+      throw new AnthropicError("stream ended without producing a Message with role=assistant");
+    }
+    return this.receivedMessages.at(-1);
+  }, _BetaMessageStream_getFinalText = function _BetaMessageStream_getFinalText2() {
+    if (this.receivedMessages.length === 0) {
+      throw new AnthropicError("stream ended without producing a Message with role=assistant");
+    }
+    const textBlocks = this.receivedMessages.at(-1).content.filter((block) => block.type === "text").map((block) => block.text);
+    if (textBlocks.length === 0) {
+      throw new AnthropicError("stream ended without producing a content block with type=text");
+    }
+    return textBlocks.join(" ");
+  }, _BetaMessageStream_beginRequest = function _BetaMessageStream_beginRequest2() {
+    if (this.ended)
+      return;
+    __classPrivateFieldSet(this, _BetaMessageStream_currentMessageSnapshot, void 0, "f");
+  }, _BetaMessageStream_addStreamEvent = function _BetaMessageStream_addStreamEvent2(event) {
+    if (this.ended)
+      return;
+    const messageSnapshot = __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_accumulateMessage).call(this, event);
+    this._emit("streamEvent", event, messageSnapshot);
+    switch (event.type) {
+      case "content_block_delta": {
+        const content = messageSnapshot.content.at(-1);
+        switch (event.delta.type) {
+          case "text_delta": {
+            if (content.type === "text") {
+              this._emit("text", event.delta.text, content.text || "");
+            }
+            break;
+          }
+          case "citations_delta": {
+            if (content.type === "text") {
+              this._emit("citation", event.delta.citation, content.citations ?? []);
+            }
+            break;
+          }
+          case "input_json_delta": {
+            if (tracksToolInput(content) && content.input) {
+              this._emit("inputJson", event.delta.partial_json, content.input);
+            }
+            break;
+          }
+          case "thinking_delta": {
+            if (content.type === "thinking") {
+              this._emit("thinking", event.delta.thinking, content.thinking);
+            }
+            break;
+          }
+          case "signature_delta": {
+            if (content.type === "thinking") {
+              this._emit("signature", content.signature);
+            }
+            break;
+          }
+          default:
+            checkNever(event.delta);
+        }
+        break;
+      }
+      case "message_stop": {
+        this._addMessageParam(messageSnapshot);
+        this._addMessage(maybeParseBetaMessage(messageSnapshot, __classPrivateFieldGet(this, _BetaMessageStream_params, "f"), { logger: __classPrivateFieldGet(this, _BetaMessageStream_logger, "f") }), true);
+        break;
+      }
+      case "content_block_stop": {
+        this._emit("contentBlock", messageSnapshot.content.at(-1));
+        break;
+      }
+      case "message_start": {
+        __classPrivateFieldSet(this, _BetaMessageStream_currentMessageSnapshot, messageSnapshot, "f");
+        break;
+      }
+      case "content_block_start":
+      case "message_delta":
+        break;
+    }
+  }, _BetaMessageStream_endRequest = function _BetaMessageStream_endRequest2() {
+    if (this.ended) {
+      throw new AnthropicError(`stream has ended, this shouldn't happen`);
+    }
+    const snapshot = __classPrivateFieldGet(this, _BetaMessageStream_currentMessageSnapshot, "f");
+    if (!snapshot) {
+      throw new AnthropicError(`request ended without sending any chunks`);
+    }
+    __classPrivateFieldSet(this, _BetaMessageStream_currentMessageSnapshot, void 0, "f");
+    return maybeParseBetaMessage(snapshot, __classPrivateFieldGet(this, _BetaMessageStream_params, "f"), { logger: __classPrivateFieldGet(this, _BetaMessageStream_logger, "f") });
+  }, _BetaMessageStream_accumulateMessage = function _BetaMessageStream_accumulateMessage2(event) {
+    let snapshot = __classPrivateFieldGet(this, _BetaMessageStream_currentMessageSnapshot, "f");
+    if (event.type === "message_start") {
+      if (snapshot) {
+        throw new AnthropicError(`Unexpected event order, got ${event.type} before receiving "message_stop"`);
+      }
+      return event.message;
+    }
+    if (!snapshot) {
+      throw new AnthropicError(`Unexpected event order, got ${event.type} before "message_start"`);
+    }
+    switch (event.type) {
+      case "message_stop":
+        return snapshot;
+      case "message_delta":
+        snapshot.container = event.delta.container;
+        snapshot.stop_reason = event.delta.stop_reason;
+        snapshot.stop_sequence = event.delta.stop_sequence;
+        snapshot.usage.output_tokens = event.usage.output_tokens;
+        snapshot.context_management = event.context_management;
+        if (event.usage.input_tokens != null) {
+          snapshot.usage.input_tokens = event.usage.input_tokens;
+        }
+        if (event.usage.cache_creation_input_tokens != null) {
+          snapshot.usage.cache_creation_input_tokens = event.usage.cache_creation_input_tokens;
+        }
+        if (event.usage.cache_read_input_tokens != null) {
+          snapshot.usage.cache_read_input_tokens = event.usage.cache_read_input_tokens;
+        }
+        if (event.usage.server_tool_use != null) {
+          snapshot.usage.server_tool_use = event.usage.server_tool_use;
+        }
+        return snapshot;
+      case "content_block_start":
+        snapshot.content.push(event.content_block);
+        return snapshot;
+      case "content_block_delta": {
+        const snapshotContent = snapshot.content.at(event.index);
+        switch (event.delta.type) {
+          case "text_delta": {
+            if (snapshotContent?.type === "text") {
+              snapshot.content[event.index] = {
+                ...snapshotContent,
+                text: (snapshotContent.text || "") + event.delta.text
+              };
+            }
+            break;
+          }
+          case "citations_delta": {
+            if (snapshotContent?.type === "text") {
+              snapshot.content[event.index] = {
+                ...snapshotContent,
+                citations: [...snapshotContent.citations ?? [], event.delta.citation]
+              };
+            }
+            break;
+          }
+          case "input_json_delta": {
+            if (snapshotContent && tracksToolInput(snapshotContent)) {
+              let jsonBuf = snapshotContent[JSON_BUF_PROPERTY] || "";
+              jsonBuf += event.delta.partial_json;
+              const newContent = { ...snapshotContent };
+              Object.defineProperty(newContent, JSON_BUF_PROPERTY, {
+                value: jsonBuf,
+                enumerable: false,
+                writable: true
+              });
+              if (jsonBuf) {
+                try {
+                  newContent.input = partialParse(jsonBuf);
+                } catch (err) {
+                  const error = new AnthropicError(`Unable to parse tool parameter JSON from model. Please retry your request or adjust your prompt. Error: ${err}. JSON: ${jsonBuf}`);
+                  __classPrivateFieldGet(this, _BetaMessageStream_handleError, "f").call(this, error);
+                }
+              }
+              snapshot.content[event.index] = newContent;
+            }
+            break;
+          }
+          case "thinking_delta": {
+            if (snapshotContent?.type === "thinking") {
+              snapshot.content[event.index] = {
+                ...snapshotContent,
+                thinking: snapshotContent.thinking + event.delta.thinking
+              };
+            }
+            break;
+          }
+          case "signature_delta": {
+            if (snapshotContent?.type === "thinking") {
+              snapshot.content[event.index] = {
+                ...snapshotContent,
+                signature: event.delta.signature
+              };
+            }
+            break;
+          }
+          default:
+            checkNever(event.delta);
+        }
+        return snapshot;
+      }
+      case "content_block_stop":
+        return snapshot;
+    }
+  }, Symbol.asyncIterator)]() {
+    const pushQueue = [];
+    const readQueue = [];
+    let done = false;
+    this.on("streamEvent", (event) => {
+      const reader = readQueue.shift();
+      if (reader) {
+        reader.resolve(event);
+      } else {
+        pushQueue.push(event);
+      }
+    });
+    this.on("end", () => {
+      done = true;
+      for (const reader of readQueue) {
+        reader.resolve(void 0);
+      }
+      readQueue.length = 0;
+    });
+    this.on("abort", (err) => {
+      done = true;
+      for (const reader of readQueue) {
+        reader.reject(err);
+      }
+      readQueue.length = 0;
+    });
+    this.on("error", (err) => {
+      done = true;
+      for (const reader of readQueue) {
+        reader.reject(err);
+      }
+      readQueue.length = 0;
+    });
+    return {
+      next: async () => {
+        if (!pushQueue.length) {
+          if (done) {
+            return { value: void 0, done: true };
+          }
+          return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+        }
+        const chunk2 = pushQueue.shift();
+        return { value: chunk2, done: false };
+      },
+      return: async () => {
+        this.abort();
+        return { value: void 0, done: true };
+      }
+    };
+  }
+  toReadableStream() {
+    const stream3 = new Stream2(this[Symbol.asyncIterator].bind(this), this.controller);
+    return stream3.toReadableStream();
+  }
+};
+function checkNever(x) {
+}
+
+// node_modules/@anthropic-ai/sdk/lib/tools/CompactionControl.mjs
+var DEFAULT_TOKEN_THRESHOLD = 1e5;
+var DEFAULT_SUMMARY_PROMPT = `You have been working on the task described above but have not yet completed it. Write a continuation summary that will allow you (or another instance of yourself) to resume work efficiently in a future context window where the conversation history will be replaced with this summary. Your summary should be structured, concise, and actionable. Include:
+1. Task Overview
+The user's core request and success criteria
+Any clarifications or constraints they specified
+2. Current State
+What has been completed so far
+Files created, modified, or analyzed (with paths if relevant)
+Key outputs or artifacts produced
+3. Important Discoveries
+Technical constraints or requirements uncovered
+Decisions made and their rationale
+Errors encountered and how they were resolved
+What approaches were tried that didn't work (and why)
+4. Next Steps
+Specific actions needed to complete the task
+Any blockers or open questions to resolve
+Priority order if multiple steps remain
+5. Context to Preserve
+User preferences or style requirements
+Domain-specific details that aren't obvious
+Any promises made to the user
+Be concise but complete\u2014err on the side of including information that would prevent duplicate work or repeated mistakes. Write in a way that enables immediate resumption of the task.
+Wrap your summary in <summary></summary> tags.`;
+
+// node_modules/@anthropic-ai/sdk/lib/tools/BetaToolRunner.mjs
+var _BetaToolRunner_instances;
+var _BetaToolRunner_consumed;
+var _BetaToolRunner_mutated;
+var _BetaToolRunner_state;
+var _BetaToolRunner_options;
+var _BetaToolRunner_message;
+var _BetaToolRunner_toolResponse;
+var _BetaToolRunner_completion;
+var _BetaToolRunner_iterationCount;
+var _BetaToolRunner_checkAndCompact;
+var _BetaToolRunner_generateToolResponse;
+function promiseWithResolvers() {
+  let resolve3;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve3 = res;
+    reject = rej;
+  });
+  return { promise, resolve: resolve3, reject };
+}
+var BetaToolRunner = class {
+  constructor(client, params, options) {
+    _BetaToolRunner_instances.add(this);
+    this.client = client;
+    _BetaToolRunner_consumed.set(this, false);
+    _BetaToolRunner_mutated.set(this, false);
+    _BetaToolRunner_state.set(this, void 0);
+    _BetaToolRunner_options.set(this, void 0);
+    _BetaToolRunner_message.set(this, void 0);
+    _BetaToolRunner_toolResponse.set(this, void 0);
+    _BetaToolRunner_completion.set(this, void 0);
+    _BetaToolRunner_iterationCount.set(this, 0);
+    __classPrivateFieldSet(this, _BetaToolRunner_state, {
+      params: {
+        // You can't clone the entire params since there are functions as handlers.
+        // You also don't really need to clone params.messages, but it probably will prevent a foot gun
+        // somewhere.
+        ...params,
+        messages: structuredClone(params.messages)
+      }
+    }, "f");
+    __classPrivateFieldSet(this, _BetaToolRunner_options, {
+      ...options,
+      headers: buildHeaders([{ "x-stainless-helper": "BetaToolRunner" }, options?.headers])
+    }, "f");
+    __classPrivateFieldSet(this, _BetaToolRunner_completion, promiseWithResolvers(), "f");
+  }
+  async *[(_BetaToolRunner_consumed = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_mutated = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_state = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_options = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_message = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_toolResponse = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_completion = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_iterationCount = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_instances = /* @__PURE__ */ new WeakSet(), _BetaToolRunner_checkAndCompact = async function _BetaToolRunner_checkAndCompact2() {
+    const compactionControl = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.compactionControl;
+    if (!compactionControl || !compactionControl.enabled) {
+      return false;
+    }
+    let tokensUsed = 0;
+    if (__classPrivateFieldGet(this, _BetaToolRunner_message, "f") !== void 0) {
+      try {
+        const message = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
+        const totalInputTokens = message.usage.input_tokens + (message.usage.cache_creation_input_tokens ?? 0) + (message.usage.cache_read_input_tokens ?? 0);
+        tokensUsed = totalInputTokens + message.usage.output_tokens;
+      } catch {
+        return false;
+      }
+    }
+    const threshold = compactionControl.contextTokenThreshold ?? DEFAULT_TOKEN_THRESHOLD;
+    if (tokensUsed < threshold) {
+      return false;
+    }
+    const model = compactionControl.model ?? __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.model;
+    const summaryPrompt = compactionControl.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT;
+    const messages = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages;
+    if (messages[messages.length - 1].role === "assistant") {
+      const lastMessage = messages[messages.length - 1];
+      if (Array.isArray(lastMessage.content)) {
+        const nonToolBlocks = lastMessage.content.filter((block) => block.type !== "tool_use");
+        if (nonToolBlocks.length === 0) {
+          messages.pop();
+        } else {
+          lastMessage.content = nonToolBlocks;
+        }
+      }
+    }
+    const response = await this.client.beta.messages.create({
+      model,
+      messages: [
+        ...messages,
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: summaryPrompt
+            }
+          ]
+        }
+      ],
+      max_tokens: __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.max_tokens
+    }, {
+      headers: { "x-stainless-helper": "compaction" }
+    });
+    if (response.content[0]?.type !== "text") {
+      throw new AnthropicError("Expected text response for compaction");
+    }
+    __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages = [
+      {
+        role: "user",
+        content: response.content
+      }
+    ];
+    return true;
+  }, Symbol.asyncIterator)]() {
+    var _a2;
+    if (__classPrivateFieldGet(this, _BetaToolRunner_consumed, "f")) {
+      throw new AnthropicError("Cannot iterate over a consumed stream");
+    }
+    __classPrivateFieldSet(this, _BetaToolRunner_consumed, true, "f");
+    __classPrivateFieldSet(this, _BetaToolRunner_mutated, true, "f");
+    __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, void 0, "f");
+    try {
+      while (true) {
+        let stream3;
+        try {
+          if (__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.max_iterations && __classPrivateFieldGet(this, _BetaToolRunner_iterationCount, "f") >= __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.max_iterations) {
+            break;
+          }
+          __classPrivateFieldSet(this, _BetaToolRunner_mutated, false, "f");
+          __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, void 0, "f");
+          __classPrivateFieldSet(this, _BetaToolRunner_iterationCount, (_a2 = __classPrivateFieldGet(this, _BetaToolRunner_iterationCount, "f"), _a2++, _a2), "f");
+          __classPrivateFieldSet(this, _BetaToolRunner_message, void 0, "f");
+          const { max_iterations, compactionControl, ...params } = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
+          if (params.stream) {
+            stream3 = this.client.beta.messages.stream({ ...params }, __classPrivateFieldGet(this, _BetaToolRunner_options, "f"));
+            __classPrivateFieldSet(this, _BetaToolRunner_message, stream3.finalMessage(), "f");
+            __classPrivateFieldGet(this, _BetaToolRunner_message, "f").catch(() => {
+            });
+            yield stream3;
+          } else {
+            __classPrivateFieldSet(this, _BetaToolRunner_message, this.client.beta.messages.create({ ...params, stream: false }, __classPrivateFieldGet(this, _BetaToolRunner_options, "f")), "f");
+            yield __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
+          }
+          const isCompacted = await __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_checkAndCompact).call(this);
+          if (!isCompacted) {
+            if (!__classPrivateFieldGet(this, _BetaToolRunner_mutated, "f")) {
+              const { role, content } = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
+              __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.push({ role, content });
+            }
+            const toolMessage = await __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_generateToolResponse).call(this, __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.at(-1));
+            if (toolMessage) {
+              __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.push(toolMessage);
+            } else if (!__classPrivateFieldGet(this, _BetaToolRunner_mutated, "f")) {
+              break;
+            }
+          }
+        } finally {
+          if (stream3) {
+            stream3.abort();
+          }
+        }
+      }
+      if (!__classPrivateFieldGet(this, _BetaToolRunner_message, "f")) {
+        throw new AnthropicError("ToolRunner concluded without a message from the server");
+      }
+      __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").resolve(await __classPrivateFieldGet(this, _BetaToolRunner_message, "f"));
+    } catch (error) {
+      __classPrivateFieldSet(this, _BetaToolRunner_consumed, false, "f");
+      __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").promise.catch(() => {
+      });
+      __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").reject(error);
+      __classPrivateFieldSet(this, _BetaToolRunner_completion, promiseWithResolvers(), "f");
+      throw error;
+    }
+  }
+  setMessagesParams(paramsOrMutator) {
+    if (typeof paramsOrMutator === "function") {
+      __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params = paramsOrMutator(__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params);
+    } else {
+      __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params = paramsOrMutator;
+    }
+    __classPrivateFieldSet(this, _BetaToolRunner_mutated, true, "f");
+    __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, void 0, "f");
+  }
+  /**
+   * Get the tool response for the last message from the assistant.
+   * Avoids redundant tool executions by caching results.
+   *
+   * @returns A promise that resolves to a BetaMessageParam containing tool results, or null if no tools need to be executed
+   *
+   * @example
+   * const toolResponse = await runner.generateToolResponse();
+   * if (toolResponse) {
+   *   console.log('Tool results:', toolResponse.content);
+   * }
+   */
+  async generateToolResponse() {
+    const message = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f") ?? this.params.messages.at(-1);
+    if (!message) {
+      return null;
+    }
+    return __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_generateToolResponse).call(this, message);
+  }
+  /**
+   * Wait for the async iterator to complete. This works even if the async iterator hasn't yet started, and
+   * will wait for an instance to start and go to completion.
+   *
+   * @returns A promise that resolves to the final BetaMessage when the iterator completes
+   *
+   * @example
+   * // Start consuming the iterator
+   * for await (const message of runner) {
+   *   console.log('Message:', message.content);
+   * }
+   *
+   * // Meanwhile, wait for completion from another part of the code
+   * const finalMessage = await runner.done();
+   * console.log('Final response:', finalMessage.content);
+   */
+  done() {
+    return __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").promise;
+  }
+  /**
+   * Returns a promise indicating that the stream is done. Unlike .done(), this will eagerly read the stream:
+   * * If the iterator has not been consumed, consume the entire iterator and return the final message from the
+   * assistant.
+   * * If the iterator has been consumed, waits for it to complete and returns the final message.
+   *
+   * @returns A promise that resolves to the final BetaMessage from the conversation
+   * @throws {AnthropicError} If no messages were processed during the conversation
+   *
+   * @example
+   * const finalMessage = await runner.runUntilDone();
+   * console.log('Final response:', finalMessage.content);
+   */
+  async runUntilDone() {
+    if (!__classPrivateFieldGet(this, _BetaToolRunner_consumed, "f")) {
+      for await (const _ of this) {
+      }
+    }
+    return this.done();
+  }
+  /**
+   * Get the current parameters being used by the ToolRunner.
+   *
+   * @returns A readonly view of the current ToolRunnerParams
+   *
+   * @example
+   * const currentParams = runner.params;
+   * console.log('Current model:', currentParams.model);
+   * console.log('Message count:', currentParams.messages.length);
+   */
+  get params() {
+    return __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
+  }
+  /**
+   * Add one or more messages to the conversation history.
+   *
+   * @param messages - One or more BetaMessageParam objects to add to the conversation
+   *
+   * @example
+   * runner.pushMessages(
+   *   { role: 'user', content: 'Also, what about the weather in NYC?' }
+   * );
+   *
+   * @example
+   * // Adding multiple messages
+   * runner.pushMessages(
+   *   { role: 'user', content: 'What about NYC?' },
+   *   { role: 'user', content: 'And Boston?' }
+   * );
+   */
+  pushMessages(...messages) {
+    this.setMessagesParams((params) => ({
+      ...params,
+      messages: [...params.messages, ...messages]
+    }));
+  }
+  /**
+   * Makes the ToolRunner directly awaitable, equivalent to calling .runUntilDone()
+   * This allows using `await runner` instead of `await runner.runUntilDone()`
+   */
+  then(onfulfilled, onrejected) {
+    return this.runUntilDone().then(onfulfilled, onrejected);
+  }
+};
+_BetaToolRunner_generateToolResponse = async function _BetaToolRunner_generateToolResponse2(lastMessage) {
+  if (__classPrivateFieldGet(this, _BetaToolRunner_toolResponse, "f") !== void 0) {
+    return __classPrivateFieldGet(this, _BetaToolRunner_toolResponse, "f");
+  }
+  __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, generateToolResponse(__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params, lastMessage), "f");
+  return __classPrivateFieldGet(this, _BetaToolRunner_toolResponse, "f");
+};
+async function generateToolResponse(params, lastMessage = params.messages.at(-1)) {
+  if (!lastMessage || lastMessage.role !== "assistant" || !lastMessage.content || typeof lastMessage.content === "string") {
+    return null;
+  }
+  const toolUseBlocks = lastMessage.content.filter((content) => content.type === "tool_use");
+  if (toolUseBlocks.length === 0) {
+    return null;
+  }
+  const toolResults = await Promise.all(toolUseBlocks.map(async (toolUse) => {
+    const tool = params.tools.find((t) => ("name" in t ? t.name : t.mcp_server_name) === toolUse.name);
+    if (!tool || !("run" in tool)) {
+      return {
+        type: "tool_result",
+        tool_use_id: toolUse.id,
+        content: `Error: Tool '${toolUse.name}' not found`,
+        is_error: true
+      };
+    }
+    try {
+      let input = toolUse.input;
+      if ("parse" in tool && tool.parse) {
+        input = tool.parse(input);
+      }
+      const result = await tool.run(input);
+      return {
+        type: "tool_result",
+        tool_use_id: toolUse.id,
+        content: result
+      };
+    } catch (error) {
+      return {
+        type: "tool_result",
+        tool_use_id: toolUse.id,
+        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        is_error: true
+      };
+    }
+  }));
+  return {
+    role: "user",
+    content: toolResults
+  };
+}
+
+// node_modules/@anthropic-ai/sdk/internal/decoders/jsonl.mjs
+var JSONLDecoder = class _JSONLDecoder {
+  constructor(iterator, controller) {
+    this.iterator = iterator;
+    this.controller = controller;
+  }
+  async *decoder() {
+    const lineDecoder = new LineDecoder();
+    for await (const chunk2 of this.iterator) {
+      for (const line of lineDecoder.decode(chunk2)) {
+        yield JSON.parse(line);
+      }
+    }
+    for (const line of lineDecoder.flush()) {
+      yield JSON.parse(line);
+    }
+  }
+  [Symbol.asyncIterator]() {
+    return this.decoder();
+  }
+  static fromResponse(response, controller) {
+    if (!response.body) {
+      controller.abort();
+      if (typeof globalThis.navigator !== "undefined" && globalThis.navigator.product === "ReactNative") {
+        throw new AnthropicError(`The default react-native fetch implementation does not support streaming. Please use expo/fetch: https://docs.expo.dev/versions/latest/sdk/expo/#expofetch-api`);
+      }
+      throw new AnthropicError(`Attempted to iterate over a response with no body`);
+    }
+    return new _JSONLDecoder(ReadableStreamToAsyncIterable(response.body), controller);
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/resources/beta/messages/batches.mjs
+var Batches = class extends APIResource {
+  /**
+   * Send a batch of Message creation requests.
+   *
+   * The Message Batches API can be used to process multiple Messages API requests at
+   * once. Once a Message Batch is created, it begins processing immediately. Batches
+   * can take up to 24 hours to complete.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const betaMessageBatch =
+   *   await client.beta.messages.batches.create({
+   *     requests: [
+   *       {
+   *         custom_id: 'my-custom-id-1',
+   *         params: {
+   *           max_tokens: 1024,
+   *           messages: [
+   *             { content: 'Hello, world', role: 'user' },
+   *           ],
+   *           model: 'claude-sonnet-4-5-20250929',
+   *         },
+   *       },
+   *     ],
+   *   });
+   * ```
+   */
+  create(params, options) {
+    const { betas, ...body } = params;
+    return this._client.post("/v1/messages/batches?beta=true", {
+      body,
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * This endpoint is idempotent and can be used to poll for Message Batch
+   * completion. To access the results of a Message Batch, make a request to the
+   * `results_url` field in the response.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const betaMessageBatch =
+   *   await client.beta.messages.batches.retrieve(
+   *     'message_batch_id',
+   *   );
+   * ```
+   */
+  retrieve(messageBatchID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.get(path7`/v1/messages/batches/${messageBatchID}?beta=true`, {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * List all Message Batches within a Workspace. Most recently created batches are
+   * returned first.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * // Automatically fetches more pages as needed.
+   * for await (const betaMessageBatch of client.beta.messages.batches.list()) {
+   *   // ...
+   * }
+   * ```
+   */
+  list(params = {}, options) {
+    const { betas, ...query } = params ?? {};
+    return this._client.getAPIList("/v1/messages/batches?beta=true", Page, {
+      query,
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * Delete a Message Batch.
+   *
+   * Message Batches can only be deleted once they've finished processing. If you'd
+   * like to delete an in-progress batch, you must first cancel it.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const betaDeletedMessageBatch =
+   *   await client.beta.messages.batches.delete(
+   *     'message_batch_id',
+   *   );
+   * ```
+   */
+  delete(messageBatchID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.delete(path7`/v1/messages/batches/${messageBatchID}?beta=true`, {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * Batches may be canceled any time before processing ends. Once cancellation is
+   * initiated, the batch enters a `canceling` state, at which time the system may
+   * complete any in-progress, non-interruptible requests before finalizing
+   * cancellation.
+   *
+   * The number of canceled requests is specified in `request_counts`. To determine
+   * which requests were canceled, check the individual results within the batch.
+   * Note that cancellation may not result in any canceled requests if they were
+   * non-interruptible.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const betaMessageBatch =
+   *   await client.beta.messages.batches.cancel(
+   *     'message_batch_id',
+   *   );
+   * ```
+   */
+  cancel(messageBatchID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.post(path7`/v1/messages/batches/${messageBatchID}/cancel?beta=true`, {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * Streams the results of a Message Batch as a `.jsonl` file.
+   *
+   * Each line in the file is a JSON object containing the result of a single request
+   * in the Message Batch. Results are not guaranteed to be in the same order as
+   * requests. Use the `custom_id` field to match results to requests.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const betaMessageBatchIndividualResponse =
+   *   await client.beta.messages.batches.results(
+   *     'message_batch_id',
+   *   );
+   * ```
+   */
+  async results(messageBatchID, params = {}, options) {
+    const batch = await this.retrieve(messageBatchID);
+    if (!batch.results_url) {
+      throw new AnthropicError(`No batch \`results_url\`; Has it finished processing? ${batch.processing_status} - ${batch.id}`);
+    }
+    const { betas } = params ?? {};
+    return this._client.get(batch.results_url, {
+      ...options,
+      headers: buildHeaders([
+        {
+          "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString(),
+          Accept: "application/binary"
+        },
+        options?.headers
+      ]),
+      stream: true,
+      __binaryResponse: true
+    })._thenUnwrap((_, props) => JSONLDecoder.fromResponse(props.response, props.controller));
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/resources/beta/messages/messages.mjs
+var DEPRECATED_MODELS = {
+  "claude-1.3": "November 6th, 2024",
+  "claude-1.3-100k": "November 6th, 2024",
+  "claude-instant-1.1": "November 6th, 2024",
+  "claude-instant-1.1-100k": "November 6th, 2024",
+  "claude-instant-1.2": "November 6th, 2024",
+  "claude-3-sonnet-20240229": "July 21st, 2025",
+  "claude-3-opus-20240229": "January 5th, 2026",
+  "claude-2.1": "July 21st, 2025",
+  "claude-2.0": "July 21st, 2025",
+  "claude-3-7-sonnet-latest": "February 19th, 2026",
+  "claude-3-7-sonnet-20250219": "February 19th, 2026"
+};
+var Messages = class extends APIResource {
+  constructor() {
+    super(...arguments);
+    this.batches = new Batches(this._client);
+  }
+  create(params, options) {
+    const { betas, ...body } = params;
+    if (body.model in DEPRECATED_MODELS) {
+      console.warn(`The model '${body.model}' is deprecated and will reach end-of-life on ${DEPRECATED_MODELS[body.model]}
+Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.`);
+    }
+    let timeout = this._client._options.timeout;
+    if (!body.stream && timeout == null) {
+      const maxNonstreamingTokens = MODEL_NONSTREAMING_TOKENS[body.model] ?? void 0;
+      timeout = this._client.calculateNonstreamingTimeout(body.max_tokens, maxNonstreamingTokens);
+    }
+    return this._client.post("/v1/messages?beta=true", {
+      body,
+      timeout: timeout ?? 6e5,
+      ...options,
+      headers: buildHeaders([
+        { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+        options?.headers
+      ]),
+      stream: params.stream ?? false
+    });
+  }
+  /**
+   * Send a structured list of input messages with text and/or image content, along with an expected `output_format` and
+   * the response will be automatically parsed and available in the `parsed_output` property of the message.
+   *
+   * @example
+   * ```ts
+   * const message = await client.beta.messages.parse({
+   *   model: 'claude-3-5-sonnet-20241022',
+   *   max_tokens: 1024,
+   *   messages: [{ role: 'user', content: 'What is 2+2?' }],
+   *   output_format: zodOutputFormat(z.object({ answer: z.number() }), 'math'),
+   * });
+   *
+   * console.log(message.parsed_output?.answer); // 4
+   * ```
+   */
+  parse(params, options) {
+    options = {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...params.betas ?? [], "structured-outputs-2025-11-13"].toString() },
+        options?.headers
+      ])
+    };
+    return this.create(params, options).then((message) => parseBetaMessage(message, params, { logger: this._client.logger ?? console }));
+  }
+  /**
+   * Create a Message stream
+   */
+  stream(body, options) {
+    return BetaMessageStream.createMessage(this, body, options);
+  }
+  /**
+   * Count the number of tokens in a Message.
+   *
+   * The Token Count API can be used to count the number of tokens in a Message,
+   * including tools, images, and documents, without creating it.
+   *
+   * Learn more about token counting in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/token-counting)
+   *
+   * @example
+   * ```ts
+   * const betaMessageTokensCount =
+   *   await client.beta.messages.countTokens({
+   *     messages: [{ content: 'string', role: 'user' }],
+   *     model: 'claude-opus-4-5-20251101',
+   *   });
+   * ```
+   */
+  countTokens(params, options) {
+    const { betas, ...body } = params;
+    return this._client.post("/v1/messages/count_tokens?beta=true", {
+      body,
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "token-counting-2024-11-01"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  toolRunner(body, options) {
+    return new BetaToolRunner(this._client, body, options);
+  }
+};
+Messages.Batches = Batches;
+Messages.BetaToolRunner = BetaToolRunner;
+
+// node_modules/@anthropic-ai/sdk/resources/beta/skills/versions.mjs
+var Versions = class extends APIResource {
+  /**
+   * Create Skill Version
+   *
+   * @example
+   * ```ts
+   * const version = await client.beta.skills.versions.create(
+   *   'skill_id',
+   * );
+   * ```
+   */
+  create(skillID, params = {}, options) {
+    const { betas, ...body } = params ?? {};
+    return this._client.post(path7`/v1/skills/${skillID}/versions?beta=true`, multipartFormRequestOptions({
+      body,
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+        options?.headers
+      ])
+    }, this._client));
+  }
+  /**
+   * Get Skill Version
+   *
+   * @example
+   * ```ts
+   * const version = await client.beta.skills.versions.retrieve(
+   *   'version',
+   *   { skill_id: 'skill_id' },
+   * );
+   * ```
+   */
+  retrieve(version, params, options) {
+    const { skill_id, betas } = params;
+    return this._client.get(path7`/v1/skills/${skill_id}/versions/${version}?beta=true`, {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * List Skill Versions
+   *
+   * @example
+   * ```ts
+   * // Automatically fetches more pages as needed.
+   * for await (const versionListResponse of client.beta.skills.versions.list(
+   *   'skill_id',
+   * )) {
+   *   // ...
+   * }
+   * ```
+   */
+  list(skillID, params = {}, options) {
+    const { betas, ...query } = params ?? {};
+    return this._client.getAPIList(path7`/v1/skills/${skillID}/versions?beta=true`, PageCursor, {
+      query,
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * Delete Skill Version
+   *
+   * @example
+   * ```ts
+   * const version = await client.beta.skills.versions.delete(
+   *   'version',
+   *   { skill_id: 'skill_id' },
+   * );
+   * ```
+   */
+  delete(version, params, options) {
+    const { skill_id, betas } = params;
+    return this._client.delete(path7`/v1/skills/${skill_id}/versions/${version}?beta=true`, {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+        options?.headers
+      ])
+    });
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/resources/beta/skills/skills.mjs
+var Skills = class extends APIResource {
+  constructor() {
+    super(...arguments);
+    this.versions = new Versions(this._client);
+  }
+  /**
+   * Create Skill
+   *
+   * @example
+   * ```ts
+   * const skill = await client.beta.skills.create();
+   * ```
+   */
+  create(params = {}, options) {
+    const { betas, ...body } = params ?? {};
+    return this._client.post("/v1/skills?beta=true", multipartFormRequestOptions({
+      body,
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+        options?.headers
+      ])
+    }, this._client));
+  }
+  /**
+   * Get Skill
+   *
+   * @example
+   * ```ts
+   * const skill = await client.beta.skills.retrieve('skill_id');
+   * ```
+   */
+  retrieve(skillID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.get(path7`/v1/skills/${skillID}?beta=true`, {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * List Skills
+   *
+   * @example
+   * ```ts
+   * // Automatically fetches more pages as needed.
+   * for await (const skillListResponse of client.beta.skills.list()) {
+   *   // ...
+   * }
+   * ```
+   */
+  list(params = {}, options) {
+    const { betas, ...query } = params ?? {};
+    return this._client.getAPIList("/v1/skills?beta=true", PageCursor, {
+      query,
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * Delete Skill
+   *
+   * @example
+   * ```ts
+   * const skill = await client.beta.skills.delete('skill_id');
+   * ```
+   */
+  delete(skillID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.delete(path7`/v1/skills/${skillID}?beta=true`, {
+      ...options,
+      headers: buildHeaders([
+        { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+        options?.headers
+      ])
+    });
+  }
+};
+Skills.Versions = Versions;
+
+// node_modules/@anthropic-ai/sdk/resources/beta/beta.mjs
+var Beta = class extends APIResource {
+  constructor() {
+    super(...arguments);
+    this.models = new Models(this._client);
+    this.messages = new Messages(this._client);
+    this.files = new Files(this._client);
+    this.skills = new Skills(this._client);
+  }
+};
+Beta.Models = Models;
+Beta.Messages = Messages;
+Beta.Files = Files;
+Beta.Skills = Skills;
+
+// node_modules/@anthropic-ai/sdk/resources/completions.mjs
+var Completions = class extends APIResource {
+  create(params, options) {
+    const { betas, ...body } = params;
+    return this._client.post("/v1/complete", {
+      body,
+      timeout: this._client._options.timeout ?? 6e5,
+      ...options,
+      headers: buildHeaders([
+        { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+        options?.headers
+      ]),
+      stream: params.stream ?? false
+    });
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs
+var _MessageStream_instances;
+var _MessageStream_currentMessageSnapshot;
+var _MessageStream_connectedPromise;
+var _MessageStream_resolveConnectedPromise;
+var _MessageStream_rejectConnectedPromise;
+var _MessageStream_endPromise;
+var _MessageStream_resolveEndPromise;
+var _MessageStream_rejectEndPromise;
+var _MessageStream_listeners;
+var _MessageStream_ended;
+var _MessageStream_errored;
+var _MessageStream_aborted;
+var _MessageStream_catchingPromiseCreated;
+var _MessageStream_response;
+var _MessageStream_request_id;
+var _MessageStream_getFinalMessage;
+var _MessageStream_getFinalText;
+var _MessageStream_handleError;
+var _MessageStream_beginRequest;
+var _MessageStream_addStreamEvent;
+var _MessageStream_endRequest;
+var _MessageStream_accumulateMessage;
+var JSON_BUF_PROPERTY2 = "__json_buf";
+function tracksToolInput2(content) {
+  return content.type === "tool_use" || content.type === "server_tool_use";
+}
+var MessageStream = class _MessageStream {
+  constructor() {
+    _MessageStream_instances.add(this);
+    this.messages = [];
+    this.receivedMessages = [];
+    _MessageStream_currentMessageSnapshot.set(this, void 0);
+    this.controller = new AbortController();
+    _MessageStream_connectedPromise.set(this, void 0);
+    _MessageStream_resolveConnectedPromise.set(this, () => {
+    });
+    _MessageStream_rejectConnectedPromise.set(this, () => {
+    });
+    _MessageStream_endPromise.set(this, void 0);
+    _MessageStream_resolveEndPromise.set(this, () => {
+    });
+    _MessageStream_rejectEndPromise.set(this, () => {
+    });
+    _MessageStream_listeners.set(this, {});
+    _MessageStream_ended.set(this, false);
+    _MessageStream_errored.set(this, false);
+    _MessageStream_aborted.set(this, false);
+    _MessageStream_catchingPromiseCreated.set(this, false);
+    _MessageStream_response.set(this, void 0);
+    _MessageStream_request_id.set(this, void 0);
+    _MessageStream_handleError.set(this, (error) => {
+      __classPrivateFieldSet(this, _MessageStream_errored, true, "f");
+      if (isAbortError(error)) {
+        error = new APIUserAbortError();
+      }
+      if (error instanceof APIUserAbortError) {
+        __classPrivateFieldSet(this, _MessageStream_aborted, true, "f");
+        return this._emit("abort", error);
+      }
+      if (error instanceof AnthropicError) {
+        return this._emit("error", error);
+      }
+      if (error instanceof Error) {
+        const anthropicError = new AnthropicError(error.message);
+        anthropicError.cause = error;
+        return this._emit("error", anthropicError);
+      }
+      return this._emit("error", new AnthropicError(String(error)));
+    });
+    __classPrivateFieldSet(this, _MessageStream_connectedPromise, new Promise((resolve3, reject) => {
+      __classPrivateFieldSet(this, _MessageStream_resolveConnectedPromise, resolve3, "f");
+      __classPrivateFieldSet(this, _MessageStream_rejectConnectedPromise, reject, "f");
+    }), "f");
+    __classPrivateFieldSet(this, _MessageStream_endPromise, new Promise((resolve3, reject) => {
+      __classPrivateFieldSet(this, _MessageStream_resolveEndPromise, resolve3, "f");
+      __classPrivateFieldSet(this, _MessageStream_rejectEndPromise, reject, "f");
+    }), "f");
+    __classPrivateFieldGet(this, _MessageStream_connectedPromise, "f").catch(() => {
+    });
+    __classPrivateFieldGet(this, _MessageStream_endPromise, "f").catch(() => {
+    });
+  }
+  get response() {
+    return __classPrivateFieldGet(this, _MessageStream_response, "f");
+  }
+  get request_id() {
+    return __classPrivateFieldGet(this, _MessageStream_request_id, "f");
+  }
+  /**
+   * Returns the `MessageStream` data, the raw `Response` instance and the ID of the request,
+   * returned vie the `request-id` header which is useful for debugging requests and resporting
+   * issues to Anthropic.
+   *
+   * This is the same as the `APIPromise.withResponse()` method.
+   *
+   * This method will raise an error if you created the stream using `MessageStream.fromReadableStream`
+   * as no `Response` is available.
+   */
+  async withResponse() {
+    __classPrivateFieldSet(this, _MessageStream_catchingPromiseCreated, true, "f");
+    const response = await __classPrivateFieldGet(this, _MessageStream_connectedPromise, "f");
+    if (!response) {
+      throw new Error("Could not resolve a `Response` object");
+    }
+    return {
+      data: this,
+      response,
+      request_id: response.headers.get("request-id")
+    };
+  }
+  /**
+   * Intended for use on the frontend, consuming a stream produced with
+   * `.toReadableStream()` on the backend.
+   *
+   * Note that messages sent to the model do not appear in `.on('message')`
+   * in this context.
+   */
+  static fromReadableStream(stream3) {
+    const runner = new _MessageStream();
+    runner._run(() => runner._fromReadableStream(stream3));
+    return runner;
+  }
+  static createMessage(messages, params, options) {
+    const runner = new _MessageStream();
+    for (const message of params.messages) {
+      runner._addMessageParam(message);
+    }
+    runner._run(() => runner._createMessage(messages, { ...params, stream: true }, { ...options, headers: { ...options?.headers, "X-Stainless-Helper-Method": "stream" } }));
+    return runner;
+  }
+  _run(executor) {
+    executor().then(() => {
+      this._emitFinal();
+      this._emit("end");
+    }, __classPrivateFieldGet(this, _MessageStream_handleError, "f"));
+  }
+  _addMessageParam(message) {
+    this.messages.push(message);
+  }
+  _addMessage(message, emit = true) {
+    this.receivedMessages.push(message);
+    if (emit) {
+      this._emit("message", message);
+    }
+  }
+  async _createMessage(messages, params, options) {
+    const signal = options?.signal;
+    let abortHandler;
+    if (signal) {
+      if (signal.aborted)
+        this.controller.abort();
+      abortHandler = this.controller.abort.bind(this.controller);
+      signal.addEventListener("abort", abortHandler);
+    }
+    try {
+      __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_beginRequest).call(this);
+      const { response, data: stream3 } = await messages.create({ ...params, stream: true }, { ...options, signal: this.controller.signal }).withResponse();
+      this._connected(response);
+      for await (const event of stream3) {
+        __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_addStreamEvent).call(this, event);
+      }
+      if (stream3.controller.signal?.aborted) {
+        throw new APIUserAbortError();
+      }
+      __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_endRequest).call(this);
+    } finally {
+      if (signal && abortHandler) {
+        signal.removeEventListener("abort", abortHandler);
+      }
+    }
+  }
+  _connected(response) {
+    if (this.ended)
+      return;
+    __classPrivateFieldSet(this, _MessageStream_response, response, "f");
+    __classPrivateFieldSet(this, _MessageStream_request_id, response?.headers.get("request-id"), "f");
+    __classPrivateFieldGet(this, _MessageStream_resolveConnectedPromise, "f").call(this, response);
+    this._emit("connect");
+  }
+  get ended() {
+    return __classPrivateFieldGet(this, _MessageStream_ended, "f");
+  }
+  get errored() {
+    return __classPrivateFieldGet(this, _MessageStream_errored, "f");
+  }
+  get aborted() {
+    return __classPrivateFieldGet(this, _MessageStream_aborted, "f");
+  }
+  abort() {
+    this.controller.abort();
+  }
+  /**
+   * Adds the listener function to the end of the listeners array for the event.
+   * No checks are made to see if the listener has already been added. Multiple calls passing
+   * the same combination of event and listener will result in the listener being added, and
+   * called, multiple times.
+   * @returns this MessageStream, so that calls can be chained
+   */
+  on(event, listener) {
+    const listeners = __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] = []);
+    listeners.push({ listener });
+    return this;
+  }
+  /**
+   * Removes the specified listener from the listener array for the event.
+   * off() will remove, at most, one instance of a listener from the listener array. If any single
+   * listener has been added multiple times to the listener array for the specified event, then
+   * off() must be called multiple times to remove each instance.
+   * @returns this MessageStream, so that calls can be chained
+   */
+  off(event, listener) {
+    const listeners = __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event];
+    if (!listeners)
+      return this;
+    const index = listeners.findIndex((l) => l.listener === listener);
+    if (index >= 0)
+      listeners.splice(index, 1);
+    return this;
+  }
+  /**
+   * Adds a one-time listener function for the event. The next time the event is triggered,
+   * this listener is removed and then invoked.
+   * @returns this MessageStream, so that calls can be chained
+   */
+  once(event, listener) {
+    const listeners = __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] = []);
+    listeners.push({ listener, once: true });
+    return this;
+  }
+  /**
+   * This is similar to `.once()`, but returns a Promise that resolves the next time
+   * the event is triggered, instead of calling a listener callback.
+   * @returns a Promise that resolves the next time given event is triggered,
+   * or rejects if an error is emitted.  (If you request the 'error' event,
+   * returns a promise that resolves with the error).
+   *
+   * Example:
+   *
+   *   const message = await stream.emitted('message') // rejects if the stream errors
+   */
+  emitted(event) {
+    return new Promise((resolve3, reject) => {
+      __classPrivateFieldSet(this, _MessageStream_catchingPromiseCreated, true, "f");
+      if (event !== "error")
+        this.once("error", reject);
+      this.once(event, resolve3);
+    });
+  }
+  async done() {
+    __classPrivateFieldSet(this, _MessageStream_catchingPromiseCreated, true, "f");
+    await __classPrivateFieldGet(this, _MessageStream_endPromise, "f");
+  }
+  get currentMessage() {
+    return __classPrivateFieldGet(this, _MessageStream_currentMessageSnapshot, "f");
+  }
+  /**
+   * @returns a promise that resolves with the the final assistant Message response,
+   * or rejects if an error occurred or the stream ended prematurely without producing a Message.
+   */
+  async finalMessage() {
+    await this.done();
+    return __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_getFinalMessage).call(this);
+  }
+  /**
+   * @returns a promise that resolves with the the final assistant Message's text response, concatenated
+   * together if there are more than one text blocks.
+   * Rejects if an error occurred or the stream ended prematurely without producing a Message.
+   */
+  async finalText() {
+    await this.done();
+    return __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_getFinalText).call(this);
+  }
+  _emit(event, ...args) {
+    if (__classPrivateFieldGet(this, _MessageStream_ended, "f"))
+      return;
+    if (event === "end") {
+      __classPrivateFieldSet(this, _MessageStream_ended, true, "f");
+      __classPrivateFieldGet(this, _MessageStream_resolveEndPromise, "f").call(this);
+    }
+    const listeners = __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event];
+    if (listeners) {
+      __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] = listeners.filter((l) => !l.once);
+      listeners.forEach(({ listener }) => listener(...args));
+    }
+    if (event === "abort") {
+      const error = args[0];
+      if (!__classPrivateFieldGet(this, _MessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
+        Promise.reject(error);
+      }
+      __classPrivateFieldGet(this, _MessageStream_rejectConnectedPromise, "f").call(this, error);
+      __classPrivateFieldGet(this, _MessageStream_rejectEndPromise, "f").call(this, error);
+      this._emit("end");
+      return;
+    }
+    if (event === "error") {
+      const error = args[0];
+      if (!__classPrivateFieldGet(this, _MessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
+        Promise.reject(error);
+      }
+      __classPrivateFieldGet(this, _MessageStream_rejectConnectedPromise, "f").call(this, error);
+      __classPrivateFieldGet(this, _MessageStream_rejectEndPromise, "f").call(this, error);
+      this._emit("end");
+    }
+  }
+  _emitFinal() {
+    const finalMessage = this.receivedMessages.at(-1);
+    if (finalMessage) {
+      this._emit("finalMessage", __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_getFinalMessage).call(this));
+    }
+  }
+  async _fromReadableStream(readableStream, options) {
+    const signal = options?.signal;
+    let abortHandler;
+    if (signal) {
+      if (signal.aborted)
+        this.controller.abort();
+      abortHandler = this.controller.abort.bind(this.controller);
+      signal.addEventListener("abort", abortHandler);
+    }
+    try {
+      __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_beginRequest).call(this);
+      this._connected(null);
+      const stream3 = Stream2.fromReadableStream(readableStream, this.controller);
+      for await (const event of stream3) {
+        __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_addStreamEvent).call(this, event);
+      }
+      if (stream3.controller.signal?.aborted) {
+        throw new APIUserAbortError();
+      }
+      __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_endRequest).call(this);
+    } finally {
+      if (signal && abortHandler) {
+        signal.removeEventListener("abort", abortHandler);
+      }
+    }
+  }
+  [(_MessageStream_currentMessageSnapshot = /* @__PURE__ */ new WeakMap(), _MessageStream_connectedPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_resolveConnectedPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_rejectConnectedPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_endPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_resolveEndPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_rejectEndPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_listeners = /* @__PURE__ */ new WeakMap(), _MessageStream_ended = /* @__PURE__ */ new WeakMap(), _MessageStream_errored = /* @__PURE__ */ new WeakMap(), _MessageStream_aborted = /* @__PURE__ */ new WeakMap(), _MessageStream_catchingPromiseCreated = /* @__PURE__ */ new WeakMap(), _MessageStream_response = /* @__PURE__ */ new WeakMap(), _MessageStream_request_id = /* @__PURE__ */ new WeakMap(), _MessageStream_handleError = /* @__PURE__ */ new WeakMap(), _MessageStream_instances = /* @__PURE__ */ new WeakSet(), _MessageStream_getFinalMessage = function _MessageStream_getFinalMessage2() {
+    if (this.receivedMessages.length === 0) {
+      throw new AnthropicError("stream ended without producing a Message with role=assistant");
+    }
+    return this.receivedMessages.at(-1);
+  }, _MessageStream_getFinalText = function _MessageStream_getFinalText2() {
+    if (this.receivedMessages.length === 0) {
+      throw new AnthropicError("stream ended without producing a Message with role=assistant");
+    }
+    const textBlocks = this.receivedMessages.at(-1).content.filter((block) => block.type === "text").map((block) => block.text);
+    if (textBlocks.length === 0) {
+      throw new AnthropicError("stream ended without producing a content block with type=text");
+    }
+    return textBlocks.join(" ");
+  }, _MessageStream_beginRequest = function _MessageStream_beginRequest2() {
+    if (this.ended)
+      return;
+    __classPrivateFieldSet(this, _MessageStream_currentMessageSnapshot, void 0, "f");
+  }, _MessageStream_addStreamEvent = function _MessageStream_addStreamEvent2(event) {
+    if (this.ended)
+      return;
+    const messageSnapshot = __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_accumulateMessage).call(this, event);
+    this._emit("streamEvent", event, messageSnapshot);
+    switch (event.type) {
+      case "content_block_delta": {
+        const content = messageSnapshot.content.at(-1);
+        switch (event.delta.type) {
+          case "text_delta": {
+            if (content.type === "text") {
+              this._emit("text", event.delta.text, content.text || "");
+            }
+            break;
+          }
+          case "citations_delta": {
+            if (content.type === "text") {
+              this._emit("citation", event.delta.citation, content.citations ?? []);
+            }
+            break;
+          }
+          case "input_json_delta": {
+            if (tracksToolInput2(content) && content.input) {
+              this._emit("inputJson", event.delta.partial_json, content.input);
+            }
+            break;
+          }
+          case "thinking_delta": {
+            if (content.type === "thinking") {
+              this._emit("thinking", event.delta.thinking, content.thinking);
+            }
+            break;
+          }
+          case "signature_delta": {
+            if (content.type === "thinking") {
+              this._emit("signature", content.signature);
+            }
+            break;
+          }
+          default:
+            checkNever2(event.delta);
+        }
+        break;
+      }
+      case "message_stop": {
+        this._addMessageParam(messageSnapshot);
+        this._addMessage(messageSnapshot, true);
+        break;
+      }
+      case "content_block_stop": {
+        this._emit("contentBlock", messageSnapshot.content.at(-1));
+        break;
+      }
+      case "message_start": {
+        __classPrivateFieldSet(this, _MessageStream_currentMessageSnapshot, messageSnapshot, "f");
+        break;
+      }
+      case "content_block_start":
+      case "message_delta":
+        break;
+    }
+  }, _MessageStream_endRequest = function _MessageStream_endRequest2() {
+    if (this.ended) {
+      throw new AnthropicError(`stream has ended, this shouldn't happen`);
+    }
+    const snapshot = __classPrivateFieldGet(this, _MessageStream_currentMessageSnapshot, "f");
+    if (!snapshot) {
+      throw new AnthropicError(`request ended without sending any chunks`);
+    }
+    __classPrivateFieldSet(this, _MessageStream_currentMessageSnapshot, void 0, "f");
+    return snapshot;
+  }, _MessageStream_accumulateMessage = function _MessageStream_accumulateMessage2(event) {
+    let snapshot = __classPrivateFieldGet(this, _MessageStream_currentMessageSnapshot, "f");
+    if (event.type === "message_start") {
+      if (snapshot) {
+        throw new AnthropicError(`Unexpected event order, got ${event.type} before receiving "message_stop"`);
+      }
+      return event.message;
+    }
+    if (!snapshot) {
+      throw new AnthropicError(`Unexpected event order, got ${event.type} before "message_start"`);
+    }
+    switch (event.type) {
+      case "message_stop":
+        return snapshot;
+      case "message_delta":
+        snapshot.stop_reason = event.delta.stop_reason;
+        snapshot.stop_sequence = event.delta.stop_sequence;
+        snapshot.usage.output_tokens = event.usage.output_tokens;
+        if (event.usage.input_tokens != null) {
+          snapshot.usage.input_tokens = event.usage.input_tokens;
+        }
+        if (event.usage.cache_creation_input_tokens != null) {
+          snapshot.usage.cache_creation_input_tokens = event.usage.cache_creation_input_tokens;
+        }
+        if (event.usage.cache_read_input_tokens != null) {
+          snapshot.usage.cache_read_input_tokens = event.usage.cache_read_input_tokens;
+        }
+        if (event.usage.server_tool_use != null) {
+          snapshot.usage.server_tool_use = event.usage.server_tool_use;
+        }
+        return snapshot;
+      case "content_block_start":
+        snapshot.content.push({ ...event.content_block });
+        return snapshot;
+      case "content_block_delta": {
+        const snapshotContent = snapshot.content.at(event.index);
+        switch (event.delta.type) {
+          case "text_delta": {
+            if (snapshotContent?.type === "text") {
+              snapshot.content[event.index] = {
+                ...snapshotContent,
+                text: (snapshotContent.text || "") + event.delta.text
+              };
+            }
+            break;
+          }
+          case "citations_delta": {
+            if (snapshotContent?.type === "text") {
+              snapshot.content[event.index] = {
+                ...snapshotContent,
+                citations: [...snapshotContent.citations ?? [], event.delta.citation]
+              };
+            }
+            break;
+          }
+          case "input_json_delta": {
+            if (snapshotContent && tracksToolInput2(snapshotContent)) {
+              let jsonBuf = snapshotContent[JSON_BUF_PROPERTY2] || "";
+              jsonBuf += event.delta.partial_json;
+              const newContent = { ...snapshotContent };
+              Object.defineProperty(newContent, JSON_BUF_PROPERTY2, {
+                value: jsonBuf,
+                enumerable: false,
+                writable: true
+              });
+              if (jsonBuf) {
+                newContent.input = partialParse(jsonBuf);
+              }
+              snapshot.content[event.index] = newContent;
+            }
+            break;
+          }
+          case "thinking_delta": {
+            if (snapshotContent?.type === "thinking") {
+              snapshot.content[event.index] = {
+                ...snapshotContent,
+                thinking: snapshotContent.thinking + event.delta.thinking
+              };
+            }
+            break;
+          }
+          case "signature_delta": {
+            if (snapshotContent?.type === "thinking") {
+              snapshot.content[event.index] = {
+                ...snapshotContent,
+                signature: event.delta.signature
+              };
+            }
+            break;
+          }
+          default:
+            checkNever2(event.delta);
+        }
+        return snapshot;
+      }
+      case "content_block_stop":
+        return snapshot;
+    }
+  }, Symbol.asyncIterator)]() {
+    const pushQueue = [];
+    const readQueue = [];
+    let done = false;
+    this.on("streamEvent", (event) => {
+      const reader = readQueue.shift();
+      if (reader) {
+        reader.resolve(event);
+      } else {
+        pushQueue.push(event);
+      }
+    });
+    this.on("end", () => {
+      done = true;
+      for (const reader of readQueue) {
+        reader.resolve(void 0);
+      }
+      readQueue.length = 0;
+    });
+    this.on("abort", (err) => {
+      done = true;
+      for (const reader of readQueue) {
+        reader.reject(err);
+      }
+      readQueue.length = 0;
+    });
+    this.on("error", (err) => {
+      done = true;
+      for (const reader of readQueue) {
+        reader.reject(err);
+      }
+      readQueue.length = 0;
+    });
+    return {
+      next: async () => {
+        if (!pushQueue.length) {
+          if (done) {
+            return { value: void 0, done: true };
+          }
+          return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+        }
+        const chunk2 = pushQueue.shift();
+        return { value: chunk2, done: false };
+      },
+      return: async () => {
+        this.abort();
+        return { value: void 0, done: true };
+      }
+    };
+  }
+  toReadableStream() {
+    const stream3 = new Stream2(this[Symbol.asyncIterator].bind(this), this.controller);
+    return stream3.toReadableStream();
+  }
+};
+function checkNever2(x) {
+}
+
+// node_modules/@anthropic-ai/sdk/resources/messages/batches.mjs
+var Batches2 = class extends APIResource {
+  /**
+   * Send a batch of Message creation requests.
+   *
+   * The Message Batches API can be used to process multiple Messages API requests at
+   * once. Once a Message Batch is created, it begins processing immediately. Batches
+   * can take up to 24 hours to complete.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const messageBatch = await client.messages.batches.create({
+   *   requests: [
+   *     {
+   *       custom_id: 'my-custom-id-1',
+   *       params: {
+   *         max_tokens: 1024,
+   *         messages: [
+   *           { content: 'Hello, world', role: 'user' },
+   *         ],
+   *         model: 'claude-sonnet-4-5-20250929',
+   *       },
+   *     },
+   *   ],
+   * });
+   * ```
+   */
+  create(body, options) {
+    return this._client.post("/v1/messages/batches", { body, ...options });
+  }
+  /**
+   * This endpoint is idempotent and can be used to poll for Message Batch
+   * completion. To access the results of a Message Batch, make a request to the
+   * `results_url` field in the response.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const messageBatch = await client.messages.batches.retrieve(
+   *   'message_batch_id',
+   * );
+   * ```
+   */
+  retrieve(messageBatchID, options) {
+    return this._client.get(path7`/v1/messages/batches/${messageBatchID}`, options);
+  }
+  /**
+   * List all Message Batches within a Workspace. Most recently created batches are
+   * returned first.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * // Automatically fetches more pages as needed.
+   * for await (const messageBatch of client.messages.batches.list()) {
+   *   // ...
+   * }
+   * ```
+   */
+  list(query = {}, options) {
+    return this._client.getAPIList("/v1/messages/batches", Page, { query, ...options });
+  }
+  /**
+   * Delete a Message Batch.
+   *
+   * Message Batches can only be deleted once they've finished processing. If you'd
+   * like to delete an in-progress batch, you must first cancel it.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const deletedMessageBatch =
+   *   await client.messages.batches.delete('message_batch_id');
+   * ```
+   */
+  delete(messageBatchID, options) {
+    return this._client.delete(path7`/v1/messages/batches/${messageBatchID}`, options);
+  }
+  /**
+   * Batches may be canceled any time before processing ends. Once cancellation is
+   * initiated, the batch enters a `canceling` state, at which time the system may
+   * complete any in-progress, non-interruptible requests before finalizing
+   * cancellation.
+   *
+   * The number of canceled requests is specified in `request_counts`. To determine
+   * which requests were canceled, check the individual results within the batch.
+   * Note that cancellation may not result in any canceled requests if they were
+   * non-interruptible.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const messageBatch = await client.messages.batches.cancel(
+   *   'message_batch_id',
+   * );
+   * ```
+   */
+  cancel(messageBatchID, options) {
+    return this._client.post(path7`/v1/messages/batches/${messageBatchID}/cancel`, options);
+  }
+  /**
+   * Streams the results of a Message Batch as a `.jsonl` file.
+   *
+   * Each line in the file is a JSON object containing the result of a single request
+   * in the Message Batch. Results are not guaranteed to be in the same order as
+   * requests. Use the `custom_id` field to match results to requests.
+   *
+   * Learn more about the Message Batches API in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+   *
+   * @example
+   * ```ts
+   * const messageBatchIndividualResponse =
+   *   await client.messages.batches.results('message_batch_id');
+   * ```
+   */
+  async results(messageBatchID, options) {
+    const batch = await this.retrieve(messageBatchID);
+    if (!batch.results_url) {
+      throw new AnthropicError(`No batch \`results_url\`; Has it finished processing? ${batch.processing_status} - ${batch.id}`);
+    }
+    return this._client.get(batch.results_url, {
+      ...options,
+      headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
+      stream: true,
+      __binaryResponse: true
+    })._thenUnwrap((_, props) => JSONLDecoder.fromResponse(props.response, props.controller));
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/resources/messages/messages.mjs
+var Messages2 = class extends APIResource {
+  constructor() {
+    super(...arguments);
+    this.batches = new Batches2(this._client);
+  }
+  create(body, options) {
+    if (body.model in DEPRECATED_MODELS2) {
+      console.warn(`The model '${body.model}' is deprecated and will reach end-of-life on ${DEPRECATED_MODELS2[body.model]}
+Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.`);
+    }
+    let timeout = this._client._options.timeout;
+    if (!body.stream && timeout == null) {
+      const maxNonstreamingTokens = MODEL_NONSTREAMING_TOKENS[body.model] ?? void 0;
+      timeout = this._client.calculateNonstreamingTimeout(body.max_tokens, maxNonstreamingTokens);
+    }
+    return this._client.post("/v1/messages", {
+      body,
+      timeout: timeout ?? 6e5,
+      ...options,
+      stream: body.stream ?? false
+    });
+  }
+  /**
+   * Create a Message stream
+   */
+  stream(body, options) {
+    return MessageStream.createMessage(this, body, options);
+  }
+  /**
+   * Count the number of tokens in a Message.
+   *
+   * The Token Count API can be used to count the number of tokens in a Message,
+   * including tools, images, and documents, without creating it.
+   *
+   * Learn more about token counting in our
+   * [user guide](https://docs.claude.com/en/docs/build-with-claude/token-counting)
+   *
+   * @example
+   * ```ts
+   * const messageTokensCount =
+   *   await client.messages.countTokens({
+   *     messages: [{ content: 'string', role: 'user' }],
+   *     model: 'claude-opus-4-5-20251101',
+   *   });
+   * ```
+   */
+  countTokens(body, options) {
+    return this._client.post("/v1/messages/count_tokens", { body, ...options });
+  }
+};
+var DEPRECATED_MODELS2 = {
+  "claude-1.3": "November 6th, 2024",
+  "claude-1.3-100k": "November 6th, 2024",
+  "claude-instant-1.1": "November 6th, 2024",
+  "claude-instant-1.1-100k": "November 6th, 2024",
+  "claude-instant-1.2": "November 6th, 2024",
+  "claude-3-sonnet-20240229": "July 21st, 2025",
+  "claude-3-opus-20240229": "January 5th, 2026",
+  "claude-2.1": "July 21st, 2025",
+  "claude-2.0": "July 21st, 2025",
+  "claude-3-7-sonnet-latest": "February 19th, 2026",
+  "claude-3-7-sonnet-20250219": "February 19th, 2026"
+};
+Messages2.Batches = Batches2;
+
+// node_modules/@anthropic-ai/sdk/resources/models.mjs
+var Models2 = class extends APIResource {
+  /**
+   * Get a specific model.
+   *
+   * The Models API response can be used to determine information about a specific
+   * model or resolve a model alias to a model ID.
+   */
+  retrieve(modelID, params = {}, options) {
+    const { betas } = params ?? {};
+    return this._client.get(path7`/v1/models/${modelID}`, {
+      ...options,
+      headers: buildHeaders([
+        { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+        options?.headers
+      ])
+    });
+  }
+  /**
+   * List available models.
+   *
+   * The Models API response can be used to determine which models are available for
+   * use in the API. More recently released models are listed first.
+   */
+  list(params = {}, options) {
+    const { betas, ...query } = params ?? {};
+    return this._client.getAPIList("/v1/models", Page, {
+      query,
+      ...options,
+      headers: buildHeaders([
+        { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+        options?.headers
+      ])
+    });
+  }
+};
+
+// node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
+var readEnv = (env) => {
+  if (typeof globalThis.process !== "undefined") {
+    return globalThis.process.env?.[env]?.trim() ?? void 0;
+  }
+  if (typeof globalThis.Deno !== "undefined") {
+    return globalThis.Deno.env?.get?.(env)?.trim();
+  }
+  return void 0;
+};
+
+// node_modules/@anthropic-ai/sdk/client.mjs
+var _BaseAnthropic_instances;
+var _a;
+var _BaseAnthropic_encoder;
+var _BaseAnthropic_baseURLOverridden;
+var HUMAN_PROMPT = "\\n\\nHuman:";
+var AI_PROMPT = "\\n\\nAssistant:";
+var BaseAnthropic = class {
+  /**
+   * API Client for interfacing with the Anthropic API.
+   *
+   * @param {string | null | undefined} [opts.apiKey=process.env['ANTHROPIC_API_KEY'] ?? null]
+   * @param {string | null | undefined} [opts.authToken=process.env['ANTHROPIC_AUTH_TOKEN'] ?? null]
+   * @param {string} [opts.baseURL=process.env['ANTHROPIC_BASE_URL'] ?? https://api.anthropic.com] - Override the default base URL for the API.
+   * @param {number} [opts.timeout=10 minutes] - The maximum amount of time (in milliseconds) the client will wait for a response before timing out.
+   * @param {MergedRequestInit} [opts.fetchOptions] - Additional `RequestInit` options to be passed to `fetch` calls.
+   * @param {Fetch} [opts.fetch] - Specify a custom `fetch` function implementation.
+   * @param {number} [opts.maxRetries=2] - The maximum number of times the client will retry a request.
+   * @param {HeadersLike} opts.defaultHeaders - Default headers to include with every request to the API.
+   * @param {Record<string, string | undefined>} opts.defaultQuery - Default query parameters to include with every request to the API.
+   * @param {boolean} [opts.dangerouslyAllowBrowser=false] - By default, client-side use of this library is not allowed, as it risks exposing your secret API credentials to attackers.
+   */
+  constructor({ baseURL = readEnv("ANTHROPIC_BASE_URL"), apiKey = readEnv("ANTHROPIC_API_KEY") ?? null, authToken = readEnv("ANTHROPIC_AUTH_TOKEN") ?? null, ...opts } = {}) {
+    _BaseAnthropic_instances.add(this);
+    _BaseAnthropic_encoder.set(this, void 0);
+    const options = {
+      apiKey,
+      authToken,
+      ...opts,
+      baseURL: baseURL || `https://api.anthropic.com`
+    };
+    if (!options.dangerouslyAllowBrowser && isRunningInBrowser()) {
+      throw new AnthropicError("It looks like you're running in a browser-like environment.\n\nThis is disabled by default, as it risks exposing your secret API credentials to attackers.\nIf you understand the risks and have appropriate mitigations in place,\nyou can set the `dangerouslyAllowBrowser` option to `true`, e.g.,\n\nnew Anthropic({ apiKey, dangerouslyAllowBrowser: true });\n");
+    }
+    this.baseURL = options.baseURL;
+    this.timeout = options.timeout ?? _a.DEFAULT_TIMEOUT;
+    this.logger = options.logger ?? console;
+    const defaultLogLevel = "warn";
+    this.logLevel = defaultLogLevel;
+    this.logLevel = parseLogLevel(options.logLevel, "ClientOptions.logLevel", this) ?? parseLogLevel(readEnv("ANTHROPIC_LOG"), "process.env['ANTHROPIC_LOG']", this) ?? defaultLogLevel;
+    this.fetchOptions = options.fetchOptions;
+    this.maxRetries = options.maxRetries ?? 2;
+    this.fetch = options.fetch ?? getDefaultFetch();
+    __classPrivateFieldSet(this, _BaseAnthropic_encoder, FallbackEncoder, "f");
+    this._options = options;
+    this.apiKey = typeof apiKey === "string" ? apiKey : null;
+    this.authToken = authToken;
+  }
+  /**
+   * Create a new client instance re-using the same options given to the current client with optional overriding.
+   */
+  withOptions(options) {
+    const client = new this.constructor({
+      ...this._options,
+      baseURL: this.baseURL,
+      maxRetries: this.maxRetries,
+      timeout: this.timeout,
+      logger: this.logger,
+      logLevel: this.logLevel,
+      fetch: this.fetch,
+      fetchOptions: this.fetchOptions,
+      apiKey: this.apiKey,
+      authToken: this.authToken,
+      ...options
+    });
+    return client;
+  }
+  defaultQuery() {
+    return this._options.defaultQuery;
+  }
+  validateHeaders({ values, nulls }) {
+    if (values.get("x-api-key") || values.get("authorization")) {
+      return;
+    }
+    if (this.apiKey && values.get("x-api-key")) {
+      return;
+    }
+    if (nulls.has("x-api-key")) {
+      return;
+    }
+    if (this.authToken && values.get("authorization")) {
+      return;
+    }
+    if (nulls.has("authorization")) {
+      return;
+    }
+    throw new Error('Could not resolve authentication method. Expected either apiKey or authToken to be set. Or for one of the "X-Api-Key" or "Authorization" headers to be explicitly omitted');
+  }
+  async authHeaders(opts) {
+    return buildHeaders([await this.apiKeyAuth(opts), await this.bearerAuth(opts)]);
+  }
+  async apiKeyAuth(opts) {
+    if (this.apiKey == null) {
+      return void 0;
+    }
+    return buildHeaders([{ "X-Api-Key": this.apiKey }]);
+  }
+  async bearerAuth(opts) {
+    if (this.authToken == null) {
+      return void 0;
+    }
+    return buildHeaders([{ Authorization: `Bearer ${this.authToken}` }]);
+  }
+  /**
+   * Basic re-implementation of `qs.stringify` for primitive types.
+   */
+  stringifyQuery(query) {
+    return Object.entries(query).filter(([_, value]) => typeof value !== "undefined").map(([key, value]) => {
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+      }
+      if (value === null) {
+        return `${encodeURIComponent(key)}=`;
+      }
+      throw new AnthropicError(`Cannot stringify type ${typeof value}; Expected string, number, boolean, or null. If you need to pass nested query parameters, you can manually encode them, e.g. { query: { 'foo[key1]': value1, 'foo[key2]': value2 } }, and please open a GitHub issue requesting better support for your use case.`);
+    }).join("&");
+  }
+  getUserAgent() {
+    return `${this.constructor.name}/JS ${VERSION}`;
+  }
+  defaultIdempotencyKey() {
+    return `stainless-node-retry-${uuid4()}`;
+  }
+  makeStatusError(status, error, message, headers) {
+    return APIError.generate(status, error, message, headers);
+  }
+  buildURL(path15, query, defaultBaseURL) {
+    const baseURL = !__classPrivateFieldGet(this, _BaseAnthropic_instances, "m", _BaseAnthropic_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
+    const url = isAbsoluteURL(path15) ? new URL(path15) : new URL(baseURL + (baseURL.endsWith("/") && path15.startsWith("/") ? path15.slice(1) : path15));
+    const defaultQuery = this.defaultQuery();
+    if (!isEmptyObj(defaultQuery)) {
+      query = { ...defaultQuery, ...query };
+    }
+    if (typeof query === "object" && query && !Array.isArray(query)) {
+      url.search = this.stringifyQuery(query);
+    }
+    return url.toString();
+  }
+  _calculateNonstreamingTimeout(maxTokens) {
+    const defaultTimeout = 10 * 60;
+    const expectedTimeout = 60 * 60 * maxTokens / 128e3;
+    if (expectedTimeout > defaultTimeout) {
+      throw new AnthropicError("Streaming is required for operations that may take longer than 10 minutes. See https://github.com/anthropics/anthropic-sdk-typescript#streaming-responses for more details");
+    }
+    return defaultTimeout * 1e3;
+  }
+  /**
+   * Used as a callback for mutating the given `FinalRequestOptions` object.
+   */
+  async prepareOptions(options) {
+  }
+  /**
+   * Used as a callback for mutating the given `RequestInit` object.
+   *
+   * This is useful for cases where you want to add certain headers based off of
+   * the request properties, e.g. `method` or `url`.
+   */
+  async prepareRequest(request, { url, options }) {
+  }
+  get(path15, opts) {
+    return this.methodRequest("get", path15, opts);
+  }
+  post(path15, opts) {
+    return this.methodRequest("post", path15, opts);
+  }
+  patch(path15, opts) {
+    return this.methodRequest("patch", path15, opts);
+  }
+  put(path15, opts) {
+    return this.methodRequest("put", path15, opts);
+  }
+  delete(path15, opts) {
+    return this.methodRequest("delete", path15, opts);
+  }
+  methodRequest(method, path15, opts) {
+    return this.request(Promise.resolve(opts).then((opts2) => {
+      return { method, path: path15, ...opts2 };
+    }));
+  }
+  request(options, remainingRetries = null) {
+    return new APIPromise(this, this.makeRequest(options, remainingRetries, void 0));
+  }
+  async makeRequest(optionsInput, retriesRemaining, retryOfRequestLogID) {
+    const options = await optionsInput;
+    const maxRetries = options.maxRetries ?? this.maxRetries;
+    if (retriesRemaining == null) {
+      retriesRemaining = maxRetries;
+    }
+    await this.prepareOptions(options);
+    const { req, url, timeout } = await this.buildRequest(options, {
+      retryCount: maxRetries - retriesRemaining
+    });
+    await this.prepareRequest(req, { url, options });
+    const requestLogID = "log_" + (Math.random() * (1 << 24) | 0).toString(16).padStart(6, "0");
+    const retryLogStr = retryOfRequestLogID === void 0 ? "" : `, retryOf: ${retryOfRequestLogID}`;
+    const startTime = Date.now();
+    loggerFor(this).debug(`[${requestLogID}] sending request`, formatRequestDetails({
+      retryOfRequestLogID,
+      method: options.method,
+      url,
+      options,
+      headers: req.headers
+    }));
+    if (options.signal?.aborted) {
+      throw new APIUserAbortError();
+    }
+    const controller = new AbortController();
+    const response = await this.fetchWithTimeout(url, req, timeout, controller).catch(castToError);
+    const headersTime = Date.now();
+    if (response instanceof globalThis.Error) {
+      const retryMessage = `retrying, ${retriesRemaining} attempts remaining`;
+      if (options.signal?.aborted) {
+        throw new APIUserAbortError();
+      }
+      const isTimeout = isAbortError(response) || /timed? ?out/i.test(String(response) + ("cause" in response ? String(response.cause) : ""));
+      if (retriesRemaining) {
+        loggerFor(this).info(`[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} - ${retryMessage}`);
+        loggerFor(this).debug(`[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} (${retryMessage})`, formatRequestDetails({
+          retryOfRequestLogID,
+          url,
+          durationMs: headersTime - startTime,
+          message: response.message
+        }));
+        return this.retryRequest(options, retriesRemaining, retryOfRequestLogID ?? requestLogID);
+      }
+      loggerFor(this).info(`[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} - error; no more retries left`);
+      loggerFor(this).debug(`[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} (error; no more retries left)`, formatRequestDetails({
+        retryOfRequestLogID,
+        url,
+        durationMs: headersTime - startTime,
+        message: response.message
+      }));
+      if (isTimeout) {
+        throw new APIConnectionTimeoutError();
+      }
+      throw new APIConnectionError({ cause: response });
+    }
+    const specialHeaders = [...response.headers.entries()].filter(([name]) => name === "request-id").map(([name, value]) => ", " + name + ": " + JSON.stringify(value)).join("");
+    const responseInfo = `[${requestLogID}${retryLogStr}${specialHeaders}] ${req.method} ${url} ${response.ok ? "succeeded" : "failed"} with status ${response.status} in ${headersTime - startTime}ms`;
+    if (!response.ok) {
+      const shouldRetry = await this.shouldRetry(response);
+      if (retriesRemaining && shouldRetry) {
+        const retryMessage2 = `retrying, ${retriesRemaining} attempts remaining`;
+        await CancelReadableStream(response.body);
+        loggerFor(this).info(`${responseInfo} - ${retryMessage2}`);
+        loggerFor(this).debug(`[${requestLogID}] response error (${retryMessage2})`, formatRequestDetails({
+          retryOfRequestLogID,
+          url: response.url,
+          status: response.status,
+          headers: response.headers,
+          durationMs: headersTime - startTime
+        }));
+        return this.retryRequest(options, retriesRemaining, retryOfRequestLogID ?? requestLogID, response.headers);
+      }
+      const retryMessage = shouldRetry ? `error; no more retries left` : `error; not retryable`;
+      loggerFor(this).info(`${responseInfo} - ${retryMessage}`);
+      const errText = await response.text().catch((err2) => castToError(err2).message);
+      const errJSON = safeJSON(errText);
+      const errMessage = errJSON ? void 0 : errText;
+      loggerFor(this).debug(`[${requestLogID}] response error (${retryMessage})`, formatRequestDetails({
+        retryOfRequestLogID,
+        url: response.url,
+        status: response.status,
+        headers: response.headers,
+        message: errMessage,
+        durationMs: Date.now() - startTime
+      }));
+      const err = this.makeStatusError(response.status, errJSON, errMessage, response.headers);
+      throw err;
+    }
+    loggerFor(this).info(responseInfo);
+    loggerFor(this).debug(`[${requestLogID}] response start`, formatRequestDetails({
+      retryOfRequestLogID,
+      url: response.url,
+      status: response.status,
+      headers: response.headers,
+      durationMs: headersTime - startTime
+    }));
+    return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
+  }
+  getAPIList(path15, Page2, opts) {
+    return this.requestAPIList(Page2, { method: "get", path: path15, ...opts });
+  }
+  requestAPIList(Page2, options) {
+    const request = this.makeRequest(options, null, void 0);
+    return new PagePromise(this, request, Page2);
+  }
+  async fetchWithTimeout(url, init, ms, controller) {
+    const { signal, method, ...options } = init || {};
+    if (signal)
+      signal.addEventListener("abort", () => controller.abort());
+    const timeout = setTimeout(() => controller.abort(), ms);
+    const isReadableBody = globalThis.ReadableStream && options.body instanceof globalThis.ReadableStream || typeof options.body === "object" && options.body !== null && Symbol.asyncIterator in options.body;
+    const fetchOptions = {
+      signal: controller.signal,
+      ...isReadableBody ? { duplex: "half" } : {},
+      method: "GET",
+      ...options
+    };
+    if (method) {
+      fetchOptions.method = method.toUpperCase();
+    }
+    try {
+      return await this.fetch.call(void 0, url, fetchOptions);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  async shouldRetry(response) {
+    const shouldRetryHeader = response.headers.get("x-should-retry");
+    if (shouldRetryHeader === "true")
+      return true;
+    if (shouldRetryHeader === "false")
+      return false;
+    if (response.status === 408)
+      return true;
+    if (response.status === 409)
+      return true;
+    if (response.status === 429)
+      return true;
+    if (response.status >= 500)
+      return true;
+    return false;
+  }
+  async retryRequest(options, retriesRemaining, requestLogID, responseHeaders) {
+    let timeoutMillis;
+    const retryAfterMillisHeader = responseHeaders?.get("retry-after-ms");
+    if (retryAfterMillisHeader) {
+      const timeoutMs = parseFloat(retryAfterMillisHeader);
+      if (!Number.isNaN(timeoutMs)) {
+        timeoutMillis = timeoutMs;
+      }
+    }
+    const retryAfterHeader = responseHeaders?.get("retry-after");
+    if (retryAfterHeader && !timeoutMillis) {
+      const timeoutSeconds = parseFloat(retryAfterHeader);
+      if (!Number.isNaN(timeoutSeconds)) {
+        timeoutMillis = timeoutSeconds * 1e3;
+      } else {
+        timeoutMillis = Date.parse(retryAfterHeader) - Date.now();
+      }
+    }
+    if (!(timeoutMillis && 0 <= timeoutMillis && timeoutMillis < 60 * 1e3)) {
+      const maxRetries = options.maxRetries ?? this.maxRetries;
+      timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
+    }
+    await sleep(timeoutMillis);
+    return this.makeRequest(options, retriesRemaining - 1, requestLogID);
+  }
+  calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries) {
+    const initialRetryDelay = 0.5;
+    const maxRetryDelay = 8;
+    const numRetries = maxRetries - retriesRemaining;
+    const sleepSeconds = Math.min(initialRetryDelay * Math.pow(2, numRetries), maxRetryDelay);
+    const jitter = 1 - Math.random() * 0.25;
+    return sleepSeconds * jitter * 1e3;
+  }
+  calculateNonstreamingTimeout(maxTokens, maxNonstreamingTokens) {
+    const maxTime = 60 * 60 * 1e3;
+    const defaultTime = 60 * 10 * 1e3;
+    const expectedTime = maxTime * maxTokens / 128e3;
+    if (expectedTime > defaultTime || maxNonstreamingTokens != null && maxTokens > maxNonstreamingTokens) {
+      throw new AnthropicError("Streaming is required for operations that may take longer than 10 minutes. See https://github.com/anthropics/anthropic-sdk-typescript#long-requests for more details");
+    }
+    return defaultTime;
+  }
+  async buildRequest(inputOptions, { retryCount = 0 } = {}) {
+    const options = { ...inputOptions };
+    const { method, path: path15, query, defaultBaseURL } = options;
+    const url = this.buildURL(path15, query, defaultBaseURL);
+    if ("timeout" in options)
+      validatePositiveInteger("timeout", options.timeout);
+    options.timeout = options.timeout ?? this.timeout;
+    const { bodyHeaders, body } = this.buildBody({ options });
+    const reqHeaders = await this.buildHeaders({ options: inputOptions, method, bodyHeaders, retryCount });
+    const req = {
+      method,
+      headers: reqHeaders,
+      ...options.signal && { signal: options.signal },
+      ...globalThis.ReadableStream && body instanceof globalThis.ReadableStream && { duplex: "half" },
+      ...body && { body },
+      ...this.fetchOptions ?? {},
+      ...options.fetchOptions ?? {}
+    };
+    return { req, url, timeout: options.timeout };
+  }
+  async buildHeaders({ options, method, bodyHeaders, retryCount }) {
+    let idempotencyHeaders = {};
+    if (this.idempotencyHeader && method !== "get") {
+      if (!options.idempotencyKey)
+        options.idempotencyKey = this.defaultIdempotencyKey();
+      idempotencyHeaders[this.idempotencyHeader] = options.idempotencyKey;
+    }
+    const headers = buildHeaders([
+      idempotencyHeaders,
+      {
+        Accept: "application/json",
+        "User-Agent": this.getUserAgent(),
+        "X-Stainless-Retry-Count": String(retryCount),
+        ...options.timeout ? { "X-Stainless-Timeout": String(Math.trunc(options.timeout / 1e3)) } : {},
+        ...getPlatformHeaders(),
+        ...this._options.dangerouslyAllowBrowser ? { "anthropic-dangerous-direct-browser-access": "true" } : void 0,
+        "anthropic-version": "2023-06-01"
+      },
+      await this.authHeaders(options),
+      this._options.defaultHeaders,
+      bodyHeaders,
+      options.headers
+    ]);
+    this.validateHeaders(headers);
+    return headers.values;
+  }
+  buildBody({ options: { body, headers: rawHeaders } }) {
+    if (!body) {
+      return { bodyHeaders: void 0, body: void 0 };
+    }
+    const headers = buildHeaders([rawHeaders]);
+    if (
+      // Pass raw type verbatim
+      ArrayBuffer.isView(body) || body instanceof ArrayBuffer || body instanceof DataView || typeof body === "string" && // Preserve legacy string encoding behavior for now
+      headers.values.has("content-type") || // `Blob` is superset of `File`
+      globalThis.Blob && body instanceof globalThis.Blob || // `FormData` -> `multipart/form-data`
+      body instanceof FormData || // `URLSearchParams` -> `application/x-www-form-urlencoded`
+      body instanceof URLSearchParams || // Send chunked stream (each chunk has own `length`)
+      globalThis.ReadableStream && body instanceof globalThis.ReadableStream
+    ) {
+      return { bodyHeaders: void 0, body };
+    } else if (typeof body === "object" && (Symbol.asyncIterator in body || Symbol.iterator in body && "next" in body && typeof body.next === "function")) {
+      return { bodyHeaders: void 0, body: ReadableStreamFrom(body) };
+    } else {
+      return __classPrivateFieldGet(this, _BaseAnthropic_encoder, "f").call(this, { body, headers });
+    }
+  }
+};
+_a = BaseAnthropic, _BaseAnthropic_encoder = /* @__PURE__ */ new WeakMap(), _BaseAnthropic_instances = /* @__PURE__ */ new WeakSet(), _BaseAnthropic_baseURLOverridden = function _BaseAnthropic_baseURLOverridden2() {
+  return this.baseURL !== "https://api.anthropic.com";
+};
+BaseAnthropic.Anthropic = _a;
+BaseAnthropic.HUMAN_PROMPT = HUMAN_PROMPT;
+BaseAnthropic.AI_PROMPT = AI_PROMPT;
+BaseAnthropic.DEFAULT_TIMEOUT = 6e5;
+BaseAnthropic.AnthropicError = AnthropicError;
+BaseAnthropic.APIError = APIError;
+BaseAnthropic.APIConnectionError = APIConnectionError;
+BaseAnthropic.APIConnectionTimeoutError = APIConnectionTimeoutError;
+BaseAnthropic.APIUserAbortError = APIUserAbortError;
+BaseAnthropic.NotFoundError = NotFoundError;
+BaseAnthropic.ConflictError = ConflictError;
+BaseAnthropic.RateLimitError = RateLimitError;
+BaseAnthropic.BadRequestError = BadRequestError;
+BaseAnthropic.AuthenticationError = AuthenticationError;
+BaseAnthropic.InternalServerError = InternalServerError;
+BaseAnthropic.PermissionDeniedError = PermissionDeniedError;
+BaseAnthropic.UnprocessableEntityError = UnprocessableEntityError;
+BaseAnthropic.toFile = toFile;
+var Anthropic = class extends BaseAnthropic {
+  constructor() {
+    super(...arguments);
+    this.completions = new Completions(this);
+    this.messages = new Messages2(this);
+    this.models = new Models2(this);
+    this.beta = new Beta(this);
+  }
+};
+Anthropic.Completions = Completions;
+Anthropic.Messages = Messages2;
+Anthropic.Models = Models2;
+Anthropic.Beta = Beta;
+
+// packages/tiny-brain-core/src/services/api/claude-tools.ts
+var SKILL_TOOLS = [
+  {
+    name: "read_file",
+    description: "Read the contents of a file at the specified path. Returns the file content as a string.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description: "The path to the file to read, relative to the repository root"
+        }
+      },
+      required: ["path"]
+    }
+  },
+  {
+    name: "write_file",
+    description: "Write content to a file at the specified path. Creates parent directories if they do not exist.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description: "The path to the file to write, relative to the repository root"
+        },
+        content: {
+          type: "string",
+          description: "The content to write to the file"
+        }
+      },
+      required: ["path", "content"]
+    }
+  },
+  {
+    name: "list_directory",
+    description: "List the contents of a directory. Returns file and directory names.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description: "The path to the directory to list, relative to the repository root"
+        },
+        recursive: {
+          type: "boolean",
+          description: "Whether to list contents recursively",
+          default: false
+        }
+      },
+      required: ["path"]
+    }
+  },
+  {
+    name: "execute_bash",
+    description: "Execute a bash command in the repository root. Use for running tests, builds, or other shell operations.",
+    input_schema: {
+      type: "object",
+      properties: {
+        command: {
+          type: "string",
+          description: "The bash command to execute"
+        },
+        timeout: {
+          type: "number",
+          description: "Maximum time in milliseconds to wait for the command to complete",
+          default: 3e4
+        }
+      },
+      required: ["command"]
+    }
+  },
+  {
+    name: "search_files",
+    description: "Search for files matching a glob pattern. Returns matching file paths.",
+    input_schema: {
+      type: "object",
+      properties: {
+        pattern: {
+          type: "string",
+          description: 'Glob pattern to match files (e.g., "**/*.ts", "src/**/*.test.ts")'
+        },
+        path: {
+          type: "string",
+          description: "Directory to search in, relative to repository root. Defaults to repository root."
+        }
+      },
+      required: ["pattern"]
+    }
+  },
+  {
+    name: "plan_sync",
+    description: "Synchronize a PRD plan from markdown files to progress.json. Call this after creating or modifying PRD files.",
+    input_schema: {
+      type: "object",
+      properties: {
+        planId: {
+          type: "string",
+          description: "The ID of the plan/PRD to sync (matches the id field in prd.md frontmatter)"
+        }
+      },
+      required: ["planId"]
+    }
+  }
+];
+
+// packages/tiny-brain-core/src/services/api/claude-client.ts
+var ClaudeClient = class {
+  client;
+  model;
+  maxIterations;
+  constructor(config) {
+    this.client = new Anthropic({ apiKey: config.apiKey });
+    this.model = config.model ?? "claude-sonnet-4-20250514";
+    this.maxIterations = config.maxIterations ?? 20;
+  }
+  async invokeSkill(request, callbacks) {
+    const messages = [
+      { role: "user", content: request.userMessage }
+    ];
+    let iterations = 0;
+    try {
+      while (iterations < this.maxIterations) {
+        iterations++;
+        const response = await this.client.messages.create({
+          model: this.model,
+          max_tokens: 4096,
+          system: request.systemPrompt,
+          tools: SKILL_TOOLS,
+          messages
+        });
+        const toolUses = [];
+        for (const block of response.content) {
+          if (block.type === "text") {
+            callbacks.onText(block.text);
+          } else if (block.type === "tool_use") {
+            callbacks.onToolUse(block.name, block.input);
+            toolUses.push({
+              id: block.id,
+              name: block.name,
+              input: block.input
+            });
+          }
+        }
+        if (response.stop_reason === "end_turn") {
+          callbacks.onComplete();
+          return;
+        }
+        if (toolUses.length > 0) {
+          const toolResults = [];
+          for (const tool of toolUses) {
+            const result = await request.toolExecutor.execute(
+              tool.name,
+              tool.input
+            );
+            callbacks.onToolResult(tool.id, result);
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: tool.id,
+              content: result.success ? JSON.stringify(result.result) : `Error: ${result.error}`
+            });
+          }
+          messages.push({
+            role: "assistant",
+            content: response.content
+          });
+          messages.push({
+            role: "user",
+            content: toolResults
+          });
+        }
+      }
+      callbacks.onError(new Error(`Exceeded maximum iterations (${this.maxIterations})`));
+    } catch (error) {
+      callbacks.onError(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+};
+
+// packages/tiny-brain-core/src/services/api/tool-executor.ts
+import * as fs6 from "fs/promises";
+import * as path8 from "path";
+import { exec as exec3 } from "child_process";
+var ToolExecutor = class {
+  repositoryRoot;
+  defaultTimeout;
+  constructor(config) {
+    this.repositoryRoot = config.repositoryRoot;
+    this.defaultTimeout = config.defaultTimeout ?? 3e4;
+  }
+  async execute(toolName, input) {
+    try {
+      switch (toolName) {
+        case "read_file":
+          return await this.readFile(input);
+        case "write_file":
+          return await this.writeFile(input);
+        case "list_directory":
+          return await this.listDirectory(input);
+        case "execute_bash":
+          return await this.executeBash(input);
+        case "search_files":
+          return await this.searchFiles(input);
+        case "plan_sync":
+          return await this.planSync(input);
+        default:
+          return { success: false, error: `Unknown tool: ${toolName}` };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  validatePath(inputPath) {
+    const resolvedPath = path8.resolve(this.repositoryRoot, inputPath);
+    if (!resolvedPath.startsWith(this.repositoryRoot)) {
+      return {
+        valid: false,
+        resolvedPath,
+        error: `Path "${inputPath}" resolves outside repository root`
+      };
+    }
+    return { valid: true, resolvedPath };
+  }
+  async readFile(input) {
+    const validation = this.validatePath(input.path);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
+    try {
+      const content = await fs6.readFile(validation.resolvedPath, "utf-8");
+      return { success: true, result: content };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  async writeFile(input) {
+    const validation = this.validatePath(input.path);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
+    try {
+      const dir = path8.dirname(validation.resolvedPath);
+      await fs6.mkdir(dir, { recursive: true });
+      await fs6.writeFile(validation.resolvedPath, input.content, "utf-8");
+      return { success: true, result: "File written successfully" };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  async listDirectory(input) {
+    const validation = this.validatePath(input.path);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
+    try {
+      const entries = await this.listDirectoryRecursive(
+        validation.resolvedPath,
+        input.recursive ?? false
+      );
+      return { success: true, result: entries };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  async listDirectoryRecursive(dirPath, recursive, prefix = "") {
+    const entries = await fs6.readdir(dirPath, { withFileTypes: true });
+    const result = [];
+    for (const entry of entries) {
+      const entryPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const type2 = entry.isDirectory() ? "directory" : "file";
+      result.push({ name: entryPath, type: type2 });
+      if (recursive && entry.isDirectory()) {
+        const subEntries = await this.listDirectoryRecursive(
+          path8.join(dirPath, entry.name),
+          recursive,
+          entryPath
+        );
+        result.push(...subEntries);
+      }
+    }
+    return result;
+  }
+  async executeBash(input) {
+    const timeout = input.timeout ?? this.defaultTimeout;
+    return new Promise((resolve3) => {
+      exec3(
+        input.command,
+        {
+          cwd: this.repositoryRoot,
+          timeout,
+          maxBuffer: 10 * 1024 * 1024
+          // 10MB
+        },
+        (error, stdout, stderr) => {
+          if (error) {
+            resolve3({
+              success: false,
+              error: error.message + (stderr ? `
+Stderr: ${stderr}` : "")
+            });
+            return;
+          }
+          const result = stderr ? `${stdout}
+Stderr: ${stderr}` : stdout;
+          resolve3({ success: true, result });
+        }
+      );
+    });
+  }
+  async searchFiles(input) {
+    let searchPath = this.repositoryRoot;
+    if (input.path) {
+      const validation = this.validatePath(input.path);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+      searchPath = validation.resolvedPath;
+    }
+    try {
+      const files = await glob(input.pattern, {
+        cwd: searchPath,
+        nodir: true
+      });
+      return { success: true, result: files };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  async planSync(input) {
+    return {
+      success: true,
+      result: `Plan sync requested for plan: ${input.planId}. This should be handled by the PlanService.`
+    };
+  }
+};
+
+// packages/tiny-brain-core/src/analyser/index.ts
+import * as fs9 from "fs/promises";
+import * as path11 from "path";
+
+// packages/tiny-brain-core/src/analyser/detectors/base-detector.ts
+import * as fs7 from "fs/promises";
+import * as path9 from "path";
+var BaseDetector = class {
+  constructor(dirPath) {
+    this.dirPath = dirPath;
+  }
+  async fileExists(filePath) {
+    try {
+      await fs7.access(path9.join(this.dirPath, filePath));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  async readFile(filePath) {
+    try {
+      return await fs7.readFile(path9.join(this.dirPath, filePath), "utf8");
+    } catch {
+      return "";
+    }
+  }
+  async readJsonFile(filePath) {
+    try {
+      const content = await this.readFile(filePath);
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  }
+  async findFiles(pattern) {
+    try {
+      const files = await fs7.readdir(this.dirPath);
+      return files.filter((file) => {
+        if (pattern.includes("*")) {
+          const regex = new RegExp(pattern.replace("*", ".*"));
+          return regex.test(file);
+        }
+        return file === pattern;
+      });
+    } catch {
+      return [];
+    }
+  }
+};
+
+// packages/tiny-brain-core/src/analyser/detectors/javascript-detector.ts
+var JavaScriptDetector = class extends BaseDetector {
+  packageJson = null;
+  async detect() {
+    return await this.fileExists("package.json");
+  }
+  async analyze() {
+    if (!await this.detect()) {
+      return null;
+    }
+    this.packageJson = await this.readJsonFile("package.json");
+    if (!this.packageJson) {
+      return null;
+    }
+    const deps = {
+      ...this.packageJson.dependencies,
+      ...this.packageJson.devDependencies
+    };
+    const stack = {
+      path: this.dirPath,
+      language: await this.detectLanguage(),
+      framework: this.detectFramework(deps),
+      frontend: this.detectFrontend(deps),
+      backend: this.detectBackend(deps),
+      testing: await this.detectTesting(deps),
+      linting: await this.detectLinting(deps),
+      bundling: this.detectBundling(deps),
+      packageManager: await this.detectPackageManager(),
+      stateManagement: this.detectStateManagement(deps),
+      styling: this.detectStyling(deps),
+      database: this.detectDatabase(deps)
+    };
+    return stack;
+  }
+  async detectLanguage() {
+    if (await this.fileExists("tsconfig.json")) {
+      return "typescript";
+    }
+    return "javascript";
+  }
+  detectFramework(deps) {
+    if (deps?.["next"]) return "nextjs";
+    if (deps?.["nuxt"]) return "nuxt";
+    if (deps?.["@angular/core"]) return "angular";
+    if (deps?.["gatsby"]) return "gatsby";
+    if (deps?.["react"]) return "react";
+    if (deps?.["vue"]) return "vue";
+    if (deps?.["svelte"]) return "svelte";
+    if (deps?.["solid-js"]) return "solidjs";
+    if (deps?.["preact"]) return "preact";
+    return null;
+  }
+  detectFrontend(deps) {
+    if (deps?.["react"] || deps?.["next"]) return "react";
+    if (deps?.["vue"] || deps?.["nuxt"]) return "vue";
+    if (deps?.["@angular/core"]) return "angular";
+    if (deps?.["svelte"]) return "svelte";
+    if (deps?.["solid-js"]) return "solidjs";
+    if (deps?.["preact"]) return "preact";
+    if (deps?.["lit"]) return "lit";
+    if (deps?.["alpinejs"]) return "alpinejs";
+    return null;
+  }
+  detectBackend(deps) {
+    if (deps?.["express"]) return "express";
+    if (deps?.["@nestjs/core"]) return "nestjs";
+    if (deps?.["fastify"]) return "fastify";
+    if (deps?.["koa"]) return "koa";
+    if (deps?.["hapi"] || deps?.["@hapi/hapi"]) return "hapi";
+    if (deps?.["restify"]) return "restify";
+    if (deps?.["@apollo/server"]) return "apollo-server";
+    return null;
+  }
+  async detectTesting(deps) {
+    const testing = {
+      framework: null,
+      libraries: [],
+      e2e: null,
+      mocking: []
+    };
+    if (deps?.["jest"]) {
+      testing.framework = "jest";
+    } else if (deps?.["vitest"]) {
+      testing.framework = "vitest";
+    } else if (deps?.["mocha"]) {
+      testing.framework = "mocha";
+    } else if (deps?.["ava"]) {
+      testing.framework = "ava";
+    } else if (deps?.["tape"]) {
+      testing.framework = "tape";
+    } else if (deps?.["jasmine"]) {
+      testing.framework = "jasmine";
+    }
+    if (deps?.["@testing-library/react"]) testing.libraries?.push("testing-library-react");
+    if (deps?.["@testing-library/vue"]) testing.libraries?.push("testing-library-vue");
+    if (deps?.["@testing-library/angular"]) testing.libraries?.push("testing-library-angular");
+    if (deps?.["@testing-library/svelte"]) testing.libraries?.push("testing-library-svelte");
+    if (deps?.["@testing-library/user-event"]) testing.libraries?.push("testing-library-user-event");
+    if (deps?.["@testing-library/jest-dom"]) testing.libraries?.push("testing-library-jest-dom");
+    if (deps?.["enzyme"]) testing.libraries?.push("enzyme");
+    if (deps?.["@vue/test-utils"]) testing.libraries?.push("vue-test-utils");
+    if (deps?.["chai"]) testing.libraries?.push("chai");
+    if (deps?.["expect"]) testing.libraries?.push("expect");
+    if (deps?.["should"]) testing.libraries?.push("should");
+    if (deps?.["sinon"]) testing.libraries?.push("sinon");
+    if (deps?.["@playwright/test"]) {
+      testing.e2e = "playwright";
+    } else if (deps?.["cypress"]) {
+      testing.e2e = "cypress";
+    } else if (deps?.["puppeteer"]) {
+      testing.e2e = "puppeteer";
+    } else if (deps?.["webdriverio"]) {
+      testing.e2e = "webdriverio";
+    } else if (deps?.["nightwatch"]) {
+      testing.e2e = "nightwatch";
+    } else if (deps?.["testcafe"]) {
+      testing.e2e = "testcafe";
+    }
+    if (deps?.["msw"]) testing.mocking?.push("msw");
+    if (deps?.["nock"]) testing.mocking?.push("nock");
+    if (deps?.["sinon"]) testing.mocking?.push("sinon");
+    if (deps?.["jest-mock-extended"]) testing.mocking?.push("jest-mock-extended");
+    if (deps?.["mockery"]) testing.mocking?.push("mockery");
+    if (deps?.["proxyquire"]) testing.mocking?.push("proxyquire");
+    return testing;
+  }
+  async detectLinting(deps) {
+    const linting = {
+      tool: null,
+      plugins: []
+    };
+    if (deps?.["eslint"]) {
+      linting.tool = "eslint";
+      if (deps?.["eslint-plugin-react"]) linting.plugins?.push("react");
+      if (deps?.["eslint-plugin-vue"]) linting.plugins?.push("vue");
+      if (deps?.["@typescript-eslint/parser"]) linting.plugins?.push("typescript");
+      if (deps?.["eslint-plugin-jest"]) linting.plugins?.push("jest");
+      if (deps?.["eslint-plugin-cypress"]) linting.plugins?.push("cypress");
+      if (deps?.["eslint-plugin-prettier"]) linting.plugins?.push("prettier");
+    } else if (deps?.["tslint"]) {
+      linting.tool = "tslint";
+    } else if (deps?.["@biomejs/biome"]) {
+      linting.tool = "biome";
+    } else if (deps?.["standard"]) {
+      linting.tool = "standard";
+    } else if (deps?.["xo"]) {
+      linting.tool = "xo";
+    }
+    return linting;
+  }
+  detectBundling(deps) {
+    if (deps?.["webpack"]) return "webpack";
+    if (deps?.["vite"]) return "vite";
+    if (deps?.["rollup"]) return "rollup";
+    if (deps?.["parcel"]) return "parcel";
+    if (deps?.["esbuild"]) return "esbuild";
+    if (deps?.["snowpack"]) return "snowpack";
+    if (deps?.["browserify"]) return "browserify";
+    return null;
+  }
+  async detectPackageManager() {
+    if (await this.fileExists("yarn.lock")) return "yarn";
+    if (await this.fileExists("pnpm-lock.yaml")) return "pnpm";
+    if (await this.fileExists("bun.lockb")) return "bun";
+    return "npm";
+  }
+  detectStateManagement(deps) {
+    if (deps?.["redux"]) return "redux";
+    if (deps?.["mobx"]) return "mobx";
+    if (deps?.["zustand"]) return "zustand";
+    if (deps?.["recoil"]) return "recoil";
+    if (deps?.["jotai"]) return "jotai";
+    if (deps?.["valtio"]) return "valtio";
+    if (deps?.["vuex"]) return "vuex";
+    if (deps?.["pinia"]) return "pinia";
+    return null;
+  }
+  detectStyling(deps) {
+    const styling = {
+      approach: null,
+      preprocessor: null
+    };
+    if (deps?.["styled-components"]) styling.approach = "styled-components";
+    else if (deps?.["@emotion/react"] || deps?.["@emotion/core"]) styling.approach = "emotion";
+    else if (deps?.["@stitches/react"]) styling.approach = "stitches";
+    else if (deps?.["styled-jsx"]) styling.approach = "styled-jsx";
+    else if (deps?.["tailwindcss"]) styling.approach = "tailwind";
+    else if (deps?.["windicss"]) styling.approach = "windicss";
+    else if (deps?.["unocss"]) styling.approach = "unocss";
+    else if (deps?.["@mui/material"]) styling.approach = "material-ui";
+    else if (deps?.["antd"]) styling.approach = "ant-design";
+    else if (deps?.["@chakra-ui/react"]) styling.approach = "chakra-ui";
+    else if (deps?.["@mantine/core"]) styling.approach = "mantine";
+    if (deps?.["sass"] || deps?.["node-sass"]) styling.preprocessor = "sass";
+    else if (deps?.["less"]) styling.preprocessor = "less";
+    else if (deps?.["stylus"]) styling.preprocessor = "stylus";
+    else if (deps?.["postcss"]) styling.preprocessor = "postcss";
+    return styling;
+  }
+  detectDatabase(deps) {
+    const database = {
+      orm: null,
+      driver: null
+    };
+    if (deps?.["prisma"] || deps?.["@prisma/client"]) database.orm = "prisma";
+    else if (deps?.["typeorm"]) database.orm = "typeorm";
+    else if (deps?.["sequelize"]) database.orm = "sequelize";
+    else if (deps?.["mongoose"]) database.orm = "mongoose";
+    else if (deps?.["knex"]) database.orm = "knex";
+    else if (deps?.["objection"]) database.orm = "objection";
+    else if (deps?.["mikro-orm"]) database.orm = "mikro-orm";
+    else if (deps?.["bookshelf"]) database.orm = "bookshelf";
+    if (deps?.["pg"]) database.driver = "postgresql";
+    else if (deps?.["mysql"] || deps?.["mysql2"]) database.driver = "mysql";
+    else if (deps?.["sqlite3"] || deps?.["better-sqlite3"]) database.driver = "sqlite";
+    else if (deps?.["mongodb"]) database.driver = "mongodb";
+    else if (deps?.["redis"] || deps?.["ioredis"]) database.driver = "redis";
+    else if (deps?.["@aws-sdk/client-dynamodb"]) database.driver = "dynamodb";
+    return database;
+  }
+};
 
 // packages/tiny-brain-core/src/analyser/utils.ts
-import * as path7 from "path";
-import * as fs6 from "fs/promises";
+import * as path10 from "path";
+import * as fs8 from "fs/promises";
+
+// packages/tiny-brain-core/src/analyser/index.ts
+var DEFAULT_OPTIONS = {
+  maxDepth: 5,
+  skipDirs: ["node_modules", ".git", "dist", "build", ".next", ".nuxt", "coverage", ".turbo", ".cache"]
+};
+var TEST_PATTERNS = [".test.", ".spec.", "__tests__", ".e2e.", ".integration."];
+async function analyseRepository(rootPath = process.cwd(), options) {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const languages = /* @__PURE__ */ new Set();
+  const frameworks = /* @__PURE__ */ new Set();
+  const testingTools = /* @__PURE__ */ new Set();
+  const buildTools = /* @__PURE__ */ new Set();
+  const testFiles = [];
+  const testPatterns = /* @__PURE__ */ new Set();
+  const languageFileCounts = {};
+  await walkDirectory(rootPath, async (dirPath, files) => {
+    const stack = await detectTechInDirectory(dirPath);
+    if (stack) {
+      if (stack.language === "javascript" || stack.language === "typescript") {
+        const detector = new JavaScriptDetector(dirPath);
+        const enhancedStack = await detector.analyze();
+        if (enhancedStack) {
+          processStack(enhancedStack);
+        }
+      } else {
+        processStack(stack);
+      }
+    }
+    for (const file of files || []) {
+      detectFileType(file);
+      detectTestFile(file);
+    }
+    await detectOtherLanguages(dirPath, files || []);
+  }, opts);
+  function processStack(stack) {
+    if (stack.language) {
+      languages.add(stack.language);
+      languageFileCounts[stack.language] = (languageFileCounts[stack.language] || 0) + 1;
+    }
+    if (stack.framework) frameworks.add(stack.framework);
+    if (stack.frontend) frameworks.add(stack.frontend);
+    if (stack.backend) frameworks.add(stack.backend);
+    if (stack.testing?.framework) testingTools.add(stack.testing.framework);
+    if (stack.testing?.e2e) testingTools.add(stack.testing.e2e);
+    if (stack.testing?.libraries) {
+      stack.testing.libraries.forEach((lib) => testingTools.add(lib));
+    }
+    if (stack.bundling) buildTools.add(stack.bundling);
+  }
+  function detectFileType(fileName) {
+    const ext2 = path11.extname(fileName).toLowerCase();
+    if ([".js", ".mjs", ".cjs", ".jsx"].includes(ext2)) {
+      languages.add("javascript");
+      languageFileCounts.javascript = (languageFileCounts.javascript || 0) + 1;
+    }
+    if ([".ts", ".tsx", ".mts", ".cts"].includes(ext2)) {
+      languages.add("typescript");
+      languageFileCounts.typescript = (languageFileCounts.typescript || 0) + 1;
+    }
+    if ([".py"].includes(ext2)) {
+      languages.add("python");
+      languageFileCounts.python = (languageFileCounts.python || 0) + 1;
+    }
+    if ([".go"].includes(ext2)) {
+      languages.add("go");
+      languageFileCounts.go = (languageFileCounts.go || 0) + 1;
+    }
+    if ([".rb"].includes(ext2)) {
+      languages.add("ruby");
+      languageFileCounts.ruby = (languageFileCounts.ruby || 0) + 1;
+    }
+    if ([".java"].includes(ext2)) {
+      languages.add("java");
+      languageFileCounts.java = (languageFileCounts.java || 0) + 1;
+    }
+    if ([".rs"].includes(ext2)) {
+      languages.add("rust");
+      languageFileCounts.rust = (languageFileCounts.rust || 0) + 1;
+    }
+    if ([".cs"].includes(ext2)) {
+      languages.add("csharp");
+      languageFileCounts.csharp = (languageFileCounts.csharp || 0) + 1;
+    }
+  }
+  function detectTestFile(fileName) {
+    for (const pattern of TEST_PATTERNS) {
+      if (fileName.includes(pattern)) {
+        testFiles.push(fileName);
+        const ext2 = path11.extname(fileName);
+        if (ext2) {
+          testPatterns.add(pattern + ext2.substring(1));
+        }
+        break;
+      }
+    }
+  }
+  async function detectOtherLanguages(dirPath, files) {
+    try {
+      for (const file of files) {
+        const filePath = path11.join(dirPath, file);
+        if (file === "requirements.txt" || file === "setup.py" || file === "pyproject.toml") {
+          languages.add("python");
+          const content = await fs9.readFile(filePath, "utf8").catch(() => "");
+          if (content.includes("django")) frameworks.add("django");
+          if (content.includes("flask")) frameworks.add("flask");
+          if (content.includes("fastapi")) frameworks.add("fastapi");
+          if (content.includes("pytest")) testingTools.add("pytest");
+          if (content.includes("unittest")) testingTools.add("unittest");
+        }
+        if (file === "go.mod" || file === "go.sum") {
+          languages.add("go");
+          const content = await fs9.readFile(filePath, "utf8").catch(() => "");
+          if (content.includes("testify")) testingTools.add("testify");
+          if (content.includes("gin-gonic")) frameworks.add("gin");
+          if (content.includes("echo")) frameworks.add("echo");
+        }
+        if (file === "Gemfile" || file === "Rakefile") {
+          languages.add("ruby");
+          const content = await fs9.readFile(filePath, "utf8").catch(() => "");
+          if (content.includes("rails")) frameworks.add("rails");
+          if (content.includes("sinatra")) frameworks.add("sinatra");
+          if (content.includes("rspec")) testingTools.add("rspec");
+          if (content.includes("minitest")) testingTools.add("minitest");
+        }
+        if (file === "webpack.config.js") buildTools.add("webpack");
+        if (file === "rollup.config.js") buildTools.add("rollup");
+        if (file === "vite.config.js" || file === "vite.config.ts") buildTools.add("vite");
+        if (file === "gulpfile.js") buildTools.add("gulp");
+        if (file === "Gruntfile.js") buildTools.add("grunt");
+        if (file === "Makefile") buildTools.add("make");
+      }
+    } catch {
+    }
+  }
+  let primaryLanguage;
+  if (Object.keys(languageFileCounts).length > 0) {
+    primaryLanguage = Object.entries(languageFileCounts).sort((a, b) => b[1] - a[1])[0][0];
+  }
+  const sortedLanguages = Array.from(languages).sort((a, b) => {
+    const countA = languageFileCounts[a] || 0;
+    const countB = languageFileCounts[b] || 0;
+    return countB - countA;
+  });
+  const documentationLocations = [];
+  let documentationPattern;
+  const rootFiles = await fs9.readdir(rootPath).catch(() => []);
+  const hasRootReadme = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "readme.md");
+  const hasDocsFolder = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "docs");
+  if (hasRootReadme) {
+    documentationLocations.push("README.md");
+  }
+  if (hasDocsFolder) {
+    documentationLocations.push("docs/");
+  }
+  if (hasDocsFolder && hasRootReadme) {
+    documentationPattern = "mixed";
+  } else if (hasDocsFolder) {
+    documentationPattern = "docs-folder";
+  } else if (hasRootReadme) {
+    documentationPattern = "single-readme";
+  }
+  return {
+    // Core detected technologies
+    languages: sortedLanguages,
+    frameworks: Array.from(frameworks),
+    testingTools: Array.from(testingTools),
+    buildTools: Array.from(buildTools),
+    // Test detection
+    hasTests: testFiles.length > 0,
+    testFileCount: testFiles.length,
+    testPatterns: Array.from(testPatterns),
+    // Polyglot detection
+    isPolyglot: languages.size > 1,
+    primaryLanguage,
+    // Documentation detection
+    documentationPattern,
+    documentationLocations: documentationLocations.length > 0 ? documentationLocations : void 0
+  };
+}
+async function walkDirectory(dir, callback, options, currentDepth = 0) {
+  if (currentDepth > (options.maxDepth || 5)) {
+    return;
+  }
+  try {
+    const entries = await fs9.readdir(dir, { withFileTypes: true });
+    const files = [];
+    const dirs = [];
+    for (const entry of entries) {
+      if (entry.isDirectory() && !options.skipDirs?.includes(entry.name)) {
+        dirs.push(entry.name);
+      } else if (!entry.isDirectory()) {
+        files.push(entry.name);
+      }
+    }
+    await callback(dir, files);
+    for (const subdir of dirs) {
+      const fullPath = path11.join(dir, subdir);
+      await walkDirectory(fullPath, callback, options, currentDepth + 1);
+    }
+  } catch {
+    await callback(dir, []);
+  }
+}
+async function detectTechInDirectory(dirPath) {
+  const detectors = [
+    new JavaScriptDetector(dirPath)
+    // Future: Add more detectors here
+    // new PythonDetector(dirPath),
+    // new GoDetector(dirPath),
+    // new DotNetDetector(dirPath),
+    // new JavaDetector(dirPath),
+    // new RustDetector(dirPath),
+  ];
+  for (const detector of detectors) {
+    if (await detector.detect()) {
+      return await detector.analyze();
+    }
+  }
+  return null;
+}
 
 // packages/tiny-brain-core/src/constants/test-plan-emojis.ts
 var TEST_PLAN_EMOJIS = Object.freeze({
@@ -20680,6 +26384,12 @@ var ServiceBridge = class {
   planning;
   personas;
   repoConfig;
+  /**
+   * Analyse a repository and save results to .tiny-brain/analysis.json
+   */
+  async analyseRepository(repoPath) {
+    return analyseRepository(repoPath);
+  }
   getActivePersonaId() {
     return this.context.activePersona?.id || "default";
   }
@@ -20978,12 +26688,14 @@ function createConfigRoutes(bridge) {
     if (!libraryAuth) {
       return c.json({
         clientId: null,
-        clientSecret: null
+        clientSecret: null,
+        hasLlmApiKey: false
       });
     }
     return c.json({
       clientId: libraryAuth.clientId || null,
-      clientSecret: libraryAuth.hasStoredSecret ? "[STORED]" : null
+      clientSecret: libraryAuth.hasStoredSecret ? "[STORED]" : null,
+      hasLlmApiKey: libraryAuth.hasLlmApiKey
     });
   });
   app.post("/credentials", async (c) => {
@@ -21151,8 +26863,8 @@ function createSettingsRoutes(bridge) {
 }
 
 // packages/tiny-brain-dashboard/server/routes/repos.routes.ts
-import { readdir as readdir6, readFile as readFile6 } from "fs/promises";
-import { join as join8 } from "path";
+import { readdir as readdir9, readFile as readFile9 } from "fs/promises";
+import { join as join11 } from "path";
 function parseTasksFromMarkdown(content) {
   const tasks = [];
   const taskRegex = /###\s+(\d+)\.\s+([^\n]+)\n([\s\S]*?)(?=###\s+\d+\.|## |$)/g;
@@ -21282,10 +26994,10 @@ function createRepoRoutes(bridge) {
         console.log("[Feature API] Repository not found:", repoId);
         return c.json({ error: "Repository not found" }, 404);
       }
-      const featurePath = join8(repo.path, "docs", "prd", planId, "features", `${featureId}.md`);
+      const featurePath = join11(repo.path, "docs", "prd", planId, "features", `${featureId}.md`);
       console.log("[Feature API] Looking for file:", featurePath);
       try {
-        const content = await readFile6(featurePath, "utf-8");
+        const content = await readFile9(featurePath, "utf-8");
         const feature = parseFeatureMarkdown(content);
         console.log("[Feature API] Success - found", feature.tasks.length, "tasks");
         return c.json({ feature });
@@ -21337,13 +27049,13 @@ function createRepoRoutes(bridge) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const agentsPath = join8(repo.path, ".claude", "agents");
+      const agentsPath = join11(repo.path, ".claude", "agents");
       const agents = [];
       try {
-        const files = await readdir6(agentsPath);
+        const files = await readdir9(agentsPath);
         const mdFiles = files.filter((f) => f.endsWith(".md"));
         for (const file of mdFiles) {
-          const content = await readFile6(join8(agentsPath, file), "utf-8");
+          const content = await readFile9(join11(agentsPath, file), "utf-8");
           const frontmatter = parseFrontmatter(content);
           const id = file.replace(".md", "");
           agents.push({
@@ -21372,15 +27084,15 @@ function createRepoRoutes(bridge) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const skillsPath = join8(repo.path, ".claude", "skills");
+      const skillsPath = join11(repo.path, ".claude", "skills");
       const skills = [];
       try {
-        const entries = await readdir6(skillsPath, { withFileTypes: true });
+        const entries = await readdir9(skillsPath, { withFileTypes: true });
         const directories = entries.filter((e) => e.isDirectory());
         for (const dir of directories) {
-          const skillMdPath = join8(skillsPath, dir.name, "SKILL.md");
+          const skillMdPath = join11(skillsPath, dir.name, "SKILL.md");
           try {
-            const content = await readFile6(skillMdPath, "utf-8");
+            const content = await readFile9(skillMdPath, "utf-8");
             const frontmatter = parseFrontmatter(content);
             skills.push({
               id: dir.name,
@@ -21402,6 +27114,46 @@ function createRepoRoutes(bridge) {
       return c.json({ error: message }, 500);
     }
   });
+  app.get("/:repoId/analysis", async (c) => {
+    try {
+      const repoId = c.req.param("repoId");
+      const repo = await bridge.repoConfig.getRepo(repoId);
+      if (!repo) {
+        return c.json({ error: "Repository not found" }, 404);
+      }
+      const analysisPath = join11(repo.path, ".tiny-brain", "analysis.json");
+      try {
+        const content = await readFile9(analysisPath, "utf-8");
+        const analysis = JSON.parse(content);
+        return c.json({ exists: true, analysis });
+      } catch (err) {
+        if (err.code === "ENOENT") {
+          return c.json({ exists: false, analysis: null });
+        }
+        throw err;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
+  app.post("/:repoId/analysis", async (c) => {
+    try {
+      const repoId = c.req.param("repoId");
+      const repo = await bridge.repoConfig.getRepo(repoId);
+      if (!repo) {
+        return c.json({ error: "Repository not found" }, 404);
+      }
+      if (!bridge.analyseRepository) {
+        return c.json({ error: "Analysis service not available" }, 500);
+      }
+      const analysis = await bridge.analyseRepository(repo.path);
+      return c.json({ success: true, analysis });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
   app.get("/:repoId/quality", async (c) => {
     try {
       const repoId = c.req.param("repoId");
@@ -21409,14 +27161,14 @@ function createRepoRoutes(bridge) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const qualityRunsPath = join8(repo.path, "docs", "quality", "runs");
+      const qualityRunsPath = join11(repo.path, "docs", "quality", "runs");
       const runs = [];
       try {
-        const files = await readdir6(qualityRunsPath);
+        const files = await readdir9(qualityRunsPath);
         const qualityFiles = files.filter((f) => f.endsWith("-quality.md"));
         qualityFiles.sort((a, b) => b.localeCompare(a));
         for (const file of qualityFiles) {
-          const content = await readFile6(join8(qualityRunsPath, file), "utf-8");
+          const content = await readFile9(join11(qualityRunsPath, file), "utf-8");
           const frontmatter = parseFrontmatter(content);
           const runId = file.replace(".md", "");
           runs.push({
@@ -21448,11 +27200,11 @@ function createRepoRoutes(bridge) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const runPath = join8(repo.path, "docs", "quality", "runs", `${runId}.md`);
+      const runPath = join11(repo.path, "docs", "quality", "runs", `${runId}.md`);
       try {
-        const content = await readFile6(runPath, "utf-8");
+        const content = await readFile9(runPath, "utf-8");
         const frontmatter = parseFrontmatter(content);
-        const run = {
+        const run2 = {
           runId,
           date: frontmatter.run_date || "",
           score: parseInt(frontmatter.score || "0", 10),
@@ -21460,7 +27212,7 @@ function createRepoRoutes(bridge) {
           issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10),
           rawContent: content
         };
-        return c.json({ run });
+        return c.json({ run: run2 });
       } catch (err) {
         if (err.code === "ENOENT") {
           return c.json({ error: "Quality run not found" }, 404);
@@ -21621,8 +27373,400 @@ function createPluginRoutes(bridge) {
   return app;
 }
 
+// packages/tiny-brain-dashboard/server/routes/hooks.routes.ts
+function createHooksRoutes(_bridge) {
+  const app = new Hono2();
+  app.get("/", async (c) => {
+    const repoPath = c.req.query("repoPath");
+    if (!repoPath) {
+      return c.json({ error: "repoPath query parameter is required" }, 400);
+    }
+    const hooksService = new HooksService(repoPath);
+    const hooks = await hooksService.getAllHooks();
+    return c.json(hooks);
+  });
+  app.get("/:hookType/:hookName/content", async (c) => {
+    const hookType = c.req.param("hookType");
+    const hookName = c.req.param("hookName");
+    const repoPath = c.req.query("repoPath");
+    if (!repoPath) {
+      return c.json({ error: "repoPath query parameter is required" }, 400);
+    }
+    if (hookType !== "git" && hookType !== "plugin") {
+      return c.json({ error: 'hookType must be "git" or "plugin"' }, 400);
+    }
+    const hooksService = new HooksService(repoPath);
+    const content = await hooksService.getHookContent(hookType, hookName);
+    if (content === null) {
+      return c.json({ error: "Hook not found" }, 404);
+    }
+    return c.json({ content });
+  });
+  return app;
+}
+
+// node_modules/hono/dist/utils/stream.js
+var StreamingApi = class {
+  writer;
+  encoder;
+  writable;
+  abortSubscribers = [];
+  responseReadable;
+  /**
+   * Whether the stream has been aborted.
+   */
+  aborted = false;
+  /**
+   * Whether the stream has been closed normally.
+   */
+  closed = false;
+  constructor(writable, _readable) {
+    this.writable = writable;
+    this.writer = writable.getWriter();
+    this.encoder = new TextEncoder();
+    const reader = _readable.getReader();
+    this.abortSubscribers.push(async () => {
+      await reader.cancel();
+    });
+    this.responseReadable = new ReadableStream({
+      async pull(controller) {
+        const { done, value } = await reader.read();
+        done ? controller.close() : controller.enqueue(value);
+      },
+      cancel: () => {
+        this.abort();
+      }
+    });
+  }
+  async write(input) {
+    try {
+      if (typeof input === "string") {
+        input = this.encoder.encode(input);
+      }
+      await this.writer.write(input);
+    } catch {
+    }
+    return this;
+  }
+  async writeln(input) {
+    await this.write(input + "\n");
+    return this;
+  }
+  sleep(ms) {
+    return new Promise((res) => setTimeout(res, ms));
+  }
+  async close() {
+    try {
+      await this.writer.close();
+    } catch {
+    }
+    this.closed = true;
+  }
+  async pipe(body) {
+    this.writer.releaseLock();
+    await body.pipeTo(this.writable, { preventClose: true });
+    this.writer = this.writable.getWriter();
+  }
+  onAbort(listener) {
+    this.abortSubscribers.push(listener);
+  }
+  /**
+   * Abort the stream.
+   * You can call this method when stream is aborted by external event.
+   */
+  abort() {
+    if (!this.aborted) {
+      this.aborted = true;
+      this.abortSubscribers.forEach((subscriber) => subscriber());
+    }
+  }
+};
+
+// node_modules/hono/dist/helper/streaming/utils.js
+var isOldBunVersion = () => {
+  const version = typeof Bun !== "undefined" ? Bun.version : void 0;
+  if (version === void 0) {
+    return false;
+  }
+  const result = version.startsWith("1.1") || version.startsWith("1.0") || version.startsWith("0.");
+  isOldBunVersion = () => result;
+  return result;
+};
+
+// node_modules/hono/dist/helper/streaming/sse.js
+var SSEStreamingApi = class extends StreamingApi {
+  constructor(writable, readable) {
+    super(writable, readable);
+  }
+  async writeSSE(message) {
+    const data = await resolveCallback(message.data, HtmlEscapedCallbackPhase.Stringify, false, {});
+    const dataLines = data.split("\n").map((line) => {
+      return `data: ${line}`;
+    }).join("\n");
+    const sseData = [
+      message.event && `event: ${message.event}`,
+      dataLines,
+      message.id && `id: ${message.id}`,
+      message.retry && `retry: ${message.retry}`
+    ].filter(Boolean).join("\n") + "\n\n";
+    await this.write(sseData);
+  }
+};
+var run = async (stream3, cb, onError) => {
+  try {
+    await cb(stream3);
+  } catch (e) {
+    if (e instanceof Error && onError) {
+      await onError(e, stream3);
+      await stream3.writeSSE({
+        event: "error",
+        data: e.message
+      });
+    } else {
+      console.error(e);
+    }
+  } finally {
+    stream3.close();
+  }
+};
+var contextStash = /* @__PURE__ */ new WeakMap();
+var streamSSE = (c, cb, onError) => {
+  const { readable, writable } = new TransformStream();
+  const stream3 = new SSEStreamingApi(writable, readable);
+  if (isOldBunVersion()) {
+    c.req.raw.signal.addEventListener("abort", () => {
+      if (!stream3.closed) {
+        stream3.abort();
+      }
+    });
+  }
+  contextStash.set(stream3.responseReadable, c);
+  c.header("Transfer-Encoding", "chunked");
+  c.header("Content-Type", "text/event-stream");
+  c.header("Cache-Control", "no-cache");
+  c.header("Connection", "keep-alive");
+  run(stream3, cb, onError);
+  return c.newResponse(stream3.responseReadable);
+};
+
+// packages/tiny-brain-dashboard/server/services/skill-session.service.ts
+var SkillSessionManager = class {
+  sessions = /* @__PURE__ */ new Map();
+  /**
+   * Create a new session for a skill invocation
+   */
+  createSession() {
+    const id = crypto.randomUUID();
+    const session = {
+      id,
+      abortController: new AbortController(),
+      startedAt: /* @__PURE__ */ new Date()
+    };
+    this.sessions.set(id, session);
+    return session;
+  }
+  /**
+   * Get a session by ID
+   */
+  getSession(sessionId) {
+    return this.sessions.get(sessionId);
+  }
+  /**
+   * Cancel a running session
+   * @returns true if session was found and cancelled, false if not found
+   */
+  cancelSession(sessionId) {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return false;
+    }
+    session.abortController.abort();
+    this.sessions.delete(sessionId);
+    return true;
+  }
+  /**
+   * End a session (cleanup after completion)
+   */
+  endSession(sessionId) {
+    this.sessions.delete(sessionId);
+  }
+  /**
+   * Get count of active sessions
+   */
+  getActiveSessionCount() {
+    return this.sessions.size;
+  }
+  /**
+   * Clean up stale sessions (older than timeout)
+   * @param timeoutMs Maximum session age in milliseconds (default: 30 minutes)
+   */
+  cleanupStaleSessions(timeoutMs = 30 * 60 * 1e3) {
+    const now = Date.now();
+    let cleanedCount = 0;
+    for (const [id, session] of this.sessions) {
+      if (now - session.startedAt.getTime() > timeoutMs) {
+        session.abortController.abort();
+        this.sessions.delete(id);
+        cleanedCount++;
+      }
+    }
+    return cleanedCount;
+  }
+};
+
+// packages/tiny-brain-dashboard/server/routes/skills.routes.ts
+var AVAILABLE_SKILLS = ["plan", "fix", "feature", "adr", "quality"];
+function createSkillsRoutes(bridge) {
+  const app = new Hono2();
+  const sessionManager = new SkillSessionManager();
+  const getSkillsPath = () => {
+    if (process.env.CLAUDE_PLUGIN_ROOT) {
+      return `${process.env.CLAUDE_PLUGIN_ROOT}/skills`;
+    }
+    return process.env.SKILLS_PATH || "/Users/andyrichardson/work/repos/tiny-brain/tiny-brain-local/packages/tiny-brain-plugin/skills";
+  };
+  app.get("/", async (c) => {
+    const skillsPath = getSkillsPath();
+    const loader2 = new SkillLoader(skillsPath);
+    const skills = [];
+    for (const skillName of AVAILABLE_SKILLS) {
+      try {
+        const skill = await loader2.loadSkill(skillName);
+        skills.push({
+          name: skill.name,
+          description: skill.description,
+          version: skill.version
+        });
+      } catch (error) {
+        bridge.context.logger.warn(`Failed to load skill ${skillName}:`, error);
+      }
+    }
+    return c.json({ skills });
+  });
+  app.post("/invoke", async (c) => {
+    const body = await c.req.json();
+    const { skill: skillName, prompt, context: userContext } = body;
+    if (!skillName) {
+      return c.json({ error: "Missing required field: skill" }, 400);
+    }
+    if (!prompt) {
+      return c.json({ error: "Missing required field: prompt" }, 400);
+    }
+    const getLlmApiKey = bridge.context.libraryAuth?.getLlmApiKey;
+    if (!getLlmApiKey) {
+      return c.json({ error: "API key getter not configured" }, 401);
+    }
+    const apiKey = await getLlmApiKey();
+    if (!apiKey) {
+      return c.json({ error: "No API key configured. Please set LLM_API_KEY or configure via CLI." }, 401);
+    }
+    if (!AVAILABLE_SKILLS.includes(skillName)) {
+      return c.json({ error: `Skill '${skillName}' not found` }, 404);
+    }
+    const skillsPath = getSkillsPath();
+    const loader2 = new SkillLoader(skillsPath);
+    let skill;
+    try {
+      skill = await loader2.loadSkill(skillName);
+    } catch (error) {
+      bridge.context.logger.error(`Failed to load skill ${skillName}:`, error);
+      return c.json({ error: `Failed to load skill '${skillName}'` }, 500);
+    }
+    const session = sessionManager.createSession();
+    const repositoryRoot = bridge.context.repositoryRoot || process.cwd();
+    return streamSSE(c, async (stream3) => {
+      try {
+        const toolExecutor = new ToolExecutor({ repositoryRoot });
+        const client = new ClaudeClient({ apiKey });
+        let userMessage = prompt;
+        if (userContext) {
+          userMessage = `Context:
+${JSON.stringify(userContext, null, 2)}
+
+Request:
+${prompt}`;
+        }
+        let systemPrompt = skill.systemPrompt;
+        if (Object.keys(skill.templates).length > 0) {
+          systemPrompt += "\n\n## Available Templates\n\n";
+          for (const [name, content] of Object.entries(skill.templates)) {
+            systemPrompt += `### ${name}
+\`\`\`
+${content}
+\`\`\`
+
+`;
+          }
+        }
+        await client.invokeSkill(
+          {
+            systemPrompt,
+            userMessage,
+            toolExecutor
+          },
+          {
+            onText: async (text) => {
+              await stream3.writeSSE({
+                event: "text",
+                data: JSON.stringify({ text })
+              });
+            },
+            onToolUse: async (toolName, input) => {
+              await stream3.writeSSE({
+                event: "tool_use",
+                data: JSON.stringify({ tool: toolName, input })
+              });
+            },
+            onToolResult: async (toolId, result) => {
+              await stream3.writeSSE({
+                event: "tool_result",
+                data: JSON.stringify({
+                  toolId,
+                  success: result.success,
+                  result: result.result,
+                  error: result.error
+                })
+              });
+            },
+            onComplete: async () => {
+              await stream3.writeSSE({
+                event: "complete",
+                data: JSON.stringify({ success: true, sessionId: session.id })
+              });
+              sessionManager.endSession(session.id);
+            },
+            onError: async (error) => {
+              await stream3.writeSSE({
+                event: "error",
+                data: JSON.stringify({ error: error.message })
+              });
+              sessionManager.endSession(session.id);
+            }
+          }
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        await stream3.writeSSE({
+          event: "error",
+          data: JSON.stringify({ error: message })
+        });
+        sessionManager.endSession(session.id);
+      }
+    });
+  });
+  app.post("/:sessionId/cancel", async (c) => {
+    const sessionId = c.req.param("sessionId");
+    const cancelled = sessionManager.cancelSession(sessionId);
+    if (!cancelled) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+    return c.json({ success: true, message: "Session cancelled" });
+  });
+  return app;
+}
+
 // packages/tiny-brain-dashboard/server/app.ts
-var __dirname = path9.dirname(fileURLToPath3(import.meta.url));
+var __dirname = path12.dirname(fileURLToPath3(import.meta.url));
 function createApp(context, sse) {
   const app = new Hono2();
   const bridge = new ServiceBridge(context);
@@ -21634,12 +27778,14 @@ function createApp(context, sse) {
   app.route("/api/settings", createSettingsRoutes(bridge));
   app.route("/api/repos", createRepoRoutes(bridge));
   app.route("/api/repos/:repoId/git", createGitRoutes(bridge));
+  app.route("/api/hooks", createHooksRoutes(bridge));
   app.route("/api/plugins", createPluginRoutes(bridge));
+  app.route("/api/skills", createSkillsRoutes(bridge));
   app.get("/events", async (c) => {
     c.header("Content-Type", "text/event-stream");
     c.header("Cache-Control", "no-cache");
     c.header("Connection", "keep-alive");
-    const stream2 = new ReadableStream({
+    const stream3 = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
         const activePersonaId = bridge.getActivePersonaId();
@@ -21675,19 +27821,19 @@ data: ${JSON.stringify(initialData)}
         });
       }
     });
-    return new Response(stream2, {
+    return new Response(stream3, {
       headers: c.res.headers
     });
   });
   app.get("/health", (c) => {
     return c.json({ status: "ok" });
   });
-  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path9.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path9.resolve(__dirname, "../dist");
-  const distExists = fs8.existsSync(distPath);
+  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path12.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path12.resolve(__dirname, "../dist");
+  const distExists = fs10.existsSync(distPath);
   if (distExists) {
     app.use("/assets/*", serveStatic({
       root: distPath,
-      rewriteRequestPath: (path12) => path12.replace("/assets", "/assets")
+      rewriteRequestPath: (path15) => path15.replace("/assets", "/assets")
     }));
     app.use("/favicon.png", serveStatic({
       root: distPath,
@@ -21698,9 +27844,9 @@ data: ${JSON.stringify(initialData)}
       if (reqPath.startsWith("/api") || reqPath.startsWith("/events") || reqPath === "/health") {
         return c.notFound();
       }
-      const indexPath = path9.join(distPath, "index.html");
-      if (fs8.existsSync(indexPath)) {
-        const indexHtml = fs8.readFileSync(indexPath, "utf-8");
+      const indexPath = path12.join(distPath, "index.html");
+      if (fs10.existsSync(indexPath)) {
+        const indexHtml = fs10.readFileSync(indexPath, "utf-8");
         return c.html(indexHtml);
       }
       return c.html(`<!DOCTYPE html>
@@ -21742,11 +27888,11 @@ data: ${JSON.stringify(initialData)}
 // packages/tiny-brain-dashboard/server/services/sse.service.ts
 var SSEService = class {
   connections = /* @__PURE__ */ new Set();
-  addConnection(stream2) {
-    this.connections.add(stream2);
+  addConnection(stream3) {
+    this.connections.add(stream3);
   }
-  removeConnection(stream2) {
-    this.connections.delete(stream2);
+  removeConnection(stream3) {
+    this.connections.delete(stream3);
   }
   async broadcast(event, data) {
     const message = event ? `event: ${event}
@@ -21756,10 +27902,10 @@ data: ${JSON.stringify(data)}
 
 `;
     const promises2 = [];
-    for (const stream2 of this.connections) {
+    for (const stream3 of this.connections) {
       promises2.push(
-        stream2.write(message).catch(() => {
-          this.connections.delete(stream2);
+        stream3.write(message).catch(() => {
+          this.connections.delete(stream3);
         })
       );
     }
@@ -21774,13 +27920,13 @@ data: ${JSON.stringify(data)}
 };
 
 // packages/tiny-brain-dashboard/server/services/file-watcher.service.ts
-import * as path11 from "path";
-import * as fs10 from "fs";
+import * as path14 from "path";
+import * as fs12 from "fs";
 import * as os from "os";
 
 // packages/tiny-brain-dashboard/server/services/generic-file-watcher.ts
-import * as fs9 from "fs";
-import * as path10 from "path";
+import * as fs11 from "fs";
+import * as path13 from "path";
 import { EventEmitter as EventEmitter2 } from "events";
 var FileWatcherService = class extends EventEmitter2 {
   watchInterval = null;
@@ -21810,10 +27956,10 @@ var FileWatcherService = class extends EventEmitter2 {
       ...this.options,
       ...options
     };
-    if (!fs9.existsSync(watchPath)) {
+    if (!fs11.existsSync(watchPath)) {
       throw new Error(`Watch path does not exist: ${watchPath}`);
     }
-    const stats = fs9.statSync(watchPath);
+    const stats = fs11.statSync(watchPath);
     if (!stats.isDirectory()) {
       throw new Error(`Watch path is not a directory: ${watchPath}`);
     }
@@ -21844,9 +27990,9 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = [];
     const scanDir = (currentPath) => {
       try {
-        const entries = fs9.readdirSync(currentPath, { withFileTypes: true });
+        const entries = fs11.readdirSync(currentPath, { withFileTypes: true });
         for (const entry of entries) {
-          const fullPath = path10.join(currentPath, entry.name);
+          const fullPath = path13.join(currentPath, entry.name);
           if (entry.name.startsWith(".")) {
             continue;
           }
@@ -21873,7 +28019,7 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = this.getAllFiles(this.watchPath);
     for (const filePath of files) {
       try {
-        const stats = fs9.statSync(filePath);
+        const stats = fs11.statSync(filePath);
         this.fileTimestamps.set(filePath, stats.mtimeMs);
       } catch (error) {
         this.logger.error(`Error getting stats for ${filePath}:`, error);
@@ -21895,7 +28041,7 @@ var FileWatcherService = class extends EventEmitter2 {
         const change = {
           type: "deleted",
           filePath,
-          relativePath: path10.relative(this.watchPath, filePath)
+          relativePath: path13.relative(this.watchPath, filePath)
         };
         this.emit("change", change);
         this.logger.debug(`File deleted: ${filePath}`);
@@ -21903,14 +28049,14 @@ var FileWatcherService = class extends EventEmitter2 {
     }
     for (const filePath of currentFiles) {
       try {
-        const stats = fs9.statSync(filePath);
+        const stats = fs11.statSync(filePath);
         const previousMtime = this.fileTimestamps.get(filePath);
         if (!previousMtime) {
           this.fileTimestamps.set(filePath, stats.mtimeMs);
           const change = {
             type: "added",
             filePath,
-            relativePath: path10.relative(this.watchPath, filePath),
+            relativePath: path13.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -21920,7 +28066,7 @@ var FileWatcherService = class extends EventEmitter2 {
           const change = {
             type: "modified",
             filePath,
-            relativePath: path10.relative(this.watchPath, filePath),
+            relativePath: path13.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -22006,9 +28152,9 @@ var FileWatcher = class {
     if (!this.plansCache.has(repoId)) {
       this.plansCache.set(repoId, /* @__PURE__ */ new Map());
     }
-    const tinyBrainPath = path11.join(repoPath, ".tiny-brain");
-    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs10.existsSync(tinyBrainPath)}`);
-    if (fs10.existsSync(tinyBrainPath)) {
+    const tinyBrainPath = path14.join(repoPath, ".tiny-brain");
+    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs12.existsSync(tinyBrainPath)}`);
+    if (fs12.existsSync(tinyBrainPath)) {
       try {
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -22029,7 +28175,7 @@ var FileWatcher = class {
       }
     } else {
       try {
-        await fs10.promises.mkdir(tinyBrainPath, { recursive: true });
+        await fs12.promises.mkdir(tinyBrainPath, { recursive: true });
         this.context.logger.info(`[FileWatcher] Created .tiny-brain directory for repo ${repoId}`);
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -22048,9 +28194,9 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to create .tiny-brain and start PRD watcher for ${repoId}:`, error);
       }
     }
-    const fixesPath = path11.join(repoPath, ".tiny-brain/fixes");
-    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs10.existsSync(fixesPath)}`);
-    if (fs10.existsSync(fixesPath)) {
+    const fixesPath = path14.join(repoPath, ".tiny-brain/fixes");
+    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs12.existsSync(fixesPath)}`);
+    if (fs12.existsSync(fixesPath)) {
       try {
         watchers.fixesWatcher = new FileWatcherService(this.context.logger);
         watchers.fixesWatcher.on("change", (change) => {
@@ -22067,9 +28213,9 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start fixes watcher for ${repoId}:`, error);
       }
     }
-    const qualityPath = path11.join(repoPath, "docs/quality/runs");
-    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs10.existsSync(qualityPath)}`);
-    if (fs10.existsSync(qualityPath)) {
+    const qualityPath = path14.join(repoPath, "docs/quality/runs");
+    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs12.existsSync(qualityPath)}`);
+    if (fs12.existsSync(qualityPath)) {
       try {
         if (!this.qualityCache.has(repoId)) {
           this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
@@ -22089,9 +28235,9 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start quality watcher for ${repoId}:`, error);
       }
     }
-    const prdDocsPath = path11.join(repoPath, "docs/prd");
-    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs10.existsSync(prdDocsPath)}`);
-    if (fs10.existsSync(prdDocsPath)) {
+    const prdDocsPath = path14.join(repoPath, "docs/prd");
+    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs12.existsSync(prdDocsPath)}`);
+    if (fs12.existsSync(prdDocsPath)) {
       try {
         watchers.prdDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.prdDocsWatcher.on("change", (change) => {
@@ -22109,8 +28255,8 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start PRD docs watcher for ${repoId}:`, error);
       }
     }
-    const fixDocsPath = path11.join(repoPath, ".tiny-brain/fixes");
-    if (fs10.existsSync(fixDocsPath)) {
+    const fixDocsPath = path14.join(repoPath, ".tiny-brain/fixes");
+    if (fs12.existsSync(fixDocsPath)) {
       try {
         watchers.fixDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.fixDocsWatcher.on("change", (change) => {
@@ -22136,8 +28282,8 @@ var FileWatcher = class {
    * Start watching ~/.tiny-brain/repos/repos.json for new repo registrations
    */
   async startReposConfigWatcher() {
-    const reposDir = path11.join(os.homedir(), ".tiny-brain", "repos");
-    if (!fs10.existsSync(reposDir)) {
+    const reposDir = path14.join(os.homedir(), ".tiny-brain", "repos");
+    if (!fs12.existsSync(reposDir)) {
       this.context.logger.info(`[FileWatcher] Repos config directory does not exist: ${reposDir}`);
       return;
     }
@@ -22219,7 +28365,7 @@ var FileWatcher = class {
         this.context.logger.info(`[FileWatcher] No SSE clients connected - skipping file processing`);
         return;
       }
-      const fileName = path11.basename(change.relativePath);
+      const fileName = path14.basename(change.relativePath);
       this.context.logger.debug(`[FileWatcher] File name:`, fileName);
       if (!fileName.endsWith(".json")) {
         this.context.logger.debug(`[FileWatcher] Not a valid progress file - skipping`);
@@ -22254,7 +28400,7 @@ var FileWatcher = class {
       let newPlan;
       try {
         this.context.logger.debug(`[FileWatcher] Reading file: ${change.filePath}`);
-        const content = await fs10.promises.readFile(change.filePath, "utf-8");
+        const content = await fs12.promises.readFile(change.filePath, "utf-8");
         newPlan = JSON.parse(content);
       } catch (error) {
         this.context.logger.error(`Error reading progress file ${change.filePath}:`, error);
@@ -22458,7 +28604,7 @@ var FileWatcher = class {
       }
       let newFixes;
       try {
-        const content = await fs10.promises.readFile(change.filePath, "utf-8");
+        const content = await fs12.promises.readFile(change.filePath, "utf-8");
         newFixes = JSON.parse(content);
       } catch (error) {
         this.context.logger.error(`Error reading fixes progress file ${change.filePath}:`, error);
@@ -22567,7 +28713,7 @@ var FileWatcher = class {
       if (!change.relativePath.endsWith(".md")) {
         return;
       }
-      const fileName = path11.basename(change.relativePath);
+      const fileName = path14.basename(change.relativePath);
       const runId = fileName.replace(/\.md$/, "");
       let repoCache = this.qualityCache.get(repoId);
       if (!repoCache) {
@@ -22586,7 +28732,7 @@ var FileWatcher = class {
       }
       let runData = { runId };
       try {
-        const content = await fs10.promises.readFile(change.filePath, "utf-8");
+        const content = await fs12.promises.readFile(change.filePath, "utf-8");
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (frontmatterMatch) {
           const frontmatter = frontmatterMatch[1];
@@ -22699,7 +28845,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs10.promises.readFile(change.filePath, "utf-8");
+        content = await fs12.promises.readFile(change.filePath, "utf-8");
       } catch (error) {
         this.context.logger.error(`Error reading PRD doc file ${change.filePath}:`, error);
         return;
@@ -22758,7 +28904,7 @@ var FileWatcher = class {
         return;
       }
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-      const fixId = path11.basename(change.relativePath, ".md");
+      const fixId = path14.basename(change.relativePath, ".md");
       if (change.type === "deleted") {
         await this.sse.broadcast("fix-doc-change", {
           eventType: "fix:doc:deleted",
@@ -22770,7 +28916,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs10.promises.readFile(change.filePath, "utf-8");
+        content = await fs12.promises.readFile(change.filePath, "utf-8");
       } catch (error) {
         this.context.logger.error(`Error reading fix doc file ${change.filePath}:`, error);
         return;
@@ -22836,7 +28982,7 @@ var DashboardServer = class {
       fetch: this.app.fetch,
       port: this.port
     });
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       let errorHandled = false;
       const errorHandler2 = (error) => {
         if (errorHandled) return;
@@ -22844,7 +28990,7 @@ var DashboardServer = class {
         if (error?.code === "EADDRINUSE") {
           this.context.logger.info(`Dashboard already running on port ${this.port}`);
           this.server = null;
-          resolve2({
+          resolve3({
             url: `http://localhost:${this.port}`,
             port: this.port
           });
@@ -22862,7 +29008,7 @@ var DashboardServer = class {
         } catch (error) {
           this.context.logger.warn("Failed to start file watcher, dashboard will run without real-time updates:", error);
         }
-        resolve2({
+        resolve3({
           url: `http://localhost:${this.port}`,
           port: this.port
         });
@@ -22876,18 +29022,18 @@ var DashboardServer = class {
     await this.watcher.stop();
     this.sse.closeAll();
     if (this.server) {
-      return new Promise((resolve2) => {
+      return new Promise((resolve3) => {
         const timeout = setTimeout(() => {
           this.context.logger.warn("Server close timed out after 5s, forcing cleanup");
           this.server = null;
           this.port = 0;
-          resolve2();
+          resolve3();
         }, 5e3);
         this.server.close(() => {
           clearTimeout(timeout);
           this.server = null;
           this.port = 0;
-          resolve2();
+          resolve3();
         });
       });
     }

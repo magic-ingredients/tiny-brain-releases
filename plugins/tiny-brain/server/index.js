@@ -449,8 +449,8 @@ var init_parseUtil = __esm({
     init_errors();
     init_en();
     makeIssue = (params) => {
-      const { data, path: path21, errorMaps, issueData } = params;
-      const fullPath = [...path21, ...issueData.path || []];
+      const { data, path: path24, errorMaps, issueData } = params;
+      const fullPath = [...path24, ...issueData.path || []];
       const fullIssue = {
         ...issueData,
         path: fullPath
@@ -758,11 +758,11 @@ var init_types = __esm({
     init_parseUtil();
     init_util();
     ParseInputLazyPath = class {
-      constructor(parent, value, path21, key) {
+      constructor(parent, value, path24, key) {
         this._cachedPath = [];
         this.parent = parent;
         this.data = value;
-        this._path = path21;
+        this._path = path24;
         this._key = key;
       }
       get path() {
@@ -2833,9 +2833,9 @@ var init_types = __esm({
         return this._def.options;
       }
     };
-    ZodUnion2.create = (types2, params) => {
+    ZodUnion2.create = (types3, params) => {
       return new ZodUnion2({
-        options: types2,
+        options: types3,
         typeName: ZodFirstPartyTypeKind.ZodUnion,
         ...processCreateParams(params)
       });
@@ -4178,12 +4178,12 @@ var require_code = __commonJS({
         return item === "" || item === '""';
       }
       get str() {
-        var _a;
-        return (_a = this._str) !== null && _a !== void 0 ? _a : this._str = this._items.reduce((s, c) => `${s}${c}`, "");
+        var _a2;
+        return (_a2 = this._str) !== null && _a2 !== void 0 ? _a2 : this._str = this._items.reduce((s, c) => `${s}${c}`, "");
       }
       get names() {
-        var _a;
-        return (_a = this._names) !== null && _a !== void 0 ? _a : this._names = this._items.reduce((names, c) => {
+        var _a2;
+        return (_a2 = this._names) !== null && _a2 !== void 0 ? _a2 : this._names = this._items.reduce((names, c) => {
           if (c instanceof Name)
             names[c.str] = (names[c.str] || 0) + 1;
           return names;
@@ -4329,8 +4329,8 @@ var require_scope = __commonJS({
         return `${prefix}${ng.index++}`;
       }
       _nameGroup(prefix) {
-        var _a, _b;
-        if (((_b = (_a = this._parent) === null || _a === void 0 ? void 0 : _a._prefixes) === null || _b === void 0 ? void 0 : _b.has(prefix)) || this._prefixes && !this._prefixes.has(prefix)) {
+        var _a2, _b;
+        if (((_b = (_a2 = this._parent) === null || _a2 === void 0 ? void 0 : _a2._prefixes) === null || _b === void 0 ? void 0 : _b.has(prefix)) || this._prefixes && !this._prefixes.has(prefix)) {
           throw new Error(`CodeGen: prefix "${prefix}" is not allowed in this scope`);
         }
         return this._names[prefix] = { prefix, index: 0 };
@@ -4363,12 +4363,12 @@ var require_scope = __commonJS({
         return new ValueScopeName(prefix, this._newName(prefix));
       }
       value(nameOrPrefix, value) {
-        var _a;
+        var _a2;
         if (value.ref === void 0)
           throw new Error("CodeGen: ref must be passed in value");
         const name = this.toName(nameOrPrefix);
         const { prefix } = name;
-        const valueKey = (_a = value.key) !== null && _a !== void 0 ? _a : value.ref;
+        const valueKey = (_a2 = value.key) !== null && _a2 !== void 0 ? _a2 : value.ref;
         let vs = this._values[prefix];
         if (vs) {
           const _name = vs.get(valueKey);
@@ -4686,8 +4686,8 @@ var require_codegen = __commonJS({
         return this;
       }
       optimizeNames(names, constants) {
-        var _a;
-        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
+        var _a2;
+        this.else = (_a2 = this.else) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants);
         if (!(super.optimizeNames(names, constants) || this.else))
           return;
         this.condition = optimizeExpr(this.condition, names, constants);
@@ -4791,16 +4791,16 @@ var require_codegen = __commonJS({
         return code;
       }
       optimizeNodes() {
-        var _a, _b;
+        var _a2, _b;
         super.optimizeNodes();
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNodes();
+        (_a2 = this.catch) === null || _a2 === void 0 ? void 0 : _a2.optimizeNodes();
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
       optimizeNames(names, constants) {
-        var _a, _b;
+        var _a2, _b;
         super.optimizeNames(names, constants);
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
+        (_a2 = this.catch) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants);
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants);
         return this;
       }
@@ -5296,14 +5296,14 @@ var require_util = __commonJS({
       });
     }
     exports.useFunc = useFunc;
-    var Type;
-    (function(Type2) {
-      Type2[Type2["Num"] = 0] = "Num";
-      Type2[Type2["Str"] = 1] = "Str";
-    })(Type || (exports.Type = Type = {}));
+    var Type2;
+    (function(Type3) {
+      Type3[Type3["Num"] = 0] = "Num";
+      Type3[Type3["Str"] = 1] = "Str";
+    })(Type2 || (exports.Type = Type2 = {}));
     function getErrorPath(dataProp, dataPropType, jsPropertySyntax) {
       if (dataProp instanceof codegen_1.Name) {
-        const isNumber2 = dataPropType === Type.Num;
+        const isNumber2 = dataPropType === Type2.Num;
         return jsPropertySyntax ? isNumber2 ? (0, codegen_1._)`"[" + ${dataProp} + "]"` : (0, codegen_1._)`"['" + ${dataProp} + "']"` : isNumber2 ? (0, codegen_1._)`"/" + ${dataProp}` : (0, codegen_1._)`"/" + ${dataProp}.replace(/~/g, "~0").replace(/\\//g, "~1")`;
       }
       return jsPropertySyntax ? (0, codegen_1.getProperty)(dataProp).toString() : "/" + escapeJsonPointer(dataProp);
@@ -5580,8 +5580,8 @@ var require_applicability = __commonJS({
     }
     exports.shouldUseGroup = shouldUseGroup;
     function shouldUseRule(schema2, rule) {
-      var _a;
-      return schema2[rule.keyword] !== void 0 || ((_a = rule.definition.implements) === null || _a === void 0 ? void 0 : _a.some((kwd) => schema2[kwd] !== void 0));
+      var _a2;
+      return schema2[rule.keyword] !== void 0 || ((_a2 = rule.definition.implements) === null || _a2 === void 0 ? void 0 : _a2.some((kwd) => schema2[kwd] !== void 0));
     }
     exports.shouldUseRule = shouldUseRule;
   }
@@ -5604,37 +5604,37 @@ var require_dataType = __commonJS({
       DataType2[DataType2["Wrong"] = 1] = "Wrong";
     })(DataType || (exports.DataType = DataType = {}));
     function getSchemaTypes(schema2) {
-      const types2 = getJSONTypes(schema2.type);
-      const hasNull = types2.includes("null");
+      const types3 = getJSONTypes(schema2.type);
+      const hasNull = types3.includes("null");
       if (hasNull) {
         if (schema2.nullable === false)
           throw new Error("type: null contradicts nullable: false");
       } else {
-        if (!types2.length && schema2.nullable !== void 0) {
+        if (!types3.length && schema2.nullable !== void 0) {
           throw new Error('"nullable" cannot be used without "type"');
         }
         if (schema2.nullable === true)
-          types2.push("null");
+          types3.push("null");
       }
-      return types2;
+      return types3;
     }
     exports.getSchemaTypes = getSchemaTypes;
     function getJSONTypes(ts) {
-      const types2 = Array.isArray(ts) ? ts : ts ? [ts] : [];
-      if (types2.every(rules_1.isJSONType))
-        return types2;
-      throw new Error("type must be JSONType or JSONType[]: " + types2.join(","));
+      const types3 = Array.isArray(ts) ? ts : ts ? [ts] : [];
+      if (types3.every(rules_1.isJSONType))
+        return types3;
+      throw new Error("type must be JSONType or JSONType[]: " + types3.join(","));
     }
     exports.getJSONTypes = getJSONTypes;
-    function coerceAndCheckDataType(it, types2) {
+    function coerceAndCheckDataType(it, types3) {
       const { gen, data, opts } = it;
-      const coerceTo = coerceToTypes(types2, opts.coerceTypes);
-      const checkTypes = types2.length > 0 && !(coerceTo.length === 0 && types2.length === 1 && (0, applicability_1.schemaHasRulesForType)(it, types2[0]));
+      const coerceTo = coerceToTypes(types3, opts.coerceTypes);
+      const checkTypes = types3.length > 0 && !(coerceTo.length === 0 && types3.length === 1 && (0, applicability_1.schemaHasRulesForType)(it, types3[0]));
       if (checkTypes) {
-        const wrongType = checkDataTypes(types2, data, opts.strictNumbers, DataType.Wrong);
+        const wrongType = checkDataTypes(types3, data, opts.strictNumbers, DataType.Wrong);
         gen.if(wrongType, () => {
           if (coerceTo.length)
-            coerceData(it, types2, coerceTo);
+            coerceData(it, types3, coerceTo);
           else
             reportTypeError(it);
         });
@@ -5643,15 +5643,15 @@ var require_dataType = __commonJS({
     }
     exports.coerceAndCheckDataType = coerceAndCheckDataType;
     var COERCIBLE = /* @__PURE__ */ new Set(["string", "number", "integer", "boolean", "null"]);
-    function coerceToTypes(types2, coerceTypes) {
-      return coerceTypes ? types2.filter((t) => COERCIBLE.has(t) || coerceTypes === "array" && t === "array") : [];
+    function coerceToTypes(types3, coerceTypes) {
+      return coerceTypes ? types3.filter((t) => COERCIBLE.has(t) || coerceTypes === "array" && t === "array") : [];
     }
-    function coerceData(it, types2, coerceTo) {
+    function coerceData(it, types3, coerceTo) {
       const { gen, data, opts } = it;
       const dataType = gen.let("dataType", (0, codegen_1._)`typeof ${data}`);
       const coerced = gen.let("coerced", (0, codegen_1._)`undefined`);
       if (opts.coerceTypes === "array") {
-        gen.if((0, codegen_1._)`${dataType} == 'object' && Array.isArray(${data}) && ${data}.length == 1`, () => gen.assign(data, (0, codegen_1._)`${data}[0]`).assign(dataType, (0, codegen_1._)`typeof ${data}`).if(checkDataTypes(types2, data, opts.strictNumbers), () => gen.assign(coerced, data)));
+        gen.if((0, codegen_1._)`${dataType} == 'object' && Array.isArray(${data}) && ${data}.length == 1`, () => gen.assign(data, (0, codegen_1._)`${data}[0]`).assign(dataType, (0, codegen_1._)`typeof ${data}`).if(checkDataTypes(types3, data, opts.strictNumbers), () => gen.assign(coerced, data)));
       }
       gen.if((0, codegen_1._)`${coerced} !== undefined`);
       for (const t of coerceTo) {
@@ -5727,19 +5727,19 @@ var require_dataType = __commonJS({
         return checkDataType(dataTypes[0], data, strictNums, correct);
       }
       let cond;
-      const types2 = (0, util_1.toHash)(dataTypes);
-      if (types2.array && types2.object) {
+      const types3 = (0, util_1.toHash)(dataTypes);
+      if (types3.array && types3.object) {
         const notObj = (0, codegen_1._)`typeof ${data} != "object"`;
-        cond = types2.null ? notObj : (0, codegen_1._)`!${data} || ${notObj}`;
-        delete types2.null;
-        delete types2.array;
-        delete types2.object;
+        cond = types3.null ? notObj : (0, codegen_1._)`!${data} || ${notObj}`;
+        delete types3.null;
+        delete types3.array;
+        delete types3.object;
       } else {
         cond = codegen_1.nil;
       }
-      if (types2.number)
-        delete types2.integer;
-      for (const t in types2)
+      if (types3.number)
+        delete types3.integer;
+      for (const t in types3)
         cond = (0, codegen_1.and)(cond, checkDataType(t, data, strictNums, correct));
       return cond;
     }
@@ -5969,14 +5969,14 @@ var require_keyword = __commonJS({
     }
     exports.macroKeywordCode = macroKeywordCode;
     function funcKeywordCode(cxt, def) {
-      var _a;
+      var _a2;
       const { gen, keyword, schema: schema2, parentSchema, $data, it } = cxt;
       checkAsyncKeyword(it, def);
       const validate = !$data && def.compile ? def.compile.call(it.self, schema2, parentSchema, it) : def.validate;
       const validateRef = useKeyword(gen, keyword, validate);
       const valid = gen.let("valid");
       cxt.block$data(valid, validateKeyword);
-      cxt.ok((_a = def.valid) !== null && _a !== void 0 ? _a : valid);
+      cxt.ok((_a2 = def.valid) !== null && _a2 !== void 0 ? _a2 : valid);
       function validateKeyword() {
         if (def.errors === false) {
           assignValid();
@@ -6007,8 +6007,8 @@ var require_keyword = __commonJS({
         gen.assign(valid, (0, codegen_1._)`${_await}${(0, code_1.callValidateCode)(cxt, validateRef, passCxt, passSchema)}`, def.modifying);
       }
       function reportErrs(errors) {
-        var _a2;
-        gen.if((0, codegen_1.not)((_a2 = def.valid) !== null && _a2 !== void 0 ? _a2 : valid), errors);
+        var _a3;
+        gen.if((0, codegen_1.not)((_a3 = def.valid) !== null && _a3 !== void 0 ? _a3 : valid), errors);
       }
     }
     exports.funcKeywordCode = funcKeywordCode;
@@ -6544,9 +6544,9 @@ var require_validate = __commonJS({
     function typeAndKeywords(it, errsCount) {
       if (it.opts.jtd)
         return schemaKeywords(it, [], false, errsCount);
-      const types2 = (0, dataType_1.getSchemaTypes)(it.schema);
-      const checkedTypes = (0, dataType_1.coerceAndCheckDataType)(it, types2);
-      schemaKeywords(it, types2, !checkedTypes, errsCount);
+      const types3 = (0, dataType_1.getSchemaTypes)(it.schema);
+      const checkedTypes = (0, dataType_1.coerceAndCheckDataType)(it, types3);
+      schemaKeywords(it, types3, !checkedTypes, errsCount);
     }
     function checkRefsAndKeywords(it) {
       const { schema: schema2, errSchemaPath, opts, self } = it;
@@ -6596,7 +6596,7 @@ var require_validate = __commonJS({
       if (items instanceof codegen_1.Name)
         gen.assign((0, codegen_1._)`${evaluated}.items`, items);
     }
-    function schemaKeywords(it, types2, typeErrors, errsCount) {
+    function schemaKeywords(it, types3, typeErrors, errsCount) {
       const { gen, schema: schema2, data, allErrors, opts, self } = it;
       const { RULES } = self;
       if (schema2.$ref && (opts.ignoreKeywordsWithRef || !(0, util_1.schemaHasRulesButRef)(schema2, RULES))) {
@@ -6604,7 +6604,7 @@ var require_validate = __commonJS({
         return;
       }
       if (!opts.jtd)
-        checkStrictTypes(it, types2);
+        checkStrictTypes(it, types3);
       gen.block(() => {
         for (const group of RULES.rules)
           groupKeywords(group);
@@ -6616,7 +6616,7 @@ var require_validate = __commonJS({
         if (group.type) {
           gen.if((0, dataType_2.checkDataType)(group.type, data, opts.strictNumbers));
           iterateKeywords(it, group);
-          if (types2.length === 1 && types2[0] === group.type && typeErrors) {
+          if (types3.length === 1 && types3[0] === group.type && typeErrors) {
             gen.else();
             (0, dataType_2.reportTypeError)(it);
           }
@@ -6640,27 +6640,27 @@ var require_validate = __commonJS({
         }
       });
     }
-    function checkStrictTypes(it, types2) {
+    function checkStrictTypes(it, types3) {
       if (it.schemaEnv.meta || !it.opts.strictTypes)
         return;
-      checkContextTypes(it, types2);
+      checkContextTypes(it, types3);
       if (!it.opts.allowUnionTypes)
-        checkMultipleTypes(it, types2);
+        checkMultipleTypes(it, types3);
       checkKeywordTypes(it, it.dataTypes);
     }
-    function checkContextTypes(it, types2) {
-      if (!types2.length)
+    function checkContextTypes(it, types3) {
+      if (!types3.length)
         return;
       if (!it.dataTypes.length) {
-        it.dataTypes = types2;
+        it.dataTypes = types3;
         return;
       }
-      types2.forEach((t) => {
+      types3.forEach((t) => {
         if (!includesType(it.dataTypes, t)) {
           strictTypesError(it, `type "${t}" not allowed by context "${it.dataTypes.join(",")}"`);
         }
       });
-      narrowSchemaTypes(it, types2);
+      narrowSchemaTypes(it, types3);
     }
     function checkMultipleTypes(it, ts) {
       if (ts.length > 1 && !(ts.length === 2 && ts.includes("null"))) {
@@ -6976,7 +6976,7 @@ var require_compile = __commonJS({
     var validate_1 = require_validate();
     var SchemaEnv = class {
       constructor(env) {
-        var _a;
+        var _a2;
         this.refs = {};
         this.dynamicAnchors = {};
         let schema2;
@@ -6985,7 +6985,7 @@ var require_compile = __commonJS({
         this.schema = env.schema;
         this.schemaId = env.schemaId;
         this.root = env.root || this;
-        this.baseId = (_a = env.baseId) !== null && _a !== void 0 ? _a : (0, resolve_1.normalizeId)(schema2 === null || schema2 === void 0 ? void 0 : schema2[env.schemaId || "$id"]);
+        this.baseId = (_a2 = env.baseId) !== null && _a2 !== void 0 ? _a2 : (0, resolve_1.normalizeId)(schema2 === null || schema2 === void 0 ? void 0 : schema2[env.schemaId || "$id"]);
         this.schemaPath = env.schemaPath;
         this.localRefs = env.localRefs;
         this.meta = env.meta;
@@ -7081,14 +7081,14 @@ var require_compile = __commonJS({
     }
     exports.compileSchema = compileSchema;
     function resolveRef(root, baseId, ref) {
-      var _a;
+      var _a2;
       ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, ref);
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve2.call(this, root, ref);
+      let _sch = resolve3.call(this, root, ref);
       if (_sch === void 0) {
-        const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
+        const schema2 = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
         const { schemaId } = this.opts;
         if (schema2)
           _sch = new SchemaEnv({ schema: schema2, schemaId, root, baseId });
@@ -7113,7 +7113,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve2(root, ref) {
+    function resolve3(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -7157,8 +7157,8 @@ var require_compile = __commonJS({
       "definitions"
     ]);
     function getJsonPointer(parsedRef, { baseId, schema: schema2, root }) {
-      var _a;
-      if (((_a = parsedRef.fragment) === null || _a === void 0 ? void 0 : _a[0]) !== "/")
+      var _a2;
+      if (((_a2 = parsedRef.fragment) === null || _a2 === void 0 ? void 0 : _a2[0]) !== "/")
         return;
       for (const part of parsedRef.fragment.slice(1).split("/")) {
         if (typeof schema2 === "boolean")
@@ -7328,8 +7328,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path21) {
-      let input = path21;
+    function removeDotSegments(path24) {
+      let input = path24;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -7528,8 +7528,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path21, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path21 && path21 !== "/" ? path21 : void 0;
+        const [path24, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path24 && path24 !== "/" ? path24 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -7688,7 +7688,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve2(baseURI, relativeURI, options) {
+    function resolve3(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const resolved = resolveComponent(parse3(baseURI, schemelessOptions), parse3(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
@@ -7915,7 +7915,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize: normalize2,
-      resolve: resolve2,
+      resolve: resolve3,
       resolveComponent,
       equal,
       serialize,
@@ -8019,9 +8019,9 @@ var require_core = __commonJS({
     };
     var MAX_EXPRESSION = 200;
     function requiredOptions(o) {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0;
+      var _a2, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0;
       const s = o.strict;
-      const _optz = (_a = o.code) === null || _a === void 0 ? void 0 : _a.optimize;
+      const _optz = (_a2 = o.code) === null || _a2 === void 0 ? void 0 : _a2.optimize;
       const optimize = _optz === true || _optz === void 0 ? 1 : _optz || 0;
       const regExp = (_c = (_b = o.code) === null || _b === void 0 ? void 0 : _b.regExp) !== null && _c !== void 0 ? _c : defaultRegExp;
       const uriResolver = (_d = o.uriResolver) !== null && _d !== void 0 ? _d : uri_1.default;
@@ -8495,7 +8495,7 @@ var require_core = __commonJS({
       }
     }
     function addRule(keyword, definition, dataType) {
-      var _a;
+      var _a2;
       const post = definition === null || definition === void 0 ? void 0 : definition.post;
       if (dataType && post)
         throw new Error('keyword with "post" flag cannot have "type"');
@@ -8521,7 +8521,7 @@ var require_core = __commonJS({
       else
         ruleGroup.rules.push(rule);
       RULES.all[keyword] = rule;
-      (_a = definition.implements) === null || _a === void 0 ? void 0 : _a.forEach((kwd) => this.addKeyword(kwd));
+      (_a2 = definition.implements) === null || _a2 === void 0 ? void 0 : _a2.forEach((kwd) => this.addKeyword(kwd));
     }
     function addBeforeRule(ruleGroup, rule, before) {
       const i = ruleGroup.rules.findIndex((_rule) => _rule.keyword === before);
@@ -8655,10 +8655,10 @@ var require_ref = __commonJS({
         gen.assign(names_1.default.errors, (0, codegen_1._)`${names_1.default.vErrors}.length`);
       }
       function addEvaluatedFrom(source) {
-        var _a;
+        var _a2;
         if (!it.opts.unevaluated)
           return;
-        const schEvaluated = (_a = sch === null || sch === void 0 ? void 0 : sch.validate) === null || _a === void 0 ? void 0 : _a.evaluated;
+        const schEvaluated = (_a2 = sch === null || sch === void 0 ? void 0 : sch.validate) === null || _a2 === void 0 ? void 0 : _a2.evaluated;
         if (it.props !== true) {
           if (schEvaluated && !schEvaluated.dynamicProps) {
             if (schEvaluated.props !== void 0) {
@@ -10300,7 +10300,7 @@ var require_discriminator = __commonJS({
           return _valid;
         }
         function getMapping() {
-          var _a;
+          var _a2;
           const oneOfMapping = {};
           const topRequired = hasRequired(parentSchema);
           let tagRequired = true;
@@ -10314,7 +10314,7 @@ var require_discriminator = __commonJS({
               if (sch === void 0)
                 throw new ref_error_1.default(it.opts.uriResolver, it.baseId, ref);
             }
-            const propSch = (_a = sch === null || sch === void 0 ? void 0 : sch.properties) === null || _a === void 0 ? void 0 : _a[tagName];
+            const propSch = (_a2 = sch === null || sch === void 0 ? void 0 : sch.properties) === null || _a2 === void 0 ? void 0 : _a2[tagName];
             if (typeof propSch != "object") {
               throw new Error(`discriminator: oneOf subschemas (or referenced schemas) must have "properties/${tagName}"`);
             }
@@ -10824,12 +10824,12 @@ var require_code3 = __commonJS({
         return item === "" || item === '""';
       }
       get str() {
-        var _a;
-        return (_a = this._str) !== null && _a !== void 0 ? _a : this._str = this._items.reduce((s, c) => `${s}${c}`, "");
+        var _a2;
+        return (_a2 = this._str) !== null && _a2 !== void 0 ? _a2 : this._str = this._items.reduce((s, c) => `${s}${c}`, "");
       }
       get names() {
-        var _a;
-        return (_a = this._names) !== null && _a !== void 0 ? _a : this._names = this._items.reduce((names, c) => {
+        var _a2;
+        return (_a2 = this._names) !== null && _a2 !== void 0 ? _a2 : this._names = this._items.reduce((names, c) => {
           if (c instanceof Name)
             names[c.str] = (names[c.str] || 0) + 1;
           return names;
@@ -10975,8 +10975,8 @@ var require_scope2 = __commonJS({
         return `${prefix}${ng.index++}`;
       }
       _nameGroup(prefix) {
-        var _a, _b;
-        if (((_b = (_a = this._parent) === null || _a === void 0 ? void 0 : _a._prefixes) === null || _b === void 0 ? void 0 : _b.has(prefix)) || this._prefixes && !this._prefixes.has(prefix)) {
+        var _a2, _b;
+        if (((_b = (_a2 = this._parent) === null || _a2 === void 0 ? void 0 : _a2._prefixes) === null || _b === void 0 ? void 0 : _b.has(prefix)) || this._prefixes && !this._prefixes.has(prefix)) {
           throw new Error(`CodeGen: prefix "${prefix}" is not allowed in this scope`);
         }
         return this._names[prefix] = { prefix, index: 0 };
@@ -11009,12 +11009,12 @@ var require_scope2 = __commonJS({
         return new ValueScopeName(prefix, this._newName(prefix));
       }
       value(nameOrPrefix, value) {
-        var _a;
+        var _a2;
         if (value.ref === void 0)
           throw new Error("CodeGen: ref must be passed in value");
         const name = this.toName(nameOrPrefix);
         const { prefix } = name;
-        const valueKey = (_a = value.key) !== null && _a !== void 0 ? _a : value.ref;
+        const valueKey = (_a2 = value.key) !== null && _a2 !== void 0 ? _a2 : value.ref;
         let vs = this._values[prefix];
         if (vs) {
           const _name = vs.get(valueKey);
@@ -11332,8 +11332,8 @@ var require_codegen2 = __commonJS({
         return this;
       }
       optimizeNames(names, constants) {
-        var _a;
-        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
+        var _a2;
+        this.else = (_a2 = this.else) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants);
         if (!(super.optimizeNames(names, constants) || this.else))
           return;
         this.condition = optimizeExpr(this.condition, names, constants);
@@ -11437,16 +11437,16 @@ var require_codegen2 = __commonJS({
         return code;
       }
       optimizeNodes() {
-        var _a, _b;
+        var _a2, _b;
         super.optimizeNodes();
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNodes();
+        (_a2 = this.catch) === null || _a2 === void 0 ? void 0 : _a2.optimizeNodes();
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
       optimizeNames(names, constants) {
-        var _a, _b;
+        var _a2, _b;
         super.optimizeNames(names, constants);
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
+        (_a2 = this.catch) === null || _a2 === void 0 ? void 0 : _a2.optimizeNames(names, constants);
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants);
         return this;
       }
@@ -11942,14 +11942,14 @@ var require_util2 = __commonJS({
       });
     }
     exports.useFunc = useFunc;
-    var Type;
-    (function(Type2) {
-      Type2[Type2["Num"] = 0] = "Num";
-      Type2[Type2["Str"] = 1] = "Str";
-    })(Type || (exports.Type = Type = {}));
+    var Type2;
+    (function(Type3) {
+      Type3[Type3["Num"] = 0] = "Num";
+      Type3[Type3["Str"] = 1] = "Str";
+    })(Type2 || (exports.Type = Type2 = {}));
     function getErrorPath(dataProp, dataPropType, jsPropertySyntax) {
       if (dataProp instanceof codegen_1.Name) {
-        const isNumber2 = dataPropType === Type.Num;
+        const isNumber2 = dataPropType === Type2.Num;
         return jsPropertySyntax ? isNumber2 ? (0, codegen_1._)`"[" + ${dataProp} + "]"` : (0, codegen_1._)`"['" + ${dataProp} + "']"` : isNumber2 ? (0, codegen_1._)`"/" + ${dataProp}` : (0, codegen_1._)`"/" + ${dataProp}.replace(/~/g, "~0").replace(/\\//g, "~1")`;
       }
       return jsPropertySyntax ? (0, codegen_1.getProperty)(dataProp).toString() : "/" + escapeJsonPointer(dataProp);
@@ -12226,8 +12226,8 @@ var require_applicability2 = __commonJS({
     }
     exports.shouldUseGroup = shouldUseGroup;
     function shouldUseRule(schema2, rule) {
-      var _a;
-      return schema2[rule.keyword] !== void 0 || ((_a = rule.definition.implements) === null || _a === void 0 ? void 0 : _a.some((kwd) => schema2[kwd] !== void 0));
+      var _a2;
+      return schema2[rule.keyword] !== void 0 || ((_a2 = rule.definition.implements) === null || _a2 === void 0 ? void 0 : _a2.some((kwd) => schema2[kwd] !== void 0));
     }
     exports.shouldUseRule = shouldUseRule;
   }
@@ -12250,37 +12250,37 @@ var require_dataType2 = __commonJS({
       DataType2[DataType2["Wrong"] = 1] = "Wrong";
     })(DataType || (exports.DataType = DataType = {}));
     function getSchemaTypes(schema2) {
-      const types2 = getJSONTypes(schema2.type);
-      const hasNull = types2.includes("null");
+      const types3 = getJSONTypes(schema2.type);
+      const hasNull = types3.includes("null");
       if (hasNull) {
         if (schema2.nullable === false)
           throw new Error("type: null contradicts nullable: false");
       } else {
-        if (!types2.length && schema2.nullable !== void 0) {
+        if (!types3.length && schema2.nullable !== void 0) {
           throw new Error('"nullable" cannot be used without "type"');
         }
         if (schema2.nullable === true)
-          types2.push("null");
+          types3.push("null");
       }
-      return types2;
+      return types3;
     }
     exports.getSchemaTypes = getSchemaTypes;
     function getJSONTypes(ts) {
-      const types2 = Array.isArray(ts) ? ts : ts ? [ts] : [];
-      if (types2.every(rules_1.isJSONType))
-        return types2;
-      throw new Error("type must be JSONType or JSONType[]: " + types2.join(","));
+      const types3 = Array.isArray(ts) ? ts : ts ? [ts] : [];
+      if (types3.every(rules_1.isJSONType))
+        return types3;
+      throw new Error("type must be JSONType or JSONType[]: " + types3.join(","));
     }
     exports.getJSONTypes = getJSONTypes;
-    function coerceAndCheckDataType(it, types2) {
+    function coerceAndCheckDataType(it, types3) {
       const { gen, data, opts } = it;
-      const coerceTo = coerceToTypes(types2, opts.coerceTypes);
-      const checkTypes = types2.length > 0 && !(coerceTo.length === 0 && types2.length === 1 && (0, applicability_1.schemaHasRulesForType)(it, types2[0]));
+      const coerceTo = coerceToTypes(types3, opts.coerceTypes);
+      const checkTypes = types3.length > 0 && !(coerceTo.length === 0 && types3.length === 1 && (0, applicability_1.schemaHasRulesForType)(it, types3[0]));
       if (checkTypes) {
-        const wrongType = checkDataTypes(types2, data, opts.strictNumbers, DataType.Wrong);
+        const wrongType = checkDataTypes(types3, data, opts.strictNumbers, DataType.Wrong);
         gen.if(wrongType, () => {
           if (coerceTo.length)
-            coerceData(it, types2, coerceTo);
+            coerceData(it, types3, coerceTo);
           else
             reportTypeError(it);
         });
@@ -12289,15 +12289,15 @@ var require_dataType2 = __commonJS({
     }
     exports.coerceAndCheckDataType = coerceAndCheckDataType;
     var COERCIBLE = /* @__PURE__ */ new Set(["string", "number", "integer", "boolean", "null"]);
-    function coerceToTypes(types2, coerceTypes) {
-      return coerceTypes ? types2.filter((t) => COERCIBLE.has(t) || coerceTypes === "array" && t === "array") : [];
+    function coerceToTypes(types3, coerceTypes) {
+      return coerceTypes ? types3.filter((t) => COERCIBLE.has(t) || coerceTypes === "array" && t === "array") : [];
     }
-    function coerceData(it, types2, coerceTo) {
+    function coerceData(it, types3, coerceTo) {
       const { gen, data, opts } = it;
       const dataType = gen.let("dataType", (0, codegen_1._)`typeof ${data}`);
       const coerced = gen.let("coerced", (0, codegen_1._)`undefined`);
       if (opts.coerceTypes === "array") {
-        gen.if((0, codegen_1._)`${dataType} == 'object' && Array.isArray(${data}) && ${data}.length == 1`, () => gen.assign(data, (0, codegen_1._)`${data}[0]`).assign(dataType, (0, codegen_1._)`typeof ${data}`).if(checkDataTypes(types2, data, opts.strictNumbers), () => gen.assign(coerced, data)));
+        gen.if((0, codegen_1._)`${dataType} == 'object' && Array.isArray(${data}) && ${data}.length == 1`, () => gen.assign(data, (0, codegen_1._)`${data}[0]`).assign(dataType, (0, codegen_1._)`typeof ${data}`).if(checkDataTypes(types3, data, opts.strictNumbers), () => gen.assign(coerced, data)));
       }
       gen.if((0, codegen_1._)`${coerced} !== undefined`);
       for (const t of coerceTo) {
@@ -12373,19 +12373,19 @@ var require_dataType2 = __commonJS({
         return checkDataType(dataTypes[0], data, strictNums, correct);
       }
       let cond;
-      const types2 = (0, util_1.toHash)(dataTypes);
-      if (types2.array && types2.object) {
+      const types3 = (0, util_1.toHash)(dataTypes);
+      if (types3.array && types3.object) {
         const notObj = (0, codegen_1._)`typeof ${data} != "object"`;
-        cond = types2.null ? notObj : (0, codegen_1._)`!${data} || ${notObj}`;
-        delete types2.null;
-        delete types2.array;
-        delete types2.object;
+        cond = types3.null ? notObj : (0, codegen_1._)`!${data} || ${notObj}`;
+        delete types3.null;
+        delete types3.array;
+        delete types3.object;
       } else {
         cond = codegen_1.nil;
       }
-      if (types2.number)
-        delete types2.integer;
-      for (const t in types2)
+      if (types3.number)
+        delete types3.integer;
+      for (const t in types3)
         cond = (0, codegen_1.and)(cond, checkDataType(t, data, strictNums, correct));
       return cond;
     }
@@ -12615,14 +12615,14 @@ var require_keyword2 = __commonJS({
     }
     exports.macroKeywordCode = macroKeywordCode;
     function funcKeywordCode(cxt, def) {
-      var _a;
+      var _a2;
       const { gen, keyword, schema: schema2, parentSchema, $data, it } = cxt;
       checkAsyncKeyword(it, def);
       const validate = !$data && def.compile ? def.compile.call(it.self, schema2, parentSchema, it) : def.validate;
       const validateRef = useKeyword(gen, keyword, validate);
       const valid = gen.let("valid");
       cxt.block$data(valid, validateKeyword);
-      cxt.ok((_a = def.valid) !== null && _a !== void 0 ? _a : valid);
+      cxt.ok((_a2 = def.valid) !== null && _a2 !== void 0 ? _a2 : valid);
       function validateKeyword() {
         if (def.errors === false) {
           assignValid();
@@ -12653,8 +12653,8 @@ var require_keyword2 = __commonJS({
         gen.assign(valid, (0, codegen_1._)`${_await}${(0, code_1.callValidateCode)(cxt, validateRef, passCxt, passSchema)}`, def.modifying);
       }
       function reportErrs(errors) {
-        var _a2;
-        gen.if((0, codegen_1.not)((_a2 = def.valid) !== null && _a2 !== void 0 ? _a2 : valid), errors);
+        var _a3;
+        gen.if((0, codegen_1.not)((_a3 = def.valid) !== null && _a3 !== void 0 ? _a3 : valid), errors);
       }
     }
     exports.funcKeywordCode = funcKeywordCode;
@@ -13155,9 +13155,9 @@ var require_validate2 = __commonJS({
     function typeAndKeywords(it, errsCount) {
       if (it.opts.jtd)
         return schemaKeywords(it, [], false, errsCount);
-      const types2 = (0, dataType_1.getSchemaTypes)(it.schema);
-      const checkedTypes = (0, dataType_1.coerceAndCheckDataType)(it, types2);
-      schemaKeywords(it, types2, !checkedTypes, errsCount);
+      const types3 = (0, dataType_1.getSchemaTypes)(it.schema);
+      const checkedTypes = (0, dataType_1.coerceAndCheckDataType)(it, types3);
+      schemaKeywords(it, types3, !checkedTypes, errsCount);
     }
     function checkRefsAndKeywords(it) {
       const { schema: schema2, errSchemaPath, opts, self } = it;
@@ -13207,7 +13207,7 @@ var require_validate2 = __commonJS({
       if (items instanceof codegen_1.Name)
         gen.assign((0, codegen_1._)`${evaluated}.items`, items);
     }
-    function schemaKeywords(it, types2, typeErrors, errsCount) {
+    function schemaKeywords(it, types3, typeErrors, errsCount) {
       const { gen, schema: schema2, data, allErrors, opts, self } = it;
       const { RULES } = self;
       if (schema2.$ref && (opts.ignoreKeywordsWithRef || !(0, util_1.schemaHasRulesButRef)(schema2, RULES))) {
@@ -13215,7 +13215,7 @@ var require_validate2 = __commonJS({
         return;
       }
       if (!opts.jtd)
-        checkStrictTypes(it, types2);
+        checkStrictTypes(it, types3);
       gen.block(() => {
         for (const group of RULES.rules)
           groupKeywords(group);
@@ -13227,7 +13227,7 @@ var require_validate2 = __commonJS({
         if (group.type) {
           gen.if((0, dataType_2.checkDataType)(group.type, data, opts.strictNumbers));
           iterateKeywords(it, group);
-          if (types2.length === 1 && types2[0] === group.type && typeErrors) {
+          if (types3.length === 1 && types3[0] === group.type && typeErrors) {
             gen.else();
             (0, dataType_2.reportTypeError)(it);
           }
@@ -13251,27 +13251,27 @@ var require_validate2 = __commonJS({
         }
       });
     }
-    function checkStrictTypes(it, types2) {
+    function checkStrictTypes(it, types3) {
       if (it.schemaEnv.meta || !it.opts.strictTypes)
         return;
-      checkContextTypes(it, types2);
+      checkContextTypes(it, types3);
       if (!it.opts.allowUnionTypes)
-        checkMultipleTypes(it, types2);
+        checkMultipleTypes(it, types3);
       checkKeywordTypes(it, it.dataTypes);
     }
-    function checkContextTypes(it, types2) {
-      if (!types2.length)
+    function checkContextTypes(it, types3) {
+      if (!types3.length)
         return;
       if (!it.dataTypes.length) {
-        it.dataTypes = types2;
+        it.dataTypes = types3;
         return;
       }
-      types2.forEach((t) => {
+      types3.forEach((t) => {
         if (!includesType(it.dataTypes, t)) {
           strictTypesError(it, `type "${t}" not allowed by context "${it.dataTypes.join(",")}"`);
         }
       });
-      narrowSchemaTypes(it, types2);
+      narrowSchemaTypes(it, types3);
     }
     function checkMultipleTypes(it, ts) {
       if (ts.length > 1 && !(ts.length === 2 && ts.includes("null"))) {
@@ -13587,7 +13587,7 @@ var require_compile2 = __commonJS({
     var validate_1 = require_validate2();
     var SchemaEnv = class {
       constructor(env) {
-        var _a;
+        var _a2;
         this.refs = {};
         this.dynamicAnchors = {};
         let schema2;
@@ -13596,7 +13596,7 @@ var require_compile2 = __commonJS({
         this.schema = env.schema;
         this.schemaId = env.schemaId;
         this.root = env.root || this;
-        this.baseId = (_a = env.baseId) !== null && _a !== void 0 ? _a : (0, resolve_1.normalizeId)(schema2 === null || schema2 === void 0 ? void 0 : schema2[env.schemaId || "$id"]);
+        this.baseId = (_a2 = env.baseId) !== null && _a2 !== void 0 ? _a2 : (0, resolve_1.normalizeId)(schema2 === null || schema2 === void 0 ? void 0 : schema2[env.schemaId || "$id"]);
         this.schemaPath = env.schemaPath;
         this.localRefs = env.localRefs;
         this.meta = env.meta;
@@ -13692,14 +13692,14 @@ var require_compile2 = __commonJS({
     }
     exports.compileSchema = compileSchema;
     function resolveRef(root, baseId, ref) {
-      var _a;
+      var _a2;
       ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, ref);
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve2.call(this, root, ref);
+      let _sch = resolve3.call(this, root, ref);
       if (_sch === void 0) {
-        const schema2 = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
+        const schema2 = (_a2 = root.localRefs) === null || _a2 === void 0 ? void 0 : _a2[ref];
         const { schemaId } = this.opts;
         if (schema2)
           _sch = new SchemaEnv({ schema: schema2, schemaId, root, baseId });
@@ -13724,7 +13724,7 @@ var require_compile2 = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve2(root, ref) {
+    function resolve3(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -13768,8 +13768,8 @@ var require_compile2 = __commonJS({
       "definitions"
     ]);
     function getJsonPointer(parsedRef, { baseId, schema: schema2, root }) {
-      var _a;
-      if (((_a = parsedRef.fragment) === null || _a === void 0 ? void 0 : _a[0]) !== "/")
+      var _a2;
+      if (((_a2 = parsedRef.fragment) === null || _a2 === void 0 ? void 0 : _a2[0]) !== "/")
         return;
       for (const part of parsedRef.fragment.slice(1).split("/")) {
         if (typeof schema2 === "boolean")
@@ -13908,9 +13908,9 @@ var require_core3 = __commonJS({
     };
     var MAX_EXPRESSION = 200;
     function requiredOptions(o) {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0;
+      var _a2, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0;
       const s = o.strict;
-      const _optz = (_a = o.code) === null || _a === void 0 ? void 0 : _a.optimize;
+      const _optz = (_a2 = o.code) === null || _a2 === void 0 ? void 0 : _a2.optimize;
       const optimize = _optz === true || _optz === void 0 ? 1 : _optz || 0;
       const regExp = (_c = (_b = o.code) === null || _b === void 0 ? void 0 : _b.regExp) !== null && _c !== void 0 ? _c : defaultRegExp;
       const uriResolver = (_d = o.uriResolver) !== null && _d !== void 0 ? _d : uri_1.default;
@@ -14384,7 +14384,7 @@ var require_core3 = __commonJS({
       }
     }
     function addRule(keyword, definition, dataType) {
-      var _a;
+      var _a2;
       const post = definition === null || definition === void 0 ? void 0 : definition.post;
       if (dataType && post)
         throw new Error('keyword with "post" flag cannot have "type"');
@@ -14410,7 +14410,7 @@ var require_core3 = __commonJS({
       else
         ruleGroup.rules.push(rule);
       RULES.all[keyword] = rule;
-      (_a = definition.implements) === null || _a === void 0 ? void 0 : _a.forEach((kwd) => this.addKeyword(kwd));
+      (_a2 = definition.implements) === null || _a2 === void 0 ? void 0 : _a2.forEach((kwd) => this.addKeyword(kwd));
     }
     function addBeforeRule(ruleGroup, rule, before) {
       const i = ruleGroup.rules.findIndex((_rule) => _rule.keyword === before);
@@ -14544,10 +14544,10 @@ var require_ref2 = __commonJS({
         gen.assign(names_1.default.errors, (0, codegen_1._)`${names_1.default.vErrors}.length`);
       }
       function addEvaluatedFrom(source) {
-        var _a;
+        var _a2;
         if (!it.opts.unevaluated)
           return;
-        const schEvaluated = (_a = sch === null || sch === void 0 ? void 0 : sch.validate) === null || _a === void 0 ? void 0 : _a.evaluated;
+        const schEvaluated = (_a2 = sch === null || sch === void 0 ? void 0 : sch.validate) === null || _a2 === void 0 ? void 0 : _a2.evaluated;
         if (it.props !== true) {
           if (schEvaluated && !schEvaluated.dynamicProps) {
             if (schEvaluated.props !== void 0) {
@@ -16189,7 +16189,7 @@ var require_discriminator2 = __commonJS({
           return _valid;
         }
         function getMapping() {
-          var _a;
+          var _a2;
           const oneOfMapping = {};
           const topRequired = hasRequired(parentSchema);
           let tagRequired = true;
@@ -16203,7 +16203,7 @@ var require_discriminator2 = __commonJS({
               if (sch === void 0)
                 throw new ref_error_1.default(it.opts.uriResolver, it.baseId, ref);
             }
-            const propSch = (_a = sch === null || sch === void 0 ? void 0 : sch.properties) === null || _a === void 0 ? void 0 : _a[tagName];
+            const propSch = (_a2 = sch === null || sch === void 0 ? void 0 : sch.properties) === null || _a2 === void 0 ? void 0 : _a2[tagName];
             if (typeof propSch != "object") {
               throw new Error(`discriminator: oneOf subschemas (or referenced schemas) must have "properties/${tagName}"`);
             }
@@ -16568,12 +16568,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs19, exportName) {
-      var _a;
+    function addFormats(ajv, list, fs21, exportName) {
+      var _a2;
       var _b;
-      (_a = (_b = ajv.opts.code).formats) !== null && _a !== void 0 ? _a : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
+      (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs19[f]);
+        ajv.addFormat(f, fs21[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -23265,10 +23265,10 @@ var init_esm3 = __esm({
        * Return a void Promise that resolves once the stream ends.
        */
       async promise() {
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve3, reject) => {
           this.on(DESTROYED, () => reject(new Error("stream destroyed")));
           this.on("error", (er) => reject(er));
-          this.on("end", () => resolve2());
+          this.on("end", () => resolve3());
         });
       }
       /**
@@ -23292,7 +23292,7 @@ var init_esm3 = __esm({
             return Promise.resolve({ done: false, value: res });
           if (this[EOF])
             return stop();
-          let resolve2;
+          let resolve3;
           let reject;
           const onerr = (er) => {
             this.off("data", ondata);
@@ -23306,19 +23306,19 @@ var init_esm3 = __esm({
             this.off("end", onend);
             this.off(DESTROYED, ondestroy);
             this.pause();
-            resolve2({ value, done: !!this[EOF] });
+            resolve3({ value, done: !!this[EOF] });
           };
           const onend = () => {
             this.off("error", onerr);
             this.off("data", ondata);
             this.off(DESTROYED, ondestroy);
             stop();
-            resolve2({ done: true, value: void 0 });
+            resolve3({ done: true, value: void 0 });
           };
           const ondestroy = () => onerr(new Error("stream destroyed"));
           return new Promise((res2, rej) => {
             reject = rej;
-            resolve2 = res2;
+            resolve3 = res2;
             this.once(DESTROYED, ondestroy);
             this.once("error", onerr);
             this.once("end", onend);
@@ -23689,12 +23689,12 @@ var init_esm4 = __esm({
       /**
        * Get the Path object referenced by the string path, resolved from this Path
        */
-      resolve(path21) {
-        if (!path21) {
+      resolve(path24) {
+        if (!path24) {
           return this;
         }
-        const rootPath = this.getRootString(path21);
-        const dir = path21.substring(rootPath.length);
+        const rootPath = this.getRootString(path24);
+        const dir = path24.substring(rootPath.length);
         const dirParts = dir.split(this.splitSep);
         const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
         return result;
@@ -24298,9 +24298,9 @@ var init_esm4 = __esm({
         if (this.#asyncReaddirInFlight) {
           await this.#asyncReaddirInFlight;
         } else {
-          let resolve2 = () => {
+          let resolve3 = () => {
           };
-          this.#asyncReaddirInFlight = new Promise((res) => resolve2 = res);
+          this.#asyncReaddirInFlight = new Promise((res) => resolve3 = res);
           try {
             for (const e of await this.#fs.promises.readdir(fullpath, {
               withFileTypes: true
@@ -24313,7 +24313,7 @@ var init_esm4 = __esm({
             children.provisional = 0;
           }
           this.#asyncReaddirInFlight = void 0;
-          resolve2();
+          resolve3();
         }
         return children.slice(0, children.provisional);
       }
@@ -24446,8 +24446,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      getRootString(path21) {
-        return win32.parse(path21).root;
+      getRootString(path24) {
+        return win32.parse(path24).root;
       }
       /**
        * @internal
@@ -24493,8 +24493,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      getRootString(path21) {
-        return path21.startsWith("/") ? "/" : "";
+      getRootString(path24) {
+        return path24.startsWith("/") ? "/" : "";
       }
       /**
        * @internal
@@ -24543,8 +24543,8 @@ var init_esm4 = __esm({
        *
        * @internal
        */
-      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs19 = defaultFS } = {}) {
-        this.#fs = fsFromOption(fs19);
+      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs21 = defaultFS } = {}) {
+        this.#fs = fsFromOption(fs21);
         if (cwd instanceof URL || cwd.startsWith("file://")) {
           cwd = fileURLToPath(cwd);
         }
@@ -24583,11 +24583,11 @@ var init_esm4 = __esm({
       /**
        * Get the depth of a provided path, string, or the cwd
        */
-      depth(path21 = this.cwd) {
-        if (typeof path21 === "string") {
-          path21 = this.cwd.resolve(path21);
+      depth(path24 = this.cwd) {
+        if (typeof path24 === "string") {
+          path24 = this.cwd.resolve(path24);
         }
-        return path21.depth();
+        return path24.depth();
       }
       /**
        * Return the cache of child entries.  Exposed so subclasses can create
@@ -25074,9 +25074,9 @@ var init_esm4 = __esm({
         process3();
         return results;
       }
-      chdir(path21 = this.cwd) {
+      chdir(path24 = this.cwd) {
         const oldCwd = this.cwd;
-        this.cwd = typeof path21 === "string" ? this.cwd.resolve(path21) : path21;
+        this.cwd = typeof path24 === "string" ? this.cwd.resolve(path24) : path24;
         this.cwd[setAsCwd](oldCwd);
       }
     };
@@ -25102,8 +25102,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      newRoot(fs19) {
-        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs19 });
+      newRoot(fs21) {
+        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs21 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -25131,8 +25131,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      newRoot(fs19) {
-        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs19 });
+      newRoot(fs21) {
+        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs21 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -25451,8 +25451,8 @@ var init_processor = __esm({
       }
       // match, absolute, ifdir
       entries() {
-        return [...this.store.entries()].map(([path21, n]) => [
-          path21,
+        return [...this.store.entries()].map(([path24, n]) => [
+          path24,
           !!(n & 2),
           !!(n & 1)
         ]);
@@ -25665,9 +25665,9 @@ var init_walker = __esm({
       signal;
       maxDepth;
       includeChildMatches;
-      constructor(patterns, path21, opts) {
+      constructor(patterns, path24, opts) {
         this.patterns = patterns;
-        this.path = path21;
+        this.path = path24;
         this.opts = opts;
         this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
         this.includeChildMatches = opts.includeChildMatches !== false;
@@ -25686,11 +25686,11 @@ var init_walker = __esm({
           });
         }
       }
-      #ignored(path21) {
-        return this.seen.has(path21) || !!this.#ignore?.ignored?.(path21);
+      #ignored(path24) {
+        return this.seen.has(path24) || !!this.#ignore?.ignored?.(path24);
       }
-      #childrenIgnored(path21) {
-        return !!this.#ignore?.childrenIgnored?.(path21);
+      #childrenIgnored(path24) {
+        return !!this.#ignore?.childrenIgnored?.(path24);
       }
       // backpressure mechanism
       pause() {
@@ -25905,8 +25905,8 @@ var init_walker = __esm({
     };
     GlobWalker = class extends GlobUtil {
       matches = /* @__PURE__ */ new Set();
-      constructor(patterns, path21, opts) {
-        super(patterns, path21, opts);
+      constructor(patterns, path24, opts) {
+        super(patterns, path24, opts);
       }
       matchEmit(e) {
         this.matches.add(e);
@@ -25943,8 +25943,8 @@ var init_walker = __esm({
     };
     GlobStream = class extends GlobUtil {
       results;
-      constructor(patterns, path21, opts) {
-        super(patterns, path21, opts);
+      constructor(patterns, path24, opts) {
+        super(patterns, path24, opts);
         this.results = new Minipass({
           signal: this.signal,
           objectMode: true
@@ -28449,7 +28449,7 @@ function renamed(from, to) {
     throw new Error("Function yaml." + from + " is removed in js-yaml 4. Use yaml." + to + " instead, which is now safe by default.");
   };
 }
-var isNothing_1, isObject_1, toArray_1, repeat_1, isNegativeZero_1, extend_1, common, exception, snippet, TYPE_CONSTRUCTOR_OPTIONS, YAML_NODE_KINDS, type, schema, str, seq, map, failsafe, _null4, bool, int2, YAML_FLOAT_PATTERN, SCIENTIFIC_WITHOUT_DOT, float, json, core, YAML_DATE_REGEXP, YAML_TIMESTAMP_REGEXP, timestamp, merge2, BASE64_MAP, binary, _hasOwnProperty$3, _toString$2, omap, _toString$1, pairs, _hasOwnProperty$2, set, _default2, _hasOwnProperty$1, CONTEXT_FLOW_IN, CONTEXT_FLOW_OUT, CONTEXT_BLOCK_IN, CONTEXT_BLOCK_OUT, CHOMPING_CLIP, CHOMPING_STRIP, CHOMPING_KEEP, PATTERN_NON_PRINTABLE, PATTERN_NON_ASCII_LINE_BREAKS, PATTERN_FLOW_INDICATORS, PATTERN_TAG_HANDLE, PATTERN_TAG_URI, simpleEscapeCheck, simpleEscapeMap, i, directiveHandlers, loadAll_1, load_1, loader, _toString, _hasOwnProperty, CHAR_BOM, CHAR_TAB, CHAR_LINE_FEED, CHAR_CARRIAGE_RETURN, CHAR_SPACE, CHAR_EXCLAMATION, CHAR_DOUBLE_QUOTE, CHAR_SHARP, CHAR_PERCENT, CHAR_AMPERSAND, CHAR_SINGLE_QUOTE, CHAR_ASTERISK, CHAR_COMMA, CHAR_MINUS, CHAR_COLON, CHAR_EQUALS, CHAR_GREATER_THAN, CHAR_QUESTION, CHAR_COMMERCIAL_AT, CHAR_LEFT_SQUARE_BRACKET, CHAR_RIGHT_SQUARE_BRACKET, CHAR_GRAVE_ACCENT, CHAR_LEFT_CURLY_BRACKET, CHAR_VERTICAL_LINE, CHAR_RIGHT_CURLY_BRACKET, ESCAPE_SEQUENCES, DEPRECATED_BOOLEANS_SYNTAX, DEPRECATED_BASE60_SYNTAX, QUOTING_TYPE_SINGLE, QUOTING_TYPE_DOUBLE, STYLE_PLAIN, STYLE_SINGLE, STYLE_LITERAL, STYLE_FOLDED, STYLE_DOUBLE, dump_1, dumper, load, loadAll, dump, safeLoad, safeLoadAll, safeDump;
+var isNothing_1, isObject_1, toArray_1, repeat_1, isNegativeZero_1, extend_1, common, exception, snippet, TYPE_CONSTRUCTOR_OPTIONS, YAML_NODE_KINDS, type, schema, str, seq, map, failsafe, _null4, bool, int2, YAML_FLOAT_PATTERN, SCIENTIFIC_WITHOUT_DOT, float, json, core, YAML_DATE_REGEXP, YAML_TIMESTAMP_REGEXP, timestamp, merge2, BASE64_MAP, binary, _hasOwnProperty$3, _toString$2, omap, _toString$1, pairs, _hasOwnProperty$2, set, _default2, _hasOwnProperty$1, CONTEXT_FLOW_IN, CONTEXT_FLOW_OUT, CONTEXT_BLOCK_IN, CONTEXT_BLOCK_OUT, CHOMPING_CLIP, CHOMPING_STRIP, CHOMPING_KEEP, PATTERN_NON_PRINTABLE, PATTERN_NON_ASCII_LINE_BREAKS, PATTERN_FLOW_INDICATORS, PATTERN_TAG_HANDLE, PATTERN_TAG_URI, simpleEscapeCheck, simpleEscapeMap, i, directiveHandlers, loadAll_1, load_1, loader, _toString, _hasOwnProperty, CHAR_BOM, CHAR_TAB, CHAR_LINE_FEED, CHAR_CARRIAGE_RETURN, CHAR_SPACE, CHAR_EXCLAMATION, CHAR_DOUBLE_QUOTE, CHAR_SHARP, CHAR_PERCENT, CHAR_AMPERSAND, CHAR_SINGLE_QUOTE, CHAR_ASTERISK, CHAR_COMMA, CHAR_MINUS, CHAR_COLON, CHAR_EQUALS, CHAR_GREATER_THAN, CHAR_QUESTION, CHAR_COMMERCIAL_AT, CHAR_LEFT_SQUARE_BRACKET, CHAR_RIGHT_SQUARE_BRACKET, CHAR_GRAVE_ACCENT, CHAR_LEFT_CURLY_BRACKET, CHAR_VERTICAL_LINE, CHAR_RIGHT_CURLY_BRACKET, ESCAPE_SEQUENCES, DEPRECATED_BOOLEANS_SYNTAX, DEPRECATED_BASE60_SYNTAX, QUOTING_TYPE_SINGLE, QUOTING_TYPE_DOUBLE, STYLE_PLAIN, STYLE_SINGLE, STYLE_LITERAL, STYLE_FOLDED, STYLE_DOUBLE, dump_1, dumper, Type, Schema, FAILSAFE_SCHEMA, JSON_SCHEMA, CORE_SCHEMA, DEFAULT_SCHEMA, load, loadAll, dump, YAMLException, types2, safeLoad, safeLoadAll, safeDump, jsYaml;
 var init_js_yaml = __esm({
   "node_modules/js-yaml/dist/js-yaml.mjs"() {
     isNothing_1 = isNothing;
@@ -28848,12 +28848,50 @@ var init_js_yaml = __esm({
     dumper = {
       dump: dump_1
     };
+    Type = type;
+    Schema = schema;
+    FAILSAFE_SCHEMA = failsafe;
+    JSON_SCHEMA = json;
+    CORE_SCHEMA = core;
+    DEFAULT_SCHEMA = _default2;
     load = loader.load;
     loadAll = loader.loadAll;
     dump = dumper.dump;
+    YAMLException = exception;
+    types2 = {
+      binary,
+      float,
+      map,
+      null: _null4,
+      pairs,
+      set,
+      timestamp,
+      bool,
+      int: int2,
+      merge: merge2,
+      omap,
+      seq,
+      str
+    };
     safeLoad = renamed("safeLoad", "load");
     safeLoadAll = renamed("safeLoadAll", "loadAll");
     safeDump = renamed("safeDump", "dump");
+    jsYaml = {
+      Type,
+      Schema,
+      FAILSAFE_SCHEMA,
+      JSON_SCHEMA,
+      CORE_SCHEMA,
+      DEFAULT_SCHEMA,
+      load,
+      loadAll,
+      dump,
+      YAMLException,
+      types: types2,
+      safeLoad,
+      safeLoadAll,
+      safeDump
+    };
   }
 });
 
@@ -34476,8 +34514,8 @@ var init_repo_config_service = __esm({
       /**
        * Generate a unique repo ID from path
        */
-      generateRepoId(path21) {
-        const hash = createHash("sha256").update(path21).digest("hex");
+      generateRepoId(path24) {
+        const hash = createHash("sha256").update(path24).digest("hex");
         return `repo-${hash.substring(0, 12)}`;
       }
       /**
@@ -35167,7 +35205,7 @@ var init_config_service = __esm({
         if (!this.context.repositoryRoot) {
           throw new Error("Cannot save repo config: not in a repository");
         }
-        const { writeFile: writeFile5, mkdir: mkdir5 } = await import("fs/promises");
+        const { writeFile: writeFile6, mkdir: mkdir6 } = await import("fs/promises");
         const configPath = join2(this.context.repositoryRoot, REPO_CONFIG_PATH);
         const configDir = join2(this.context.repositoryRoot, ".tiny-brain");
         const existing = await this.loadRepoConfig();
@@ -35183,12 +35221,12 @@ var init_config_service = __esm({
             }
           }
         };
-        await mkdir5(configDir, { recursive: true });
+        await mkdir6(configDir, { recursive: true });
         const config2 = {
           version: CONFIG_VERSION2,
           preferences: merged
         };
-        await writeFile5(configPath, JSON.stringify(config2, null, 2), "utf-8");
+        await writeFile6(configPath, JSON.stringify(config2, null, 2), "utf-8");
       }
       /**
        * Create default config
@@ -36636,6 +36674,161 @@ var init_quality2 = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/services/hooks/hooks-service.ts
+import { existsSync as existsSync2 } from "fs";
+import { readFile as readFile4, readdir as readdir4 } from "fs/promises";
+import { join as join4 } from "path";
+var HooksService;
+var init_hooks_service = __esm({
+  "packages/tiny-brain-core/src/services/hooks/hooks-service.ts"() {
+    "use strict";
+    HooksService = class {
+      repoRoot;
+      constructor(repoRoot) {
+        this.repoRoot = repoRoot;
+      }
+      /**
+       * Get all plugin hooks from hooks.json
+       */
+      async getPluginHooks() {
+        const hooksJsonPath = this.getPluginHooksPath();
+        if (!existsSync2(hooksJsonPath)) {
+          return [];
+        }
+        try {
+          const content = await readFile4(hooksJsonPath, "utf-8");
+          const hooksJson = JSON.parse(content);
+          const hooks = [];
+          for (const [event, groups] of Object.entries(hooksJson.hooks || {})) {
+            const matcherGroup = groups.find((g) => g.matcher);
+            hooks.push({
+              name: event,
+              event,
+              type: "plugin",
+              path: hooksJsonPath,
+              matcher: matcherGroup?.matcher
+            });
+          }
+          return hooks;
+        } catch {
+          return [];
+        }
+      }
+      /**
+       * Get all git hooks from .git/hooks/
+       */
+      async getGitHooks() {
+        const gitHooksDir = join4(this.repoRoot, ".git", "hooks");
+        if (!existsSync2(gitHooksDir)) {
+          return [];
+        }
+        try {
+          const entries = await readdir4(gitHooksDir, { withFileTypes: true });
+          const hooks = [];
+          for (const entry of entries) {
+            if (!entry.isFile() || entry.name.endsWith(".sample")) {
+              continue;
+            }
+            hooks.push({
+              name: entry.name,
+              event: entry.name,
+              type: "git",
+              path: join4(gitHooksDir, entry.name)
+            });
+          }
+          return hooks;
+        } catch {
+          return [];
+        }
+      }
+      /**
+       * Get all hooks (both plugin and git)
+       */
+      async getAllHooks() {
+        const [pluginHooks, gitHooks] = await Promise.all([
+          this.getPluginHooks(),
+          this.getGitHooks()
+        ]);
+        return { pluginHooks, gitHooks };
+      }
+      /**
+       * Get the content of a specific hook
+       */
+      async getHookContent(type2, hookName) {
+        if (type2 === "git") {
+          return this.getGitHookContent(hookName);
+        } else {
+          return this.getPluginHookContent(hookName);
+        }
+      }
+      async getGitHookContent(hookName) {
+        const hookPath = join4(this.repoRoot, ".git", "hooks", hookName);
+        if (!existsSync2(hookPath)) {
+          return null;
+        }
+        try {
+          return await readFile4(hookPath, "utf-8");
+        } catch {
+          return null;
+        }
+      }
+      async getPluginHookContent(hookName) {
+        const hooksJsonPath = this.getPluginHooksPath();
+        if (!existsSync2(hooksJsonPath)) {
+          return null;
+        }
+        try {
+          const content = await readFile4(hooksJsonPath, "utf-8");
+          const hooksJson = JSON.parse(content);
+          const hookGroups = hooksJson.hooks?.[hookName];
+          if (!hookGroups || hookGroups.length === 0) {
+            return null;
+          }
+          const lines = [`# ${hookName} Hook`, ""];
+          for (const group of hookGroups) {
+            if (group.matcher) {
+              lines.push(`## Matcher: ${group.matcher}`);
+            } else {
+              lines.push("## Default");
+            }
+            lines.push("");
+            for (const hook of group.hooks) {
+              lines.push(`### ${hook.type}`);
+              lines.push("```bash");
+              lines.push(hook.command);
+              lines.push("```");
+              lines.push("");
+            }
+          }
+          return lines.join("\n");
+        } catch {
+          return null;
+        }
+      }
+      getPluginHooksPath() {
+        const possiblePaths = [
+          join4(this.repoRoot, ".claude-plugin", "hooks", "hooks.json"),
+          join4(this.repoRoot, "hooks", "hooks.json")
+        ];
+        for (const p of possiblePaths) {
+          if (existsSync2(p)) {
+            return p;
+          }
+        }
+        return possiblePaths[0];
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/hooks/index.ts
+var init_hooks = __esm({
+  "packages/tiny-brain-core/src/services/hooks/index.ts"() {
+    "use strict";
+    init_hooks_service();
+  }
+});
+
 // packages/tiny-brain-core/src/services/persona/types.ts
 var init_types10 = __esm({
   "packages/tiny-brain-core/src/services/persona/types.ts"() {
@@ -36870,8 +37063,8 @@ var init_library_client = __esm({
       /**
        * Get agent by path (new agent system)
        */
-      async getAgentByPath(token, path21) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path21}`, {
+      async getAgentByPath(token, path24) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path24}`, {
           method: "GET",
           headers: {
             "Accept": "application/json",
@@ -36887,8 +37080,8 @@ var init_library_client = __esm({
       /**
        * Store agent at specified path (new agent system)
        */
-      async storeAgent(token, path21, agent) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path21}`, {
+      async storeAgent(token, path24, agent) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path24}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -36903,8 +37096,8 @@ var init_library_client = __esm({
       /**
        * Archive agent at specified path (new agent system)
        */
-      async archiveAgent(token, path21) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path21}`, {
+      async archiveAgent(token, path24) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path24}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -36988,6 +37181,5400 @@ var init_library_client = __esm({
         }
         const data = await response.json();
         return data;
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/api/skill-loader.ts
+import * as fs5 from "fs/promises";
+import * as path6 from "path";
+var SkillLoader;
+var init_skill_loader = __esm({
+  "packages/tiny-brain-core/src/services/api/skill-loader.ts"() {
+    "use strict";
+    init_js_yaml();
+    SkillLoader = class {
+      skillsPath;
+      cache = /* @__PURE__ */ new Map();
+      constructor(skillsPath) {
+        this.skillsPath = skillsPath;
+      }
+      async loadSkill(skillName) {
+        const cached2 = this.cache.get(skillName);
+        if (cached2) {
+          return cached2;
+        }
+        const skillPath = path6.join(this.skillsPath, skillName);
+        const skillFile = path6.join(skillPath, "SKILL.md");
+        const content = await fs5.readFile(skillFile, "utf-8");
+        const { metadata, body } = this.parseFrontmatter(content);
+        const templates = await this.loadTemplates(skillPath);
+        const skill = {
+          name: metadata.name || skillName,
+          version: metadata.version || "1.0.0",
+          description: metadata.description || "",
+          systemPrompt: body.trim(),
+          templates
+        };
+        this.cache.set(skillName, skill);
+        return skill;
+      }
+      parseFrontmatter(content) {
+        if (!content.startsWith("---")) {
+          return {
+            metadata: {},
+            body: content
+          };
+        }
+        const endIndex = content.indexOf("---", 3);
+        if (endIndex === -1) {
+          return {
+            metadata: {},
+            body: content
+          };
+        }
+        const yamlContent = content.slice(3, endIndex).trim();
+        const body = content.slice(endIndex + 3).trim();
+        let metadata = {};
+        if (yamlContent) {
+          try {
+            metadata = jsYaml.load(yamlContent);
+          } catch {
+            metadata = {};
+          }
+        }
+        return { metadata, body };
+      }
+      async loadTemplates(skillPath) {
+        const templatesPath = path6.join(skillPath, "templates");
+        const templates = {};
+        try {
+          const entries = await fs5.readdir(templatesPath, { withFileTypes: true });
+          for (const entry of entries) {
+            if (entry.isFile() && entry.name.endsWith(".md")) {
+              const templatePath = path6.join(templatesPath, entry.name);
+              const content = await fs5.readFile(templatePath, "utf-8");
+              templates[entry.name] = content;
+            }
+          }
+        } catch (error2) {
+          const err = error2;
+          if (err.code === "ENOENT") {
+            return {};
+          }
+          throw error2;
+        }
+        return templates;
+      }
+      /**
+       * Clear the skill cache
+       */
+      clearCache() {
+        this.cache.clear();
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/tslib.mjs
+function __classPrivateFieldSet(receiver, state, value, kind, f) {
+  if (kind === "m")
+    throw new TypeError("Private method is not writable");
+  if (kind === "a" && !f)
+    throw new TypeError("Private accessor was defined without a setter");
+  if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver))
+    throw new TypeError("Cannot write private member to an object whose class did not declare it");
+  return kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value), value;
+}
+function __classPrivateFieldGet(receiver, state, kind, f) {
+  if (kind === "a" && !f)
+    throw new TypeError("Private accessor was defined without a getter");
+  if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver))
+    throw new TypeError("Cannot read private member from an object whose class did not declare it");
+  return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+}
+var init_tslib = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/tslib.mjs"() {
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/utils/uuid.mjs
+var uuid4;
+var init_uuid = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/utils/uuid.mjs"() {
+    uuid4 = function() {
+      const { crypto: crypto6 } = globalThis;
+      if (crypto6?.randomUUID) {
+        uuid4 = crypto6.randomUUID.bind(crypto6);
+        return crypto6.randomUUID();
+      }
+      const u8 = new Uint8Array(1);
+      const randomByte = crypto6 ? () => crypto6.getRandomValues(u8)[0] : () => Math.random() * 255 & 255;
+      return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (+c ^ randomByte() & 15 >> +c / 4).toString(16));
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/errors.mjs
+function isAbortError(err) {
+  return typeof err === "object" && err !== null && // Spec-compliant fetch implementations
+  ("name" in err && err.name === "AbortError" || // Expo fetch
+  "message" in err && String(err.message).includes("FetchRequestCanceledException"));
+}
+var castToError;
+var init_errors2 = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/errors.mjs"() {
+    castToError = (err) => {
+      if (err instanceof Error)
+        return err;
+      if (typeof err === "object" && err !== null) {
+        try {
+          if (Object.prototype.toString.call(err) === "[object Error]") {
+            const error2 = new Error(err.message, err.cause ? { cause: err.cause } : {});
+            if (err.stack)
+              error2.stack = err.stack;
+            if (err.cause && !error2.cause)
+              error2.cause = err.cause;
+            if (err.name)
+              error2.name = err.name;
+            return error2;
+          }
+        } catch {
+        }
+        try {
+          return new Error(JSON.stringify(err));
+        } catch {
+        }
+      }
+      return new Error(err);
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/core/error.mjs
+var AnthropicError, APIError, APIUserAbortError, APIConnectionError, APIConnectionTimeoutError, BadRequestError, AuthenticationError, PermissionDeniedError, NotFoundError, ConflictError, UnprocessableEntityError, RateLimitError, InternalServerError;
+var init_error = __esm({
+  "node_modules/@anthropic-ai/sdk/core/error.mjs"() {
+    init_errors2();
+    AnthropicError = class extends Error {
+    };
+    APIError = class _APIError extends AnthropicError {
+      constructor(status, error2, message, headers) {
+        super(`${_APIError.makeMessage(status, error2, message)}`);
+        this.status = status;
+        this.headers = headers;
+        this.requestID = headers?.get("request-id");
+        this.error = error2;
+      }
+      static makeMessage(status, error2, message) {
+        const msg = error2?.message ? typeof error2.message === "string" ? error2.message : JSON.stringify(error2.message) : error2 ? JSON.stringify(error2) : message;
+        if (status && msg) {
+          return `${status} ${msg}`;
+        }
+        if (status) {
+          return `${status} status code (no body)`;
+        }
+        if (msg) {
+          return msg;
+        }
+        return "(no status code or body)";
+      }
+      static generate(status, errorResponse, message, headers) {
+        if (!status || !headers) {
+          return new APIConnectionError({ message, cause: castToError(errorResponse) });
+        }
+        const error2 = errorResponse;
+        if (status === 400) {
+          return new BadRequestError(status, error2, message, headers);
+        }
+        if (status === 401) {
+          return new AuthenticationError(status, error2, message, headers);
+        }
+        if (status === 403) {
+          return new PermissionDeniedError(status, error2, message, headers);
+        }
+        if (status === 404) {
+          return new NotFoundError(status, error2, message, headers);
+        }
+        if (status === 409) {
+          return new ConflictError(status, error2, message, headers);
+        }
+        if (status === 422) {
+          return new UnprocessableEntityError(status, error2, message, headers);
+        }
+        if (status === 429) {
+          return new RateLimitError(status, error2, message, headers);
+        }
+        if (status >= 500) {
+          return new InternalServerError(status, error2, message, headers);
+        }
+        return new _APIError(status, error2, message, headers);
+      }
+    };
+    APIUserAbortError = class extends APIError {
+      constructor({ message } = {}) {
+        super(void 0, void 0, message || "Request was aborted.", void 0);
+      }
+    };
+    APIConnectionError = class extends APIError {
+      constructor({ message, cause }) {
+        super(void 0, void 0, message || "Connection error.", void 0);
+        if (cause)
+          this.cause = cause;
+      }
+    };
+    APIConnectionTimeoutError = class extends APIConnectionError {
+      constructor({ message } = {}) {
+        super({ message: message ?? "Request timed out." });
+      }
+    };
+    BadRequestError = class extends APIError {
+    };
+    AuthenticationError = class extends APIError {
+    };
+    PermissionDeniedError = class extends APIError {
+    };
+    NotFoundError = class extends APIError {
+    };
+    ConflictError = class extends APIError {
+    };
+    UnprocessableEntityError = class extends APIError {
+    };
+    RateLimitError = class extends APIError {
+    };
+    InternalServerError = class extends APIError {
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
+function maybeObj(x) {
+  if (typeof x !== "object") {
+    return {};
+  }
+  return x ?? {};
+}
+function isEmptyObj(obj) {
+  if (!obj)
+    return true;
+  for (const _k in obj)
+    return false;
+  return true;
+}
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+var startsWithSchemeRegexp, isAbsoluteURL, isArray, isReadonlyArray, validatePositiveInteger, safeJSON;
+var init_values = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/utils/values.mjs"() {
+    init_error();
+    startsWithSchemeRegexp = /^[a-z][a-z0-9+.-]*:/i;
+    isAbsoluteURL = (url) => {
+      return startsWithSchemeRegexp.test(url);
+    };
+    isArray = (val) => (isArray = Array.isArray, isArray(val));
+    isReadonlyArray = isArray;
+    validatePositiveInteger = (name, n) => {
+      if (typeof n !== "number" || !Number.isInteger(n)) {
+        throw new AnthropicError(`${name} must be an integer`);
+      }
+      if (n < 0) {
+        throw new AnthropicError(`${name} must be a positive integer`);
+      }
+      return n;
+    };
+    safeJSON = (text) => {
+      try {
+        return JSON.parse(text);
+      } catch (err) {
+        return void 0;
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/utils/sleep.mjs
+var sleep;
+var init_sleep = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/utils/sleep.mjs"() {
+    sleep = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/version.mjs
+var VERSION;
+var init_version = __esm({
+  "node_modules/@anthropic-ai/sdk/version.mjs"() {
+    VERSION = "0.71.2";
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
+function getDetectedPlatform() {
+  if (typeof Deno !== "undefined" && Deno.build != null) {
+    return "deno";
+  }
+  if (typeof EdgeRuntime !== "undefined") {
+    return "edge";
+  }
+  if (Object.prototype.toString.call(typeof globalThis.process !== "undefined" ? globalThis.process : 0) === "[object process]") {
+    return "node";
+  }
+  return "unknown";
+}
+function getBrowserInfo() {
+  if (typeof navigator === "undefined" || !navigator) {
+    return null;
+  }
+  const browserPatterns = [
+    { key: "edge", pattern: /Edge(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "ie", pattern: /MSIE(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "ie", pattern: /Trident(?:.*rv\:(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "chrome", pattern: /Chrome(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "firefox", pattern: /Firefox(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
+    { key: "safari", pattern: /(?:Version\W+(\d+)\.(\d+)(?:\.(\d+))?)?(?:\W+Mobile\S*)?\W+Safari/ }
+  ];
+  for (const { key, pattern } of browserPatterns) {
+    const match3 = pattern.exec(navigator.userAgent);
+    if (match3) {
+      const major = match3[1] || 0;
+      const minor = match3[2] || 0;
+      const patch = match3[3] || 0;
+      return { browser: key, version: `${major}.${minor}.${patch}` };
+    }
+  }
+  return null;
+}
+var isRunningInBrowser, getPlatformProperties, normalizeArch, normalizePlatform, _platformHeaders, getPlatformHeaders;
+var init_detect_platform = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs"() {
+    init_version();
+    isRunningInBrowser = () => {
+      return (
+        // @ts-ignore
+        typeof window !== "undefined" && // @ts-ignore
+        typeof window.document !== "undefined" && // @ts-ignore
+        typeof navigator !== "undefined"
+      );
+    };
+    getPlatformProperties = () => {
+      const detectedPlatform = getDetectedPlatform();
+      if (detectedPlatform === "deno") {
+        return {
+          "X-Stainless-Lang": "js",
+          "X-Stainless-Package-Version": VERSION,
+          "X-Stainless-OS": normalizePlatform(Deno.build.os),
+          "X-Stainless-Arch": normalizeArch(Deno.build.arch),
+          "X-Stainless-Runtime": "deno",
+          "X-Stainless-Runtime-Version": typeof Deno.version === "string" ? Deno.version : Deno.version?.deno ?? "unknown"
+        };
+      }
+      if (typeof EdgeRuntime !== "undefined") {
+        return {
+          "X-Stainless-Lang": "js",
+          "X-Stainless-Package-Version": VERSION,
+          "X-Stainless-OS": "Unknown",
+          "X-Stainless-Arch": `other:${EdgeRuntime}`,
+          "X-Stainless-Runtime": "edge",
+          "X-Stainless-Runtime-Version": globalThis.process.version
+        };
+      }
+      if (detectedPlatform === "node") {
+        return {
+          "X-Stainless-Lang": "js",
+          "X-Stainless-Package-Version": VERSION,
+          "X-Stainless-OS": normalizePlatform(globalThis.process.platform ?? "unknown"),
+          "X-Stainless-Arch": normalizeArch(globalThis.process.arch ?? "unknown"),
+          "X-Stainless-Runtime": "node",
+          "X-Stainless-Runtime-Version": globalThis.process.version ?? "unknown"
+        };
+      }
+      const browserInfo = getBrowserInfo();
+      if (browserInfo) {
+        return {
+          "X-Stainless-Lang": "js",
+          "X-Stainless-Package-Version": VERSION,
+          "X-Stainless-OS": "Unknown",
+          "X-Stainless-Arch": "unknown",
+          "X-Stainless-Runtime": `browser:${browserInfo.browser}`,
+          "X-Stainless-Runtime-Version": browserInfo.version
+        };
+      }
+      return {
+        "X-Stainless-Lang": "js",
+        "X-Stainless-Package-Version": VERSION,
+        "X-Stainless-OS": "Unknown",
+        "X-Stainless-Arch": "unknown",
+        "X-Stainless-Runtime": "unknown",
+        "X-Stainless-Runtime-Version": "unknown"
+      };
+    };
+    normalizeArch = (arch) => {
+      if (arch === "x32")
+        return "x32";
+      if (arch === "x86_64" || arch === "x64")
+        return "x64";
+      if (arch === "arm")
+        return "arm";
+      if (arch === "aarch64" || arch === "arm64")
+        return "arm64";
+      if (arch)
+        return `other:${arch}`;
+      return "unknown";
+    };
+    normalizePlatform = (platform2) => {
+      platform2 = platform2.toLowerCase();
+      if (platform2.includes("ios"))
+        return "iOS";
+      if (platform2 === "android")
+        return "Android";
+      if (platform2 === "darwin")
+        return "MacOS";
+      if (platform2 === "win32")
+        return "Windows";
+      if (platform2 === "freebsd")
+        return "FreeBSD";
+      if (platform2 === "openbsd")
+        return "OpenBSD";
+      if (platform2 === "linux")
+        return "Linux";
+      if (platform2)
+        return `Other:${platform2}`;
+      return "Unknown";
+    };
+    getPlatformHeaders = () => {
+      return _platformHeaders ?? (_platformHeaders = getPlatformProperties());
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/shims.mjs
+function getDefaultFetch() {
+  if (typeof fetch !== "undefined") {
+    return fetch;
+  }
+  throw new Error("`fetch` is not defined as a global; Either pass `fetch` to the client, `new Anthropic({ fetch })` or polyfill the global, `globalThis.fetch = fetch`");
+}
+function makeReadableStream(...args) {
+  const ReadableStream2 = globalThis.ReadableStream;
+  if (typeof ReadableStream2 === "undefined") {
+    throw new Error("`ReadableStream` is not defined as a global; You will need to polyfill it, `globalThis.ReadableStream = ReadableStream`");
+  }
+  return new ReadableStream2(...args);
+}
+function ReadableStreamFrom(iterable) {
+  let iter = Symbol.asyncIterator in iterable ? iterable[Symbol.asyncIterator]() : iterable[Symbol.iterator]();
+  return makeReadableStream({
+    start() {
+    },
+    async pull(controller) {
+      const { done, value } = await iter.next();
+      if (done) {
+        controller.close();
+      } else {
+        controller.enqueue(value);
+      }
+    },
+    async cancel() {
+      await iter.return?.();
+    }
+  });
+}
+function ReadableStreamToAsyncIterable(stream3) {
+  if (stream3[Symbol.asyncIterator])
+    return stream3;
+  const reader = stream3.getReader();
+  return {
+    async next() {
+      try {
+        const result = await reader.read();
+        if (result?.done)
+          reader.releaseLock();
+        return result;
+      } catch (e) {
+        reader.releaseLock();
+        throw e;
+      }
+    },
+    async return() {
+      const cancelPromise = reader.cancel();
+      reader.releaseLock();
+      await cancelPromise;
+      return { done: true, value: void 0 };
+    },
+    [Symbol.asyncIterator]() {
+      return this;
+    }
+  };
+}
+async function CancelReadableStream(stream3) {
+  if (stream3 === null || typeof stream3 !== "object")
+    return;
+  if (stream3[Symbol.asyncIterator]) {
+    await stream3[Symbol.asyncIterator]().return?.();
+    return;
+  }
+  const reader = stream3.getReader();
+  const cancelPromise = reader.cancel();
+  reader.releaseLock();
+  await cancelPromise;
+}
+var init_shims = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/shims.mjs"() {
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/request-options.mjs
+var FallbackEncoder;
+var init_request_options = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/request-options.mjs"() {
+    FallbackEncoder = ({ headers, body }) => {
+      return {
+        bodyHeaders: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify(body)
+      };
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/utils/bytes.mjs
+function concatBytes(buffers) {
+  let length = 0;
+  for (const buffer of buffers) {
+    length += buffer.length;
+  }
+  const output = new Uint8Array(length);
+  let index = 0;
+  for (const buffer of buffers) {
+    output.set(buffer, index);
+    index += buffer.length;
+  }
+  return output;
+}
+function encodeUTF8(str2) {
+  let encoder;
+  return (encodeUTF8_ ?? (encoder = new globalThis.TextEncoder(), encodeUTF8_ = encoder.encode.bind(encoder)))(str2);
+}
+function decodeUTF8(bytes) {
+  let decoder;
+  return (decodeUTF8_ ?? (decoder = new globalThis.TextDecoder(), decodeUTF8_ = decoder.decode.bind(decoder)))(bytes);
+}
+var encodeUTF8_, decodeUTF8_;
+var init_bytes = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/utils/bytes.mjs"() {
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/decoders/line.mjs
+function findNewlineIndex(buffer, startIndex) {
+  const newline = 10;
+  const carriage = 13;
+  for (let i = startIndex ?? 0; i < buffer.length; i++) {
+    if (buffer[i] === newline) {
+      return { preceding: i, index: i + 1, carriage: false };
+    }
+    if (buffer[i] === carriage) {
+      return { preceding: i, index: i + 1, carriage: true };
+    }
+  }
+  return null;
+}
+function findDoubleNewlineIndex(buffer) {
+  const newline = 10;
+  const carriage = 13;
+  for (let i = 0; i < buffer.length - 1; i++) {
+    if (buffer[i] === newline && buffer[i + 1] === newline) {
+      return i + 2;
+    }
+    if (buffer[i] === carriage && buffer[i + 1] === carriage) {
+      return i + 2;
+    }
+    if (buffer[i] === carriage && buffer[i + 1] === newline && i + 3 < buffer.length && buffer[i + 2] === carriage && buffer[i + 3] === newline) {
+      return i + 4;
+    }
+  }
+  return -1;
+}
+var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex, LineDecoder;
+var init_line = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/decoders/line.mjs"() {
+    init_tslib();
+    init_bytes();
+    LineDecoder = class {
+      constructor() {
+        _LineDecoder_buffer.set(this, void 0);
+        _LineDecoder_carriageReturnIndex.set(this, void 0);
+        __classPrivateFieldSet(this, _LineDecoder_buffer, new Uint8Array(), "f");
+        __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, null, "f");
+      }
+      decode(chunk2) {
+        if (chunk2 == null) {
+          return [];
+        }
+        const binaryChunk = chunk2 instanceof ArrayBuffer ? new Uint8Array(chunk2) : typeof chunk2 === "string" ? encodeUTF8(chunk2) : chunk2;
+        __classPrivateFieldSet(this, _LineDecoder_buffer, concatBytes([__classPrivateFieldGet(this, _LineDecoder_buffer, "f"), binaryChunk]), "f");
+        const lines = [];
+        let patternIndex;
+        while ((patternIndex = findNewlineIndex(__classPrivateFieldGet(this, _LineDecoder_buffer, "f"), __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f"))) != null) {
+          if (patternIndex.carriage && __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") == null) {
+            __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, patternIndex.index, "f");
+            continue;
+          }
+          if (__classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") != null && (patternIndex.index !== __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") + 1 || patternIndex.carriage)) {
+            lines.push(decodeUTF8(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(0, __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") - 1)));
+            __classPrivateFieldSet(this, _LineDecoder_buffer, __classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(__classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f")), "f");
+            __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, null, "f");
+            continue;
+          }
+          const endIndex = __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") !== null ? patternIndex.preceding - 1 : patternIndex.preceding;
+          const line = decodeUTF8(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(0, endIndex));
+          lines.push(line);
+          __classPrivateFieldSet(this, _LineDecoder_buffer, __classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(patternIndex.index), "f");
+          __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, null, "f");
+        }
+        return lines;
+      }
+      flush() {
+        if (!__classPrivateFieldGet(this, _LineDecoder_buffer, "f").length) {
+          return [];
+        }
+        return this.decode("\n");
+      }
+    };
+    _LineDecoder_buffer = /* @__PURE__ */ new WeakMap(), _LineDecoder_carriageReturnIndex = /* @__PURE__ */ new WeakMap();
+    LineDecoder.NEWLINE_CHARS = /* @__PURE__ */ new Set(["\n", "\r"]);
+    LineDecoder.NEWLINE_REGEXP = /\r\n|[\n\r]/g;
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/utils/log.mjs
+function noop() {
+}
+function makeLogFn(fnLevel, logger, logLevel) {
+  if (!logger || levelNumbers[fnLevel] > levelNumbers[logLevel]) {
+    return noop;
+  } else {
+    return logger[fnLevel].bind(logger);
+  }
+}
+function loggerFor(client) {
+  const logger = client.logger;
+  const logLevel = client.logLevel ?? "off";
+  if (!logger) {
+    return noopLogger;
+  }
+  const cachedLogger = cachedLoggers.get(logger);
+  if (cachedLogger && cachedLogger[0] === logLevel) {
+    return cachedLogger[1];
+  }
+  const levelLogger = {
+    error: makeLogFn("error", logger, logLevel),
+    warn: makeLogFn("warn", logger, logLevel),
+    info: makeLogFn("info", logger, logLevel),
+    debug: makeLogFn("debug", logger, logLevel)
+  };
+  cachedLoggers.set(logger, [logLevel, levelLogger]);
+  return levelLogger;
+}
+var levelNumbers, parseLogLevel, noopLogger, cachedLoggers, formatRequestDetails;
+var init_log = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/utils/log.mjs"() {
+    init_values();
+    levelNumbers = {
+      off: 0,
+      error: 200,
+      warn: 300,
+      info: 400,
+      debug: 500
+    };
+    parseLogLevel = (maybeLevel, sourceName, client) => {
+      if (!maybeLevel) {
+        return void 0;
+      }
+      if (hasOwn(levelNumbers, maybeLevel)) {
+        return maybeLevel;
+      }
+      loggerFor(client).warn(`${sourceName} was set to ${JSON.stringify(maybeLevel)}, expected one of ${JSON.stringify(Object.keys(levelNumbers))}`);
+      return void 0;
+    };
+    noopLogger = {
+      error: noop,
+      warn: noop,
+      info: noop,
+      debug: noop
+    };
+    cachedLoggers = /* @__PURE__ */ new WeakMap();
+    formatRequestDetails = (details) => {
+      if (details.options) {
+        details.options = { ...details.options };
+        delete details.options["headers"];
+      }
+      if (details.headers) {
+        details.headers = Object.fromEntries((details.headers instanceof Headers ? [...details.headers] : Object.entries(details.headers)).map(([name, value]) => [
+          name,
+          name.toLowerCase() === "x-api-key" || name.toLowerCase() === "authorization" || name.toLowerCase() === "cookie" || name.toLowerCase() === "set-cookie" ? "***" : value
+        ]));
+      }
+      if ("retryOfRequestLogID" in details) {
+        if (details.retryOfRequestLogID) {
+          details.retryOf = details.retryOfRequestLogID;
+        }
+        delete details.retryOfRequestLogID;
+      }
+      return details;
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/core/streaming.mjs
+async function* _iterSSEMessages(response, controller) {
+  if (!response.body) {
+    controller.abort();
+    if (typeof globalThis.navigator !== "undefined" && globalThis.navigator.product === "ReactNative") {
+      throw new AnthropicError(`The default react-native fetch implementation does not support streaming. Please use expo/fetch: https://docs.expo.dev/versions/latest/sdk/expo/#expofetch-api`);
+    }
+    throw new AnthropicError(`Attempted to iterate over a response with no body`);
+  }
+  const sseDecoder = new SSEDecoder();
+  const lineDecoder = new LineDecoder();
+  const iter = ReadableStreamToAsyncIterable(response.body);
+  for await (const sseChunk of iterSSEChunks(iter)) {
+    for (const line of lineDecoder.decode(sseChunk)) {
+      const sse = sseDecoder.decode(line);
+      if (sse)
+        yield sse;
+    }
+  }
+  for (const line of lineDecoder.flush()) {
+    const sse = sseDecoder.decode(line);
+    if (sse)
+      yield sse;
+  }
+}
+async function* iterSSEChunks(iterator) {
+  let data = new Uint8Array();
+  for await (const chunk2 of iterator) {
+    if (chunk2 == null) {
+      continue;
+    }
+    const binaryChunk = chunk2 instanceof ArrayBuffer ? new Uint8Array(chunk2) : typeof chunk2 === "string" ? encodeUTF8(chunk2) : chunk2;
+    let newData = new Uint8Array(data.length + binaryChunk.length);
+    newData.set(data);
+    newData.set(binaryChunk, data.length);
+    data = newData;
+    let patternIndex;
+    while ((patternIndex = findDoubleNewlineIndex(data)) !== -1) {
+      yield data.slice(0, patternIndex);
+      data = data.slice(patternIndex);
+    }
+  }
+  if (data.length > 0) {
+    yield data;
+  }
+}
+function partition(str2, delimiter) {
+  const index = str2.indexOf(delimiter);
+  if (index !== -1) {
+    return [str2.substring(0, index), delimiter, str2.substring(index + delimiter.length)];
+  }
+  return [str2, "", ""];
+}
+var _Stream_client, Stream2, SSEDecoder;
+var init_streaming = __esm({
+  "node_modules/@anthropic-ai/sdk/core/streaming.mjs"() {
+    init_tslib();
+    init_error();
+    init_shims();
+    init_line();
+    init_shims();
+    init_errors2();
+    init_values();
+    init_bytes();
+    init_log();
+    init_error();
+    Stream2 = class _Stream {
+      constructor(iterator, controller, client) {
+        this.iterator = iterator;
+        _Stream_client.set(this, void 0);
+        this.controller = controller;
+        __classPrivateFieldSet(this, _Stream_client, client, "f");
+      }
+      static fromSSEResponse(response, controller, client) {
+        let consumed = false;
+        const logger = client ? loggerFor(client) : console;
+        async function* iterator() {
+          if (consumed) {
+            throw new AnthropicError("Cannot iterate over a consumed stream, use `.tee()` to split the stream.");
+          }
+          consumed = true;
+          let done = false;
+          try {
+            for await (const sse of _iterSSEMessages(response, controller)) {
+              if (sse.event === "completion") {
+                try {
+                  yield JSON.parse(sse.data);
+                } catch (e) {
+                  logger.error(`Could not parse message into JSON:`, sse.data);
+                  logger.error(`From chunk:`, sse.raw);
+                  throw e;
+                }
+              }
+              if (sse.event === "message_start" || sse.event === "message_delta" || sse.event === "message_stop" || sse.event === "content_block_start" || sse.event === "content_block_delta" || sse.event === "content_block_stop") {
+                try {
+                  yield JSON.parse(sse.data);
+                } catch (e) {
+                  logger.error(`Could not parse message into JSON:`, sse.data);
+                  logger.error(`From chunk:`, sse.raw);
+                  throw e;
+                }
+              }
+              if (sse.event === "ping") {
+                continue;
+              }
+              if (sse.event === "error") {
+                throw new APIError(void 0, safeJSON(sse.data) ?? sse.data, void 0, response.headers);
+              }
+            }
+            done = true;
+          } catch (e) {
+            if (isAbortError(e))
+              return;
+            throw e;
+          } finally {
+            if (!done)
+              controller.abort();
+          }
+        }
+        return new _Stream(iterator, controller, client);
+      }
+      /**
+       * Generates a Stream from a newline-separated ReadableStream
+       * where each item is a JSON value.
+       */
+      static fromReadableStream(readableStream, controller, client) {
+        let consumed = false;
+        async function* iterLines() {
+          const lineDecoder = new LineDecoder();
+          const iter = ReadableStreamToAsyncIterable(readableStream);
+          for await (const chunk2 of iter) {
+            for (const line of lineDecoder.decode(chunk2)) {
+              yield line;
+            }
+          }
+          for (const line of lineDecoder.flush()) {
+            yield line;
+          }
+        }
+        async function* iterator() {
+          if (consumed) {
+            throw new AnthropicError("Cannot iterate over a consumed stream, use `.tee()` to split the stream.");
+          }
+          consumed = true;
+          let done = false;
+          try {
+            for await (const line of iterLines()) {
+              if (done)
+                continue;
+              if (line)
+                yield JSON.parse(line);
+            }
+            done = true;
+          } catch (e) {
+            if (isAbortError(e))
+              return;
+            throw e;
+          } finally {
+            if (!done)
+              controller.abort();
+          }
+        }
+        return new _Stream(iterator, controller, client);
+      }
+      [(_Stream_client = /* @__PURE__ */ new WeakMap(), Symbol.asyncIterator)]() {
+        return this.iterator();
+      }
+      /**
+       * Splits the stream into two streams which can be
+       * independently read from at different speeds.
+       */
+      tee() {
+        const left = [];
+        const right = [];
+        const iterator = this.iterator();
+        const teeIterator = (queue) => {
+          return {
+            next: () => {
+              if (queue.length === 0) {
+                const result = iterator.next();
+                left.push(result);
+                right.push(result);
+              }
+              return queue.shift();
+            }
+          };
+        };
+        return [
+          new _Stream(() => teeIterator(left), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
+          new _Stream(() => teeIterator(right), this.controller, __classPrivateFieldGet(this, _Stream_client, "f"))
+        ];
+      }
+      /**
+       * Converts this stream to a newline-separated ReadableStream of
+       * JSON stringified values in the stream
+       * which can be turned back into a Stream with `Stream.fromReadableStream()`.
+       */
+      toReadableStream() {
+        const self = this;
+        let iter;
+        return makeReadableStream({
+          async start() {
+            iter = self[Symbol.asyncIterator]();
+          },
+          async pull(ctrl) {
+            try {
+              const { value, done } = await iter.next();
+              if (done)
+                return ctrl.close();
+              const bytes = encodeUTF8(JSON.stringify(value) + "\n");
+              ctrl.enqueue(bytes);
+            } catch (err) {
+              ctrl.error(err);
+            }
+          },
+          async cancel() {
+            await iter.return?.();
+          }
+        });
+      }
+    };
+    SSEDecoder = class {
+      constructor() {
+        this.event = null;
+        this.data = [];
+        this.chunks = [];
+      }
+      decode(line) {
+        if (line.endsWith("\r")) {
+          line = line.substring(0, line.length - 1);
+        }
+        if (!line) {
+          if (!this.event && !this.data.length)
+            return null;
+          const sse = {
+            event: this.event,
+            data: this.data.join("\n"),
+            raw: this.chunks
+          };
+          this.event = null;
+          this.data = [];
+          this.chunks = [];
+          return sse;
+        }
+        this.chunks.push(line);
+        if (line.startsWith(":")) {
+          return null;
+        }
+        let [fieldname, _, value] = partition(line, ":");
+        if (value.startsWith(" ")) {
+          value = value.substring(1);
+        }
+        if (fieldname === "event") {
+          this.event = value;
+        } else if (fieldname === "data") {
+          this.data.push(value);
+        }
+        return null;
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/parse.mjs
+async function defaultParseResponse(client, props) {
+  const { response, requestLogID, retryOfRequestLogID, startTime } = props;
+  const body = await (async () => {
+    if (props.options.stream) {
+      loggerFor(client).debug("response", response.status, response.url, response.headers, response.body);
+      if (props.options.__streamClass) {
+        return props.options.__streamClass.fromSSEResponse(response, props.controller);
+      }
+      return Stream2.fromSSEResponse(response, props.controller);
+    }
+    if (response.status === 204) {
+      return null;
+    }
+    if (props.options.__binaryResponse) {
+      return response;
+    }
+    const contentType = response.headers.get("content-type");
+    const mediaType = contentType?.split(";")[0]?.trim();
+    const isJSON = mediaType?.includes("application/json") || mediaType?.endsWith("+json");
+    if (isJSON) {
+      const json2 = await response.json();
+      return addRequestID(json2, response);
+    }
+    const text = await response.text();
+    return text;
+  })();
+  loggerFor(client).debug(`[${requestLogID}] response parsed`, formatRequestDetails({
+    retryOfRequestLogID,
+    url: response.url,
+    status: response.status,
+    body,
+    durationMs: Date.now() - startTime
+  }));
+  return body;
+}
+function addRequestID(value, response) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+  return Object.defineProperty(value, "_request_id", {
+    value: response.headers.get("request-id"),
+    enumerable: false
+  });
+}
+var init_parse = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/parse.mjs"() {
+    init_streaming();
+    init_log();
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/core/api-promise.mjs
+var _APIPromise_client, APIPromise;
+var init_api_promise = __esm({
+  "node_modules/@anthropic-ai/sdk/core/api-promise.mjs"() {
+    init_tslib();
+    init_parse();
+    APIPromise = class _APIPromise extends Promise {
+      constructor(client, responsePromise, parseResponse = defaultParseResponse) {
+        super((resolve3) => {
+          resolve3(null);
+        });
+        this.responsePromise = responsePromise;
+        this.parseResponse = parseResponse;
+        _APIPromise_client.set(this, void 0);
+        __classPrivateFieldSet(this, _APIPromise_client, client, "f");
+      }
+      _thenUnwrap(transform2) {
+        return new _APIPromise(__classPrivateFieldGet(this, _APIPromise_client, "f"), this.responsePromise, async (client, props) => addRequestID(transform2(await this.parseResponse(client, props), props), props.response));
+      }
+      /**
+       * Gets the raw `Response` instance instead of parsing the response
+       * data.
+       *
+       * If you want to parse the response body but still get the `Response`
+       * instance, you can use {@link withResponse()}.
+       *
+       * 👋 Getting the wrong TypeScript type for `Response`?
+       * Try setting `"moduleResolution": "NodeNext"` or add `"lib": ["DOM"]`
+       * to your `tsconfig.json`.
+       */
+      asResponse() {
+        return this.responsePromise.then((p) => p.response);
+      }
+      /**
+       * Gets the parsed response data, the raw `Response` instance and the ID of the request,
+       * returned via the `request-id` header which is useful for debugging requests and resporting
+       * issues to Anthropic.
+       *
+       * If you just want to get the raw `Response` instance without parsing it,
+       * you can use {@link asResponse()}.
+       *
+       * 👋 Getting the wrong TypeScript type for `Response`?
+       * Try setting `"moduleResolution": "NodeNext"` or add `"lib": ["DOM"]`
+       * to your `tsconfig.json`.
+       */
+      async withResponse() {
+        const [data, response] = await Promise.all([this.parse(), this.asResponse()]);
+        return { data, response, request_id: response.headers.get("request-id") };
+      }
+      parse() {
+        if (!this.parsedPromise) {
+          this.parsedPromise = this.responsePromise.then((data) => this.parseResponse(__classPrivateFieldGet(this, _APIPromise_client, "f"), data));
+        }
+        return this.parsedPromise;
+      }
+      then(onfulfilled, onrejected) {
+        return this.parse().then(onfulfilled, onrejected);
+      }
+      catch(onrejected) {
+        return this.parse().catch(onrejected);
+      }
+      finally(onfinally) {
+        return this.parse().finally(onfinally);
+      }
+    };
+    _APIPromise_client = /* @__PURE__ */ new WeakMap();
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/core/pagination.mjs
+var _AbstractPage_client, AbstractPage, PagePromise, Page, PageCursor;
+var init_pagination = __esm({
+  "node_modules/@anthropic-ai/sdk/core/pagination.mjs"() {
+    init_tslib();
+    init_error();
+    init_parse();
+    init_api_promise();
+    init_values();
+    AbstractPage = class {
+      constructor(client, response, body, options) {
+        _AbstractPage_client.set(this, void 0);
+        __classPrivateFieldSet(this, _AbstractPage_client, client, "f");
+        this.options = options;
+        this.response = response;
+        this.body = body;
+      }
+      hasNextPage() {
+        const items = this.getPaginatedItems();
+        if (!items.length)
+          return false;
+        return this.nextPageRequestOptions() != null;
+      }
+      async getNextPage() {
+        const nextOptions = this.nextPageRequestOptions();
+        if (!nextOptions) {
+          throw new AnthropicError("No next page expected; please check `.hasNextPage()` before calling `.getNextPage()`.");
+        }
+        return await __classPrivateFieldGet(this, _AbstractPage_client, "f").requestAPIList(this.constructor, nextOptions);
+      }
+      async *iterPages() {
+        let page = this;
+        yield page;
+        while (page.hasNextPage()) {
+          page = await page.getNextPage();
+          yield page;
+        }
+      }
+      async *[(_AbstractPage_client = /* @__PURE__ */ new WeakMap(), Symbol.asyncIterator)]() {
+        for await (const page of this.iterPages()) {
+          for (const item of page.getPaginatedItems()) {
+            yield item;
+          }
+        }
+      }
+    };
+    PagePromise = class extends APIPromise {
+      constructor(client, request, Page2) {
+        super(client, request, async (client2, props) => new Page2(client2, props.response, await defaultParseResponse(client2, props), props.options));
+      }
+      /**
+       * Allow auto-paginating iteration on an unawaited list call, eg:
+       *
+       *    for await (const item of client.items.list()) {
+       *      console.log(item)
+       *    }
+       */
+      async *[Symbol.asyncIterator]() {
+        const page = await this;
+        for await (const item of page) {
+          yield item;
+        }
+      }
+    };
+    Page = class extends AbstractPage {
+      constructor(client, response, body, options) {
+        super(client, response, body, options);
+        this.data = body.data || [];
+        this.has_more = body.has_more || false;
+        this.first_id = body.first_id || null;
+        this.last_id = body.last_id || null;
+      }
+      getPaginatedItems() {
+        return this.data ?? [];
+      }
+      hasNextPage() {
+        if (this.has_more === false) {
+          return false;
+        }
+        return super.hasNextPage();
+      }
+      nextPageRequestOptions() {
+        if (this.options.query?.["before_id"]) {
+          const first_id = this.first_id;
+          if (!first_id) {
+            return null;
+          }
+          return {
+            ...this.options,
+            query: {
+              ...maybeObj(this.options.query),
+              before_id: first_id
+            }
+          };
+        }
+        const cursor = this.last_id;
+        if (!cursor) {
+          return null;
+        }
+        return {
+          ...this.options,
+          query: {
+            ...maybeObj(this.options.query),
+            after_id: cursor
+          }
+        };
+      }
+    };
+    PageCursor = class extends AbstractPage {
+      constructor(client, response, body, options) {
+        super(client, response, body, options);
+        this.data = body.data || [];
+        this.has_more = body.has_more || false;
+        this.next_page = body.next_page || null;
+      }
+      getPaginatedItems() {
+        return this.data ?? [];
+      }
+      hasNextPage() {
+        if (this.has_more === false) {
+          return false;
+        }
+        return super.hasNextPage();
+      }
+      nextPageRequestOptions() {
+        const cursor = this.next_page;
+        if (!cursor) {
+          return null;
+        }
+        return {
+          ...this.options,
+          query: {
+            ...maybeObj(this.options.query),
+            page: cursor
+          }
+        };
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/uploads.mjs
+function makeFile(fileBits, fileName, options) {
+  checkFileSupport();
+  return new File(fileBits, fileName ?? "unknown_file", options);
+}
+function getName(value) {
+  return (typeof value === "object" && value !== null && ("name" in value && value.name && String(value.name) || "url" in value && value.url && String(value.url) || "filename" in value && value.filename && String(value.filename) || "path" in value && value.path && String(value.path)) || "").split(/[\\/]/).pop() || void 0;
+}
+function supportsFormData(fetchObject) {
+  const fetch2 = typeof fetchObject === "function" ? fetchObject : fetchObject.fetch;
+  const cached2 = supportsFormDataMap.get(fetch2);
+  if (cached2)
+    return cached2;
+  const promise = (async () => {
+    try {
+      const FetchResponse = "Response" in fetch2 ? fetch2.Response : (await fetch2("data:,")).constructor;
+      const data = new FormData();
+      if (data.toString() === await new FetchResponse(data).text()) {
+        return false;
+      }
+      return true;
+    } catch {
+      return true;
+    }
+  })();
+  supportsFormDataMap.set(fetch2, promise);
+  return promise;
+}
+var checkFileSupport, isAsyncIterable, multipartFormRequestOptions, supportsFormDataMap, createForm, isNamedBlob, addFormValue;
+var init_uploads = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/uploads.mjs"() {
+    init_shims();
+    checkFileSupport = () => {
+      if (typeof File === "undefined") {
+        const { process: process3 } = globalThis;
+        const isOldNode = typeof process3?.versions?.node === "string" && parseInt(process3.versions.node.split(".")) < 20;
+        throw new Error("`File` is not defined as a global, which is required for file uploads." + (isOldNode ? " Update to Node 20 LTS or newer, or set `globalThis.File` to `import('node:buffer').File`." : ""));
+      }
+    };
+    isAsyncIterable = (value) => value != null && typeof value === "object" && typeof value[Symbol.asyncIterator] === "function";
+    multipartFormRequestOptions = async (opts, fetch2) => {
+      return { ...opts, body: await createForm(opts.body, fetch2) };
+    };
+    supportsFormDataMap = /* @__PURE__ */ new WeakMap();
+    createForm = async (body, fetch2) => {
+      if (!await supportsFormData(fetch2)) {
+        throw new TypeError("The provided fetch function does not support file uploads with the current global FormData class.");
+      }
+      const form = new FormData();
+      await Promise.all(Object.entries(body || {}).map(([key, value]) => addFormValue(form, key, value)));
+      return form;
+    };
+    isNamedBlob = (value) => value instanceof Blob && "name" in value;
+    addFormValue = async (form, key, value) => {
+      if (value === void 0)
+        return;
+      if (value == null) {
+        throw new TypeError(`Received null for "${key}"; to pass null in FormData, you must use the string 'null'`);
+      }
+      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        form.append(key, String(value));
+      } else if (value instanceof Response) {
+        let options = {};
+        const contentType = value.headers.get("Content-Type");
+        if (contentType) {
+          options = { type: contentType };
+        }
+        form.append(key, makeFile([await value.blob()], getName(value), options));
+      } else if (isAsyncIterable(value)) {
+        form.append(key, makeFile([await new Response(ReadableStreamFrom(value)).blob()], getName(value)));
+      } else if (isNamedBlob(value)) {
+        form.append(key, makeFile([value], getName(value), { type: value.type }));
+      } else if (Array.isArray(value)) {
+        await Promise.all(value.map((entry) => addFormValue(form, key + "[]", entry)));
+      } else if (typeof value === "object") {
+        await Promise.all(Object.entries(value).map(([name, prop]) => addFormValue(form, `${key}[${name}]`, prop)));
+      } else {
+        throw new TypeError(`Invalid value given to form, expected a string, number, boolean, object, Array, File or Blob but got ${value} instead`);
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/to-file.mjs
+async function toFile(value, name, options) {
+  checkFileSupport();
+  value = await value;
+  name || (name = getName(value));
+  if (isFileLike(value)) {
+    if (value instanceof File && name == null && options == null) {
+      return value;
+    }
+    return makeFile([await value.arrayBuffer()], name ?? value.name, {
+      type: value.type,
+      lastModified: value.lastModified,
+      ...options
+    });
+  }
+  if (isResponseLike(value)) {
+    const blob = await value.blob();
+    name || (name = new URL(value.url).pathname.split(/[\\/]/).pop());
+    return makeFile(await getBytes(blob), name, options);
+  }
+  const parts = await getBytes(value);
+  if (!options?.type) {
+    const type2 = parts.find((part) => typeof part === "object" && "type" in part && part.type);
+    if (typeof type2 === "string") {
+      options = { ...options, type: type2 };
+    }
+  }
+  return makeFile(parts, name, options);
+}
+async function getBytes(value) {
+  let parts = [];
+  if (typeof value === "string" || ArrayBuffer.isView(value) || // includes Uint8Array, Buffer, etc.
+  value instanceof ArrayBuffer) {
+    parts.push(value);
+  } else if (isBlobLike(value)) {
+    parts.push(value instanceof Blob ? value : await value.arrayBuffer());
+  } else if (isAsyncIterable(value)) {
+    for await (const chunk2 of value) {
+      parts.push(...await getBytes(chunk2));
+    }
+  } else {
+    const constructor = value?.constructor?.name;
+    throw new Error(`Unexpected data type: ${typeof value}${constructor ? `; constructor: ${constructor}` : ""}${propsForError(value)}`);
+  }
+  return parts;
+}
+function propsForError(value) {
+  if (typeof value !== "object" || value === null)
+    return "";
+  const props = Object.getOwnPropertyNames(value);
+  return `; props: [${props.map((p) => `"${p}"`).join(", ")}]`;
+}
+var isBlobLike, isFileLike, isResponseLike;
+var init_to_file = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/to-file.mjs"() {
+    init_uploads();
+    init_uploads();
+    isBlobLike = (value) => value != null && typeof value === "object" && typeof value.size === "number" && typeof value.type === "string" && typeof value.text === "function" && typeof value.slice === "function" && typeof value.arrayBuffer === "function";
+    isFileLike = (value) => value != null && typeof value === "object" && typeof value.name === "string" && typeof value.lastModified === "number" && isBlobLike(value);
+    isResponseLike = (value) => value != null && typeof value === "object" && typeof value.url === "string" && typeof value.blob === "function";
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/core/uploads.mjs
+var init_uploads2 = __esm({
+  "node_modules/@anthropic-ai/sdk/core/uploads.mjs"() {
+    init_to_file();
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/shared.mjs
+var init_shared = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/shared.mjs"() {
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/core/resource.mjs
+var APIResource;
+var init_resource = __esm({
+  "node_modules/@anthropic-ai/sdk/core/resource.mjs"() {
+    APIResource = class {
+      constructor(client) {
+        this._client = client;
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/headers.mjs
+function* iterateHeaders(headers) {
+  if (!headers)
+    return;
+  if (brand_privateNullableHeaders in headers) {
+    const { values, nulls } = headers;
+    yield* values.entries();
+    for (const name of nulls) {
+      yield [name, null];
+    }
+    return;
+  }
+  let shouldClear = false;
+  let iter;
+  if (headers instanceof Headers) {
+    iter = headers.entries();
+  } else if (isReadonlyArray(headers)) {
+    iter = headers;
+  } else {
+    shouldClear = true;
+    iter = Object.entries(headers ?? {});
+  }
+  for (let row of iter) {
+    const name = row[0];
+    if (typeof name !== "string")
+      throw new TypeError("expected header name to be a string");
+    const values = isReadonlyArray(row[1]) ? row[1] : [row[1]];
+    let didClear = false;
+    for (const value of values) {
+      if (value === void 0)
+        continue;
+      if (shouldClear && !didClear) {
+        didClear = true;
+        yield [name, null];
+      }
+      yield [name, value];
+    }
+  }
+}
+var brand_privateNullableHeaders, buildHeaders;
+var init_headers = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/headers.mjs"() {
+    init_values();
+    brand_privateNullableHeaders = Symbol.for("brand.privateNullableHeaders");
+    buildHeaders = (newHeaders) => {
+      const targetHeaders = new Headers();
+      const nullHeaders = /* @__PURE__ */ new Set();
+      for (const headers of newHeaders) {
+        const seenHeaders = /* @__PURE__ */ new Set();
+        for (const [name, value] of iterateHeaders(headers)) {
+          const lowerName = name.toLowerCase();
+          if (!seenHeaders.has(lowerName)) {
+            targetHeaders.delete(name);
+            seenHeaders.add(lowerName);
+          }
+          if (value === null) {
+            targetHeaders.delete(name);
+            nullHeaders.add(lowerName);
+          } else {
+            targetHeaders.append(name, value);
+            nullHeaders.delete(lowerName);
+          }
+        }
+      }
+      return { [brand_privateNullableHeaders]: true, values: targetHeaders, nulls: nullHeaders };
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/utils/path.mjs
+function encodeURIPath(str2) {
+  return str2.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
+}
+var EMPTY, createPathTagFunction, path7;
+var init_path = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/utils/path.mjs"() {
+    init_error();
+    EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path24(statics, ...params) {
+      if (statics.length === 1)
+        return statics[0];
+      let postPath = false;
+      const invalidSegments = [];
+      const path25 = statics.reduce((previousValue, currentValue, index) => {
+        if (/[?#]/.test(currentValue)) {
+          postPath = true;
+        }
+        const value = params[index];
+        let encoded = (postPath ? encodeURIComponent : pathEncoder)("" + value);
+        if (index !== params.length && (value == null || typeof value === "object" && // handle values from other realms
+        value.toString === Object.getPrototypeOf(Object.getPrototypeOf(value.hasOwnProperty ?? EMPTY) ?? EMPTY)?.toString)) {
+          encoded = value + "";
+          invalidSegments.push({
+            start: previousValue.length + currentValue.length,
+            length: encoded.length,
+            error: `Value of type ${Object.prototype.toString.call(value).slice(8, -1)} is not a valid path parameter`
+          });
+        }
+        return previousValue + currentValue + (index === params.length ? "" : encoded);
+      }, "");
+      const pathOnly = path25.split(/[?#]/, 1)[0];
+      const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
+      let match3;
+      while ((match3 = invalidSegmentPattern.exec(pathOnly)) !== null) {
+        invalidSegments.push({
+          start: match3.index,
+          length: match3[0].length,
+          error: `Value "${match3[0]}" can't be safely passed as a path parameter`
+        });
+      }
+      invalidSegments.sort((a, b) => a.start - b.start);
+      if (invalidSegments.length > 0) {
+        let lastEnd = 0;
+        const underline = invalidSegments.reduce((acc, segment) => {
+          const spaces = " ".repeat(segment.start - lastEnd);
+          const arrows = "^".repeat(segment.length);
+          lastEnd = segment.start + segment.length;
+          return acc + spaces + arrows;
+        }, "");
+        throw new AnthropicError(`Path parameters result in path with invalid segments:
+${invalidSegments.map((e) => e.error).join("\n")}
+${path25}
+${underline}`);
+      }
+      return path25;
+    };
+    path7 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/beta/files.mjs
+var Files;
+var init_files = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/beta/files.mjs"() {
+    init_resource();
+    init_pagination();
+    init_headers();
+    init_uploads();
+    init_path();
+    Files = class extends APIResource {
+      /**
+       * List Files
+       *
+       * @example
+       * ```ts
+       * // Automatically fetches more pages as needed.
+       * for await (const fileMetadata of client.beta.files.list()) {
+       *   // ...
+       * }
+       * ```
+       */
+      list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList("/v1/files", Page, {
+          query,
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * Delete File
+       *
+       * @example
+       * ```ts
+       * const deletedFile = await client.beta.files.delete(
+       *   'file_id',
+       * );
+       * ```
+       */
+      delete(fileID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.delete(path7`/v1/files/${fileID}`, {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * Download File
+       *
+       * @example
+       * ```ts
+       * const response = await client.beta.files.download(
+       *   'file_id',
+       * );
+       *
+       * const content = await response.blob();
+       * console.log(content);
+       * ```
+       */
+      download(fileID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path7`/v1/files/${fileID}/content`, {
+          ...options,
+          headers: buildHeaders([
+            {
+              "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString(),
+              Accept: "application/binary"
+            },
+            options?.headers
+          ]),
+          __binaryResponse: true
+        });
+      }
+      /**
+       * Get File Metadata
+       *
+       * @example
+       * ```ts
+       * const fileMetadata =
+       *   await client.beta.files.retrieveMetadata('file_id');
+       * ```
+       */
+      retrieveMetadata(fileID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path7`/v1/files/${fileID}`, {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * Upload File
+       *
+       * @example
+       * ```ts
+       * const fileMetadata = await client.beta.files.upload({
+       *   file: fs.createReadStream('path/to/file'),
+       * });
+       * ```
+       */
+      upload(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post("/v1/files", multipartFormRequestOptions({
+          body,
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
+            options?.headers
+          ])
+        }, this._client));
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/beta/models.mjs
+var Models;
+var init_models = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/beta/models.mjs"() {
+    init_resource();
+    init_pagination();
+    init_headers();
+    init_path();
+    Models = class extends APIResource {
+      /**
+       * Get a specific model.
+       *
+       * The Models API response can be used to determine information about a specific
+       * model or resolve a model alias to a model ID.
+       *
+       * @example
+       * ```ts
+       * const betaModelInfo = await client.beta.models.retrieve(
+       *   'model_id',
+       * );
+       * ```
+       */
+      retrieve(modelID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path7`/v1/models/${modelID}?beta=true`, {
+          ...options,
+          headers: buildHeaders([
+            { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * List available models.
+       *
+       * The Models API response can be used to determine which models are available for
+       * use in the API. More recently released models are listed first.
+       *
+       * @example
+       * ```ts
+       * // Automatically fetches more pages as needed.
+       * for await (const betaModelInfo of client.beta.models.list()) {
+       *   // ...
+       * }
+       * ```
+       */
+      list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList("/v1/models?beta=true", Page, {
+          query,
+          ...options,
+          headers: buildHeaders([
+            { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+            options?.headers
+          ])
+        });
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/constants.mjs
+var MODEL_NONSTREAMING_TOKENS;
+var init_constants = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/constants.mjs"() {
+    MODEL_NONSTREAMING_TOKENS = {
+      "claude-opus-4-20250514": 8192,
+      "claude-opus-4-0": 8192,
+      "claude-4-opus-20250514": 8192,
+      "anthropic.claude-opus-4-20250514-v1:0": 8192,
+      "claude-opus-4@20250514": 8192,
+      "claude-opus-4-1-20250805": 8192,
+      "anthropic.claude-opus-4-1-20250805-v1:0": 8192,
+      "claude-opus-4-1@20250805": 8192
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/lib/beta-parser.mjs
+function maybeParseBetaMessage(message, params, opts) {
+  if (!params || !("parse" in (params.output_format ?? {}))) {
+    return {
+      ...message,
+      content: message.content.map((block) => {
+        if (block.type === "text") {
+          const parsedBlock = Object.defineProperty({ ...block }, "parsed_output", {
+            value: null,
+            enumerable: false
+          });
+          return Object.defineProperty(parsedBlock, "parsed", {
+            get() {
+              opts.logger.warn("The `parsed` property on `text` blocks is deprecated, please use `parsed_output` instead.");
+              return null;
+            },
+            enumerable: false
+          });
+        }
+        return block;
+      }),
+      parsed_output: null
+    };
+  }
+  return parseBetaMessage(message, params, opts);
+}
+function parseBetaMessage(message, params, opts) {
+  let firstParsedOutput = null;
+  const content = message.content.map((block) => {
+    if (block.type === "text") {
+      const parsedOutput = parseBetaOutputFormat(params, block.text);
+      if (firstParsedOutput === null) {
+        firstParsedOutput = parsedOutput;
+      }
+      const parsedBlock = Object.defineProperty({ ...block }, "parsed_output", {
+        value: parsedOutput,
+        enumerable: false
+      });
+      return Object.defineProperty(parsedBlock, "parsed", {
+        get() {
+          opts.logger.warn("The `parsed` property on `text` blocks is deprecated, please use `parsed_output` instead.");
+          return parsedOutput;
+        },
+        enumerable: false
+      });
+    }
+    return block;
+  });
+  return {
+    ...message,
+    content,
+    parsed_output: firstParsedOutput
+  };
+}
+function parseBetaOutputFormat(params, content) {
+  if (params.output_format?.type !== "json_schema") {
+    return null;
+  }
+  try {
+    if ("parse" in params.output_format) {
+      return params.output_format.parse(content);
+    }
+    return JSON.parse(content);
+  } catch (error2) {
+    throw new AnthropicError(`Failed to parse structured output: ${error2}`);
+  }
+}
+var init_beta_parser = __esm({
+  "node_modules/@anthropic-ai/sdk/lib/beta-parser.mjs"() {
+    init_error();
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/_vendor/partial-json-parser/parser.mjs
+var tokenize, strip, unstrip, generate, partialParse;
+var init_parser = __esm({
+  "node_modules/@anthropic-ai/sdk/_vendor/partial-json-parser/parser.mjs"() {
+    tokenize = (input) => {
+      let current = 0;
+      let tokens = [];
+      while (current < input.length) {
+        let char = input[current];
+        if (char === "\\") {
+          current++;
+          continue;
+        }
+        if (char === "{") {
+          tokens.push({
+            type: "brace",
+            value: "{"
+          });
+          current++;
+          continue;
+        }
+        if (char === "}") {
+          tokens.push({
+            type: "brace",
+            value: "}"
+          });
+          current++;
+          continue;
+        }
+        if (char === "[") {
+          tokens.push({
+            type: "paren",
+            value: "["
+          });
+          current++;
+          continue;
+        }
+        if (char === "]") {
+          tokens.push({
+            type: "paren",
+            value: "]"
+          });
+          current++;
+          continue;
+        }
+        if (char === ":") {
+          tokens.push({
+            type: "separator",
+            value: ":"
+          });
+          current++;
+          continue;
+        }
+        if (char === ",") {
+          tokens.push({
+            type: "delimiter",
+            value: ","
+          });
+          current++;
+          continue;
+        }
+        if (char === '"') {
+          let value = "";
+          let danglingQuote = false;
+          char = input[++current];
+          while (char !== '"') {
+            if (current === input.length) {
+              danglingQuote = true;
+              break;
+            }
+            if (char === "\\") {
+              current++;
+              if (current === input.length) {
+                danglingQuote = true;
+                break;
+              }
+              value += char + input[current];
+              char = input[++current];
+            } else {
+              value += char;
+              char = input[++current];
+            }
+          }
+          char = input[++current];
+          if (!danglingQuote) {
+            tokens.push({
+              type: "string",
+              value
+            });
+          }
+          continue;
+        }
+        let WHITESPACE = /\s/;
+        if (char && WHITESPACE.test(char)) {
+          current++;
+          continue;
+        }
+        let NUMBERS = /[0-9]/;
+        if (char && NUMBERS.test(char) || char === "-" || char === ".") {
+          let value = "";
+          if (char === "-") {
+            value += char;
+            char = input[++current];
+          }
+          while (char && NUMBERS.test(char) || char === ".") {
+            value += char;
+            char = input[++current];
+          }
+          tokens.push({
+            type: "number",
+            value
+          });
+          continue;
+        }
+        let LETTERS = /[a-z]/i;
+        if (char && LETTERS.test(char)) {
+          let value = "";
+          while (char && LETTERS.test(char)) {
+            if (current === input.length) {
+              break;
+            }
+            value += char;
+            char = input[++current];
+          }
+          if (value == "true" || value == "false" || value === "null") {
+            tokens.push({
+              type: "name",
+              value
+            });
+          } else {
+            current++;
+            continue;
+          }
+          continue;
+        }
+        current++;
+      }
+      return tokens;
+    };
+    strip = (tokens) => {
+      if (tokens.length === 0) {
+        return tokens;
+      }
+      let lastToken = tokens[tokens.length - 1];
+      switch (lastToken.type) {
+        case "separator":
+          tokens = tokens.slice(0, tokens.length - 1);
+          return strip(tokens);
+          break;
+        case "number":
+          let lastCharacterOfLastToken = lastToken.value[lastToken.value.length - 1];
+          if (lastCharacterOfLastToken === "." || lastCharacterOfLastToken === "-") {
+            tokens = tokens.slice(0, tokens.length - 1);
+            return strip(tokens);
+          }
+        case "string":
+          let tokenBeforeTheLastToken = tokens[tokens.length - 2];
+          if (tokenBeforeTheLastToken?.type === "delimiter") {
+            tokens = tokens.slice(0, tokens.length - 1);
+            return strip(tokens);
+          } else if (tokenBeforeTheLastToken?.type === "brace" && tokenBeforeTheLastToken.value === "{") {
+            tokens = tokens.slice(0, tokens.length - 1);
+            return strip(tokens);
+          }
+          break;
+        case "delimiter":
+          tokens = tokens.slice(0, tokens.length - 1);
+          return strip(tokens);
+          break;
+      }
+      return tokens;
+    };
+    unstrip = (tokens) => {
+      let tail = [];
+      tokens.map((token) => {
+        if (token.type === "brace") {
+          if (token.value === "{") {
+            tail.push("}");
+          } else {
+            tail.splice(tail.lastIndexOf("}"), 1);
+          }
+        }
+        if (token.type === "paren") {
+          if (token.value === "[") {
+            tail.push("]");
+          } else {
+            tail.splice(tail.lastIndexOf("]"), 1);
+          }
+        }
+      });
+      if (tail.length > 0) {
+        tail.reverse().map((item) => {
+          if (item === "}") {
+            tokens.push({
+              type: "brace",
+              value: "}"
+            });
+          } else if (item === "]") {
+            tokens.push({
+              type: "paren",
+              value: "]"
+            });
+          }
+        });
+      }
+      return tokens;
+    };
+    generate = (tokens) => {
+      let output = "";
+      tokens.map((token) => {
+        switch (token.type) {
+          case "string":
+            output += '"' + token.value + '"';
+            break;
+          default:
+            output += token.value;
+            break;
+        }
+      });
+      return output;
+    };
+    partialParse = (input) => JSON.parse(generate(unstrip(strip(tokenize(input)))));
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/error.mjs
+var init_error2 = __esm({
+  "node_modules/@anthropic-ai/sdk/error.mjs"() {
+    init_error();
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/streaming.mjs
+var init_streaming2 = __esm({
+  "node_modules/@anthropic-ai/sdk/streaming.mjs"() {
+    init_streaming();
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/lib/BetaMessageStream.mjs
+function tracksToolInput(content) {
+  return content.type === "tool_use" || content.type === "server_tool_use" || content.type === "mcp_tool_use";
+}
+function checkNever(x) {
+}
+var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _BetaMessageStream_params, _BetaMessageStream_connectedPromise, _BetaMessageStream_resolveConnectedPromise, _BetaMessageStream_rejectConnectedPromise, _BetaMessageStream_endPromise, _BetaMessageStream_resolveEndPromise, _BetaMessageStream_rejectEndPromise, _BetaMessageStream_listeners, _BetaMessageStream_ended, _BetaMessageStream_errored, _BetaMessageStream_aborted, _BetaMessageStream_catchingPromiseCreated, _BetaMessageStream_response, _BetaMessageStream_request_id, _BetaMessageStream_logger, _BetaMessageStream_getFinalMessage, _BetaMessageStream_getFinalText, _BetaMessageStream_handleError, _BetaMessageStream_beginRequest, _BetaMessageStream_addStreamEvent, _BetaMessageStream_endRequest, _BetaMessageStream_accumulateMessage, JSON_BUF_PROPERTY, BetaMessageStream;
+var init_BetaMessageStream = __esm({
+  "node_modules/@anthropic-ai/sdk/lib/BetaMessageStream.mjs"() {
+    init_tslib();
+    init_parser();
+    init_error2();
+    init_errors2();
+    init_streaming2();
+    init_beta_parser();
+    JSON_BUF_PROPERTY = "__json_buf";
+    BetaMessageStream = class _BetaMessageStream {
+      constructor(params, opts) {
+        _BetaMessageStream_instances.add(this);
+        this.messages = [];
+        this.receivedMessages = [];
+        _BetaMessageStream_currentMessageSnapshot.set(this, void 0);
+        _BetaMessageStream_params.set(this, null);
+        this.controller = new AbortController();
+        _BetaMessageStream_connectedPromise.set(this, void 0);
+        _BetaMessageStream_resolveConnectedPromise.set(this, () => {
+        });
+        _BetaMessageStream_rejectConnectedPromise.set(this, () => {
+        });
+        _BetaMessageStream_endPromise.set(this, void 0);
+        _BetaMessageStream_resolveEndPromise.set(this, () => {
+        });
+        _BetaMessageStream_rejectEndPromise.set(this, () => {
+        });
+        _BetaMessageStream_listeners.set(this, {});
+        _BetaMessageStream_ended.set(this, false);
+        _BetaMessageStream_errored.set(this, false);
+        _BetaMessageStream_aborted.set(this, false);
+        _BetaMessageStream_catchingPromiseCreated.set(this, false);
+        _BetaMessageStream_response.set(this, void 0);
+        _BetaMessageStream_request_id.set(this, void 0);
+        _BetaMessageStream_logger.set(this, void 0);
+        _BetaMessageStream_handleError.set(this, (error2) => {
+          __classPrivateFieldSet(this, _BetaMessageStream_errored, true, "f");
+          if (isAbortError(error2)) {
+            error2 = new APIUserAbortError();
+          }
+          if (error2 instanceof APIUserAbortError) {
+            __classPrivateFieldSet(this, _BetaMessageStream_aborted, true, "f");
+            return this._emit("abort", error2);
+          }
+          if (error2 instanceof AnthropicError) {
+            return this._emit("error", error2);
+          }
+          if (error2 instanceof Error) {
+            const anthropicError = new AnthropicError(error2.message);
+            anthropicError.cause = error2;
+            return this._emit("error", anthropicError);
+          }
+          return this._emit("error", new AnthropicError(String(error2)));
+        });
+        __classPrivateFieldSet(this, _BetaMessageStream_connectedPromise, new Promise((resolve3, reject) => {
+          __classPrivateFieldSet(this, _BetaMessageStream_resolveConnectedPromise, resolve3, "f");
+          __classPrivateFieldSet(this, _BetaMessageStream_rejectConnectedPromise, reject, "f");
+        }), "f");
+        __classPrivateFieldSet(this, _BetaMessageStream_endPromise, new Promise((resolve3, reject) => {
+          __classPrivateFieldSet(this, _BetaMessageStream_resolveEndPromise, resolve3, "f");
+          __classPrivateFieldSet(this, _BetaMessageStream_rejectEndPromise, reject, "f");
+        }), "f");
+        __classPrivateFieldGet(this, _BetaMessageStream_connectedPromise, "f").catch(() => {
+        });
+        __classPrivateFieldGet(this, _BetaMessageStream_endPromise, "f").catch(() => {
+        });
+        __classPrivateFieldSet(this, _BetaMessageStream_params, params, "f");
+        __classPrivateFieldSet(this, _BetaMessageStream_logger, opts?.logger ?? console, "f");
+      }
+      get response() {
+        return __classPrivateFieldGet(this, _BetaMessageStream_response, "f");
+      }
+      get request_id() {
+        return __classPrivateFieldGet(this, _BetaMessageStream_request_id, "f");
+      }
+      /**
+       * Returns the `MessageStream` data, the raw `Response` instance and the ID of the request,
+       * returned vie the `request-id` header which is useful for debugging requests and resporting
+       * issues to Anthropic.
+       *
+       * This is the same as the `APIPromise.withResponse()` method.
+       *
+       * This method will raise an error if you created the stream using `MessageStream.fromReadableStream`
+       * as no `Response` is available.
+       */
+      async withResponse() {
+        __classPrivateFieldSet(this, _BetaMessageStream_catchingPromiseCreated, true, "f");
+        const response = await __classPrivateFieldGet(this, _BetaMessageStream_connectedPromise, "f");
+        if (!response) {
+          throw new Error("Could not resolve a `Response` object");
+        }
+        return {
+          data: this,
+          response,
+          request_id: response.headers.get("request-id")
+        };
+      }
+      /**
+       * Intended for use on the frontend, consuming a stream produced with
+       * `.toReadableStream()` on the backend.
+       *
+       * Note that messages sent to the model do not appear in `.on('message')`
+       * in this context.
+       */
+      static fromReadableStream(stream3) {
+        const runner = new _BetaMessageStream(null);
+        runner._run(() => runner._fromReadableStream(stream3));
+        return runner;
+      }
+      static createMessage(messages, params, options, { logger } = {}) {
+        const runner = new _BetaMessageStream(params, { logger });
+        for (const message of params.messages) {
+          runner._addMessageParam(message);
+        }
+        __classPrivateFieldSet(runner, _BetaMessageStream_params, { ...params, stream: true }, "f");
+        runner._run(() => runner._createMessage(messages, { ...params, stream: true }, { ...options, headers: { ...options?.headers, "X-Stainless-Helper-Method": "stream" } }));
+        return runner;
+      }
+      _run(executor) {
+        executor().then(() => {
+          this._emitFinal();
+          this._emit("end");
+        }, __classPrivateFieldGet(this, _BetaMessageStream_handleError, "f"));
+      }
+      _addMessageParam(message) {
+        this.messages.push(message);
+      }
+      _addMessage(message, emit = true) {
+        this.receivedMessages.push(message);
+        if (emit) {
+          this._emit("message", message);
+        }
+      }
+      async _createMessage(messages, params, options) {
+        const signal = options?.signal;
+        let abortHandler;
+        if (signal) {
+          if (signal.aborted)
+            this.controller.abort();
+          abortHandler = this.controller.abort.bind(this.controller);
+          signal.addEventListener("abort", abortHandler);
+        }
+        try {
+          __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_beginRequest).call(this);
+          const { response, data: stream3 } = await messages.create({ ...params, stream: true }, { ...options, signal: this.controller.signal }).withResponse();
+          this._connected(response);
+          for await (const event of stream3) {
+            __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_addStreamEvent).call(this, event);
+          }
+          if (stream3.controller.signal?.aborted) {
+            throw new APIUserAbortError();
+          }
+          __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_endRequest).call(this);
+        } finally {
+          if (signal && abortHandler) {
+            signal.removeEventListener("abort", abortHandler);
+          }
+        }
+      }
+      _connected(response) {
+        if (this.ended)
+          return;
+        __classPrivateFieldSet(this, _BetaMessageStream_response, response, "f");
+        __classPrivateFieldSet(this, _BetaMessageStream_request_id, response?.headers.get("request-id"), "f");
+        __classPrivateFieldGet(this, _BetaMessageStream_resolveConnectedPromise, "f").call(this, response);
+        this._emit("connect");
+      }
+      get ended() {
+        return __classPrivateFieldGet(this, _BetaMessageStream_ended, "f");
+      }
+      get errored() {
+        return __classPrivateFieldGet(this, _BetaMessageStream_errored, "f");
+      }
+      get aborted() {
+        return __classPrivateFieldGet(this, _BetaMessageStream_aborted, "f");
+      }
+      abort() {
+        this.controller.abort();
+      }
+      /**
+       * Adds the listener function to the end of the listeners array for the event.
+       * No checks are made to see if the listener has already been added. Multiple calls passing
+       * the same combination of event and listener will result in the listener being added, and
+       * called, multiple times.
+       * @returns this MessageStream, so that calls can be chained
+       */
+      on(event, listener) {
+        const listeners = __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] = []);
+        listeners.push({ listener });
+        return this;
+      }
+      /**
+       * Removes the specified listener from the listener array for the event.
+       * off() will remove, at most, one instance of a listener from the listener array. If any single
+       * listener has been added multiple times to the listener array for the specified event, then
+       * off() must be called multiple times to remove each instance.
+       * @returns this MessageStream, so that calls can be chained
+       */
+      off(event, listener) {
+        const listeners = __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event];
+        if (!listeners)
+          return this;
+        const index = listeners.findIndex((l) => l.listener === listener);
+        if (index >= 0)
+          listeners.splice(index, 1);
+        return this;
+      }
+      /**
+       * Adds a one-time listener function for the event. The next time the event is triggered,
+       * this listener is removed and then invoked.
+       * @returns this MessageStream, so that calls can be chained
+       */
+      once(event, listener) {
+        const listeners = __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] = []);
+        listeners.push({ listener, once: true });
+        return this;
+      }
+      /**
+       * This is similar to `.once()`, but returns a Promise that resolves the next time
+       * the event is triggered, instead of calling a listener callback.
+       * @returns a Promise that resolves the next time given event is triggered,
+       * or rejects if an error is emitted.  (If you request the 'error' event,
+       * returns a promise that resolves with the error).
+       *
+       * Example:
+       *
+       *   const message = await stream.emitted('message') // rejects if the stream errors
+       */
+      emitted(event) {
+        return new Promise((resolve3, reject) => {
+          __classPrivateFieldSet(this, _BetaMessageStream_catchingPromiseCreated, true, "f");
+          if (event !== "error")
+            this.once("error", reject);
+          this.once(event, resolve3);
+        });
+      }
+      async done() {
+        __classPrivateFieldSet(this, _BetaMessageStream_catchingPromiseCreated, true, "f");
+        await __classPrivateFieldGet(this, _BetaMessageStream_endPromise, "f");
+      }
+      get currentMessage() {
+        return __classPrivateFieldGet(this, _BetaMessageStream_currentMessageSnapshot, "f");
+      }
+      /**
+       * @returns a promise that resolves with the the final assistant Message response,
+       * or rejects if an error occurred or the stream ended prematurely without producing a Message.
+       * If structured outputs were used, this will be a ParsedMessage with a `parsed` field.
+       */
+      async finalMessage() {
+        await this.done();
+        return __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_getFinalMessage).call(this);
+      }
+      /**
+       * @returns a promise that resolves with the the final assistant Message's text response, concatenated
+       * together if there are more than one text blocks.
+       * Rejects if an error occurred or the stream ended prematurely without producing a Message.
+       */
+      async finalText() {
+        await this.done();
+        return __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_getFinalText).call(this);
+      }
+      _emit(event, ...args) {
+        if (__classPrivateFieldGet(this, _BetaMessageStream_ended, "f"))
+          return;
+        if (event === "end") {
+          __classPrivateFieldSet(this, _BetaMessageStream_ended, true, "f");
+          __classPrivateFieldGet(this, _BetaMessageStream_resolveEndPromise, "f").call(this);
+        }
+        const listeners = __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event];
+        if (listeners) {
+          __classPrivateFieldGet(this, _BetaMessageStream_listeners, "f")[event] = listeners.filter((l) => !l.once);
+          listeners.forEach(({ listener }) => listener(...args));
+        }
+        if (event === "abort") {
+          const error2 = args[0];
+          if (!__classPrivateFieldGet(this, _BetaMessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
+            Promise.reject(error2);
+          }
+          __classPrivateFieldGet(this, _BetaMessageStream_rejectConnectedPromise, "f").call(this, error2);
+          __classPrivateFieldGet(this, _BetaMessageStream_rejectEndPromise, "f").call(this, error2);
+          this._emit("end");
+          return;
+        }
+        if (event === "error") {
+          const error2 = args[0];
+          if (!__classPrivateFieldGet(this, _BetaMessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
+            Promise.reject(error2);
+          }
+          __classPrivateFieldGet(this, _BetaMessageStream_rejectConnectedPromise, "f").call(this, error2);
+          __classPrivateFieldGet(this, _BetaMessageStream_rejectEndPromise, "f").call(this, error2);
+          this._emit("end");
+        }
+      }
+      _emitFinal() {
+        const finalMessage = this.receivedMessages.at(-1);
+        if (finalMessage) {
+          this._emit("finalMessage", __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_getFinalMessage).call(this));
+        }
+      }
+      async _fromReadableStream(readableStream, options) {
+        const signal = options?.signal;
+        let abortHandler;
+        if (signal) {
+          if (signal.aborted)
+            this.controller.abort();
+          abortHandler = this.controller.abort.bind(this.controller);
+          signal.addEventListener("abort", abortHandler);
+        }
+        try {
+          __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_beginRequest).call(this);
+          this._connected(null);
+          const stream3 = Stream2.fromReadableStream(readableStream, this.controller);
+          for await (const event of stream3) {
+            __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_addStreamEvent).call(this, event);
+          }
+          if (stream3.controller.signal?.aborted) {
+            throw new APIUserAbortError();
+          }
+          __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_endRequest).call(this);
+        } finally {
+          if (signal && abortHandler) {
+            signal.removeEventListener("abort", abortHandler);
+          }
+        }
+      }
+      [(_BetaMessageStream_currentMessageSnapshot = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_params = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_connectedPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_resolveConnectedPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_rejectConnectedPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_endPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_resolveEndPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_rejectEndPromise = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_listeners = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_ended = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_errored = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_aborted = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_catchingPromiseCreated = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_response = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_request_id = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_logger = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_handleError = /* @__PURE__ */ new WeakMap(), _BetaMessageStream_instances = /* @__PURE__ */ new WeakSet(), _BetaMessageStream_getFinalMessage = function _BetaMessageStream_getFinalMessage2() {
+        if (this.receivedMessages.length === 0) {
+          throw new AnthropicError("stream ended without producing a Message with role=assistant");
+        }
+        return this.receivedMessages.at(-1);
+      }, _BetaMessageStream_getFinalText = function _BetaMessageStream_getFinalText2() {
+        if (this.receivedMessages.length === 0) {
+          throw new AnthropicError("stream ended without producing a Message with role=assistant");
+        }
+        const textBlocks = this.receivedMessages.at(-1).content.filter((block) => block.type === "text").map((block) => block.text);
+        if (textBlocks.length === 0) {
+          throw new AnthropicError("stream ended without producing a content block with type=text");
+        }
+        return textBlocks.join(" ");
+      }, _BetaMessageStream_beginRequest = function _BetaMessageStream_beginRequest2() {
+        if (this.ended)
+          return;
+        __classPrivateFieldSet(this, _BetaMessageStream_currentMessageSnapshot, void 0, "f");
+      }, _BetaMessageStream_addStreamEvent = function _BetaMessageStream_addStreamEvent2(event) {
+        if (this.ended)
+          return;
+        const messageSnapshot = __classPrivateFieldGet(this, _BetaMessageStream_instances, "m", _BetaMessageStream_accumulateMessage).call(this, event);
+        this._emit("streamEvent", event, messageSnapshot);
+        switch (event.type) {
+          case "content_block_delta": {
+            const content = messageSnapshot.content.at(-1);
+            switch (event.delta.type) {
+              case "text_delta": {
+                if (content.type === "text") {
+                  this._emit("text", event.delta.text, content.text || "");
+                }
+                break;
+              }
+              case "citations_delta": {
+                if (content.type === "text") {
+                  this._emit("citation", event.delta.citation, content.citations ?? []);
+                }
+                break;
+              }
+              case "input_json_delta": {
+                if (tracksToolInput(content) && content.input) {
+                  this._emit("inputJson", event.delta.partial_json, content.input);
+                }
+                break;
+              }
+              case "thinking_delta": {
+                if (content.type === "thinking") {
+                  this._emit("thinking", event.delta.thinking, content.thinking);
+                }
+                break;
+              }
+              case "signature_delta": {
+                if (content.type === "thinking") {
+                  this._emit("signature", content.signature);
+                }
+                break;
+              }
+              default:
+                checkNever(event.delta);
+            }
+            break;
+          }
+          case "message_stop": {
+            this._addMessageParam(messageSnapshot);
+            this._addMessage(maybeParseBetaMessage(messageSnapshot, __classPrivateFieldGet(this, _BetaMessageStream_params, "f"), { logger: __classPrivateFieldGet(this, _BetaMessageStream_logger, "f") }), true);
+            break;
+          }
+          case "content_block_stop": {
+            this._emit("contentBlock", messageSnapshot.content.at(-1));
+            break;
+          }
+          case "message_start": {
+            __classPrivateFieldSet(this, _BetaMessageStream_currentMessageSnapshot, messageSnapshot, "f");
+            break;
+          }
+          case "content_block_start":
+          case "message_delta":
+            break;
+        }
+      }, _BetaMessageStream_endRequest = function _BetaMessageStream_endRequest2() {
+        if (this.ended) {
+          throw new AnthropicError(`stream has ended, this shouldn't happen`);
+        }
+        const snapshot = __classPrivateFieldGet(this, _BetaMessageStream_currentMessageSnapshot, "f");
+        if (!snapshot) {
+          throw new AnthropicError(`request ended without sending any chunks`);
+        }
+        __classPrivateFieldSet(this, _BetaMessageStream_currentMessageSnapshot, void 0, "f");
+        return maybeParseBetaMessage(snapshot, __classPrivateFieldGet(this, _BetaMessageStream_params, "f"), { logger: __classPrivateFieldGet(this, _BetaMessageStream_logger, "f") });
+      }, _BetaMessageStream_accumulateMessage = function _BetaMessageStream_accumulateMessage2(event) {
+        let snapshot = __classPrivateFieldGet(this, _BetaMessageStream_currentMessageSnapshot, "f");
+        if (event.type === "message_start") {
+          if (snapshot) {
+            throw new AnthropicError(`Unexpected event order, got ${event.type} before receiving "message_stop"`);
+          }
+          return event.message;
+        }
+        if (!snapshot) {
+          throw new AnthropicError(`Unexpected event order, got ${event.type} before "message_start"`);
+        }
+        switch (event.type) {
+          case "message_stop":
+            return snapshot;
+          case "message_delta":
+            snapshot.container = event.delta.container;
+            snapshot.stop_reason = event.delta.stop_reason;
+            snapshot.stop_sequence = event.delta.stop_sequence;
+            snapshot.usage.output_tokens = event.usage.output_tokens;
+            snapshot.context_management = event.context_management;
+            if (event.usage.input_tokens != null) {
+              snapshot.usage.input_tokens = event.usage.input_tokens;
+            }
+            if (event.usage.cache_creation_input_tokens != null) {
+              snapshot.usage.cache_creation_input_tokens = event.usage.cache_creation_input_tokens;
+            }
+            if (event.usage.cache_read_input_tokens != null) {
+              snapshot.usage.cache_read_input_tokens = event.usage.cache_read_input_tokens;
+            }
+            if (event.usage.server_tool_use != null) {
+              snapshot.usage.server_tool_use = event.usage.server_tool_use;
+            }
+            return snapshot;
+          case "content_block_start":
+            snapshot.content.push(event.content_block);
+            return snapshot;
+          case "content_block_delta": {
+            const snapshotContent = snapshot.content.at(event.index);
+            switch (event.delta.type) {
+              case "text_delta": {
+                if (snapshotContent?.type === "text") {
+                  snapshot.content[event.index] = {
+                    ...snapshotContent,
+                    text: (snapshotContent.text || "") + event.delta.text
+                  };
+                }
+                break;
+              }
+              case "citations_delta": {
+                if (snapshotContent?.type === "text") {
+                  snapshot.content[event.index] = {
+                    ...snapshotContent,
+                    citations: [...snapshotContent.citations ?? [], event.delta.citation]
+                  };
+                }
+                break;
+              }
+              case "input_json_delta": {
+                if (snapshotContent && tracksToolInput(snapshotContent)) {
+                  let jsonBuf = snapshotContent[JSON_BUF_PROPERTY] || "";
+                  jsonBuf += event.delta.partial_json;
+                  const newContent = { ...snapshotContent };
+                  Object.defineProperty(newContent, JSON_BUF_PROPERTY, {
+                    value: jsonBuf,
+                    enumerable: false,
+                    writable: true
+                  });
+                  if (jsonBuf) {
+                    try {
+                      newContent.input = partialParse(jsonBuf);
+                    } catch (err) {
+                      const error2 = new AnthropicError(`Unable to parse tool parameter JSON from model. Please retry your request or adjust your prompt. Error: ${err}. JSON: ${jsonBuf}`);
+                      __classPrivateFieldGet(this, _BetaMessageStream_handleError, "f").call(this, error2);
+                    }
+                  }
+                  snapshot.content[event.index] = newContent;
+                }
+                break;
+              }
+              case "thinking_delta": {
+                if (snapshotContent?.type === "thinking") {
+                  snapshot.content[event.index] = {
+                    ...snapshotContent,
+                    thinking: snapshotContent.thinking + event.delta.thinking
+                  };
+                }
+                break;
+              }
+              case "signature_delta": {
+                if (snapshotContent?.type === "thinking") {
+                  snapshot.content[event.index] = {
+                    ...snapshotContent,
+                    signature: event.delta.signature
+                  };
+                }
+                break;
+              }
+              default:
+                checkNever(event.delta);
+            }
+            return snapshot;
+          }
+          case "content_block_stop":
+            return snapshot;
+        }
+      }, Symbol.asyncIterator)]() {
+        const pushQueue = [];
+        const readQueue = [];
+        let done = false;
+        this.on("streamEvent", (event) => {
+          const reader = readQueue.shift();
+          if (reader) {
+            reader.resolve(event);
+          } else {
+            pushQueue.push(event);
+          }
+        });
+        this.on("end", () => {
+          done = true;
+          for (const reader of readQueue) {
+            reader.resolve(void 0);
+          }
+          readQueue.length = 0;
+        });
+        this.on("abort", (err) => {
+          done = true;
+          for (const reader of readQueue) {
+            reader.reject(err);
+          }
+          readQueue.length = 0;
+        });
+        this.on("error", (err) => {
+          done = true;
+          for (const reader of readQueue) {
+            reader.reject(err);
+          }
+          readQueue.length = 0;
+        });
+        return {
+          next: async () => {
+            if (!pushQueue.length) {
+              if (done) {
+                return { value: void 0, done: true };
+              }
+              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+            }
+            const chunk2 = pushQueue.shift();
+            return { value: chunk2, done: false };
+          },
+          return: async () => {
+            this.abort();
+            return { value: void 0, done: true };
+          }
+        };
+      }
+      toReadableStream() {
+        const stream3 = new Stream2(this[Symbol.asyncIterator].bind(this), this.controller);
+        return stream3.toReadableStream();
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/lib/tools/CompactionControl.mjs
+var DEFAULT_TOKEN_THRESHOLD, DEFAULT_SUMMARY_PROMPT;
+var init_CompactionControl = __esm({
+  "node_modules/@anthropic-ai/sdk/lib/tools/CompactionControl.mjs"() {
+    DEFAULT_TOKEN_THRESHOLD = 1e5;
+    DEFAULT_SUMMARY_PROMPT = `You have been working on the task described above but have not yet completed it. Write a continuation summary that will allow you (or another instance of yourself) to resume work efficiently in a future context window where the conversation history will be replaced with this summary. Your summary should be structured, concise, and actionable. Include:
+1. Task Overview
+The user's core request and success criteria
+Any clarifications or constraints they specified
+2. Current State
+What has been completed so far
+Files created, modified, or analyzed (with paths if relevant)
+Key outputs or artifacts produced
+3. Important Discoveries
+Technical constraints or requirements uncovered
+Decisions made and their rationale
+Errors encountered and how they were resolved
+What approaches were tried that didn't work (and why)
+4. Next Steps
+Specific actions needed to complete the task
+Any blockers or open questions to resolve
+Priority order if multiple steps remain
+5. Context to Preserve
+User preferences or style requirements
+Domain-specific details that aren't obvious
+Any promises made to the user
+Be concise but complete\u2014err on the side of including information that would prevent duplicate work or repeated mistakes. Write in a way that enables immediate resumption of the task.
+Wrap your summary in <summary></summary> tags.`;
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/lib/tools/BetaToolRunner.mjs
+function promiseWithResolvers() {
+  let resolve3;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve3 = res;
+    reject = rej;
+  });
+  return { promise, resolve: resolve3, reject };
+}
+async function generateToolResponse(params, lastMessage = params.messages.at(-1)) {
+  if (!lastMessage || lastMessage.role !== "assistant" || !lastMessage.content || typeof lastMessage.content === "string") {
+    return null;
+  }
+  const toolUseBlocks = lastMessage.content.filter((content) => content.type === "tool_use");
+  if (toolUseBlocks.length === 0) {
+    return null;
+  }
+  const toolResults = await Promise.all(toolUseBlocks.map(async (toolUse) => {
+    const tool = params.tools.find((t) => ("name" in t ? t.name : t.mcp_server_name) === toolUse.name);
+    if (!tool || !("run" in tool)) {
+      return {
+        type: "tool_result",
+        tool_use_id: toolUse.id,
+        content: `Error: Tool '${toolUse.name}' not found`,
+        is_error: true
+      };
+    }
+    try {
+      let input = toolUse.input;
+      if ("parse" in tool && tool.parse) {
+        input = tool.parse(input);
+      }
+      const result = await tool.run(input);
+      return {
+        type: "tool_result",
+        tool_use_id: toolUse.id,
+        content: result
+      };
+    } catch (error2) {
+      return {
+        type: "tool_result",
+        tool_use_id: toolUse.id,
+        content: `Error: ${error2 instanceof Error ? error2.message : String(error2)}`,
+        is_error: true
+      };
+    }
+  }));
+  return {
+    role: "user",
+    content: toolResults
+  };
+}
+var _BetaToolRunner_instances, _BetaToolRunner_consumed, _BetaToolRunner_mutated, _BetaToolRunner_state, _BetaToolRunner_options, _BetaToolRunner_message, _BetaToolRunner_toolResponse, _BetaToolRunner_completion, _BetaToolRunner_iterationCount, _BetaToolRunner_checkAndCompact, _BetaToolRunner_generateToolResponse, BetaToolRunner;
+var init_BetaToolRunner = __esm({
+  "node_modules/@anthropic-ai/sdk/lib/tools/BetaToolRunner.mjs"() {
+    init_tslib();
+    init_error();
+    init_headers();
+    init_CompactionControl();
+    BetaToolRunner = class {
+      constructor(client, params, options) {
+        _BetaToolRunner_instances.add(this);
+        this.client = client;
+        _BetaToolRunner_consumed.set(this, false);
+        _BetaToolRunner_mutated.set(this, false);
+        _BetaToolRunner_state.set(this, void 0);
+        _BetaToolRunner_options.set(this, void 0);
+        _BetaToolRunner_message.set(this, void 0);
+        _BetaToolRunner_toolResponse.set(this, void 0);
+        _BetaToolRunner_completion.set(this, void 0);
+        _BetaToolRunner_iterationCount.set(this, 0);
+        __classPrivateFieldSet(this, _BetaToolRunner_state, {
+          params: {
+            // You can't clone the entire params since there are functions as handlers.
+            // You also don't really need to clone params.messages, but it probably will prevent a foot gun
+            // somewhere.
+            ...params,
+            messages: structuredClone(params.messages)
+          }
+        }, "f");
+        __classPrivateFieldSet(this, _BetaToolRunner_options, {
+          ...options,
+          headers: buildHeaders([{ "x-stainless-helper": "BetaToolRunner" }, options?.headers])
+        }, "f");
+        __classPrivateFieldSet(this, _BetaToolRunner_completion, promiseWithResolvers(), "f");
+      }
+      async *[(_BetaToolRunner_consumed = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_mutated = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_state = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_options = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_message = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_toolResponse = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_completion = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_iterationCount = /* @__PURE__ */ new WeakMap(), _BetaToolRunner_instances = /* @__PURE__ */ new WeakSet(), _BetaToolRunner_checkAndCompact = async function _BetaToolRunner_checkAndCompact2() {
+        const compactionControl = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.compactionControl;
+        if (!compactionControl || !compactionControl.enabled) {
+          return false;
+        }
+        let tokensUsed = 0;
+        if (__classPrivateFieldGet(this, _BetaToolRunner_message, "f") !== void 0) {
+          try {
+            const message = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
+            const totalInputTokens = message.usage.input_tokens + (message.usage.cache_creation_input_tokens ?? 0) + (message.usage.cache_read_input_tokens ?? 0);
+            tokensUsed = totalInputTokens + message.usage.output_tokens;
+          } catch {
+            return false;
+          }
+        }
+        const threshold = compactionControl.contextTokenThreshold ?? DEFAULT_TOKEN_THRESHOLD;
+        if (tokensUsed < threshold) {
+          return false;
+        }
+        const model = compactionControl.model ?? __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.model;
+        const summaryPrompt = compactionControl.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT;
+        const messages = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages;
+        if (messages[messages.length - 1].role === "assistant") {
+          const lastMessage = messages[messages.length - 1];
+          if (Array.isArray(lastMessage.content)) {
+            const nonToolBlocks = lastMessage.content.filter((block) => block.type !== "tool_use");
+            if (nonToolBlocks.length === 0) {
+              messages.pop();
+            } else {
+              lastMessage.content = nonToolBlocks;
+            }
+          }
+        }
+        const response = await this.client.beta.messages.create({
+          model,
+          messages: [
+            ...messages,
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: summaryPrompt
+                }
+              ]
+            }
+          ],
+          max_tokens: __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.max_tokens
+        }, {
+          headers: { "x-stainless-helper": "compaction" }
+        });
+        if (response.content[0]?.type !== "text") {
+          throw new AnthropicError("Expected text response for compaction");
+        }
+        __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages = [
+          {
+            role: "user",
+            content: response.content
+          }
+        ];
+        return true;
+      }, Symbol.asyncIterator)]() {
+        var _a2;
+        if (__classPrivateFieldGet(this, _BetaToolRunner_consumed, "f")) {
+          throw new AnthropicError("Cannot iterate over a consumed stream");
+        }
+        __classPrivateFieldSet(this, _BetaToolRunner_consumed, true, "f");
+        __classPrivateFieldSet(this, _BetaToolRunner_mutated, true, "f");
+        __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, void 0, "f");
+        try {
+          while (true) {
+            let stream3;
+            try {
+              if (__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.max_iterations && __classPrivateFieldGet(this, _BetaToolRunner_iterationCount, "f") >= __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.max_iterations) {
+                break;
+              }
+              __classPrivateFieldSet(this, _BetaToolRunner_mutated, false, "f");
+              __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, void 0, "f");
+              __classPrivateFieldSet(this, _BetaToolRunner_iterationCount, (_a2 = __classPrivateFieldGet(this, _BetaToolRunner_iterationCount, "f"), _a2++, _a2), "f");
+              __classPrivateFieldSet(this, _BetaToolRunner_message, void 0, "f");
+              const { max_iterations, compactionControl, ...params } = __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
+              if (params.stream) {
+                stream3 = this.client.beta.messages.stream({ ...params }, __classPrivateFieldGet(this, _BetaToolRunner_options, "f"));
+                __classPrivateFieldSet(this, _BetaToolRunner_message, stream3.finalMessage(), "f");
+                __classPrivateFieldGet(this, _BetaToolRunner_message, "f").catch(() => {
+                });
+                yield stream3;
+              } else {
+                __classPrivateFieldSet(this, _BetaToolRunner_message, this.client.beta.messages.create({ ...params, stream: false }, __classPrivateFieldGet(this, _BetaToolRunner_options, "f")), "f");
+                yield __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
+              }
+              const isCompacted = await __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_checkAndCompact).call(this);
+              if (!isCompacted) {
+                if (!__classPrivateFieldGet(this, _BetaToolRunner_mutated, "f")) {
+                  const { role, content } = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f");
+                  __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.push({ role, content });
+                }
+                const toolMessage = await __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_generateToolResponse).call(this, __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.at(-1));
+                if (toolMessage) {
+                  __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params.messages.push(toolMessage);
+                } else if (!__classPrivateFieldGet(this, _BetaToolRunner_mutated, "f")) {
+                  break;
+                }
+              }
+            } finally {
+              if (stream3) {
+                stream3.abort();
+              }
+            }
+          }
+          if (!__classPrivateFieldGet(this, _BetaToolRunner_message, "f")) {
+            throw new AnthropicError("ToolRunner concluded without a message from the server");
+          }
+          __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").resolve(await __classPrivateFieldGet(this, _BetaToolRunner_message, "f"));
+        } catch (error2) {
+          __classPrivateFieldSet(this, _BetaToolRunner_consumed, false, "f");
+          __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").promise.catch(() => {
+          });
+          __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").reject(error2);
+          __classPrivateFieldSet(this, _BetaToolRunner_completion, promiseWithResolvers(), "f");
+          throw error2;
+        }
+      }
+      setMessagesParams(paramsOrMutator) {
+        if (typeof paramsOrMutator === "function") {
+          __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params = paramsOrMutator(__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params);
+        } else {
+          __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params = paramsOrMutator;
+        }
+        __classPrivateFieldSet(this, _BetaToolRunner_mutated, true, "f");
+        __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, void 0, "f");
+      }
+      /**
+       * Get the tool response for the last message from the assistant.
+       * Avoids redundant tool executions by caching results.
+       *
+       * @returns A promise that resolves to a BetaMessageParam containing tool results, or null if no tools need to be executed
+       *
+       * @example
+       * const toolResponse = await runner.generateToolResponse();
+       * if (toolResponse) {
+       *   console.log('Tool results:', toolResponse.content);
+       * }
+       */
+      async generateToolResponse() {
+        const message = await __classPrivateFieldGet(this, _BetaToolRunner_message, "f") ?? this.params.messages.at(-1);
+        if (!message) {
+          return null;
+        }
+        return __classPrivateFieldGet(this, _BetaToolRunner_instances, "m", _BetaToolRunner_generateToolResponse).call(this, message);
+      }
+      /**
+       * Wait for the async iterator to complete. This works even if the async iterator hasn't yet started, and
+       * will wait for an instance to start and go to completion.
+       *
+       * @returns A promise that resolves to the final BetaMessage when the iterator completes
+       *
+       * @example
+       * // Start consuming the iterator
+       * for await (const message of runner) {
+       *   console.log('Message:', message.content);
+       * }
+       *
+       * // Meanwhile, wait for completion from another part of the code
+       * const finalMessage = await runner.done();
+       * console.log('Final response:', finalMessage.content);
+       */
+      done() {
+        return __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").promise;
+      }
+      /**
+       * Returns a promise indicating that the stream is done. Unlike .done(), this will eagerly read the stream:
+       * * If the iterator has not been consumed, consume the entire iterator and return the final message from the
+       * assistant.
+       * * If the iterator has been consumed, waits for it to complete and returns the final message.
+       *
+       * @returns A promise that resolves to the final BetaMessage from the conversation
+       * @throws {AnthropicError} If no messages were processed during the conversation
+       *
+       * @example
+       * const finalMessage = await runner.runUntilDone();
+       * console.log('Final response:', finalMessage.content);
+       */
+      async runUntilDone() {
+        if (!__classPrivateFieldGet(this, _BetaToolRunner_consumed, "f")) {
+          for await (const _ of this) {
+          }
+        }
+        return this.done();
+      }
+      /**
+       * Get the current parameters being used by the ToolRunner.
+       *
+       * @returns A readonly view of the current ToolRunnerParams
+       *
+       * @example
+       * const currentParams = runner.params;
+       * console.log('Current model:', currentParams.model);
+       * console.log('Message count:', currentParams.messages.length);
+       */
+      get params() {
+        return __classPrivateFieldGet(this, _BetaToolRunner_state, "f").params;
+      }
+      /**
+       * Add one or more messages to the conversation history.
+       *
+       * @param messages - One or more BetaMessageParam objects to add to the conversation
+       *
+       * @example
+       * runner.pushMessages(
+       *   { role: 'user', content: 'Also, what about the weather in NYC?' }
+       * );
+       *
+       * @example
+       * // Adding multiple messages
+       * runner.pushMessages(
+       *   { role: 'user', content: 'What about NYC?' },
+       *   { role: 'user', content: 'And Boston?' }
+       * );
+       */
+      pushMessages(...messages) {
+        this.setMessagesParams((params) => ({
+          ...params,
+          messages: [...params.messages, ...messages]
+        }));
+      }
+      /**
+       * Makes the ToolRunner directly awaitable, equivalent to calling .runUntilDone()
+       * This allows using `await runner` instead of `await runner.runUntilDone()`
+       */
+      then(onfulfilled, onrejected) {
+        return this.runUntilDone().then(onfulfilled, onrejected);
+      }
+    };
+    _BetaToolRunner_generateToolResponse = async function _BetaToolRunner_generateToolResponse2(lastMessage) {
+      if (__classPrivateFieldGet(this, _BetaToolRunner_toolResponse, "f") !== void 0) {
+        return __classPrivateFieldGet(this, _BetaToolRunner_toolResponse, "f");
+      }
+      __classPrivateFieldSet(this, _BetaToolRunner_toolResponse, generateToolResponse(__classPrivateFieldGet(this, _BetaToolRunner_state, "f").params, lastMessage), "f");
+      return __classPrivateFieldGet(this, _BetaToolRunner_toolResponse, "f");
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/decoders/jsonl.mjs
+var JSONLDecoder;
+var init_jsonl = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/decoders/jsonl.mjs"() {
+    init_error();
+    init_shims();
+    init_line();
+    JSONLDecoder = class _JSONLDecoder {
+      constructor(iterator, controller) {
+        this.iterator = iterator;
+        this.controller = controller;
+      }
+      async *decoder() {
+        const lineDecoder = new LineDecoder();
+        for await (const chunk2 of this.iterator) {
+          for (const line of lineDecoder.decode(chunk2)) {
+            yield JSON.parse(line);
+          }
+        }
+        for (const line of lineDecoder.flush()) {
+          yield JSON.parse(line);
+        }
+      }
+      [Symbol.asyncIterator]() {
+        return this.decoder();
+      }
+      static fromResponse(response, controller) {
+        if (!response.body) {
+          controller.abort();
+          if (typeof globalThis.navigator !== "undefined" && globalThis.navigator.product === "ReactNative") {
+            throw new AnthropicError(`The default react-native fetch implementation does not support streaming. Please use expo/fetch: https://docs.expo.dev/versions/latest/sdk/expo/#expofetch-api`);
+          }
+          throw new AnthropicError(`Attempted to iterate over a response with no body`);
+        }
+        return new _JSONLDecoder(ReadableStreamToAsyncIterable(response.body), controller);
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/beta/messages/batches.mjs
+var Batches;
+var init_batches = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/beta/messages/batches.mjs"() {
+    init_resource();
+    init_pagination();
+    init_headers();
+    init_jsonl();
+    init_error2();
+    init_path();
+    Batches = class extends APIResource {
+      /**
+       * Send a batch of Message creation requests.
+       *
+       * The Message Batches API can be used to process multiple Messages API requests at
+       * once. Once a Message Batch is created, it begins processing immediately. Batches
+       * can take up to 24 hours to complete.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const betaMessageBatch =
+       *   await client.beta.messages.batches.create({
+       *     requests: [
+       *       {
+       *         custom_id: 'my-custom-id-1',
+       *         params: {
+       *           max_tokens: 1024,
+       *           messages: [
+       *             { content: 'Hello, world', role: 'user' },
+       *           ],
+       *           model: 'claude-sonnet-4-5-20250929',
+       *         },
+       *       },
+       *     ],
+       *   });
+       * ```
+       */
+      create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post("/v1/messages/batches?beta=true", {
+          body,
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * This endpoint is idempotent and can be used to poll for Message Batch
+       * completion. To access the results of a Message Batch, make a request to the
+       * `results_url` field in the response.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const betaMessageBatch =
+       *   await client.beta.messages.batches.retrieve(
+       *     'message_batch_id',
+       *   );
+       * ```
+       */
+      retrieve(messageBatchID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path7`/v1/messages/batches/${messageBatchID}?beta=true`, {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * List all Message Batches within a Workspace. Most recently created batches are
+       * returned first.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * // Automatically fetches more pages as needed.
+       * for await (const betaMessageBatch of client.beta.messages.batches.list()) {
+       *   // ...
+       * }
+       * ```
+       */
+      list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList("/v1/messages/batches?beta=true", Page, {
+          query,
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * Delete a Message Batch.
+       *
+       * Message Batches can only be deleted once they've finished processing. If you'd
+       * like to delete an in-progress batch, you must first cancel it.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const betaDeletedMessageBatch =
+       *   await client.beta.messages.batches.delete(
+       *     'message_batch_id',
+       *   );
+       * ```
+       */
+      delete(messageBatchID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.delete(path7`/v1/messages/batches/${messageBatchID}?beta=true`, {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * Batches may be canceled any time before processing ends. Once cancellation is
+       * initiated, the batch enters a `canceling` state, at which time the system may
+       * complete any in-progress, non-interruptible requests before finalizing
+       * cancellation.
+       *
+       * The number of canceled requests is specified in `request_counts`. To determine
+       * which requests were canceled, check the individual results within the batch.
+       * Note that cancellation may not result in any canceled requests if they were
+       * non-interruptible.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const betaMessageBatch =
+       *   await client.beta.messages.batches.cancel(
+       *     'message_batch_id',
+       *   );
+       * ```
+       */
+      cancel(messageBatchID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path7`/v1/messages/batches/${messageBatchID}/cancel?beta=true`, {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * Streams the results of a Message Batch as a `.jsonl` file.
+       *
+       * Each line in the file is a JSON object containing the result of a single request
+       * in the Message Batch. Results are not guaranteed to be in the same order as
+       * requests. Use the `custom_id` field to match results to requests.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const betaMessageBatchIndividualResponse =
+       *   await client.beta.messages.batches.results(
+       *     'message_batch_id',
+       *   );
+       * ```
+       */
+      async results(messageBatchID, params = {}, options) {
+        const batch = await this.retrieve(messageBatchID);
+        if (!batch.results_url) {
+          throw new AnthropicError(`No batch \`results_url\`; Has it finished processing? ${batch.processing_status} - ${batch.id}`);
+        }
+        const { betas } = params ?? {};
+        return this._client.get(batch.results_url, {
+          ...options,
+          headers: buildHeaders([
+            {
+              "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString(),
+              Accept: "application/binary"
+            },
+            options?.headers
+          ]),
+          stream: true,
+          __binaryResponse: true
+        })._thenUnwrap((_, props) => JSONLDecoder.fromResponse(props.response, props.controller));
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/beta/messages/messages.mjs
+var DEPRECATED_MODELS, Messages;
+var init_messages = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/beta/messages/messages.mjs"() {
+    init_resource();
+    init_constants();
+    init_headers();
+    init_beta_parser();
+    init_BetaMessageStream();
+    init_BetaToolRunner();
+    init_batches();
+    init_batches();
+    init_BetaToolRunner();
+    DEPRECATED_MODELS = {
+      "claude-1.3": "November 6th, 2024",
+      "claude-1.3-100k": "November 6th, 2024",
+      "claude-instant-1.1": "November 6th, 2024",
+      "claude-instant-1.1-100k": "November 6th, 2024",
+      "claude-instant-1.2": "November 6th, 2024",
+      "claude-3-sonnet-20240229": "July 21st, 2025",
+      "claude-3-opus-20240229": "January 5th, 2026",
+      "claude-2.1": "July 21st, 2025",
+      "claude-2.0": "July 21st, 2025",
+      "claude-3-7-sonnet-latest": "February 19th, 2026",
+      "claude-3-7-sonnet-20250219": "February 19th, 2026"
+    };
+    Messages = class extends APIResource {
+      constructor() {
+        super(...arguments);
+        this.batches = new Batches(this._client);
+      }
+      create(params, options) {
+        const { betas, ...body } = params;
+        if (body.model in DEPRECATED_MODELS) {
+          console.warn(`The model '${body.model}' is deprecated and will reach end-of-life on ${DEPRECATED_MODELS[body.model]}
+Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.`);
+        }
+        let timeout = this._client._options.timeout;
+        if (!body.stream && timeout == null) {
+          const maxNonstreamingTokens = MODEL_NONSTREAMING_TOKENS[body.model] ?? void 0;
+          timeout = this._client.calculateNonstreamingTimeout(body.max_tokens, maxNonstreamingTokens);
+        }
+        return this._client.post("/v1/messages?beta=true", {
+          body,
+          timeout: timeout ?? 6e5,
+          ...options,
+          headers: buildHeaders([
+            { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+            options?.headers
+          ]),
+          stream: params.stream ?? false
+        });
+      }
+      /**
+       * Send a structured list of input messages with text and/or image content, along with an expected `output_format` and
+       * the response will be automatically parsed and available in the `parsed_output` property of the message.
+       *
+       * @example
+       * ```ts
+       * const message = await client.beta.messages.parse({
+       *   model: 'claude-3-5-sonnet-20241022',
+       *   max_tokens: 1024,
+       *   messages: [{ role: 'user', content: 'What is 2+2?' }],
+       *   output_format: zodOutputFormat(z.object({ answer: z.number() }), 'math'),
+       * });
+       *
+       * console.log(message.parsed_output?.answer); // 4
+       * ```
+       */
+      parse(params, options) {
+        options = {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...params.betas ?? [], "structured-outputs-2025-11-13"].toString() },
+            options?.headers
+          ])
+        };
+        return this.create(params, options).then((message) => parseBetaMessage(message, params, { logger: this._client.logger ?? console }));
+      }
+      /**
+       * Create a Message stream
+       */
+      stream(body, options) {
+        return BetaMessageStream.createMessage(this, body, options);
+      }
+      /**
+       * Count the number of tokens in a Message.
+       *
+       * The Token Count API can be used to count the number of tokens in a Message,
+       * including tools, images, and documents, without creating it.
+       *
+       * Learn more about token counting in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/token-counting)
+       *
+       * @example
+       * ```ts
+       * const betaMessageTokensCount =
+       *   await client.beta.messages.countTokens({
+       *     messages: [{ content: 'string', role: 'user' }],
+       *     model: 'claude-opus-4-5-20251101',
+       *   });
+       * ```
+       */
+      countTokens(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post("/v1/messages/count_tokens?beta=true", {
+          body,
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "token-counting-2024-11-01"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      toolRunner(body, options) {
+        return new BetaToolRunner(this._client, body, options);
+      }
+    };
+    Messages.Batches = Batches;
+    Messages.BetaToolRunner = BetaToolRunner;
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/beta/skills/versions.mjs
+var Versions;
+var init_versions = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/beta/skills/versions.mjs"() {
+    init_resource();
+    init_pagination();
+    init_headers();
+    init_uploads();
+    init_path();
+    Versions = class extends APIResource {
+      /**
+       * Create Skill Version
+       *
+       * @example
+       * ```ts
+       * const version = await client.beta.skills.versions.create(
+       *   'skill_id',
+       * );
+       * ```
+       */
+      create(skillID, params = {}, options) {
+        const { betas, ...body } = params ?? {};
+        return this._client.post(path7`/v1/skills/${skillID}/versions?beta=true`, multipartFormRequestOptions({
+          body,
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+            options?.headers
+          ])
+        }, this._client));
+      }
+      /**
+       * Get Skill Version
+       *
+       * @example
+       * ```ts
+       * const version = await client.beta.skills.versions.retrieve(
+       *   'version',
+       *   { skill_id: 'skill_id' },
+       * );
+       * ```
+       */
+      retrieve(version2, params, options) {
+        const { skill_id, betas } = params;
+        return this._client.get(path7`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * List Skill Versions
+       *
+       * @example
+       * ```ts
+       * // Automatically fetches more pages as needed.
+       * for await (const versionListResponse of client.beta.skills.versions.list(
+       *   'skill_id',
+       * )) {
+       *   // ...
+       * }
+       * ```
+       */
+      list(skillID, params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList(path7`/v1/skills/${skillID}/versions?beta=true`, PageCursor, {
+          query,
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * Delete Skill Version
+       *
+       * @example
+       * ```ts
+       * const version = await client.beta.skills.versions.delete(
+       *   'version',
+       *   { skill_id: 'skill_id' },
+       * );
+       * ```
+       */
+      delete(version2, params, options) {
+        const { skill_id, betas } = params;
+        return this._client.delete(path7`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+            options?.headers
+          ])
+        });
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/beta/skills/skills.mjs
+var Skills;
+var init_skills = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/beta/skills/skills.mjs"() {
+    init_resource();
+    init_versions();
+    init_versions();
+    init_pagination();
+    init_headers();
+    init_uploads();
+    init_path();
+    Skills = class extends APIResource {
+      constructor() {
+        super(...arguments);
+        this.versions = new Versions(this._client);
+      }
+      /**
+       * Create Skill
+       *
+       * @example
+       * ```ts
+       * const skill = await client.beta.skills.create();
+       * ```
+       */
+      create(params = {}, options) {
+        const { betas, ...body } = params ?? {};
+        return this._client.post("/v1/skills?beta=true", multipartFormRequestOptions({
+          body,
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+            options?.headers
+          ])
+        }, this._client));
+      }
+      /**
+       * Get Skill
+       *
+       * @example
+       * ```ts
+       * const skill = await client.beta.skills.retrieve('skill_id');
+       * ```
+       */
+      retrieve(skillID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path7`/v1/skills/${skillID}?beta=true`, {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * List Skills
+       *
+       * @example
+       * ```ts
+       * // Automatically fetches more pages as needed.
+       * for await (const skillListResponse of client.beta.skills.list()) {
+       *   // ...
+       * }
+       * ```
+       */
+      list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList("/v1/skills?beta=true", PageCursor, {
+          query,
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * Delete Skill
+       *
+       * @example
+       * ```ts
+       * const skill = await client.beta.skills.delete('skill_id');
+       * ```
+       */
+      delete(skillID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.delete(path7`/v1/skills/${skillID}?beta=true`, {
+          ...options,
+          headers: buildHeaders([
+            { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
+            options?.headers
+          ])
+        });
+      }
+    };
+    Skills.Versions = Versions;
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/beta/beta.mjs
+var Beta;
+var init_beta = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/beta/beta.mjs"() {
+    init_resource();
+    init_files();
+    init_files();
+    init_models();
+    init_models();
+    init_messages();
+    init_messages();
+    init_skills();
+    init_skills();
+    Beta = class extends APIResource {
+      constructor() {
+        super(...arguments);
+        this.models = new Models(this._client);
+        this.messages = new Messages(this._client);
+        this.files = new Files(this._client);
+        this.skills = new Skills(this._client);
+      }
+    };
+    Beta.Models = Models;
+    Beta.Messages = Messages;
+    Beta.Files = Files;
+    Beta.Skills = Skills;
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/completions.mjs
+var Completions;
+var init_completions = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/completions.mjs"() {
+    init_resource();
+    init_headers();
+    Completions = class extends APIResource {
+      create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post("/v1/complete", {
+          body,
+          timeout: this._client._options.timeout ?? 6e5,
+          ...options,
+          headers: buildHeaders([
+            { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+            options?.headers
+          ]),
+          stream: params.stream ?? false
+        });
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs
+function tracksToolInput2(content) {
+  return content.type === "tool_use" || content.type === "server_tool_use";
+}
+function checkNever2(x) {
+}
+var _MessageStream_instances, _MessageStream_currentMessageSnapshot, _MessageStream_connectedPromise, _MessageStream_resolveConnectedPromise, _MessageStream_rejectConnectedPromise, _MessageStream_endPromise, _MessageStream_resolveEndPromise, _MessageStream_rejectEndPromise, _MessageStream_listeners, _MessageStream_ended, _MessageStream_errored, _MessageStream_aborted, _MessageStream_catchingPromiseCreated, _MessageStream_response, _MessageStream_request_id, _MessageStream_getFinalMessage, _MessageStream_getFinalText, _MessageStream_handleError, _MessageStream_beginRequest, _MessageStream_addStreamEvent, _MessageStream_endRequest, _MessageStream_accumulateMessage, JSON_BUF_PROPERTY2, MessageStream;
+var init_MessageStream = __esm({
+  "node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs"() {
+    init_tslib();
+    init_errors2();
+    init_error2();
+    init_streaming2();
+    init_parser();
+    JSON_BUF_PROPERTY2 = "__json_buf";
+    MessageStream = class _MessageStream {
+      constructor() {
+        _MessageStream_instances.add(this);
+        this.messages = [];
+        this.receivedMessages = [];
+        _MessageStream_currentMessageSnapshot.set(this, void 0);
+        this.controller = new AbortController();
+        _MessageStream_connectedPromise.set(this, void 0);
+        _MessageStream_resolveConnectedPromise.set(this, () => {
+        });
+        _MessageStream_rejectConnectedPromise.set(this, () => {
+        });
+        _MessageStream_endPromise.set(this, void 0);
+        _MessageStream_resolveEndPromise.set(this, () => {
+        });
+        _MessageStream_rejectEndPromise.set(this, () => {
+        });
+        _MessageStream_listeners.set(this, {});
+        _MessageStream_ended.set(this, false);
+        _MessageStream_errored.set(this, false);
+        _MessageStream_aborted.set(this, false);
+        _MessageStream_catchingPromiseCreated.set(this, false);
+        _MessageStream_response.set(this, void 0);
+        _MessageStream_request_id.set(this, void 0);
+        _MessageStream_handleError.set(this, (error2) => {
+          __classPrivateFieldSet(this, _MessageStream_errored, true, "f");
+          if (isAbortError(error2)) {
+            error2 = new APIUserAbortError();
+          }
+          if (error2 instanceof APIUserAbortError) {
+            __classPrivateFieldSet(this, _MessageStream_aborted, true, "f");
+            return this._emit("abort", error2);
+          }
+          if (error2 instanceof AnthropicError) {
+            return this._emit("error", error2);
+          }
+          if (error2 instanceof Error) {
+            const anthropicError = new AnthropicError(error2.message);
+            anthropicError.cause = error2;
+            return this._emit("error", anthropicError);
+          }
+          return this._emit("error", new AnthropicError(String(error2)));
+        });
+        __classPrivateFieldSet(this, _MessageStream_connectedPromise, new Promise((resolve3, reject) => {
+          __classPrivateFieldSet(this, _MessageStream_resolveConnectedPromise, resolve3, "f");
+          __classPrivateFieldSet(this, _MessageStream_rejectConnectedPromise, reject, "f");
+        }), "f");
+        __classPrivateFieldSet(this, _MessageStream_endPromise, new Promise((resolve3, reject) => {
+          __classPrivateFieldSet(this, _MessageStream_resolveEndPromise, resolve3, "f");
+          __classPrivateFieldSet(this, _MessageStream_rejectEndPromise, reject, "f");
+        }), "f");
+        __classPrivateFieldGet(this, _MessageStream_connectedPromise, "f").catch(() => {
+        });
+        __classPrivateFieldGet(this, _MessageStream_endPromise, "f").catch(() => {
+        });
+      }
+      get response() {
+        return __classPrivateFieldGet(this, _MessageStream_response, "f");
+      }
+      get request_id() {
+        return __classPrivateFieldGet(this, _MessageStream_request_id, "f");
+      }
+      /**
+       * Returns the `MessageStream` data, the raw `Response` instance and the ID of the request,
+       * returned vie the `request-id` header which is useful for debugging requests and resporting
+       * issues to Anthropic.
+       *
+       * This is the same as the `APIPromise.withResponse()` method.
+       *
+       * This method will raise an error if you created the stream using `MessageStream.fromReadableStream`
+       * as no `Response` is available.
+       */
+      async withResponse() {
+        __classPrivateFieldSet(this, _MessageStream_catchingPromiseCreated, true, "f");
+        const response = await __classPrivateFieldGet(this, _MessageStream_connectedPromise, "f");
+        if (!response) {
+          throw new Error("Could not resolve a `Response` object");
+        }
+        return {
+          data: this,
+          response,
+          request_id: response.headers.get("request-id")
+        };
+      }
+      /**
+       * Intended for use on the frontend, consuming a stream produced with
+       * `.toReadableStream()` on the backend.
+       *
+       * Note that messages sent to the model do not appear in `.on('message')`
+       * in this context.
+       */
+      static fromReadableStream(stream3) {
+        const runner = new _MessageStream();
+        runner._run(() => runner._fromReadableStream(stream3));
+        return runner;
+      }
+      static createMessage(messages, params, options) {
+        const runner = new _MessageStream();
+        for (const message of params.messages) {
+          runner._addMessageParam(message);
+        }
+        runner._run(() => runner._createMessage(messages, { ...params, stream: true }, { ...options, headers: { ...options?.headers, "X-Stainless-Helper-Method": "stream" } }));
+        return runner;
+      }
+      _run(executor) {
+        executor().then(() => {
+          this._emitFinal();
+          this._emit("end");
+        }, __classPrivateFieldGet(this, _MessageStream_handleError, "f"));
+      }
+      _addMessageParam(message) {
+        this.messages.push(message);
+      }
+      _addMessage(message, emit = true) {
+        this.receivedMessages.push(message);
+        if (emit) {
+          this._emit("message", message);
+        }
+      }
+      async _createMessage(messages, params, options) {
+        const signal = options?.signal;
+        let abortHandler;
+        if (signal) {
+          if (signal.aborted)
+            this.controller.abort();
+          abortHandler = this.controller.abort.bind(this.controller);
+          signal.addEventListener("abort", abortHandler);
+        }
+        try {
+          __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_beginRequest).call(this);
+          const { response, data: stream3 } = await messages.create({ ...params, stream: true }, { ...options, signal: this.controller.signal }).withResponse();
+          this._connected(response);
+          for await (const event of stream3) {
+            __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_addStreamEvent).call(this, event);
+          }
+          if (stream3.controller.signal?.aborted) {
+            throw new APIUserAbortError();
+          }
+          __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_endRequest).call(this);
+        } finally {
+          if (signal && abortHandler) {
+            signal.removeEventListener("abort", abortHandler);
+          }
+        }
+      }
+      _connected(response) {
+        if (this.ended)
+          return;
+        __classPrivateFieldSet(this, _MessageStream_response, response, "f");
+        __classPrivateFieldSet(this, _MessageStream_request_id, response?.headers.get("request-id"), "f");
+        __classPrivateFieldGet(this, _MessageStream_resolveConnectedPromise, "f").call(this, response);
+        this._emit("connect");
+      }
+      get ended() {
+        return __classPrivateFieldGet(this, _MessageStream_ended, "f");
+      }
+      get errored() {
+        return __classPrivateFieldGet(this, _MessageStream_errored, "f");
+      }
+      get aborted() {
+        return __classPrivateFieldGet(this, _MessageStream_aborted, "f");
+      }
+      abort() {
+        this.controller.abort();
+      }
+      /**
+       * Adds the listener function to the end of the listeners array for the event.
+       * No checks are made to see if the listener has already been added. Multiple calls passing
+       * the same combination of event and listener will result in the listener being added, and
+       * called, multiple times.
+       * @returns this MessageStream, so that calls can be chained
+       */
+      on(event, listener) {
+        const listeners = __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] = []);
+        listeners.push({ listener });
+        return this;
+      }
+      /**
+       * Removes the specified listener from the listener array for the event.
+       * off() will remove, at most, one instance of a listener from the listener array. If any single
+       * listener has been added multiple times to the listener array for the specified event, then
+       * off() must be called multiple times to remove each instance.
+       * @returns this MessageStream, so that calls can be chained
+       */
+      off(event, listener) {
+        const listeners = __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event];
+        if (!listeners)
+          return this;
+        const index = listeners.findIndex((l) => l.listener === listener);
+        if (index >= 0)
+          listeners.splice(index, 1);
+        return this;
+      }
+      /**
+       * Adds a one-time listener function for the event. The next time the event is triggered,
+       * this listener is removed and then invoked.
+       * @returns this MessageStream, so that calls can be chained
+       */
+      once(event, listener) {
+        const listeners = __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] = []);
+        listeners.push({ listener, once: true });
+        return this;
+      }
+      /**
+       * This is similar to `.once()`, but returns a Promise that resolves the next time
+       * the event is triggered, instead of calling a listener callback.
+       * @returns a Promise that resolves the next time given event is triggered,
+       * or rejects if an error is emitted.  (If you request the 'error' event,
+       * returns a promise that resolves with the error).
+       *
+       * Example:
+       *
+       *   const message = await stream.emitted('message') // rejects if the stream errors
+       */
+      emitted(event) {
+        return new Promise((resolve3, reject) => {
+          __classPrivateFieldSet(this, _MessageStream_catchingPromiseCreated, true, "f");
+          if (event !== "error")
+            this.once("error", reject);
+          this.once(event, resolve3);
+        });
+      }
+      async done() {
+        __classPrivateFieldSet(this, _MessageStream_catchingPromiseCreated, true, "f");
+        await __classPrivateFieldGet(this, _MessageStream_endPromise, "f");
+      }
+      get currentMessage() {
+        return __classPrivateFieldGet(this, _MessageStream_currentMessageSnapshot, "f");
+      }
+      /**
+       * @returns a promise that resolves with the the final assistant Message response,
+       * or rejects if an error occurred or the stream ended prematurely without producing a Message.
+       */
+      async finalMessage() {
+        await this.done();
+        return __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_getFinalMessage).call(this);
+      }
+      /**
+       * @returns a promise that resolves with the the final assistant Message's text response, concatenated
+       * together if there are more than one text blocks.
+       * Rejects if an error occurred or the stream ended prematurely without producing a Message.
+       */
+      async finalText() {
+        await this.done();
+        return __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_getFinalText).call(this);
+      }
+      _emit(event, ...args) {
+        if (__classPrivateFieldGet(this, _MessageStream_ended, "f"))
+          return;
+        if (event === "end") {
+          __classPrivateFieldSet(this, _MessageStream_ended, true, "f");
+          __classPrivateFieldGet(this, _MessageStream_resolveEndPromise, "f").call(this);
+        }
+        const listeners = __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event];
+        if (listeners) {
+          __classPrivateFieldGet(this, _MessageStream_listeners, "f")[event] = listeners.filter((l) => !l.once);
+          listeners.forEach(({ listener }) => listener(...args));
+        }
+        if (event === "abort") {
+          const error2 = args[0];
+          if (!__classPrivateFieldGet(this, _MessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
+            Promise.reject(error2);
+          }
+          __classPrivateFieldGet(this, _MessageStream_rejectConnectedPromise, "f").call(this, error2);
+          __classPrivateFieldGet(this, _MessageStream_rejectEndPromise, "f").call(this, error2);
+          this._emit("end");
+          return;
+        }
+        if (event === "error") {
+          const error2 = args[0];
+          if (!__classPrivateFieldGet(this, _MessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
+            Promise.reject(error2);
+          }
+          __classPrivateFieldGet(this, _MessageStream_rejectConnectedPromise, "f").call(this, error2);
+          __classPrivateFieldGet(this, _MessageStream_rejectEndPromise, "f").call(this, error2);
+          this._emit("end");
+        }
+      }
+      _emitFinal() {
+        const finalMessage = this.receivedMessages.at(-1);
+        if (finalMessage) {
+          this._emit("finalMessage", __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_getFinalMessage).call(this));
+        }
+      }
+      async _fromReadableStream(readableStream, options) {
+        const signal = options?.signal;
+        let abortHandler;
+        if (signal) {
+          if (signal.aborted)
+            this.controller.abort();
+          abortHandler = this.controller.abort.bind(this.controller);
+          signal.addEventListener("abort", abortHandler);
+        }
+        try {
+          __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_beginRequest).call(this);
+          this._connected(null);
+          const stream3 = Stream2.fromReadableStream(readableStream, this.controller);
+          for await (const event of stream3) {
+            __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_addStreamEvent).call(this, event);
+          }
+          if (stream3.controller.signal?.aborted) {
+            throw new APIUserAbortError();
+          }
+          __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_endRequest).call(this);
+        } finally {
+          if (signal && abortHandler) {
+            signal.removeEventListener("abort", abortHandler);
+          }
+        }
+      }
+      [(_MessageStream_currentMessageSnapshot = /* @__PURE__ */ new WeakMap(), _MessageStream_connectedPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_resolveConnectedPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_rejectConnectedPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_endPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_resolveEndPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_rejectEndPromise = /* @__PURE__ */ new WeakMap(), _MessageStream_listeners = /* @__PURE__ */ new WeakMap(), _MessageStream_ended = /* @__PURE__ */ new WeakMap(), _MessageStream_errored = /* @__PURE__ */ new WeakMap(), _MessageStream_aborted = /* @__PURE__ */ new WeakMap(), _MessageStream_catchingPromiseCreated = /* @__PURE__ */ new WeakMap(), _MessageStream_response = /* @__PURE__ */ new WeakMap(), _MessageStream_request_id = /* @__PURE__ */ new WeakMap(), _MessageStream_handleError = /* @__PURE__ */ new WeakMap(), _MessageStream_instances = /* @__PURE__ */ new WeakSet(), _MessageStream_getFinalMessage = function _MessageStream_getFinalMessage2() {
+        if (this.receivedMessages.length === 0) {
+          throw new AnthropicError("stream ended without producing a Message with role=assistant");
+        }
+        return this.receivedMessages.at(-1);
+      }, _MessageStream_getFinalText = function _MessageStream_getFinalText2() {
+        if (this.receivedMessages.length === 0) {
+          throw new AnthropicError("stream ended without producing a Message with role=assistant");
+        }
+        const textBlocks = this.receivedMessages.at(-1).content.filter((block) => block.type === "text").map((block) => block.text);
+        if (textBlocks.length === 0) {
+          throw new AnthropicError("stream ended without producing a content block with type=text");
+        }
+        return textBlocks.join(" ");
+      }, _MessageStream_beginRequest = function _MessageStream_beginRequest2() {
+        if (this.ended)
+          return;
+        __classPrivateFieldSet(this, _MessageStream_currentMessageSnapshot, void 0, "f");
+      }, _MessageStream_addStreamEvent = function _MessageStream_addStreamEvent2(event) {
+        if (this.ended)
+          return;
+        const messageSnapshot = __classPrivateFieldGet(this, _MessageStream_instances, "m", _MessageStream_accumulateMessage).call(this, event);
+        this._emit("streamEvent", event, messageSnapshot);
+        switch (event.type) {
+          case "content_block_delta": {
+            const content = messageSnapshot.content.at(-1);
+            switch (event.delta.type) {
+              case "text_delta": {
+                if (content.type === "text") {
+                  this._emit("text", event.delta.text, content.text || "");
+                }
+                break;
+              }
+              case "citations_delta": {
+                if (content.type === "text") {
+                  this._emit("citation", event.delta.citation, content.citations ?? []);
+                }
+                break;
+              }
+              case "input_json_delta": {
+                if (tracksToolInput2(content) && content.input) {
+                  this._emit("inputJson", event.delta.partial_json, content.input);
+                }
+                break;
+              }
+              case "thinking_delta": {
+                if (content.type === "thinking") {
+                  this._emit("thinking", event.delta.thinking, content.thinking);
+                }
+                break;
+              }
+              case "signature_delta": {
+                if (content.type === "thinking") {
+                  this._emit("signature", content.signature);
+                }
+                break;
+              }
+              default:
+                checkNever2(event.delta);
+            }
+            break;
+          }
+          case "message_stop": {
+            this._addMessageParam(messageSnapshot);
+            this._addMessage(messageSnapshot, true);
+            break;
+          }
+          case "content_block_stop": {
+            this._emit("contentBlock", messageSnapshot.content.at(-1));
+            break;
+          }
+          case "message_start": {
+            __classPrivateFieldSet(this, _MessageStream_currentMessageSnapshot, messageSnapshot, "f");
+            break;
+          }
+          case "content_block_start":
+          case "message_delta":
+            break;
+        }
+      }, _MessageStream_endRequest = function _MessageStream_endRequest2() {
+        if (this.ended) {
+          throw new AnthropicError(`stream has ended, this shouldn't happen`);
+        }
+        const snapshot = __classPrivateFieldGet(this, _MessageStream_currentMessageSnapshot, "f");
+        if (!snapshot) {
+          throw new AnthropicError(`request ended without sending any chunks`);
+        }
+        __classPrivateFieldSet(this, _MessageStream_currentMessageSnapshot, void 0, "f");
+        return snapshot;
+      }, _MessageStream_accumulateMessage = function _MessageStream_accumulateMessage2(event) {
+        let snapshot = __classPrivateFieldGet(this, _MessageStream_currentMessageSnapshot, "f");
+        if (event.type === "message_start") {
+          if (snapshot) {
+            throw new AnthropicError(`Unexpected event order, got ${event.type} before receiving "message_stop"`);
+          }
+          return event.message;
+        }
+        if (!snapshot) {
+          throw new AnthropicError(`Unexpected event order, got ${event.type} before "message_start"`);
+        }
+        switch (event.type) {
+          case "message_stop":
+            return snapshot;
+          case "message_delta":
+            snapshot.stop_reason = event.delta.stop_reason;
+            snapshot.stop_sequence = event.delta.stop_sequence;
+            snapshot.usage.output_tokens = event.usage.output_tokens;
+            if (event.usage.input_tokens != null) {
+              snapshot.usage.input_tokens = event.usage.input_tokens;
+            }
+            if (event.usage.cache_creation_input_tokens != null) {
+              snapshot.usage.cache_creation_input_tokens = event.usage.cache_creation_input_tokens;
+            }
+            if (event.usage.cache_read_input_tokens != null) {
+              snapshot.usage.cache_read_input_tokens = event.usage.cache_read_input_tokens;
+            }
+            if (event.usage.server_tool_use != null) {
+              snapshot.usage.server_tool_use = event.usage.server_tool_use;
+            }
+            return snapshot;
+          case "content_block_start":
+            snapshot.content.push({ ...event.content_block });
+            return snapshot;
+          case "content_block_delta": {
+            const snapshotContent = snapshot.content.at(event.index);
+            switch (event.delta.type) {
+              case "text_delta": {
+                if (snapshotContent?.type === "text") {
+                  snapshot.content[event.index] = {
+                    ...snapshotContent,
+                    text: (snapshotContent.text || "") + event.delta.text
+                  };
+                }
+                break;
+              }
+              case "citations_delta": {
+                if (snapshotContent?.type === "text") {
+                  snapshot.content[event.index] = {
+                    ...snapshotContent,
+                    citations: [...snapshotContent.citations ?? [], event.delta.citation]
+                  };
+                }
+                break;
+              }
+              case "input_json_delta": {
+                if (snapshotContent && tracksToolInput2(snapshotContent)) {
+                  let jsonBuf = snapshotContent[JSON_BUF_PROPERTY2] || "";
+                  jsonBuf += event.delta.partial_json;
+                  const newContent = { ...snapshotContent };
+                  Object.defineProperty(newContent, JSON_BUF_PROPERTY2, {
+                    value: jsonBuf,
+                    enumerable: false,
+                    writable: true
+                  });
+                  if (jsonBuf) {
+                    newContent.input = partialParse(jsonBuf);
+                  }
+                  snapshot.content[event.index] = newContent;
+                }
+                break;
+              }
+              case "thinking_delta": {
+                if (snapshotContent?.type === "thinking") {
+                  snapshot.content[event.index] = {
+                    ...snapshotContent,
+                    thinking: snapshotContent.thinking + event.delta.thinking
+                  };
+                }
+                break;
+              }
+              case "signature_delta": {
+                if (snapshotContent?.type === "thinking") {
+                  snapshot.content[event.index] = {
+                    ...snapshotContent,
+                    signature: event.delta.signature
+                  };
+                }
+                break;
+              }
+              default:
+                checkNever2(event.delta);
+            }
+            return snapshot;
+          }
+          case "content_block_stop":
+            return snapshot;
+        }
+      }, Symbol.asyncIterator)]() {
+        const pushQueue = [];
+        const readQueue = [];
+        let done = false;
+        this.on("streamEvent", (event) => {
+          const reader = readQueue.shift();
+          if (reader) {
+            reader.resolve(event);
+          } else {
+            pushQueue.push(event);
+          }
+        });
+        this.on("end", () => {
+          done = true;
+          for (const reader of readQueue) {
+            reader.resolve(void 0);
+          }
+          readQueue.length = 0;
+        });
+        this.on("abort", (err) => {
+          done = true;
+          for (const reader of readQueue) {
+            reader.reject(err);
+          }
+          readQueue.length = 0;
+        });
+        this.on("error", (err) => {
+          done = true;
+          for (const reader of readQueue) {
+            reader.reject(err);
+          }
+          readQueue.length = 0;
+        });
+        return {
+          next: async () => {
+            if (!pushQueue.length) {
+              if (done) {
+                return { value: void 0, done: true };
+              }
+              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+            }
+            const chunk2 = pushQueue.shift();
+            return { value: chunk2, done: false };
+          },
+          return: async () => {
+            this.abort();
+            return { value: void 0, done: true };
+          }
+        };
+      }
+      toReadableStream() {
+        const stream3 = new Stream2(this[Symbol.asyncIterator].bind(this), this.controller);
+        return stream3.toReadableStream();
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/messages/batches.mjs
+var Batches2;
+var init_batches2 = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/messages/batches.mjs"() {
+    init_resource();
+    init_pagination();
+    init_headers();
+    init_jsonl();
+    init_error2();
+    init_path();
+    Batches2 = class extends APIResource {
+      /**
+       * Send a batch of Message creation requests.
+       *
+       * The Message Batches API can be used to process multiple Messages API requests at
+       * once. Once a Message Batch is created, it begins processing immediately. Batches
+       * can take up to 24 hours to complete.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const messageBatch = await client.messages.batches.create({
+       *   requests: [
+       *     {
+       *       custom_id: 'my-custom-id-1',
+       *       params: {
+       *         max_tokens: 1024,
+       *         messages: [
+       *           { content: 'Hello, world', role: 'user' },
+       *         ],
+       *         model: 'claude-sonnet-4-5-20250929',
+       *       },
+       *     },
+       *   ],
+       * });
+       * ```
+       */
+      create(body, options) {
+        return this._client.post("/v1/messages/batches", { body, ...options });
+      }
+      /**
+       * This endpoint is idempotent and can be used to poll for Message Batch
+       * completion. To access the results of a Message Batch, make a request to the
+       * `results_url` field in the response.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const messageBatch = await client.messages.batches.retrieve(
+       *   'message_batch_id',
+       * );
+       * ```
+       */
+      retrieve(messageBatchID, options) {
+        return this._client.get(path7`/v1/messages/batches/${messageBatchID}`, options);
+      }
+      /**
+       * List all Message Batches within a Workspace. Most recently created batches are
+       * returned first.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * // Automatically fetches more pages as needed.
+       * for await (const messageBatch of client.messages.batches.list()) {
+       *   // ...
+       * }
+       * ```
+       */
+      list(query = {}, options) {
+        return this._client.getAPIList("/v1/messages/batches", Page, { query, ...options });
+      }
+      /**
+       * Delete a Message Batch.
+       *
+       * Message Batches can only be deleted once they've finished processing. If you'd
+       * like to delete an in-progress batch, you must first cancel it.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const deletedMessageBatch =
+       *   await client.messages.batches.delete('message_batch_id');
+       * ```
+       */
+      delete(messageBatchID, options) {
+        return this._client.delete(path7`/v1/messages/batches/${messageBatchID}`, options);
+      }
+      /**
+       * Batches may be canceled any time before processing ends. Once cancellation is
+       * initiated, the batch enters a `canceling` state, at which time the system may
+       * complete any in-progress, non-interruptible requests before finalizing
+       * cancellation.
+       *
+       * The number of canceled requests is specified in `request_counts`. To determine
+       * which requests were canceled, check the individual results within the batch.
+       * Note that cancellation may not result in any canceled requests if they were
+       * non-interruptible.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const messageBatch = await client.messages.batches.cancel(
+       *   'message_batch_id',
+       * );
+       * ```
+       */
+      cancel(messageBatchID, options) {
+        return this._client.post(path7`/v1/messages/batches/${messageBatchID}/cancel`, options);
+      }
+      /**
+       * Streams the results of a Message Batch as a `.jsonl` file.
+       *
+       * Each line in the file is a JSON object containing the result of a single request
+       * in the Message Batch. Results are not guaranteed to be in the same order as
+       * requests. Use the `custom_id` field to match results to requests.
+       *
+       * Learn more about the Message Batches API in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+       *
+       * @example
+       * ```ts
+       * const messageBatchIndividualResponse =
+       *   await client.messages.batches.results('message_batch_id');
+       * ```
+       */
+      async results(messageBatchID, options) {
+        const batch = await this.retrieve(messageBatchID);
+        if (!batch.results_url) {
+          throw new AnthropicError(`No batch \`results_url\`; Has it finished processing? ${batch.processing_status} - ${batch.id}`);
+        }
+        return this._client.get(batch.results_url, {
+          ...options,
+          headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
+          stream: true,
+          __binaryResponse: true
+        })._thenUnwrap((_, props) => JSONLDecoder.fromResponse(props.response, props.controller));
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/messages/messages.mjs
+var Messages2, DEPRECATED_MODELS2;
+var init_messages2 = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/messages/messages.mjs"() {
+    init_resource();
+    init_MessageStream();
+    init_batches2();
+    init_batches2();
+    init_constants();
+    Messages2 = class extends APIResource {
+      constructor() {
+        super(...arguments);
+        this.batches = new Batches2(this._client);
+      }
+      create(body, options) {
+        if (body.model in DEPRECATED_MODELS2) {
+          console.warn(`The model '${body.model}' is deprecated and will reach end-of-life on ${DEPRECATED_MODELS2[body.model]}
+Please migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.`);
+        }
+        let timeout = this._client._options.timeout;
+        if (!body.stream && timeout == null) {
+          const maxNonstreamingTokens = MODEL_NONSTREAMING_TOKENS[body.model] ?? void 0;
+          timeout = this._client.calculateNonstreamingTimeout(body.max_tokens, maxNonstreamingTokens);
+        }
+        return this._client.post("/v1/messages", {
+          body,
+          timeout: timeout ?? 6e5,
+          ...options,
+          stream: body.stream ?? false
+        });
+      }
+      /**
+       * Create a Message stream
+       */
+      stream(body, options) {
+        return MessageStream.createMessage(this, body, options);
+      }
+      /**
+       * Count the number of tokens in a Message.
+       *
+       * The Token Count API can be used to count the number of tokens in a Message,
+       * including tools, images, and documents, without creating it.
+       *
+       * Learn more about token counting in our
+       * [user guide](https://docs.claude.com/en/docs/build-with-claude/token-counting)
+       *
+       * @example
+       * ```ts
+       * const messageTokensCount =
+       *   await client.messages.countTokens({
+       *     messages: [{ content: 'string', role: 'user' }],
+       *     model: 'claude-opus-4-5-20251101',
+       *   });
+       * ```
+       */
+      countTokens(body, options) {
+        return this._client.post("/v1/messages/count_tokens", { body, ...options });
+      }
+    };
+    DEPRECATED_MODELS2 = {
+      "claude-1.3": "November 6th, 2024",
+      "claude-1.3-100k": "November 6th, 2024",
+      "claude-instant-1.1": "November 6th, 2024",
+      "claude-instant-1.1-100k": "November 6th, 2024",
+      "claude-instant-1.2": "November 6th, 2024",
+      "claude-3-sonnet-20240229": "July 21st, 2025",
+      "claude-3-opus-20240229": "January 5th, 2026",
+      "claude-2.1": "July 21st, 2025",
+      "claude-2.0": "July 21st, 2025",
+      "claude-3-7-sonnet-latest": "February 19th, 2026",
+      "claude-3-7-sonnet-20250219": "February 19th, 2026"
+    };
+    Messages2.Batches = Batches2;
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/models.mjs
+var Models2;
+var init_models2 = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/models.mjs"() {
+    init_resource();
+    init_pagination();
+    init_headers();
+    init_path();
+    Models2 = class extends APIResource {
+      /**
+       * Get a specific model.
+       *
+       * The Models API response can be used to determine information about a specific
+       * model or resolve a model alias to a model ID.
+       */
+      retrieve(modelID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path7`/v1/models/${modelID}`, {
+          ...options,
+          headers: buildHeaders([
+            { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+            options?.headers
+          ])
+        });
+      }
+      /**
+       * List available models.
+       *
+       * The Models API response can be used to determine which models are available for
+       * use in the API. More recently released models are listed first.
+       */
+      list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList("/v1/models", Page, {
+          query,
+          ...options,
+          headers: buildHeaders([
+            { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
+            options?.headers
+          ])
+        });
+      }
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/resources/index.mjs
+var init_resources = __esm({
+  "node_modules/@anthropic-ai/sdk/resources/index.mjs"() {
+    init_shared();
+    init_beta();
+    init_completions();
+    init_messages2();
+    init_models2();
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
+var readEnv;
+var init_env = __esm({
+  "node_modules/@anthropic-ai/sdk/internal/utils/env.mjs"() {
+    readEnv = (env) => {
+      if (typeof globalThis.process !== "undefined") {
+        return globalThis.process.env?.[env]?.trim() ?? void 0;
+      }
+      if (typeof globalThis.Deno !== "undefined") {
+        return globalThis.Deno.env?.get?.(env)?.trim();
+      }
+      return void 0;
+    };
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/client.mjs
+var _BaseAnthropic_instances, _a, _BaseAnthropic_encoder, _BaseAnthropic_baseURLOverridden, HUMAN_PROMPT, AI_PROMPT, BaseAnthropic, Anthropic;
+var init_client = __esm({
+  "node_modules/@anthropic-ai/sdk/client.mjs"() {
+    init_tslib();
+    init_uuid();
+    init_values();
+    init_sleep();
+    init_errors2();
+    init_detect_platform();
+    init_shims();
+    init_request_options();
+    init_version();
+    init_error();
+    init_pagination();
+    init_uploads2();
+    init_resources();
+    init_api_promise();
+    init_completions();
+    init_models2();
+    init_beta();
+    init_messages2();
+    init_detect_platform();
+    init_headers();
+    init_env();
+    init_log();
+    init_values();
+    HUMAN_PROMPT = "\\n\\nHuman:";
+    AI_PROMPT = "\\n\\nAssistant:";
+    BaseAnthropic = class {
+      /**
+       * API Client for interfacing with the Anthropic API.
+       *
+       * @param {string | null | undefined} [opts.apiKey=process.env['ANTHROPIC_API_KEY'] ?? null]
+       * @param {string | null | undefined} [opts.authToken=process.env['ANTHROPIC_AUTH_TOKEN'] ?? null]
+       * @param {string} [opts.baseURL=process.env['ANTHROPIC_BASE_URL'] ?? https://api.anthropic.com] - Override the default base URL for the API.
+       * @param {number} [opts.timeout=10 minutes] - The maximum amount of time (in milliseconds) the client will wait for a response before timing out.
+       * @param {MergedRequestInit} [opts.fetchOptions] - Additional `RequestInit` options to be passed to `fetch` calls.
+       * @param {Fetch} [opts.fetch] - Specify a custom `fetch` function implementation.
+       * @param {number} [opts.maxRetries=2] - The maximum number of times the client will retry a request.
+       * @param {HeadersLike} opts.defaultHeaders - Default headers to include with every request to the API.
+       * @param {Record<string, string | undefined>} opts.defaultQuery - Default query parameters to include with every request to the API.
+       * @param {boolean} [opts.dangerouslyAllowBrowser=false] - By default, client-side use of this library is not allowed, as it risks exposing your secret API credentials to attackers.
+       */
+      constructor({ baseURL = readEnv("ANTHROPIC_BASE_URL"), apiKey = readEnv("ANTHROPIC_API_KEY") ?? null, authToken = readEnv("ANTHROPIC_AUTH_TOKEN") ?? null, ...opts } = {}) {
+        _BaseAnthropic_instances.add(this);
+        _BaseAnthropic_encoder.set(this, void 0);
+        const options = {
+          apiKey,
+          authToken,
+          ...opts,
+          baseURL: baseURL || `https://api.anthropic.com`
+        };
+        if (!options.dangerouslyAllowBrowser && isRunningInBrowser()) {
+          throw new AnthropicError("It looks like you're running in a browser-like environment.\n\nThis is disabled by default, as it risks exposing your secret API credentials to attackers.\nIf you understand the risks and have appropriate mitigations in place,\nyou can set the `dangerouslyAllowBrowser` option to `true`, e.g.,\n\nnew Anthropic({ apiKey, dangerouslyAllowBrowser: true });\n");
+        }
+        this.baseURL = options.baseURL;
+        this.timeout = options.timeout ?? _a.DEFAULT_TIMEOUT;
+        this.logger = options.logger ?? console;
+        const defaultLogLevel = "warn";
+        this.logLevel = defaultLogLevel;
+        this.logLevel = parseLogLevel(options.logLevel, "ClientOptions.logLevel", this) ?? parseLogLevel(readEnv("ANTHROPIC_LOG"), "process.env['ANTHROPIC_LOG']", this) ?? defaultLogLevel;
+        this.fetchOptions = options.fetchOptions;
+        this.maxRetries = options.maxRetries ?? 2;
+        this.fetch = options.fetch ?? getDefaultFetch();
+        __classPrivateFieldSet(this, _BaseAnthropic_encoder, FallbackEncoder, "f");
+        this._options = options;
+        this.apiKey = typeof apiKey === "string" ? apiKey : null;
+        this.authToken = authToken;
+      }
+      /**
+       * Create a new client instance re-using the same options given to the current client with optional overriding.
+       */
+      withOptions(options) {
+        const client = new this.constructor({
+          ...this._options,
+          baseURL: this.baseURL,
+          maxRetries: this.maxRetries,
+          timeout: this.timeout,
+          logger: this.logger,
+          logLevel: this.logLevel,
+          fetch: this.fetch,
+          fetchOptions: this.fetchOptions,
+          apiKey: this.apiKey,
+          authToken: this.authToken,
+          ...options
+        });
+        return client;
+      }
+      defaultQuery() {
+        return this._options.defaultQuery;
+      }
+      validateHeaders({ values, nulls }) {
+        if (values.get("x-api-key") || values.get("authorization")) {
+          return;
+        }
+        if (this.apiKey && values.get("x-api-key")) {
+          return;
+        }
+        if (nulls.has("x-api-key")) {
+          return;
+        }
+        if (this.authToken && values.get("authorization")) {
+          return;
+        }
+        if (nulls.has("authorization")) {
+          return;
+        }
+        throw new Error('Could not resolve authentication method. Expected either apiKey or authToken to be set. Or for one of the "X-Api-Key" or "Authorization" headers to be explicitly omitted');
+      }
+      async authHeaders(opts) {
+        return buildHeaders([await this.apiKeyAuth(opts), await this.bearerAuth(opts)]);
+      }
+      async apiKeyAuth(opts) {
+        if (this.apiKey == null) {
+          return void 0;
+        }
+        return buildHeaders([{ "X-Api-Key": this.apiKey }]);
+      }
+      async bearerAuth(opts) {
+        if (this.authToken == null) {
+          return void 0;
+        }
+        return buildHeaders([{ Authorization: `Bearer ${this.authToken}` }]);
+      }
+      /**
+       * Basic re-implementation of `qs.stringify` for primitive types.
+       */
+      stringifyQuery(query) {
+        return Object.entries(query).filter(([_, value]) => typeof value !== "undefined").map(([key, value]) => {
+          if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+            return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+          }
+          if (value === null) {
+            return `${encodeURIComponent(key)}=`;
+          }
+          throw new AnthropicError(`Cannot stringify type ${typeof value}; Expected string, number, boolean, or null. If you need to pass nested query parameters, you can manually encode them, e.g. { query: { 'foo[key1]': value1, 'foo[key2]': value2 } }, and please open a GitHub issue requesting better support for your use case.`);
+        }).join("&");
+      }
+      getUserAgent() {
+        return `${this.constructor.name}/JS ${VERSION}`;
+      }
+      defaultIdempotencyKey() {
+        return `stainless-node-retry-${uuid4()}`;
+      }
+      makeStatusError(status, error2, message, headers) {
+        return APIError.generate(status, error2, message, headers);
+      }
+      buildURL(path24, query, defaultBaseURL) {
+        const baseURL = !__classPrivateFieldGet(this, _BaseAnthropic_instances, "m", _BaseAnthropic_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
+        const url = isAbsoluteURL(path24) ? new URL(path24) : new URL(baseURL + (baseURL.endsWith("/") && path24.startsWith("/") ? path24.slice(1) : path24));
+        const defaultQuery = this.defaultQuery();
+        if (!isEmptyObj(defaultQuery)) {
+          query = { ...defaultQuery, ...query };
+        }
+        if (typeof query === "object" && query && !Array.isArray(query)) {
+          url.search = this.stringifyQuery(query);
+        }
+        return url.toString();
+      }
+      _calculateNonstreamingTimeout(maxTokens) {
+        const defaultTimeout = 10 * 60;
+        const expectedTimeout = 60 * 60 * maxTokens / 128e3;
+        if (expectedTimeout > defaultTimeout) {
+          throw new AnthropicError("Streaming is required for operations that may take longer than 10 minutes. See https://github.com/anthropics/anthropic-sdk-typescript#streaming-responses for more details");
+        }
+        return defaultTimeout * 1e3;
+      }
+      /**
+       * Used as a callback for mutating the given `FinalRequestOptions` object.
+       */
+      async prepareOptions(options) {
+      }
+      /**
+       * Used as a callback for mutating the given `RequestInit` object.
+       *
+       * This is useful for cases where you want to add certain headers based off of
+       * the request properties, e.g. `method` or `url`.
+       */
+      async prepareRequest(request, { url, options }) {
+      }
+      get(path24, opts) {
+        return this.methodRequest("get", path24, opts);
+      }
+      post(path24, opts) {
+        return this.methodRequest("post", path24, opts);
+      }
+      patch(path24, opts) {
+        return this.methodRequest("patch", path24, opts);
+      }
+      put(path24, opts) {
+        return this.methodRequest("put", path24, opts);
+      }
+      delete(path24, opts) {
+        return this.methodRequest("delete", path24, opts);
+      }
+      methodRequest(method, path24, opts) {
+        return this.request(Promise.resolve(opts).then((opts2) => {
+          return { method, path: path24, ...opts2 };
+        }));
+      }
+      request(options, remainingRetries = null) {
+        return new APIPromise(this, this.makeRequest(options, remainingRetries, void 0));
+      }
+      async makeRequest(optionsInput, retriesRemaining, retryOfRequestLogID) {
+        const options = await optionsInput;
+        const maxRetries = options.maxRetries ?? this.maxRetries;
+        if (retriesRemaining == null) {
+          retriesRemaining = maxRetries;
+        }
+        await this.prepareOptions(options);
+        const { req, url, timeout } = await this.buildRequest(options, {
+          retryCount: maxRetries - retriesRemaining
+        });
+        await this.prepareRequest(req, { url, options });
+        const requestLogID = "log_" + (Math.random() * (1 << 24) | 0).toString(16).padStart(6, "0");
+        const retryLogStr = retryOfRequestLogID === void 0 ? "" : `, retryOf: ${retryOfRequestLogID}`;
+        const startTime = Date.now();
+        loggerFor(this).debug(`[${requestLogID}] sending request`, formatRequestDetails({
+          retryOfRequestLogID,
+          method: options.method,
+          url,
+          options,
+          headers: req.headers
+        }));
+        if (options.signal?.aborted) {
+          throw new APIUserAbortError();
+        }
+        const controller = new AbortController();
+        const response = await this.fetchWithTimeout(url, req, timeout, controller).catch(castToError);
+        const headersTime = Date.now();
+        if (response instanceof globalThis.Error) {
+          const retryMessage = `retrying, ${retriesRemaining} attempts remaining`;
+          if (options.signal?.aborted) {
+            throw new APIUserAbortError();
+          }
+          const isTimeout = isAbortError(response) || /timed? ?out/i.test(String(response) + ("cause" in response ? String(response.cause) : ""));
+          if (retriesRemaining) {
+            loggerFor(this).info(`[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} - ${retryMessage}`);
+            loggerFor(this).debug(`[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} (${retryMessage})`, formatRequestDetails({
+              retryOfRequestLogID,
+              url,
+              durationMs: headersTime - startTime,
+              message: response.message
+            }));
+            return this.retryRequest(options, retriesRemaining, retryOfRequestLogID ?? requestLogID);
+          }
+          loggerFor(this).info(`[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} - error; no more retries left`);
+          loggerFor(this).debug(`[${requestLogID}] connection ${isTimeout ? "timed out" : "failed"} (error; no more retries left)`, formatRequestDetails({
+            retryOfRequestLogID,
+            url,
+            durationMs: headersTime - startTime,
+            message: response.message
+          }));
+          if (isTimeout) {
+            throw new APIConnectionTimeoutError();
+          }
+          throw new APIConnectionError({ cause: response });
+        }
+        const specialHeaders = [...response.headers.entries()].filter(([name]) => name === "request-id").map(([name, value]) => ", " + name + ": " + JSON.stringify(value)).join("");
+        const responseInfo = `[${requestLogID}${retryLogStr}${specialHeaders}] ${req.method} ${url} ${response.ok ? "succeeded" : "failed"} with status ${response.status} in ${headersTime - startTime}ms`;
+        if (!response.ok) {
+          const shouldRetry = await this.shouldRetry(response);
+          if (retriesRemaining && shouldRetry) {
+            const retryMessage2 = `retrying, ${retriesRemaining} attempts remaining`;
+            await CancelReadableStream(response.body);
+            loggerFor(this).info(`${responseInfo} - ${retryMessage2}`);
+            loggerFor(this).debug(`[${requestLogID}] response error (${retryMessage2})`, formatRequestDetails({
+              retryOfRequestLogID,
+              url: response.url,
+              status: response.status,
+              headers: response.headers,
+              durationMs: headersTime - startTime
+            }));
+            return this.retryRequest(options, retriesRemaining, retryOfRequestLogID ?? requestLogID, response.headers);
+          }
+          const retryMessage = shouldRetry ? `error; no more retries left` : `error; not retryable`;
+          loggerFor(this).info(`${responseInfo} - ${retryMessage}`);
+          const errText = await response.text().catch((err2) => castToError(err2).message);
+          const errJSON = safeJSON(errText);
+          const errMessage = errJSON ? void 0 : errText;
+          loggerFor(this).debug(`[${requestLogID}] response error (${retryMessage})`, formatRequestDetails({
+            retryOfRequestLogID,
+            url: response.url,
+            status: response.status,
+            headers: response.headers,
+            message: errMessage,
+            durationMs: Date.now() - startTime
+          }));
+          const err = this.makeStatusError(response.status, errJSON, errMessage, response.headers);
+          throw err;
+        }
+        loggerFor(this).info(responseInfo);
+        loggerFor(this).debug(`[${requestLogID}] response start`, formatRequestDetails({
+          retryOfRequestLogID,
+          url: response.url,
+          status: response.status,
+          headers: response.headers,
+          durationMs: headersTime - startTime
+        }));
+        return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
+      }
+      getAPIList(path24, Page2, opts) {
+        return this.requestAPIList(Page2, { method: "get", path: path24, ...opts });
+      }
+      requestAPIList(Page2, options) {
+        const request = this.makeRequest(options, null, void 0);
+        return new PagePromise(this, request, Page2);
+      }
+      async fetchWithTimeout(url, init, ms, controller) {
+        const { signal, method, ...options } = init || {};
+        if (signal)
+          signal.addEventListener("abort", () => controller.abort());
+        const timeout = setTimeout(() => controller.abort(), ms);
+        const isReadableBody = globalThis.ReadableStream && options.body instanceof globalThis.ReadableStream || typeof options.body === "object" && options.body !== null && Symbol.asyncIterator in options.body;
+        const fetchOptions = {
+          signal: controller.signal,
+          ...isReadableBody ? { duplex: "half" } : {},
+          method: "GET",
+          ...options
+        };
+        if (method) {
+          fetchOptions.method = method.toUpperCase();
+        }
+        try {
+          return await this.fetch.call(void 0, url, fetchOptions);
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+      async shouldRetry(response) {
+        const shouldRetryHeader = response.headers.get("x-should-retry");
+        if (shouldRetryHeader === "true")
+          return true;
+        if (shouldRetryHeader === "false")
+          return false;
+        if (response.status === 408)
+          return true;
+        if (response.status === 409)
+          return true;
+        if (response.status === 429)
+          return true;
+        if (response.status >= 500)
+          return true;
+        return false;
+      }
+      async retryRequest(options, retriesRemaining, requestLogID, responseHeaders) {
+        let timeoutMillis;
+        const retryAfterMillisHeader = responseHeaders?.get("retry-after-ms");
+        if (retryAfterMillisHeader) {
+          const timeoutMs = parseFloat(retryAfterMillisHeader);
+          if (!Number.isNaN(timeoutMs)) {
+            timeoutMillis = timeoutMs;
+          }
+        }
+        const retryAfterHeader = responseHeaders?.get("retry-after");
+        if (retryAfterHeader && !timeoutMillis) {
+          const timeoutSeconds = parseFloat(retryAfterHeader);
+          if (!Number.isNaN(timeoutSeconds)) {
+            timeoutMillis = timeoutSeconds * 1e3;
+          } else {
+            timeoutMillis = Date.parse(retryAfterHeader) - Date.now();
+          }
+        }
+        if (!(timeoutMillis && 0 <= timeoutMillis && timeoutMillis < 60 * 1e3)) {
+          const maxRetries = options.maxRetries ?? this.maxRetries;
+          timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
+        }
+        await sleep(timeoutMillis);
+        return this.makeRequest(options, retriesRemaining - 1, requestLogID);
+      }
+      calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries) {
+        const initialRetryDelay = 0.5;
+        const maxRetryDelay = 8;
+        const numRetries = maxRetries - retriesRemaining;
+        const sleepSeconds = Math.min(initialRetryDelay * Math.pow(2, numRetries), maxRetryDelay);
+        const jitter = 1 - Math.random() * 0.25;
+        return sleepSeconds * jitter * 1e3;
+      }
+      calculateNonstreamingTimeout(maxTokens, maxNonstreamingTokens) {
+        const maxTime = 60 * 60 * 1e3;
+        const defaultTime = 60 * 10 * 1e3;
+        const expectedTime = maxTime * maxTokens / 128e3;
+        if (expectedTime > defaultTime || maxNonstreamingTokens != null && maxTokens > maxNonstreamingTokens) {
+          throw new AnthropicError("Streaming is required for operations that may take longer than 10 minutes. See https://github.com/anthropics/anthropic-sdk-typescript#long-requests for more details");
+        }
+        return defaultTime;
+      }
+      async buildRequest(inputOptions, { retryCount = 0 } = {}) {
+        const options = { ...inputOptions };
+        const { method, path: path24, query, defaultBaseURL } = options;
+        const url = this.buildURL(path24, query, defaultBaseURL);
+        if ("timeout" in options)
+          validatePositiveInteger("timeout", options.timeout);
+        options.timeout = options.timeout ?? this.timeout;
+        const { bodyHeaders, body } = this.buildBody({ options });
+        const reqHeaders = await this.buildHeaders({ options: inputOptions, method, bodyHeaders, retryCount });
+        const req = {
+          method,
+          headers: reqHeaders,
+          ...options.signal && { signal: options.signal },
+          ...globalThis.ReadableStream && body instanceof globalThis.ReadableStream && { duplex: "half" },
+          ...body && { body },
+          ...this.fetchOptions ?? {},
+          ...options.fetchOptions ?? {}
+        };
+        return { req, url, timeout: options.timeout };
+      }
+      async buildHeaders({ options, method, bodyHeaders, retryCount }) {
+        let idempotencyHeaders = {};
+        if (this.idempotencyHeader && method !== "get") {
+          if (!options.idempotencyKey)
+            options.idempotencyKey = this.defaultIdempotencyKey();
+          idempotencyHeaders[this.idempotencyHeader] = options.idempotencyKey;
+        }
+        const headers = buildHeaders([
+          idempotencyHeaders,
+          {
+            Accept: "application/json",
+            "User-Agent": this.getUserAgent(),
+            "X-Stainless-Retry-Count": String(retryCount),
+            ...options.timeout ? { "X-Stainless-Timeout": String(Math.trunc(options.timeout / 1e3)) } : {},
+            ...getPlatformHeaders(),
+            ...this._options.dangerouslyAllowBrowser ? { "anthropic-dangerous-direct-browser-access": "true" } : void 0,
+            "anthropic-version": "2023-06-01"
+          },
+          await this.authHeaders(options),
+          this._options.defaultHeaders,
+          bodyHeaders,
+          options.headers
+        ]);
+        this.validateHeaders(headers);
+        return headers.values;
+      }
+      buildBody({ options: { body, headers: rawHeaders } }) {
+        if (!body) {
+          return { bodyHeaders: void 0, body: void 0 };
+        }
+        const headers = buildHeaders([rawHeaders]);
+        if (
+          // Pass raw type verbatim
+          ArrayBuffer.isView(body) || body instanceof ArrayBuffer || body instanceof DataView || typeof body === "string" && // Preserve legacy string encoding behavior for now
+          headers.values.has("content-type") || // `Blob` is superset of `File`
+          globalThis.Blob && body instanceof globalThis.Blob || // `FormData` -> `multipart/form-data`
+          body instanceof FormData || // `URLSearchParams` -> `application/x-www-form-urlencoded`
+          body instanceof URLSearchParams || // Send chunked stream (each chunk has own `length`)
+          globalThis.ReadableStream && body instanceof globalThis.ReadableStream
+        ) {
+          return { bodyHeaders: void 0, body };
+        } else if (typeof body === "object" && (Symbol.asyncIterator in body || Symbol.iterator in body && "next" in body && typeof body.next === "function")) {
+          return { bodyHeaders: void 0, body: ReadableStreamFrom(body) };
+        } else {
+          return __classPrivateFieldGet(this, _BaseAnthropic_encoder, "f").call(this, { body, headers });
+        }
+      }
+    };
+    _a = BaseAnthropic, _BaseAnthropic_encoder = /* @__PURE__ */ new WeakMap(), _BaseAnthropic_instances = /* @__PURE__ */ new WeakSet(), _BaseAnthropic_baseURLOverridden = function _BaseAnthropic_baseURLOverridden2() {
+      return this.baseURL !== "https://api.anthropic.com";
+    };
+    BaseAnthropic.Anthropic = _a;
+    BaseAnthropic.HUMAN_PROMPT = HUMAN_PROMPT;
+    BaseAnthropic.AI_PROMPT = AI_PROMPT;
+    BaseAnthropic.DEFAULT_TIMEOUT = 6e5;
+    BaseAnthropic.AnthropicError = AnthropicError;
+    BaseAnthropic.APIError = APIError;
+    BaseAnthropic.APIConnectionError = APIConnectionError;
+    BaseAnthropic.APIConnectionTimeoutError = APIConnectionTimeoutError;
+    BaseAnthropic.APIUserAbortError = APIUserAbortError;
+    BaseAnthropic.NotFoundError = NotFoundError;
+    BaseAnthropic.ConflictError = ConflictError;
+    BaseAnthropic.RateLimitError = RateLimitError;
+    BaseAnthropic.BadRequestError = BadRequestError;
+    BaseAnthropic.AuthenticationError = AuthenticationError;
+    BaseAnthropic.InternalServerError = InternalServerError;
+    BaseAnthropic.PermissionDeniedError = PermissionDeniedError;
+    BaseAnthropic.UnprocessableEntityError = UnprocessableEntityError;
+    BaseAnthropic.toFile = toFile;
+    Anthropic = class extends BaseAnthropic {
+      constructor() {
+        super(...arguments);
+        this.completions = new Completions(this);
+        this.messages = new Messages2(this);
+        this.models = new Models2(this);
+        this.beta = new Beta(this);
+      }
+    };
+    Anthropic.Completions = Completions;
+    Anthropic.Messages = Messages2;
+    Anthropic.Models = Models2;
+    Anthropic.Beta = Beta;
+  }
+});
+
+// node_modules/@anthropic-ai/sdk/index.mjs
+var init_sdk = __esm({
+  "node_modules/@anthropic-ai/sdk/index.mjs"() {
+    init_client();
+    init_uploads2();
+    init_api_promise();
+    init_client();
+    init_pagination();
+    init_error();
+  }
+});
+
+// packages/tiny-brain-core/src/services/api/claude-tools.ts
+var SKILL_TOOLS;
+var init_claude_tools = __esm({
+  "packages/tiny-brain-core/src/services/api/claude-tools.ts"() {
+    "use strict";
+    SKILL_TOOLS = [
+      {
+        name: "read_file",
+        description: "Read the contents of a file at the specified path. Returns the file content as a string.",
+        input_schema: {
+          type: "object",
+          properties: {
+            path: {
+              type: "string",
+              description: "The path to the file to read, relative to the repository root"
+            }
+          },
+          required: ["path"]
+        }
+      },
+      {
+        name: "write_file",
+        description: "Write content to a file at the specified path. Creates parent directories if they do not exist.",
+        input_schema: {
+          type: "object",
+          properties: {
+            path: {
+              type: "string",
+              description: "The path to the file to write, relative to the repository root"
+            },
+            content: {
+              type: "string",
+              description: "The content to write to the file"
+            }
+          },
+          required: ["path", "content"]
+        }
+      },
+      {
+        name: "list_directory",
+        description: "List the contents of a directory. Returns file and directory names.",
+        input_schema: {
+          type: "object",
+          properties: {
+            path: {
+              type: "string",
+              description: "The path to the directory to list, relative to the repository root"
+            },
+            recursive: {
+              type: "boolean",
+              description: "Whether to list contents recursively",
+              default: false
+            }
+          },
+          required: ["path"]
+        }
+      },
+      {
+        name: "execute_bash",
+        description: "Execute a bash command in the repository root. Use for running tests, builds, or other shell operations.",
+        input_schema: {
+          type: "object",
+          properties: {
+            command: {
+              type: "string",
+              description: "The bash command to execute"
+            },
+            timeout: {
+              type: "number",
+              description: "Maximum time in milliseconds to wait for the command to complete",
+              default: 3e4
+            }
+          },
+          required: ["command"]
+        }
+      },
+      {
+        name: "search_files",
+        description: "Search for files matching a glob pattern. Returns matching file paths.",
+        input_schema: {
+          type: "object",
+          properties: {
+            pattern: {
+              type: "string",
+              description: 'Glob pattern to match files (e.g., "**/*.ts", "src/**/*.test.ts")'
+            },
+            path: {
+              type: "string",
+              description: "Directory to search in, relative to repository root. Defaults to repository root."
+            }
+          },
+          required: ["pattern"]
+        }
+      },
+      {
+        name: "plan_sync",
+        description: "Synchronize a PRD plan from markdown files to progress.json. Call this after creating or modifying PRD files.",
+        input_schema: {
+          type: "object",
+          properties: {
+            planId: {
+              type: "string",
+              description: "The ID of the plan/PRD to sync (matches the id field in prd.md frontmatter)"
+            }
+          },
+          required: ["planId"]
+        }
+      }
+    ];
+  }
+});
+
+// packages/tiny-brain-core/src/services/api/claude-client.ts
+var ClaudeClient;
+var init_claude_client = __esm({
+  "packages/tiny-brain-core/src/services/api/claude-client.ts"() {
+    "use strict";
+    init_sdk();
+    init_claude_tools();
+    ClaudeClient = class {
+      client;
+      model;
+      maxIterations;
+      constructor(config2) {
+        this.client = new Anthropic({ apiKey: config2.apiKey });
+        this.model = config2.model ?? "claude-sonnet-4-20250514";
+        this.maxIterations = config2.maxIterations ?? 20;
+      }
+      async invokeSkill(request, callbacks) {
+        const messages = [
+          { role: "user", content: request.userMessage }
+        ];
+        let iterations = 0;
+        try {
+          while (iterations < this.maxIterations) {
+            iterations++;
+            const response = await this.client.messages.create({
+              model: this.model,
+              max_tokens: 4096,
+              system: request.systemPrompt,
+              tools: SKILL_TOOLS,
+              messages
+            });
+            const toolUses = [];
+            for (const block of response.content) {
+              if (block.type === "text") {
+                callbacks.onText(block.text);
+              } else if (block.type === "tool_use") {
+                callbacks.onToolUse(block.name, block.input);
+                toolUses.push({
+                  id: block.id,
+                  name: block.name,
+                  input: block.input
+                });
+              }
+            }
+            if (response.stop_reason === "end_turn") {
+              callbacks.onComplete();
+              return;
+            }
+            if (toolUses.length > 0) {
+              const toolResults = [];
+              for (const tool of toolUses) {
+                const result = await request.toolExecutor.execute(
+                  tool.name,
+                  tool.input
+                );
+                callbacks.onToolResult(tool.id, result);
+                toolResults.push({
+                  type: "tool_result",
+                  tool_use_id: tool.id,
+                  content: result.success ? JSON.stringify(result.result) : `Error: ${result.error}`
+                });
+              }
+              messages.push({
+                role: "assistant",
+                content: response.content
+              });
+              messages.push({
+                role: "user",
+                content: toolResults
+              });
+            }
+          }
+          callbacks.onError(new Error(`Exceeded maximum iterations (${this.maxIterations})`));
+        } catch (error2) {
+          callbacks.onError(error2 instanceof Error ? error2 : new Error(String(error2)));
+        }
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/api/tool-executor.ts
+import * as fs6 from "fs/promises";
+import * as path8 from "path";
+import { exec as exec3 } from "child_process";
+var ToolExecutor;
+var init_tool_executor = __esm({
+  "packages/tiny-brain-core/src/services/api/tool-executor.ts"() {
+    "use strict";
+    init_esm5();
+    ToolExecutor = class {
+      repositoryRoot;
+      defaultTimeout;
+      constructor(config2) {
+        this.repositoryRoot = config2.repositoryRoot;
+        this.defaultTimeout = config2.defaultTimeout ?? 3e4;
+      }
+      async execute(toolName, input) {
+        try {
+          switch (toolName) {
+            case "read_file":
+              return await this.readFile(input);
+            case "write_file":
+              return await this.writeFile(input);
+            case "list_directory":
+              return await this.listDirectory(input);
+            case "execute_bash":
+              return await this.executeBash(input);
+            case "search_files":
+              return await this.searchFiles(input);
+            case "plan_sync":
+              return await this.planSync(input);
+            default:
+              return { success: false, error: `Unknown tool: ${toolName}` };
+          }
+        } catch (error2) {
+          return {
+            success: false,
+            error: error2 instanceof Error ? error2.message : String(error2)
+          };
+        }
+      }
+      validatePath(inputPath) {
+        const resolvedPath = path8.resolve(this.repositoryRoot, inputPath);
+        if (!resolvedPath.startsWith(this.repositoryRoot)) {
+          return {
+            valid: false,
+            resolvedPath,
+            error: `Path "${inputPath}" resolves outside repository root`
+          };
+        }
+        return { valid: true, resolvedPath };
+      }
+      async readFile(input) {
+        const validation = this.validatePath(input.path);
+        if (!validation.valid) {
+          return { success: false, error: validation.error };
+        }
+        try {
+          const content = await fs6.readFile(validation.resolvedPath, "utf-8");
+          return { success: true, result: content };
+        } catch (error2) {
+          return {
+            success: false,
+            error: error2 instanceof Error ? error2.message : String(error2)
+          };
+        }
+      }
+      async writeFile(input) {
+        const validation = this.validatePath(input.path);
+        if (!validation.valid) {
+          return { success: false, error: validation.error };
+        }
+        try {
+          const dir = path8.dirname(validation.resolvedPath);
+          await fs6.mkdir(dir, { recursive: true });
+          await fs6.writeFile(validation.resolvedPath, input.content, "utf-8");
+          return { success: true, result: "File written successfully" };
+        } catch (error2) {
+          return {
+            success: false,
+            error: error2 instanceof Error ? error2.message : String(error2)
+          };
+        }
+      }
+      async listDirectory(input) {
+        const validation = this.validatePath(input.path);
+        if (!validation.valid) {
+          return { success: false, error: validation.error };
+        }
+        try {
+          const entries = await this.listDirectoryRecursive(
+            validation.resolvedPath,
+            input.recursive ?? false
+          );
+          return { success: true, result: entries };
+        } catch (error2) {
+          return {
+            success: false,
+            error: error2 instanceof Error ? error2.message : String(error2)
+          };
+        }
+      }
+      async listDirectoryRecursive(dirPath, recursive, prefix = "") {
+        const entries = await fs6.readdir(dirPath, { withFileTypes: true });
+        const result = [];
+        for (const entry of entries) {
+          const entryPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+          const type2 = entry.isDirectory() ? "directory" : "file";
+          result.push({ name: entryPath, type: type2 });
+          if (recursive && entry.isDirectory()) {
+            const subEntries = await this.listDirectoryRecursive(
+              path8.join(dirPath, entry.name),
+              recursive,
+              entryPath
+            );
+            result.push(...subEntries);
+          }
+        }
+        return result;
+      }
+      async executeBash(input) {
+        const timeout = input.timeout ?? this.defaultTimeout;
+        return new Promise((resolve3) => {
+          exec3(
+            input.command,
+            {
+              cwd: this.repositoryRoot,
+              timeout,
+              maxBuffer: 10 * 1024 * 1024
+              // 10MB
+            },
+            (error2, stdout, stderr) => {
+              if (error2) {
+                resolve3({
+                  success: false,
+                  error: error2.message + (stderr ? `
+Stderr: ${stderr}` : "")
+                });
+                return;
+              }
+              const result = stderr ? `${stdout}
+Stderr: ${stderr}` : stdout;
+              resolve3({ success: true, result });
+            }
+          );
+        });
+      }
+      async searchFiles(input) {
+        let searchPath = this.repositoryRoot;
+        if (input.path) {
+          const validation = this.validatePath(input.path);
+          if (!validation.valid) {
+            return { success: false, error: validation.error };
+          }
+          searchPath = validation.resolvedPath;
+        }
+        try {
+          const files = await glob(input.pattern, {
+            cwd: searchPath,
+            nodir: true
+          });
+          return { success: true, result: files };
+        } catch (error2) {
+          return {
+            success: false,
+            error: error2 instanceof Error ? error2.message : String(error2)
+          };
+        }
+      }
+      async planSync(input) {
+        return {
+          success: true,
+          result: `Plan sync requested for plan: ${input.planId}. This should be handled by the PlanService.`
+        };
       }
     };
   }
@@ -37505,8 +43092,8 @@ var init_analysis_diff = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/detectors/base-detector.ts
-import * as fs5 from "fs/promises";
-import * as path6 from "path";
+import * as fs7 from "fs/promises";
+import * as path9 from "path";
 var BaseDetector;
 var init_base_detector = __esm({
   "packages/tiny-brain-core/src/analyser/detectors/base-detector.ts"() {
@@ -37517,7 +43104,7 @@ var init_base_detector = __esm({
       }
       async fileExists(filePath) {
         try {
-          await fs5.access(path6.join(this.dirPath, filePath));
+          await fs7.access(path9.join(this.dirPath, filePath));
           return true;
         } catch {
           return false;
@@ -37525,7 +43112,7 @@ var init_base_detector = __esm({
       }
       async readFile(filePath) {
         try {
-          return await fs5.readFile(path6.join(this.dirPath, filePath), "utf8");
+          return await fs7.readFile(path9.join(this.dirPath, filePath), "utf8");
         } catch {
           return "";
         }
@@ -37540,7 +43127,7 @@ var init_base_detector = __esm({
       }
       async findFiles(pattern) {
         try {
-          const files = await fs5.readdir(this.dirPath);
+          const files = await fs7.readdir(this.dirPath);
           return files.filter((file) => {
             if (pattern.includes("*")) {
               const regex = new RegExp(pattern.replace("*", ".*"));
@@ -37786,20 +43373,20 @@ var init_javascript_detector = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/utils.ts
-import * as path7 from "path";
-import * as fs6 from "fs/promises";
+import * as path10 from "path";
+import * as fs8 from "fs/promises";
 async function findProjectRoot(startPath) {
-  let currentPath = path7.resolve(startPath);
+  let currentPath = path10.resolve(startPath);
   while (currentPath !== "/") {
     try {
-      const gitPath = path7.join(currentPath, ".git");
-      const stats = await fs6.stat(gitPath);
+      const gitPath = path10.join(currentPath, ".git");
+      const stats = await fs8.stat(gitPath);
       if (stats.isDirectory()) {
         return currentPath;
       }
     } catch {
     }
-    currentPath = path7.dirname(currentPath);
+    currentPath = path10.dirname(currentPath);
   }
   return startPath;
 }
@@ -37973,8 +43560,8 @@ var init_script_analyzer = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/index.ts
-import * as fs7 from "fs/promises";
-import * as path8 from "path";
+import * as fs9 from "fs/promises";
+import * as path11 from "path";
 async function analyseRepository(rootPath = process.cwd(), options) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const languages = /* @__PURE__ */ new Set();
@@ -38019,7 +43606,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     if (stack.bundling) buildTools.add(stack.bundling);
   }
   function detectFileType(fileName) {
-    const ext2 = path8.extname(fileName).toLowerCase();
+    const ext2 = path11.extname(fileName).toLowerCase();
     if ([".js", ".mjs", ".cjs", ".jsx"].includes(ext2)) {
       languages.add("javascript");
       languageFileCounts.javascript = (languageFileCounts.javascript || 0) + 1;
@@ -38057,7 +43644,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     for (const pattern of TEST_PATTERNS) {
       if (fileName.includes(pattern)) {
         testFiles.push(fileName);
-        const ext2 = path8.extname(fileName);
+        const ext2 = path11.extname(fileName);
         if (ext2) {
           testPatterns.add(pattern + ext2.substring(1));
         }
@@ -38068,10 +43655,10 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   async function detectOtherLanguages(dirPath, files) {
     try {
       for (const file of files) {
-        const filePath = path8.join(dirPath, file);
+        const filePath = path11.join(dirPath, file);
         if (file === "requirements.txt" || file === "setup.py" || file === "pyproject.toml") {
           languages.add("python");
-          const content = await fs7.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs9.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("django")) frameworks.add("django");
           if (content.includes("flask")) frameworks.add("flask");
           if (content.includes("fastapi")) frameworks.add("fastapi");
@@ -38080,14 +43667,14 @@ async function analyseRepository(rootPath = process.cwd(), options) {
         }
         if (file === "go.mod" || file === "go.sum") {
           languages.add("go");
-          const content = await fs7.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs9.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("testify")) testingTools.add("testify");
           if (content.includes("gin-gonic")) frameworks.add("gin");
           if (content.includes("echo")) frameworks.add("echo");
         }
         if (file === "Gemfile" || file === "Rakefile") {
           languages.add("ruby");
-          const content = await fs7.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs9.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("rails")) frameworks.add("rails");
           if (content.includes("sinatra")) frameworks.add("sinatra");
           if (content.includes("rspec")) testingTools.add("rspec");
@@ -38114,7 +43701,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   });
   const documentationLocations = [];
   let documentationPattern;
-  const rootFiles = await fs7.readdir(rootPath).catch(() => []);
+  const rootFiles = await fs9.readdir(rootPath).catch(() => []);
   const hasRootReadme = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "readme.md");
   const hasDocsFolder = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "docs");
   if (hasRootReadme) {
@@ -38153,7 +43740,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     return;
   }
   try {
-    const entries = await fs7.readdir(dir, { withFileTypes: true });
+    const entries = await fs9.readdir(dir, { withFileTypes: true });
     const files = [];
     const dirs = [];
     for (const entry of entries) {
@@ -38165,7 +43752,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     }
     await callback(dir, files);
     for (const subdir of dirs) {
-      const fullPath = path8.join(dir, subdir);
+      const fullPath = path11.join(dir, subdir);
       await walkDirectory(fullPath, callback, options, currentDepth + 1);
     }
   } catch {
@@ -38405,7 +43992,7 @@ function wrapError(error2, context) {
     originalError: error2
   });
 }
-var init_error = __esm({
+var init_error3 = __esm({
   "packages/tiny-brain-core/src/utils/error.ts"() {
     "use strict";
   }
@@ -38451,7 +44038,7 @@ function isBoolean2(value) {
 function isObject3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
-function isArray(value) {
+function isArray2(value) {
   return Array.isArray(value);
 }
 function isNullOrUndefined(value) {
@@ -38676,7 +44263,7 @@ var init_utils2 = __esm({
     "use strict";
     init_crypto();
     init_datetime();
-    init_error();
+    init_error3();
     init_string();
     init_type_guards();
     init_array();
@@ -38709,7 +44296,7 @@ var init_test_plan_emojis = __esm({
 });
 
 // packages/tiny-brain-core/src/constants/index.ts
-var init_constants = __esm({
+var init_constants2 = __esm({
   "packages/tiny-brain-core/src/constants/index.ts"() {
     "use strict";
     init_test_plan_emojis();
@@ -38724,11 +44311,13 @@ __export(src_exports, {
   BaseService: () => BaseService,
   CATEGORY_WEIGHTS: () => CATEGORY_WEIGHTS,
   ChatAnalysisService: () => ChatAnalysisService,
+  ClaudeClient: () => ClaudeClient,
   ConfigService: () => ConfigService,
   DEFAULT_PREFERENCES: () => DEFAULT_PREFERENCES,
   DefaultModuleRegistry: () => DefaultModuleRegistry,
   FixService: () => FixService,
   GRADE_THRESHOLDS: () => GRADE_THRESHOLDS,
+  HooksService: () => HooksService,
   IssueSeverity: () => IssueSeverity,
   JavaScriptDetector: () => JavaScriptDetector,
   LOG_LEVEL_PRIORITY: () => LOG_LEVEL_PRIORITY,
@@ -38752,9 +44341,11 @@ __export(src_exports, {
   RulesService: () => RulesService,
   SaveQualityRunInputSchema: () => SaveQualityRunInputSchema,
   ScriptAnalyzer: () => ScriptAnalyzer,
+  SkillLoader: () => SkillLoader,
   StrategyService: () => StrategyService,
   TEST_PLAN_EMOJIS: () => TEST_PLAN_EMOJIS,
   ThinkingService: () => ThinkingService,
+  ToolExecutor: () => ToolExecutor,
   analyseForCLI: () => analyseForCLI,
   analyseRepository: () => analyseRepository,
   analyzeComplexity: () => analyzeComplexity,
@@ -38843,7 +44434,7 @@ __export(src_exports, {
   identifyDomain: () => identifyDomain,
   identifyDomainKeywords: () => identifyDomainKeywords,
   identifyImplicitNeeds: () => identifyImplicitNeeds,
-  isArray: () => isArray,
+  isArray: () => isArray2,
   isBoolean: () => isBoolean2,
   isBootstrappedPersona: () => isBootstrappedPersona,
   isDefined: () => isDefined,
@@ -38910,12 +44501,16 @@ var init_src = __esm({
     init_types9();
     init_plugin_discovery_service();
     init_quality2();
+    init_hooks();
     init_types10();
     init_types11();
     init_types12();
     init_repo_config();
     init_user_preferences();
     init_library_client();
+    init_skill_loader();
+    init_claude_client();
+    init_tool_executor();
     init_registry();
     init_persona3();
     init_persona2();
@@ -38936,7 +44531,7 @@ var init_src = __esm({
     init_result();
     init_context();
     init_utils2();
-    init_constants();
+    init_constants2();
   }
 });
 
@@ -41105,12 +46700,12 @@ var require_concat_map = __commonJS({
       var res = [];
       for (var i = 0; i < xs.length; i++) {
         var x = fn(xs[i], i);
-        if (isArray2(x)) res.push.apply(res, x);
+        if (isArray3(x)) res.push.apply(res, x);
         else res.push(x);
       }
       return res;
     };
-    var isArray2 = Array.isArray || function(xs) {
+    var isArray3 = Array.isArray || function(xs) {
       return Object.prototype.toString.call(xs) === "[object Array]";
     };
   }
@@ -41265,7 +46860,7 @@ var require_minimatch = __commonJS({
   "node_modules/minimatch/minimatch.js"(exports, module) {
     module.exports = minimatch3;
     minimatch3.Minimatch = Minimatch2;
-    var path21 = function() {
+    var path24 = function() {
       try {
         return __require("path");
       } catch (e) {
@@ -41273,7 +46868,7 @@ var require_minimatch = __commonJS({
     }() || {
       sep: "/"
     };
-    minimatch3.sep = path21.sep;
+    minimatch3.sep = path24.sep;
     var GLOBSTAR2 = minimatch3.GLOBSTAR = Minimatch2.GLOBSTAR = {};
     var expand2 = require_brace_expansion2();
     var plTypes = {
@@ -41362,8 +46957,8 @@ var require_minimatch = __commonJS({
       assertValidPattern2(pattern);
       if (!options) options = {};
       pattern = pattern.trim();
-      if (!options.allowWindowsEscape && path21.sep !== "/") {
-        pattern = pattern.split(path21.sep).join("/");
+      if (!options.allowWindowsEscape && path24.sep !== "/") {
+        pattern = pattern.split(path24.sep).join("/");
       }
       this.options = options;
       this.set = [];
@@ -41732,8 +47327,8 @@ var require_minimatch = __commonJS({
       if (this.empty) return f === "";
       if (f === "/" && partial2) return true;
       var options = this.options;
-      if (path21.sep !== "/") {
-        f = f.split(path21.sep).join("/");
+      if (path24.sep !== "/") {
+        f = f.split(path24.sep).join("/");
       }
       f = f.split(slashSplit);
       this.debug(this.pattern, "split", f);
@@ -41904,10 +47499,10 @@ var require_package = __commonJS({
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs19 = __require("fs");
-    var path21 = __require("path");
+    var fs21 = __require("fs");
+    var path24 = __require("path");
     var os4 = __require("os");
-    var crypto5 = __require("crypto");
+    var crypto6 = __require("crypto");
     var packageJson = require_package();
     var version2 = packageJson.version;
     var TIPS = [
@@ -42043,7 +47638,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs19.existsSync(filepath)) {
+            if (fs21.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -42051,15 +47646,15 @@ var require_main = __commonJS({
           possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
         }
       } else {
-        possibleVaultPath = path21.resolve(process.cwd(), ".env.vault");
+        possibleVaultPath = path24.resolve(process.cwd(), ".env.vault");
       }
-      if (fs19.existsSync(possibleVaultPath)) {
+      if (fs21.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path21.join(os4.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path24.join(os4.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -42076,7 +47671,7 @@ var require_main = __commonJS({
       return { parsed };
     }
     function configDotenv(options) {
-      const dotenvPath = path21.resolve(process.cwd(), ".env");
+      const dotenvPath = path24.resolve(process.cwd(), ".env");
       let encoding = "utf8";
       let processEnv = process.env;
       if (options && options.processEnv != null) {
@@ -42104,13 +47699,13 @@ var require_main = __commonJS({
       }
       let lastError;
       const parsedAll = {};
-      for (const path22 of optionPaths) {
+      for (const path25 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs19.readFileSync(path22, { encoding }));
+          const parsed = DotenvModule.parse(fs21.readFileSync(path25, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
-            _debug(`Failed to load ${path22} ${e.message}`);
+            _debug(`Failed to load ${path25} ${e.message}`);
           }
           lastError = e;
         }
@@ -42123,7 +47718,7 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative2 = path21.relative(process.cwd(), filePath);
+            const relative2 = path24.relative(process.cwd(), filePath);
             shortPaths.push(relative2);
           } catch (e) {
             if (debug) {
@@ -42158,7 +47753,7 @@ var require_main = __commonJS({
       const authTag = ciphertext.subarray(-16);
       ciphertext = ciphertext.subarray(12, -16);
       try {
-        const aesgcm = crypto5.createDecipheriv("aes-256-gcm", key, nonce);
+        const aesgcm = crypto6.createDecipheriv("aes-256-gcm", key, nonce);
         aesgcm.setAuthTag(authTag);
         return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
       } catch (error2) {
@@ -42237,12 +47832,12 @@ var NEVER = Object.freeze({
 // @__NO_SIDE_EFFECTS__
 function $constructor(name, initializer3, params) {
   function init(inst, def) {
-    var _a;
+    var _a2;
     Object.defineProperty(inst, "_zod", {
       value: inst._zod ?? {},
       enumerable: false
     });
-    (_a = inst._zod).traits ?? (_a.traits = /* @__PURE__ */ new Set());
+    (_a2 = inst._zod).traits ?? (_a2.traits = /* @__PURE__ */ new Set());
     inst._zod.traits.add(name);
     initializer3(inst, def);
     for (const k in _.prototype) {
@@ -42257,10 +47852,10 @@ function $constructor(name, initializer3, params) {
   }
   Object.defineProperty(Definition, "name", { value: name });
   function _(def) {
-    var _a;
+    var _a2;
     const inst = params?.Parent ? new Definition() : this;
     init(inst, def);
-    (_a = inst._zod).deferred ?? (_a.deferred = []);
+    (_a2 = inst._zod).deferred ?? (_a2.deferred = []);
     for (const fn of inst._zod.deferred) {
       fn();
     }
@@ -42426,10 +48021,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path21) {
-  if (!path21)
+function getElementAtPath(obj, path24) {
+  if (!path24)
     return obj;
-  return path21.reduce((acc, key) => acc?.[key], obj);
+  return path24.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -42749,11 +48344,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path21, issues) {
+function prefixIssues(path24, issues) {
   return issues.map((iss) => {
-    var _a;
-    (_a = iss).path ?? (_a.path = []);
-    iss.path.unshift(path21);
+    var _a2;
+    (_a2 = iss).path ?? (_a2.path = []);
+    iss.path.unshift(path24);
     return iss;
   });
 }
@@ -42996,10 +48591,10 @@ var uppercase = /^[^a-z]*$/;
 
 // node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
-  var _a;
+  var _a2;
   inst._zod ?? (inst._zod = {});
   inst._zod.def = def;
-  (_a = inst._zod).onattach ?? (_a.onattach = []);
+  (_a2 = inst._zod).onattach ?? (_a2.onattach = []);
 });
 var numericOriginMap = {
   number: "number",
@@ -43065,8 +48660,8 @@ var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", 
 var $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (inst, def) => {
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
-    var _a;
-    (_a = inst2._zod.bag).multipleOf ?? (_a.multipleOf = def.value);
+    var _a2;
+    (_a2 = inst2._zod.bag).multipleOf ?? (_a2.multipleOf = def.value);
   });
   inst._zod.check = (payload) => {
     if (typeof payload.value !== typeof def.value)
@@ -43159,9 +48754,9 @@ var $ZodCheckNumberFormat = /* @__PURE__ */ $constructor("$ZodCheckNumberFormat"
   };
 });
 var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -43188,9 +48783,9 @@ var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (ins
   };
 });
 var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -43217,9 +48812,9 @@ var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (ins
   };
 });
 var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -43248,7 +48843,7 @@ var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals"
   };
 });
 var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat", (inst, def) => {
-  var _a, _b;
+  var _a2, _b;
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
@@ -43259,7 +48854,7 @@ var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat"
     }
   });
   if (def.pattern)
-    (_a = inst._zod).check ?? (_a.check = (payload) => {
+    (_a2 = inst._zod).check ?? (_a2.check = (payload) => {
       def.pattern.lastIndex = 0;
       if (def.pattern.test(payload.value))
         return;
@@ -43424,7 +49019,7 @@ var version = {
 
 // node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
-  var _a;
+  var _a2;
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
@@ -43439,7 +49034,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
     }
   }
   if (checks.length === 0) {
-    (_a = inst._zod).deferred ?? (_a.deferred = []);
+    (_a2 = inst._zod).deferred ?? (_a2.deferred = []);
     inst._zod.deferred?.push(() => {
       inst._zod.run = inst._zod.parse;
     });
@@ -47546,26 +53141,27 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve2) => {
+    return new Promise((resolve3) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve2();
+        resolve3();
       } else {
-        this._stdout.once("drain", resolve2);
+        this._stdout.once("drain", resolve3);
       }
     });
   }
 };
 
 // packages/tiny-brain-mcp/src/index.ts
-import { readFileSync as readFileSync4, appendFileSync, existsSync as existsSync12, mkdirSync as mkdirSync2 } from "fs";
+import { readFileSync as readFileSync5, appendFileSync, existsSync as existsSync13, mkdirSync as mkdirSync3 } from "fs";
 import { fileURLToPath as fileURLToPath9 } from "url";
-import { dirname as dirname11, join as join25 } from "path";
+import { dirname as dirname13, join as join28 } from "path";
 import { homedir as homedir5 } from "os";
 
 // packages/tiny-brain-mcp/src/core/mcp-server.ts
-import * as path20 from "path";
-import { existsSync as existsSync11, cpSync, readdirSync as readdirSync3 } from "fs";
+import * as path23 from "path";
+import { existsSync as existsSync12, cpSync, readdirSync as readdirSync3, readFileSync as readFileSync4, writeFileSync, mkdirSync as mkdirSync2 } from "fs";
+import { execSync as execSync3 } from "child_process";
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s) {
@@ -48144,7 +53740,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
+        await new Promise((resolve3) => setTimeout(resolve3, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -48161,7 +53757,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -48239,7 +53835,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve2(parseResult.data);
+            resolve3(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -48500,12 +54096,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve2, interval);
+      const timeoutId = setTimeout(resolve3, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -49328,10 +54924,10 @@ var AuthTokenService = class extends BaseService {
 };
 
 // packages/tiny-brain-mcp/src/services/credential-storage.service.ts
-import * as fs8 from "fs/promises";
-import * as path9 from "path";
+import * as fs10 from "fs/promises";
+import * as path12 from "path";
 import * as os from "os";
-import * as crypto from "crypto";
+import * as crypto2 from "crypto";
 var CredentialStorageService = class {
   credentialsPath;
   algorithm = "aes-256-gcm";
@@ -49339,10 +54935,11 @@ var CredentialStorageService = class {
   keyLength = 32;
   constructor() {
     const homeDir = os.homedir();
-    this.credentialsPath = path9.join(homeDir, ".tiny-brain", "config", "credentials.json");
+    this.credentialsPath = path12.join(homeDir, ".tiny-brain", "config", "credentials.json");
   }
   async setCredential(key, value) {
-    if (key !== "clientId" && key !== "clientSecret") {
+    const validKeys = ["clientId", "clientSecret", "llmProvider", "llmApiKey"];
+    if (!validKeys.includes(key)) {
       throw new Error(`Invalid credential key: ${key}`);
     }
     this.validateCredential(key, value);
@@ -49357,6 +54954,10 @@ var CredentialStorageService = class {
       stored.clientId = value;
     } else if (key === "clientSecret") {
       stored.clientSecret = this.encryptSecret(value);
+    } else if (key === "llmProvider") {
+      stored.llmProvider = value;
+    } else if (key === "llmApiKey") {
+      stored.llmApiKey = this.encryptSecret(value);
     }
     stored.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     await this.saveStoredCredentials(stored);
@@ -49387,12 +54988,45 @@ var CredentialStorageService = class {
     }
     return {
       clientId: stored.clientId,
-      clientSecret: stored.clientSecret ? "[STORED]" : null
+      clientSecret: stored.clientSecret ? "[STORED]" : null,
+      llmProvider: stored.llmProvider || null,
+      llmApiKey: stored.llmApiKey ? "[STORED]" : null
     };
+  }
+  /**
+   * Get the LLM provider name
+   * @returns The provider name or null if not configured
+   */
+  async getLlmProvider() {
+    const stored = await this.loadStoredCredentials();
+    return stored?.llmProvider || null;
+  }
+  /**
+   * Get the LLM API key, with fallback to environment variable
+   * @returns The API key or null if not configured
+   */
+  async getLlmApiKey() {
+    const stored = await this.loadStoredCredentials();
+    if (stored?.llmApiKey) {
+      try {
+        return this.decryptSecret(stored.llmApiKey);
+      } catch (error2) {
+        console.error("Failed to decrypt LLM API key:", error2);
+      }
+    }
+    return process.env.LLM_API_KEY || null;
+  }
+  /**
+   * Check if an LLM API key is available (stored or in env)
+   * @returns true if API key is configured
+   */
+  async hasLlmApiKey() {
+    const apiKey = await this.getLlmApiKey();
+    return apiKey !== null;
   }
   async clearCredentials() {
     try {
-      await fs8.unlink(this.credentialsPath);
+      await fs10.unlink(this.credentialsPath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -49402,15 +55036,21 @@ var CredentialStorageService = class {
   validateCredential(key, value) {
     const trimmed = value.trim();
     if (!trimmed) {
-      const displayName = key === "clientId" ? "Client ID" : "Client Secret";
+      const displayNames = {
+        clientId: "Client ID",
+        clientSecret: "Client Secret",
+        llmProvider: "LLM Provider",
+        llmApiKey: "LLM API Key"
+      };
+      const displayName = displayNames[key] || key;
       throw new Error(`${displayName} cannot be empty`);
     }
   }
   encryptSecret(secret) {
-    const salt = crypto.randomBytes(32);
-    const iv = crypto.randomBytes(16);
+    const salt = crypto2.randomBytes(32);
+    const iv = crypto2.randomBytes(16);
     const key = this.deriveKey(salt);
-    const cipher = crypto.createCipheriv(this.algorithm, key, iv);
+    const cipher = crypto2.createCipheriv(this.algorithm, key, iv);
     const encrypted = Buffer.concat([
       cipher.update(secret, "utf8"),
       cipher.final()
@@ -49429,7 +55069,7 @@ var CredentialStorageService = class {
     const tag = Buffer.from(encryptedData.tag, "base64");
     const encrypted = Buffer.from(encryptedData.encrypted, "base64");
     const key = this.deriveKey(salt);
-    const decipher = crypto.createDecipheriv(this.algorithm, key, iv);
+    const decipher = crypto2.createDecipheriv(this.algorithm, key, iv);
     decipher.setAuthTag(tag);
     const decrypted = Buffer.concat([
       decipher.update(encrypted),
@@ -49439,7 +55079,7 @@ var CredentialStorageService = class {
   }
   deriveKey(salt) {
     const passphrase = os.homedir();
-    return crypto.pbkdf2Sync(
+    return crypto2.pbkdf2Sync(
       passphrase,
       salt,
       this.iterations,
@@ -49449,7 +55089,7 @@ var CredentialStorageService = class {
   }
   async loadStoredCredentials() {
     try {
-      const data = await fs8.readFile(this.credentialsPath, "utf8");
+      const data = await fs10.readFile(this.credentialsPath, "utf8");
       return JSON.parse(data);
     } catch (error2) {
       if (error2.code === "ENOENT") {
@@ -49459,14 +55099,14 @@ var CredentialStorageService = class {
     }
   }
   async saveStoredCredentials(credentials) {
-    const dir = path9.dirname(this.credentialsPath);
-    await fs8.mkdir(dir, { recursive: true });
-    await fs8.writeFile(
+    const dir = path12.dirname(this.credentialsPath);
+    await fs10.mkdir(dir, { recursive: true });
+    await fs10.writeFile(
       this.credentialsPath,
       JSON.stringify(credentials, null, 2),
       "utf8"
     );
-    await fs8.chmod(this.credentialsPath, 384);
+    await fs10.chmod(this.credentialsPath, 384);
   }
 };
 
@@ -49727,30 +55367,30 @@ var SystemPersonaService = class extends BaseService {
 };
 
 // packages/tiny-brain-mcp/src/storage/local-filesystem-adapter.ts
-import { promises as fs9 } from "fs";
-import { dirname as dirname3, join as join9 } from "path";
+import { promises as fs11 } from "fs";
+import { dirname as dirname4, join as join12 } from "path";
 
 // packages/tiny-brain-mcp/src/storage/storage-path-builder.ts
-import { join as join8 } from "path";
+import { join as join11 } from "path";
 var LocalStoragePathBuilder = class {
   basePath;
   constructor(basePath = "~/.tiny-brain") {
-    this.basePath = basePath.startsWith("~") ? join8(process.env.HOME || process.env.USERPROFILE || "", basePath.slice(1)) : basePath;
+    this.basePath = basePath.startsWith("~") ? join11(process.env.HOME || process.env.USERPROFILE || "", basePath.slice(1)) : basePath;
   }
   buildPersonaPath(personaId, fileName, _userId) {
-    return join8(this.basePath, "personas", personaId, fileName);
+    return join11(this.basePath, "personas", personaId, fileName);
   }
   buildPersonaDirectoryPath(personaId, _userId) {
-    return join8(this.basePath, "personas", personaId);
+    return join11(this.basePath, "personas", personaId);
   }
   buildUserDataPath(key, _userId) {
-    return join8(this.basePath, key);
+    return join11(this.basePath, key);
   }
   buildUserBasePath(_userId) {
     return this.basePath;
   }
-  extractPersonaId(path21) {
-    const parts = path21.split(/[/\\]/);
+  extractPersonaId(path24) {
+    const parts = path24.split(/[/\\]/);
     const personasIndex = parts.findIndex((part) => part === "personas");
     return personasIndex !== -1 && personasIndex + 1 < parts.length ? parts[personasIndex + 1] : null;
   }
@@ -49772,22 +55412,22 @@ var LocalFilesystemStorageAdapter = class {
   async initializeUserStorage(_userId) {
     if (!this.autoCreate) return;
     const basePath = this.pathBuilder.buildUserBasePath();
-    const personasPath = join9(basePath, "personas");
+    const personasPath = join12(basePath, "personas");
     await this.ensureDirectoryExists(basePath);
     await this.ensureDirectoryExists(personasPath);
   }
   async storePersonaFile(personaId, fileName, content, _userId) {
     const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
-    const directory = dirname3(filePath);
+    const directory = dirname4(filePath);
     if (this.autoCreate) {
       await this.ensureDirectoryExists(directory);
     }
-    await fs9.writeFile(filePath, content, "utf8");
+    await fs11.writeFile(filePath, content, "utf8");
   }
   async getPersonaFile(personaId, fileName, _userId) {
     const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
     try {
-      return await fs9.readFile(filePath, "utf8");
+      return await fs11.readFile(filePath, "utf8");
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return null;
@@ -49798,7 +55438,7 @@ var LocalFilesystemStorageAdapter = class {
   async deletePersonaFile(personaId, fileName, _userId) {
     const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
     try {
-      await fs9.unlink(filePath);
+      await fs11.unlink(filePath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -49809,11 +55449,11 @@ var LocalFilesystemStorageAdapter = class {
     const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
     try {
       const getAllFiles = async (dir, basePath = "") => {
-        const entries = await fs9.readdir(dir, { withFileTypes: true });
+        const entries = await fs11.readdir(dir, { withFileTypes: true });
         const files = [];
         for (const entry of entries) {
-          const fullPath = join9(dir, entry.name);
-          const relativePath = basePath ? join9(basePath, entry.name) : entry.name;
+          const fullPath = join12(dir, entry.name);
+          const relativePath = basePath ? join12(basePath, entry.name) : entry.name;
           if (entry.isDirectory()) {
             const subFiles = await getAllFiles(fullPath, relativePath);
             files.push(...subFiles);
@@ -49833,13 +55473,13 @@ var LocalFilesystemStorageAdapter = class {
     }
   }
   async listPersonas(_userId) {
-    const personasDir = join9(this.pathBuilder.buildUserBasePath(), "personas");
+    const personasDir = join12(this.pathBuilder.buildUserBasePath(), "personas");
     try {
-      const directories = await fs9.readdir(personasDir);
+      const directories = await fs11.readdir(personasDir);
       const dirStats = await Promise.all(
         directories.map(async (dir) => {
-          const dirPath = join9(personasDir, dir);
-          const stat3 = await fs9.stat(dirPath);
+          const dirPath = join12(personasDir, dir);
+          const stat3 = await fs11.stat(dirPath);
           return { name: dir, isDirectory: stat3.isDirectory() };
         })
       );
@@ -49854,7 +55494,7 @@ var LocalFilesystemStorageAdapter = class {
   async deletePersona(personaId, _userId) {
     const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
     try {
-      await fs9.rm(personaDir, { recursive: true, force: true });
+      await fs11.rm(personaDir, { recursive: true, force: true });
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -49867,21 +55507,21 @@ var LocalFilesystemStorageAdapter = class {
     }
     const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
     await this.ensureDirectoryExists(personaDir);
-    const plansDir = join9(personaDir, "plans");
+    const plansDir = join12(personaDir, "plans");
     await this.ensureDirectoryExists(plansDir);
   }
   async storeUserData(key, content, _userId) {
     const filePath = this.pathBuilder.buildUserDataPath(key);
-    const directory = dirname3(filePath);
+    const directory = dirname4(filePath);
     if (this.autoCreate) {
       await this.ensureDirectoryExists(directory);
     }
-    await fs9.writeFile(filePath, content, "utf8");
+    await fs11.writeFile(filePath, content, "utf8");
   }
   async getUserData(key, _userId) {
     const filePath = this.pathBuilder.buildUserDataPath(key);
     try {
-      return await fs9.readFile(filePath, "utf8");
+      return await fs11.readFile(filePath, "utf8");
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return null;
@@ -49892,7 +55532,7 @@ var LocalFilesystemStorageAdapter = class {
   async deleteUserData(key, _userId) {
     const filePath = this.pathBuilder.buildUserDataPath(key);
     try {
-      await fs9.unlink(filePath);
+      await fs11.unlink(filePath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -49905,43 +55545,43 @@ var LocalFilesystemStorageAdapter = class {
       if (this.autoCreate) {
         await this.ensureDirectoryExists(basePath);
       }
-      await fs9.access(basePath, fs9.constants.R_OK | fs9.constants.W_OK);
+      await fs11.access(basePath, fs11.constants.R_OK | fs11.constants.W_OK);
       return true;
     } catch {
       return false;
     }
   }
   async renamePersona(oldPersonaId, newPersonaId, _userId) {
-    const oldPath = dirname3(this.pathBuilder.buildPersonaPath(oldPersonaId, ""));
-    const newPath = dirname3(this.pathBuilder.buildPersonaPath(newPersonaId, ""));
+    const oldPath = dirname4(this.pathBuilder.buildPersonaPath(oldPersonaId, ""));
+    const newPath = dirname4(this.pathBuilder.buildPersonaPath(newPersonaId, ""));
     try {
-      await fs9.access(oldPath);
+      await fs11.access(oldPath);
     } catch {
       throw new Error(`Persona '${oldPersonaId}' does not exist`);
     }
     try {
-      await fs9.access(newPath);
+      await fs11.access(newPath);
       throw new Error(`Persona '${newPersonaId}' already exists`);
     } catch {
     }
-    await fs9.rename(oldPath, newPath);
-    const profilePath = join9(newPath, "profile.md");
+    await fs11.rename(oldPath, newPath);
+    const profilePath = join12(newPath, "profile.md");
     try {
-      const profileContent = await fs9.readFile(profilePath, "utf-8");
+      const profileContent = await fs11.readFile(profilePath, "utf-8");
       const lines = profileContent.split("\n");
       if (lines[0].startsWith("#")) {
         lines[0] = `# ${newPersonaId}`;
-        await fs9.writeFile(profilePath, lines.join("\n"), "utf-8");
+        await fs11.writeFile(profilePath, lines.join("\n"), "utf-8");
       }
     } catch {
     }
-    const metadataPath = join9(newPath, "metadata.json");
+    const metadataPath = join12(newPath, "metadata.json");
     try {
-      const metadataContent = await fs9.readFile(metadataPath, "utf-8");
+      const metadataContent = await fs11.readFile(metadataPath, "utf-8");
       const metadata = JSON.parse(metadataContent);
       metadata.name = newPersonaId;
       metadata.lastRenamed = (/* @__PURE__ */ new Date()).toISOString();
-      await fs9.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
+      await fs11.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
     } catch {
     }
   }
@@ -49957,7 +55597,7 @@ var LocalFilesystemStorageAdapter = class {
    */
   async ensureDirectoryExists(dirPath) {
     try {
-      await fs9.mkdir(dirPath, { recursive: true });
+      await fs11.mkdir(dirPath, { recursive: true });
     } catch (error2) {
       if (error2.code !== "EEXIST") {
         throw error2;
@@ -49973,8 +55613,8 @@ var LocalFilesystemStorageAdapter = class {
 };
 
 // packages/tiny-brain-mcp/src/core/file-logger.ts
-import * as fs10 from "fs";
-import * as path10 from "path";
+import * as fs12 from "fs";
+import * as path13 from "path";
 var LOG_LEVELS = {
   debug: 0,
   info: 1,
@@ -49991,7 +55631,7 @@ var FileLogger = class {
   currentFileSize = 0;
   constructor(config2 = {}) {
     const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    const defaultLogPath = path10.join(homeDir, ".tiny-brain", "debug.log");
+    const defaultLogPath = path13.join(homeDir, ".tiny-brain", "debug.log");
     this.config = {
       logFilePath: config2.logFilePath || defaultLogPath,
       maxFileSize: config2.maxFileSize || 10 * 1024 * 1024,
@@ -50014,19 +55654,19 @@ var FileLogger = class {
   }
   initialize() {
     try {
-      const logDir = path10.dirname(this.config.logFilePath);
-      if (!fs10.existsSync(logDir)) {
-        fs10.mkdirSync(logDir, { recursive: true });
+      const logDir = path13.dirname(this.config.logFilePath);
+      if (!fs12.existsSync(logDir)) {
+        fs12.mkdirSync(logDir, { recursive: true });
       }
-      if (fs10.existsSync(this.config.logFilePath)) {
-        const stats = fs10.statSync(this.config.logFilePath);
+      if (fs12.existsSync(this.config.logFilePath)) {
+        const stats = fs12.statSync(this.config.logFilePath);
         this.currentFileSize = stats.size;
         if (this.currentFileSize >= this.config.maxFileSize) {
           this.rotateLogFile();
           this.currentFileSize = 0;
         }
       }
-      this.fileStream = fs10.createWriteStream(this.config.logFilePath, {
+      this.fileStream = fs12.createWriteStream(this.config.logFilePath, {
         flags: this.config.appendMode ? "a" : "w"
       });
       this.writeLog("info", "FileLogger initialized", {
@@ -50041,11 +55681,11 @@ var FileLogger = class {
       for (let i = this.config.maxRotatedFiles - 1; i >= 0; i--) {
         const oldPath = i === 0 ? this.config.logFilePath : `${this.config.logFilePath}.${i}`;
         const newPath = `${this.config.logFilePath}.${i + 1}`;
-        if (fs10.existsSync(oldPath)) {
+        if (fs12.existsSync(oldPath)) {
           if (i === this.config.maxRotatedFiles - 1) {
-            fs10.unlinkSync(oldPath);
+            fs12.unlinkSync(oldPath);
           } else {
-            fs10.renameSync(oldPath, newPath);
+            fs12.renameSync(oldPath, newPath);
           }
         }
       }
@@ -50075,7 +55715,7 @@ var FileLogger = class {
         this.fileStream?.end();
         this.rotateLogFile();
         this.currentFileSize = 0;
-        this.fileStream = fs10.createWriteStream(this.config.logFilePath, {
+        this.fileStream = fs12.createWriteStream(this.config.logFilePath, {
           flags: "a"
         });
       }
@@ -50120,14 +55760,14 @@ var FileLogger = class {
     return new ContextualFileLogger(this, context);
   }
   async close() {
-    return new Promise((resolve2) => {
+    return new Promise((resolve3) => {
       if (this.fileStream) {
         this.fileStream.end(() => {
           this.fileStream = void 0;
-          resolve2();
+          resolve3();
         });
       } else {
-        resolve2();
+        resolve3();
       }
     });
   }
@@ -50606,7 +56246,7 @@ import { createServer as createServerHTTP } from "http";
 import { Http2ServerRequest as Http2ServerRequest2 } from "http2";
 import { Http2ServerRequest } from "http2";
 import { Readable } from "stream";
-import crypto2 from "crypto";
+import crypto3 from "crypto";
 var RequestError = class extends Error {
   constructor(message, options) {
     super(message, options);
@@ -50892,13 +56532,13 @@ function writeFromReadableStreamDefaultReader(reader, writable, currentReadPromi
     }
   }
 }
-function writeFromReadableStream(stream2, writable) {
-  if (stream2.locked) {
+function writeFromReadableStream(stream3, writable) {
+  if (stream3.locked) {
     throw new TypeError("ReadableStream is locked.");
   } else if (writable.destroyed) {
     return;
   }
-  return writeFromReadableStreamDefaultReader(stream2.getReader(), writable);
+  return writeFromReadableStreamDefaultReader(stream3.getReader(), writable);
 }
 var buildOutgoingHttpHeaders = (headers) => {
   const res = {};
@@ -50922,7 +56562,7 @@ var buildOutgoingHttpHeaders = (headers) => {
 var X_ALREADY_SENT = "x-hono-already-sent";
 var webFetch = global.fetch;
 if (typeof global.crypto === "undefined") {
-  global.crypto = crypto2;
+  global.crypto = crypto3;
 }
 global.fetch = (info, init) => {
   init = {
@@ -51020,7 +56660,7 @@ var responseViaResponseObject = async (res, outgoing, options = {}) => {
         });
         if (!chunk2) {
           if (i === 1) {
-            await new Promise((resolve2) => setTimeout(resolve2));
+            await new Promise((resolve3) => setTimeout(resolve3));
             maxReadCount = 3;
             continue;
           }
@@ -51280,26 +56920,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path21) => {
-  const paths = path21.split("/");
+var splitPath = (path24) => {
+  const paths = path24.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path21 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path21);
+  const { groups, path: path24 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path24);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path21) => {
+var extractGroupsFromPath = (path24) => {
   const groups = [];
-  path21 = path21.replace(/\{[^}]+\}/g, (match3, index) => {
+  path24 = path24.replace(/\{[^}]+\}/g, (match3, index) => {
     const mark = `@${index}`;
     groups.push([mark, match3]);
     return mark;
   });
-  return { groups, path: path21 };
+  return { groups, path: path24 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -51354,8 +56994,8 @@ var getPath = (request) => {
     const charCode = url.charCodeAt(i);
     if (charCode === 37) {
       const queryIndex = url.indexOf("?", i);
-      const path21 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
-      return tryDecodeURI(path21.includes("%25") ? path21.replace(/%25/g, "%2525") : path21);
+      const path24 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
+      return tryDecodeURI(path24.includes("%25") ? path24.replace(/%25/g, "%2525") : path24);
     } else if (charCode === 63) {
       break;
     }
@@ -51372,11 +57012,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path21) => {
-  if (path21.charCodeAt(path21.length - 1) !== 63 || !path21.includes(":")) {
+var checkOptionalParameter = (path24) => {
+  if (path24.charCodeAt(path24.length - 1) !== 63 || !path24.includes(":")) {
     return null;
   }
-  const segments = path21.split("/");
+  const segments = path24.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -51517,9 +57157,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path21 = "/", matchResult = [[]]) {
+  constructor(request, path24 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path21;
+    this.path = path24;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -52255,8 +57895,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path21, ...handlers) => {
-      for (const p of [path21].flat()) {
+    this.on = (method, path24, ...handlers) => {
+      for (const p of [path24].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -52313,8 +57953,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path21, app) {
-    const subApp = this.basePath(path21);
+  route(path24, app) {
+    const subApp = this.basePath(path24);
     app.routes.map((r) => {
       let handler;
       if (app.errorHandler === errorHandler) {
@@ -52340,9 +57980,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path21) {
+  basePath(path24) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path21);
+    subApp._basePath = mergePath(this._basePath, path24);
     return subApp;
   }
   /**
@@ -52416,7 +58056,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path21, applicationHandler, options) {
+  mount(path24, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -52443,7 +58083,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path21);
+      const mergedPath = mergePath(this._basePath, path24);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -52458,14 +58098,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path21, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path24, "*"), handler);
     return this;
   }
-  #addRoute(method, path21, handler) {
+  #addRoute(method, path24, handler) {
     method = method.toUpperCase();
-    path21 = mergePath(this._basePath, path21);
-    const r = { basePath: this._basePath, path: path21, method, handler };
-    this.router.add(method, path21, [handler, r]);
+    path24 = mergePath(this._basePath, path24);
+    const r = { basePath: this._basePath, path: path24, method, handler };
+    this.router.add(method, path24, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -52478,10 +58118,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path21 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path21);
+    const path24 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path24);
     const c = new Context(request, {
-      path: path21,
+      path: path24,
       matchResult,
       env,
       executionCtx,
@@ -52581,15 +58221,15 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match2(method, path21) {
+function match2(method, path24) {
   const matchers = this.buildAllMatchers();
-  const match22 = (method2, path22) => {
+  const match22 = (method2, path25) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
-    const staticMatch = matcher[2][path22];
+    const staticMatch = matcher[2][path25];
     if (staticMatch) {
       return staticMatch;
     }
-    const match3 = path22.match(matcher[0]);
+    const match3 = path25.match(matcher[0]);
     if (!match3) {
       return [[], emptyParam];
     }
@@ -52597,7 +58237,7 @@ function match2(method, path21) {
     return [matcher[1][index], match3];
   };
   this.match = match22;
-  return match22(method, path21);
+  return match22(method, path24);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -52712,12 +58352,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path21, index, pathErrorCheckOnly) {
+  insert(path24, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path21 = path21.replace(/\{[^}]+\}/g, (m) => {
+      path24 = path24.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -52728,7 +58368,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path21.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path24.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -52767,9 +58407,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path21) {
-  return wildcardRegExpCache[path21] ??= new RegExp(
-    path21 === "*" ? "" : `^${path21.replace(
+function buildWildcardRegExp(path24) {
+  return wildcardRegExpCache[path24] ??= new RegExp(
+    path24 === "*" ? "" : `^${path24.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -52791,17 +58431,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path21, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path24, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path21] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path24] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path21, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path24, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path21) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path24) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -52835,12 +58475,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path21) {
+function findMiddleware(middleware, path24) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path21)) {
+    if (buildWildcardRegExp(k).test(path24)) {
       return [...middleware[k]];
     }
   }
@@ -52854,7 +58494,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path21, handler) {
+  add(method, path24, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -52869,18 +58509,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path21 === "/*") {
-      path21 = "*";
+    if (path24 === "/*") {
+      path24 = "*";
     }
-    const paramCount = (path21.match(/\/:/g) || []).length;
-    if (/\*$/.test(path21)) {
-      const re = buildWildcardRegExp(path21);
+    const paramCount = (path24.match(/\/:/g) || []).length;
+    if (/\*$/.test(path24)) {
+      const re = buildWildcardRegExp(path24);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path21] ||= findMiddleware(middleware[m], path21) || findMiddleware(middleware[METHOD_NAME_ALL], path21) || [];
+          middleware[m][path24] ||= findMiddleware(middleware[m], path24) || findMiddleware(middleware[METHOD_NAME_ALL], path24) || [];
         });
       } else {
-        middleware[method][path21] ||= findMiddleware(middleware[method], path21) || findMiddleware(middleware[METHOD_NAME_ALL], path21) || [];
+        middleware[method][path24] ||= findMiddleware(middleware[method], path24) || findMiddleware(middleware[METHOD_NAME_ALL], path24) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -52898,15 +58538,15 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path21) || [path21];
+    const paths = checkOptionalParameter(path24) || [path24];
     for (let i = 0, len = paths.length; i < len; i++) {
-      const path22 = paths[i];
+      const path25 = paths[i];
       Object.keys(routes).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
-          routes[m][path22] ||= [
-            ...findMiddleware(middleware[m], path22) || findMiddleware(middleware[METHOD_NAME_ALL], path22) || []
+          routes[m][path25] ||= [
+            ...findMiddleware(middleware[m], path25) || findMiddleware(middleware[METHOD_NAME_ALL], path25) || []
           ];
-          routes[m][path22].push([handler, paramCount - len + i + 1]);
+          routes[m][path25].push([handler, paramCount - len + i + 1]);
         }
       });
     }
@@ -52925,13 +58565,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path21) => [path21, r[method][path21]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path24) => [path24, r[method][path24]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path21) => [path21, r[METHOD_NAME_ALL][path21]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path24) => [path24, r[METHOD_NAME_ALL][path24]])
         );
       }
     });
@@ -52951,13 +58591,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path21, handler) {
+  add(method, path24, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path21, handler]);
+    this.#routes.push([method, path24, handler]);
   }
-  match(method, path21) {
+  match(method, path24) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -52972,7 +58612,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path21);
+        res = router.match(method, path24);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -53016,10 +58656,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path21, handler) {
+  insert(method, path24, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path21);
+    const parts = splitRoutingPath(path24);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -53070,12 +58710,12 @@ var Node2 = class _Node2 {
     }
     return handlerSets;
   }
-  search(method, path21) {
+  search(method, path24) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path21);
+    const parts = splitPath(path24);
     const curNodesQueue = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const part = parts[i];
@@ -53163,18 +58803,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path21, handler) {
-    const results = checkOptionalParameter(path21);
+  add(method, path24, handler) {
+    const results = checkOptionalParameter(path24);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path21, handler);
+    this.#node.insert(method, path24, handler);
   }
-  match(method, path21) {
-    return this.#node.search(method, path21);
+  match(method, path24) {
+    return this.#node.search(method, path24);
   }
 };
 
@@ -53352,8 +58992,8 @@ var _baseMimes = {
 var baseMimes = _baseMimes;
 
 // node_modules/@hono/node-server/dist/serve-static.mjs
-import { createReadStream, statSync as statSync2, existsSync as existsSync3 } from "fs";
-import { join as join11 } from "path";
+import { createReadStream, statSync as statSync2, existsSync as existsSync4 } from "fs";
+import { join as join14 } from "path";
 var COMPRESSIBLE_CONTENT_TYPE_REGEX = /^\s*(?:text\/[^;\s]+|application\/(?:javascript|json|xml|xml-dtd|ecmascript|dart|postscript|rtf|tar|toml|vnd\.dart|vnd\.ms-fontobject|vnd\.ms-opentype|wasm|x-httpd-php|x-javascript|x-ns-proxy-autoconfig|x-sh|x-tar|x-virtualbox-hdd|x-virtualbox-ova|x-virtualbox-ovf|x-virtualbox-vbox|x-virtualbox-vdi|x-virtualbox-vhd|x-virtualbox-vmdk|x-www-form-urlencoded)|font\/(?:otf|ttf)|image\/(?:bmp|vnd\.adobe\.photoshop|vnd\.microsoft\.icon|vnd\.ms-dds|x-icon|x-ms-bmp)|message\/rfc822|model\/gltf-binary|x-shader\/x-fragment|x-shader\/x-vertex|[^;\s]+?\+(?:json|text|xml|yaml))(?:[;\s]|$)/i;
 var ENCODINGS = {
   br: ".br",
@@ -53361,29 +59001,29 @@ var ENCODINGS = {
   gzip: ".gz"
 };
 var ENCODINGS_ORDERED_KEYS = Object.keys(ENCODINGS);
-var createStreamBody = (stream2) => {
+var createStreamBody = (stream3) => {
   const body = new ReadableStream({
     start(controller) {
-      stream2.on("data", (chunk2) => {
+      stream3.on("data", (chunk2) => {
         controller.enqueue(chunk2);
       });
-      stream2.on("error", (err) => {
+      stream3.on("error", (err) => {
         controller.error(err);
       });
-      stream2.on("end", () => {
+      stream3.on("end", () => {
         controller.close();
       });
     },
     cancel() {
-      stream2.destroy();
+      stream3.destroy();
     }
   });
   return body;
 };
-var getStats = (path21) => {
+var getStats = (path24) => {
   let stats;
   try {
-    stats = statSync2(path21);
+    stats = statSync2(path24);
   } catch {
   }
   return stats;
@@ -53391,7 +59031,7 @@ var getStats = (path21) => {
 var serveStatic = (options = { root: "" }) => {
   const root = options.root || "";
   const optionPath = options.path;
-  if (root !== "" && !existsSync3(root)) {
+  if (root !== "" && !existsSync4(root)) {
     console.error(`serveStatic: root path '${root}' is not found, are you sure it's correct?`);
   }
   return async (c, next) => {
@@ -53412,21 +59052,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path21 = join11(
+    let path24 = join14(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path21);
+    let stats = getStats(path24);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path21 = join11(path21, indexFile);
-      stats = getStats(path21);
+      path24 = join14(path24, indexFile);
+      stats = getStats(path24);
     }
     if (!stats) {
-      await options.onNotFound?.(path21, c);
+      await options.onNotFound?.(path24, c);
       return next();
     }
-    const mimeType = getMimeType(path21);
+    const mimeType = getMimeType(path24);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -53436,12 +59076,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path21 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path24 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path21 = path21 + ENCODINGS[encoding];
+          path24 = path24 + ENCODINGS[encoding];
           break;
         }
       }
@@ -53455,7 +59095,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path21)), 200);
+      result = c.body(createStreamBody(createReadStream(path24)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -53466,20 +59106,20 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream2 = createReadStream(path21, { start, end });
+      const stream3 = createReadStream(path24, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
-      result = c.body(createStreamBody(stream2), 206);
+      result = c.body(createStreamBody(stream3), 206);
     }
-    await options.onFound?.(path21, c);
+    await options.onFound?.(path24, c);
     return result;
   };
 };
 
 // packages/tiny-brain-dashboard/server/app.ts
-import path11 from "node:path";
+import path14 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
-import fs11 from "node:fs";
+import fs13 from "node:fs";
 
 // packages/tiny-brain-dashboard/server/services/bridge.service.ts
 init_src();
@@ -53493,6 +59133,12 @@ var ServiceBridge = class {
   planning;
   personas;
   repoConfig;
+  /**
+   * Analyse a repository and save results to .tiny-brain/analysis.json
+   */
+  async analyseRepository(repoPath) {
+    return analyseRepository(repoPath);
+  }
   getActivePersonaId() {
     return this.context.activePersona?.id || "default";
   }
@@ -53791,12 +59437,14 @@ function createConfigRoutes(bridge) {
     if (!libraryAuth) {
       return c.json({
         clientId: null,
-        clientSecret: null
+        clientSecret: null,
+        hasLlmApiKey: false
       });
     }
     return c.json({
       clientId: libraryAuth.clientId || null,
-      clientSecret: libraryAuth.hasStoredSecret ? "[STORED]" : null
+      clientSecret: libraryAuth.hasStoredSecret ? "[STORED]" : null,
+      hasLlmApiKey: libraryAuth.hasLlmApiKey
     });
   });
   app.post("/credentials", async (c) => {
@@ -53965,8 +59613,8 @@ function createSettingsRoutes(bridge) {
 }
 
 // packages/tiny-brain-dashboard/server/routes/repos.routes.ts
-import { readdir as readdir6, readFile as readFile7 } from "fs/promises";
-import { join as join12 } from "path";
+import { readdir as readdir9, readFile as readFile10 } from "fs/promises";
+import { join as join15 } from "path";
 function parseTasksFromMarkdown(content) {
   const tasks = [];
   const taskRegex = /###\s+(\d+)\.\s+([^\n]+)\n([\s\S]*?)(?=###\s+\d+\.|## |$)/g;
@@ -54096,10 +59744,10 @@ function createRepoRoutes(bridge) {
         console.log("[Feature API] Repository not found:", repoId);
         return c.json({ error: "Repository not found" }, 404);
       }
-      const featurePath = join12(repo.path, "docs", "prd", planId, "features", `${featureId}.md`);
+      const featurePath = join15(repo.path, "docs", "prd", planId, "features", `${featureId}.md`);
       console.log("[Feature API] Looking for file:", featurePath);
       try {
-        const content = await readFile7(featurePath, "utf-8");
+        const content = await readFile10(featurePath, "utf-8");
         const feature = parseFeatureMarkdown(content);
         console.log("[Feature API] Success - found", feature.tasks.length, "tasks");
         return c.json({ feature });
@@ -54151,13 +59799,13 @@ function createRepoRoutes(bridge) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const agentsPath = join12(repo.path, ".claude", "agents");
+      const agentsPath = join15(repo.path, ".claude", "agents");
       const agents = [];
       try {
-        const files = await readdir6(agentsPath);
+        const files = await readdir9(agentsPath);
         const mdFiles = files.filter((f) => f.endsWith(".md"));
         for (const file of mdFiles) {
-          const content = await readFile7(join12(agentsPath, file), "utf-8");
+          const content = await readFile10(join15(agentsPath, file), "utf-8");
           const frontmatter = parseFrontmatter(content);
           const id = file.replace(".md", "");
           agents.push({
@@ -54186,15 +59834,15 @@ function createRepoRoutes(bridge) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const skillsPath = join12(repo.path, ".claude", "skills");
+      const skillsPath = join15(repo.path, ".claude", "skills");
       const skills = [];
       try {
-        const entries = await readdir6(skillsPath, { withFileTypes: true });
+        const entries = await readdir9(skillsPath, { withFileTypes: true });
         const directories = entries.filter((e) => e.isDirectory());
         for (const dir of directories) {
-          const skillMdPath = join12(skillsPath, dir.name, "SKILL.md");
+          const skillMdPath = join15(skillsPath, dir.name, "SKILL.md");
           try {
-            const content = await readFile7(skillMdPath, "utf-8");
+            const content = await readFile10(skillMdPath, "utf-8");
             const frontmatter = parseFrontmatter(content);
             skills.push({
               id: dir.name,
@@ -54216,6 +59864,46 @@ function createRepoRoutes(bridge) {
       return c.json({ error: message }, 500);
     }
   });
+  app.get("/:repoId/analysis", async (c) => {
+    try {
+      const repoId = c.req.param("repoId");
+      const repo = await bridge.repoConfig.getRepo(repoId);
+      if (!repo) {
+        return c.json({ error: "Repository not found" }, 404);
+      }
+      const analysisPath = join15(repo.path, ".tiny-brain", "analysis.json");
+      try {
+        const content = await readFile10(analysisPath, "utf-8");
+        const analysis = JSON.parse(content);
+        return c.json({ exists: true, analysis });
+      } catch (err) {
+        if (err.code === "ENOENT") {
+          return c.json({ exists: false, analysis: null });
+        }
+        throw err;
+      }
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
+  app.post("/:repoId/analysis", async (c) => {
+    try {
+      const repoId = c.req.param("repoId");
+      const repo = await bridge.repoConfig.getRepo(repoId);
+      if (!repo) {
+        return c.json({ error: "Repository not found" }, 404);
+      }
+      if (!bridge.analyseRepository) {
+        return c.json({ error: "Analysis service not available" }, 500);
+      }
+      const analysis = await bridge.analyseRepository(repo.path);
+      return c.json({ success: true, analysis });
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : "Unknown error";
+      return c.json({ error: message }, 500);
+    }
+  });
   app.get("/:repoId/quality", async (c) => {
     try {
       const repoId = c.req.param("repoId");
@@ -54223,14 +59911,14 @@ function createRepoRoutes(bridge) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const qualityRunsPath = join12(repo.path, "docs", "quality", "runs");
+      const qualityRunsPath = join15(repo.path, "docs", "quality", "runs");
       const runs = [];
       try {
-        const files = await readdir6(qualityRunsPath);
+        const files = await readdir9(qualityRunsPath);
         const qualityFiles = files.filter((f) => f.endsWith("-quality.md"));
         qualityFiles.sort((a, b) => b.localeCompare(a));
         for (const file of qualityFiles) {
-          const content = await readFile7(join12(qualityRunsPath, file), "utf-8");
+          const content = await readFile10(join15(qualityRunsPath, file), "utf-8");
           const frontmatter = parseFrontmatter(content);
           const runId = file.replace(".md", "");
           runs.push({
@@ -54262,11 +59950,11 @@ function createRepoRoutes(bridge) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const runPath = join12(repo.path, "docs", "quality", "runs", `${runId}.md`);
+      const runPath = join15(repo.path, "docs", "quality", "runs", `${runId}.md`);
       try {
-        const content = await readFile7(runPath, "utf-8");
+        const content = await readFile10(runPath, "utf-8");
         const frontmatter = parseFrontmatter(content);
-        const run = {
+        const run2 = {
           runId,
           date: frontmatter.run_date || "",
           score: parseInt(frontmatter.score || "0", 10),
@@ -54274,7 +59962,7 @@ function createRepoRoutes(bridge) {
           issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10),
           rawContent: content
         };
-        return c.json({ run });
+        return c.json({ run: run2 });
       } catch (err) {
         if (err.code === "ENOENT") {
           return c.json({ error: "Quality run not found" }, 404);
@@ -54436,8 +60124,404 @@ function createPluginRoutes(bridge) {
   return app;
 }
 
+// packages/tiny-brain-dashboard/server/routes/hooks.routes.ts
+init_src();
+function createHooksRoutes(_bridge) {
+  const app = new Hono2();
+  app.get("/", async (c) => {
+    const repoPath = c.req.query("repoPath");
+    if (!repoPath) {
+      return c.json({ error: "repoPath query parameter is required" }, 400);
+    }
+    const hooksService = new HooksService(repoPath);
+    const hooks = await hooksService.getAllHooks();
+    return c.json(hooks);
+  });
+  app.get("/:hookType/:hookName/content", async (c) => {
+    const hookType = c.req.param("hookType");
+    const hookName = c.req.param("hookName");
+    const repoPath = c.req.query("repoPath");
+    if (!repoPath) {
+      return c.json({ error: "repoPath query parameter is required" }, 400);
+    }
+    if (hookType !== "git" && hookType !== "plugin") {
+      return c.json({ error: 'hookType must be "git" or "plugin"' }, 400);
+    }
+    const hooksService = new HooksService(repoPath);
+    const content = await hooksService.getHookContent(hookType, hookName);
+    if (content === null) {
+      return c.json({ error: "Hook not found" }, 404);
+    }
+    return c.json({ content });
+  });
+  return app;
+}
+
+// node_modules/hono/dist/utils/stream.js
+var StreamingApi = class {
+  writer;
+  encoder;
+  writable;
+  abortSubscribers = [];
+  responseReadable;
+  /**
+   * Whether the stream has been aborted.
+   */
+  aborted = false;
+  /**
+   * Whether the stream has been closed normally.
+   */
+  closed = false;
+  constructor(writable, _readable) {
+    this.writable = writable;
+    this.writer = writable.getWriter();
+    this.encoder = new TextEncoder();
+    const reader = _readable.getReader();
+    this.abortSubscribers.push(async () => {
+      await reader.cancel();
+    });
+    this.responseReadable = new ReadableStream({
+      async pull(controller) {
+        const { done, value } = await reader.read();
+        done ? controller.close() : controller.enqueue(value);
+      },
+      cancel: () => {
+        this.abort();
+      }
+    });
+  }
+  async write(input) {
+    try {
+      if (typeof input === "string") {
+        input = this.encoder.encode(input);
+      }
+      await this.writer.write(input);
+    } catch {
+    }
+    return this;
+  }
+  async writeln(input) {
+    await this.write(input + "\n");
+    return this;
+  }
+  sleep(ms) {
+    return new Promise((res) => setTimeout(res, ms));
+  }
+  async close() {
+    try {
+      await this.writer.close();
+    } catch {
+    }
+    this.closed = true;
+  }
+  async pipe(body) {
+    this.writer.releaseLock();
+    await body.pipeTo(this.writable, { preventClose: true });
+    this.writer = this.writable.getWriter();
+  }
+  onAbort(listener) {
+    this.abortSubscribers.push(listener);
+  }
+  /**
+   * Abort the stream.
+   * You can call this method when stream is aborted by external event.
+   */
+  abort() {
+    if (!this.aborted) {
+      this.aborted = true;
+      this.abortSubscribers.forEach((subscriber) => subscriber());
+    }
+  }
+};
+
+// node_modules/hono/dist/helper/streaming/utils.js
+var isOldBunVersion = () => {
+  const version2 = typeof Bun !== "undefined" ? Bun.version : void 0;
+  if (version2 === void 0) {
+    return false;
+  }
+  const result = version2.startsWith("1.1") || version2.startsWith("1.0") || version2.startsWith("0.");
+  isOldBunVersion = () => result;
+  return result;
+};
+
+// node_modules/hono/dist/helper/streaming/sse.js
+var SSEStreamingApi = class extends StreamingApi {
+  constructor(writable, readable) {
+    super(writable, readable);
+  }
+  async writeSSE(message) {
+    const data = await resolveCallback(message.data, HtmlEscapedCallbackPhase.Stringify, false, {});
+    const dataLines = data.split("\n").map((line) => {
+      return `data: ${line}`;
+    }).join("\n");
+    const sseData = [
+      message.event && `event: ${message.event}`,
+      dataLines,
+      message.id && `id: ${message.id}`,
+      message.retry && `retry: ${message.retry}`
+    ].filter(Boolean).join("\n") + "\n\n";
+    await this.write(sseData);
+  }
+};
+var run = async (stream3, cb, onError) => {
+  try {
+    await cb(stream3);
+  } catch (e) {
+    if (e instanceof Error && onError) {
+      await onError(e, stream3);
+      await stream3.writeSSE({
+        event: "error",
+        data: e.message
+      });
+    } else {
+      console.error(e);
+    }
+  } finally {
+    stream3.close();
+  }
+};
+var contextStash = /* @__PURE__ */ new WeakMap();
+var streamSSE = (c, cb, onError) => {
+  const { readable, writable } = new TransformStream();
+  const stream3 = new SSEStreamingApi(writable, readable);
+  if (isOldBunVersion()) {
+    c.req.raw.signal.addEventListener("abort", () => {
+      if (!stream3.closed) {
+        stream3.abort();
+      }
+    });
+  }
+  contextStash.set(stream3.responseReadable, c);
+  c.header("Transfer-Encoding", "chunked");
+  c.header("Content-Type", "text/event-stream");
+  c.header("Cache-Control", "no-cache");
+  c.header("Connection", "keep-alive");
+  run(stream3, cb, onError);
+  return c.newResponse(stream3.responseReadable);
+};
+
+// packages/tiny-brain-dashboard/server/routes/skills.routes.ts
+init_src();
+
+// packages/tiny-brain-dashboard/server/services/skill-session.service.ts
+var SkillSessionManager = class {
+  sessions = /* @__PURE__ */ new Map();
+  /**
+   * Create a new session for a skill invocation
+   */
+  createSession() {
+    const id = crypto.randomUUID();
+    const session = {
+      id,
+      abortController: new AbortController(),
+      startedAt: /* @__PURE__ */ new Date()
+    };
+    this.sessions.set(id, session);
+    return session;
+  }
+  /**
+   * Get a session by ID
+   */
+  getSession(sessionId) {
+    return this.sessions.get(sessionId);
+  }
+  /**
+   * Cancel a running session
+   * @returns true if session was found and cancelled, false if not found
+   */
+  cancelSession(sessionId) {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return false;
+    }
+    session.abortController.abort();
+    this.sessions.delete(sessionId);
+    return true;
+  }
+  /**
+   * End a session (cleanup after completion)
+   */
+  endSession(sessionId) {
+    this.sessions.delete(sessionId);
+  }
+  /**
+   * Get count of active sessions
+   */
+  getActiveSessionCount() {
+    return this.sessions.size;
+  }
+  /**
+   * Clean up stale sessions (older than timeout)
+   * @param timeoutMs Maximum session age in milliseconds (default: 30 minutes)
+   */
+  cleanupStaleSessions(timeoutMs = 30 * 60 * 1e3) {
+    const now = Date.now();
+    let cleanedCount = 0;
+    for (const [id, session] of this.sessions) {
+      if (now - session.startedAt.getTime() > timeoutMs) {
+        session.abortController.abort();
+        this.sessions.delete(id);
+        cleanedCount++;
+      }
+    }
+    return cleanedCount;
+  }
+};
+
+// packages/tiny-brain-dashboard/server/routes/skills.routes.ts
+var AVAILABLE_SKILLS = ["plan", "fix", "feature", "adr", "quality"];
+function createSkillsRoutes(bridge) {
+  const app = new Hono2();
+  const sessionManager = new SkillSessionManager();
+  const getSkillsPath = () => {
+    if (process.env.CLAUDE_PLUGIN_ROOT) {
+      return `${process.env.CLAUDE_PLUGIN_ROOT}/skills`;
+    }
+    return process.env.SKILLS_PATH || "/Users/andyrichardson/work/repos/tiny-brain/tiny-brain-local/packages/tiny-brain-plugin/skills";
+  };
+  app.get("/", async (c) => {
+    const skillsPath = getSkillsPath();
+    const loader2 = new SkillLoader(skillsPath);
+    const skills = [];
+    for (const skillName of AVAILABLE_SKILLS) {
+      try {
+        const skill = await loader2.loadSkill(skillName);
+        skills.push({
+          name: skill.name,
+          description: skill.description,
+          version: skill.version
+        });
+      } catch (error2) {
+        bridge.context.logger.warn(`Failed to load skill ${skillName}:`, error2);
+      }
+    }
+    return c.json({ skills });
+  });
+  app.post("/invoke", async (c) => {
+    const body = await c.req.json();
+    const { skill: skillName, prompt, context: userContext } = body;
+    if (!skillName) {
+      return c.json({ error: "Missing required field: skill" }, 400);
+    }
+    if (!prompt) {
+      return c.json({ error: "Missing required field: prompt" }, 400);
+    }
+    const getLlmApiKey = bridge.context.libraryAuth?.getLlmApiKey;
+    if (!getLlmApiKey) {
+      return c.json({ error: "API key getter not configured" }, 401);
+    }
+    const apiKey = await getLlmApiKey();
+    if (!apiKey) {
+      return c.json({ error: "No API key configured. Please set LLM_API_KEY or configure via CLI." }, 401);
+    }
+    if (!AVAILABLE_SKILLS.includes(skillName)) {
+      return c.json({ error: `Skill '${skillName}' not found` }, 404);
+    }
+    const skillsPath = getSkillsPath();
+    const loader2 = new SkillLoader(skillsPath);
+    let skill;
+    try {
+      skill = await loader2.loadSkill(skillName);
+    } catch (error2) {
+      bridge.context.logger.error(`Failed to load skill ${skillName}:`, error2);
+      return c.json({ error: `Failed to load skill '${skillName}'` }, 500);
+    }
+    const session = sessionManager.createSession();
+    const repositoryRoot = bridge.context.repositoryRoot || process.cwd();
+    return streamSSE(c, async (stream3) => {
+      try {
+        const toolExecutor = new ToolExecutor({ repositoryRoot });
+        const client = new ClaudeClient({ apiKey });
+        let userMessage = prompt;
+        if (userContext) {
+          userMessage = `Context:
+${JSON.stringify(userContext, null, 2)}
+
+Request:
+${prompt}`;
+        }
+        let systemPrompt = skill.systemPrompt;
+        if (Object.keys(skill.templates).length > 0) {
+          systemPrompt += "\n\n## Available Templates\n\n";
+          for (const [name, content] of Object.entries(skill.templates)) {
+            systemPrompt += `### ${name}
+\`\`\`
+${content}
+\`\`\`
+
+`;
+          }
+        }
+        await client.invokeSkill(
+          {
+            systemPrompt,
+            userMessage,
+            toolExecutor
+          },
+          {
+            onText: async (text) => {
+              await stream3.writeSSE({
+                event: "text",
+                data: JSON.stringify({ text })
+              });
+            },
+            onToolUse: async (toolName, input) => {
+              await stream3.writeSSE({
+                event: "tool_use",
+                data: JSON.stringify({ tool: toolName, input })
+              });
+            },
+            onToolResult: async (toolId, result) => {
+              await stream3.writeSSE({
+                event: "tool_result",
+                data: JSON.stringify({
+                  toolId,
+                  success: result.success,
+                  result: result.result,
+                  error: result.error
+                })
+              });
+            },
+            onComplete: async () => {
+              await stream3.writeSSE({
+                event: "complete",
+                data: JSON.stringify({ success: true, sessionId: session.id })
+              });
+              sessionManager.endSession(session.id);
+            },
+            onError: async (error2) => {
+              await stream3.writeSSE({
+                event: "error",
+                data: JSON.stringify({ error: error2.message })
+              });
+              sessionManager.endSession(session.id);
+            }
+          }
+        );
+      } catch (error2) {
+        const message = error2 instanceof Error ? error2.message : "Unknown error";
+        await stream3.writeSSE({
+          event: "error",
+          data: JSON.stringify({ error: message })
+        });
+        sessionManager.endSession(session.id);
+      }
+    });
+  });
+  app.post("/:sessionId/cancel", async (c) => {
+    const sessionId = c.req.param("sessionId");
+    const cancelled = sessionManager.cancelSession(sessionId);
+    if (!cancelled) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+    return c.json({ success: true, message: "Session cancelled" });
+  });
+  return app;
+}
+
 // packages/tiny-brain-dashboard/server/app.ts
-var __dirname = path11.dirname(fileURLToPath3(import.meta.url));
+var __dirname = path14.dirname(fileURLToPath3(import.meta.url));
 function createApp(context, sse) {
   const app = new Hono2();
   const bridge = new ServiceBridge(context);
@@ -54449,12 +60533,14 @@ function createApp(context, sse) {
   app.route("/api/settings", createSettingsRoutes(bridge));
   app.route("/api/repos", createRepoRoutes(bridge));
   app.route("/api/repos/:repoId/git", createGitRoutes(bridge));
+  app.route("/api/hooks", createHooksRoutes(bridge));
   app.route("/api/plugins", createPluginRoutes(bridge));
+  app.route("/api/skills", createSkillsRoutes(bridge));
   app.get("/events", async (c) => {
     c.header("Content-Type", "text/event-stream");
     c.header("Cache-Control", "no-cache");
     c.header("Connection", "keep-alive");
-    const stream2 = new ReadableStream({
+    const stream3 = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
         const activePersonaId = bridge.getActivePersonaId();
@@ -54490,19 +60576,19 @@ data: ${JSON.stringify(initialData)}
         });
       }
     });
-    return new Response(stream2, {
+    return new Response(stream3, {
       headers: c.res.headers
     });
   });
   app.get("/health", (c) => {
     return c.json({ status: "ok" });
   });
-  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path11.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path11.resolve(__dirname, "../dist");
-  const distExists = fs11.existsSync(distPath);
+  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path14.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path14.resolve(__dirname, "../dist");
+  const distExists = fs13.existsSync(distPath);
   if (distExists) {
     app.use("/assets/*", serveStatic({
       root: distPath,
-      rewriteRequestPath: (path21) => path21.replace("/assets", "/assets")
+      rewriteRequestPath: (path24) => path24.replace("/assets", "/assets")
     }));
     app.use("/favicon.png", serveStatic({
       root: distPath,
@@ -54513,9 +60599,9 @@ data: ${JSON.stringify(initialData)}
       if (reqPath.startsWith("/api") || reqPath.startsWith("/events") || reqPath === "/health") {
         return c.notFound();
       }
-      const indexPath = path11.join(distPath, "index.html");
-      if (fs11.existsSync(indexPath)) {
-        const indexHtml = fs11.readFileSync(indexPath, "utf-8");
+      const indexPath = path14.join(distPath, "index.html");
+      if (fs13.existsSync(indexPath)) {
+        const indexHtml = fs13.readFileSync(indexPath, "utf-8");
         return c.html(indexHtml);
       }
       return c.html(`<!DOCTYPE html>
@@ -54557,11 +60643,11 @@ data: ${JSON.stringify(initialData)}
 // packages/tiny-brain-dashboard/server/services/sse.service.ts
 var SSEService = class {
   connections = /* @__PURE__ */ new Set();
-  addConnection(stream2) {
-    this.connections.add(stream2);
+  addConnection(stream3) {
+    this.connections.add(stream3);
   }
-  removeConnection(stream2) {
-    this.connections.delete(stream2);
+  removeConnection(stream3) {
+    this.connections.delete(stream3);
   }
   async broadcast(event, data) {
     const message = event ? `event: ${event}
@@ -54571,10 +60657,10 @@ data: ${JSON.stringify(data)}
 
 `;
     const promises2 = [];
-    for (const stream2 of this.connections) {
+    for (const stream3 of this.connections) {
       promises2.push(
-        stream2.write(message).catch(() => {
-          this.connections.delete(stream2);
+        stream3.write(message).catch(() => {
+          this.connections.delete(stream3);
         })
       );
     }
@@ -54590,13 +60676,13 @@ data: ${JSON.stringify(data)}
 
 // packages/tiny-brain-dashboard/server/services/file-watcher.service.ts
 init_src();
-import * as path13 from "path";
-import * as fs13 from "fs";
+import * as path16 from "path";
+import * as fs15 from "fs";
 import * as os2 from "os";
 
 // packages/tiny-brain-dashboard/server/services/generic-file-watcher.ts
-import * as fs12 from "fs";
-import * as path12 from "path";
+import * as fs14 from "fs";
+import * as path15 from "path";
 import { EventEmitter as EventEmitter2 } from "events";
 var FileWatcherService = class extends EventEmitter2 {
   watchInterval = null;
@@ -54626,10 +60712,10 @@ var FileWatcherService = class extends EventEmitter2 {
       ...this.options,
       ...options
     };
-    if (!fs12.existsSync(watchPath)) {
+    if (!fs14.existsSync(watchPath)) {
       throw new Error(`Watch path does not exist: ${watchPath}`);
     }
-    const stats = fs12.statSync(watchPath);
+    const stats = fs14.statSync(watchPath);
     if (!stats.isDirectory()) {
       throw new Error(`Watch path is not a directory: ${watchPath}`);
     }
@@ -54660,9 +60746,9 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = [];
     const scanDir = (currentPath) => {
       try {
-        const entries = fs12.readdirSync(currentPath, { withFileTypes: true });
+        const entries = fs14.readdirSync(currentPath, { withFileTypes: true });
         for (const entry of entries) {
-          const fullPath = path12.join(currentPath, entry.name);
+          const fullPath = path15.join(currentPath, entry.name);
           if (entry.name.startsWith(".")) {
             continue;
           }
@@ -54689,7 +60775,7 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = this.getAllFiles(this.watchPath);
     for (const filePath of files) {
       try {
-        const stats = fs12.statSync(filePath);
+        const stats = fs14.statSync(filePath);
         this.fileTimestamps.set(filePath, stats.mtimeMs);
       } catch (error2) {
         this.logger.error(`Error getting stats for ${filePath}:`, error2);
@@ -54711,7 +60797,7 @@ var FileWatcherService = class extends EventEmitter2 {
         const change = {
           type: "deleted",
           filePath,
-          relativePath: path12.relative(this.watchPath, filePath)
+          relativePath: path15.relative(this.watchPath, filePath)
         };
         this.emit("change", change);
         this.logger.debug(`File deleted: ${filePath}`);
@@ -54719,14 +60805,14 @@ var FileWatcherService = class extends EventEmitter2 {
     }
     for (const filePath of currentFiles) {
       try {
-        const stats = fs12.statSync(filePath);
+        const stats = fs14.statSync(filePath);
         const previousMtime = this.fileTimestamps.get(filePath);
         if (!previousMtime) {
           this.fileTimestamps.set(filePath, stats.mtimeMs);
           const change = {
             type: "added",
             filePath,
-            relativePath: path12.relative(this.watchPath, filePath),
+            relativePath: path15.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -54736,7 +60822,7 @@ var FileWatcherService = class extends EventEmitter2 {
           const change = {
             type: "modified",
             filePath,
-            relativePath: path12.relative(this.watchPath, filePath),
+            relativePath: path15.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -54822,9 +60908,9 @@ var FileWatcher = class {
     if (!this.plansCache.has(repoId)) {
       this.plansCache.set(repoId, /* @__PURE__ */ new Map());
     }
-    const tinyBrainPath = path13.join(repoPath, ".tiny-brain");
-    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs13.existsSync(tinyBrainPath)}`);
-    if (fs13.existsSync(tinyBrainPath)) {
+    const tinyBrainPath = path16.join(repoPath, ".tiny-brain");
+    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs15.existsSync(tinyBrainPath)}`);
+    if (fs15.existsSync(tinyBrainPath)) {
       try {
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -54845,7 +60931,7 @@ var FileWatcher = class {
       }
     } else {
       try {
-        await fs13.promises.mkdir(tinyBrainPath, { recursive: true });
+        await fs15.promises.mkdir(tinyBrainPath, { recursive: true });
         this.context.logger.info(`[FileWatcher] Created .tiny-brain directory for repo ${repoId}`);
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -54864,9 +60950,9 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to create .tiny-brain and start PRD watcher for ${repoId}:`, error2);
       }
     }
-    const fixesPath = path13.join(repoPath, ".tiny-brain/fixes");
-    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs13.existsSync(fixesPath)}`);
-    if (fs13.existsSync(fixesPath)) {
+    const fixesPath = path16.join(repoPath, ".tiny-brain/fixes");
+    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs15.existsSync(fixesPath)}`);
+    if (fs15.existsSync(fixesPath)) {
       try {
         watchers.fixesWatcher = new FileWatcherService(this.context.logger);
         watchers.fixesWatcher.on("change", (change) => {
@@ -54883,9 +60969,9 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start fixes watcher for ${repoId}:`, error2);
       }
     }
-    const qualityPath = path13.join(repoPath, "docs/quality/runs");
-    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs13.existsSync(qualityPath)}`);
-    if (fs13.existsSync(qualityPath)) {
+    const qualityPath = path16.join(repoPath, "docs/quality/runs");
+    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs15.existsSync(qualityPath)}`);
+    if (fs15.existsSync(qualityPath)) {
       try {
         if (!this.qualityCache.has(repoId)) {
           this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
@@ -54905,9 +60991,9 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start quality watcher for ${repoId}:`, error2);
       }
     }
-    const prdDocsPath = path13.join(repoPath, "docs/prd");
-    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs13.existsSync(prdDocsPath)}`);
-    if (fs13.existsSync(prdDocsPath)) {
+    const prdDocsPath = path16.join(repoPath, "docs/prd");
+    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs15.existsSync(prdDocsPath)}`);
+    if (fs15.existsSync(prdDocsPath)) {
       try {
         watchers.prdDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.prdDocsWatcher.on("change", (change) => {
@@ -54925,8 +61011,8 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start PRD docs watcher for ${repoId}:`, error2);
       }
     }
-    const fixDocsPath = path13.join(repoPath, ".tiny-brain/fixes");
-    if (fs13.existsSync(fixDocsPath)) {
+    const fixDocsPath = path16.join(repoPath, ".tiny-brain/fixes");
+    if (fs15.existsSync(fixDocsPath)) {
       try {
         watchers.fixDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.fixDocsWatcher.on("change", (change) => {
@@ -54952,8 +61038,8 @@ var FileWatcher = class {
    * Start watching ~/.tiny-brain/repos/repos.json for new repo registrations
    */
   async startReposConfigWatcher() {
-    const reposDir = path13.join(os2.homedir(), ".tiny-brain", "repos");
-    if (!fs13.existsSync(reposDir)) {
+    const reposDir = path16.join(os2.homedir(), ".tiny-brain", "repos");
+    if (!fs15.existsSync(reposDir)) {
       this.context.logger.info(`[FileWatcher] Repos config directory does not exist: ${reposDir}`);
       return;
     }
@@ -55035,7 +61121,7 @@ var FileWatcher = class {
         this.context.logger.info(`[FileWatcher] No SSE clients connected - skipping file processing`);
         return;
       }
-      const fileName = path13.basename(change.relativePath);
+      const fileName = path16.basename(change.relativePath);
       this.context.logger.debug(`[FileWatcher] File name:`, fileName);
       if (!fileName.endsWith(".json")) {
         this.context.logger.debug(`[FileWatcher] Not a valid progress file - skipping`);
@@ -55070,7 +61156,7 @@ var FileWatcher = class {
       let newPlan;
       try {
         this.context.logger.debug(`[FileWatcher] Reading file: ${change.filePath}`);
-        const content = await fs13.promises.readFile(change.filePath, "utf-8");
+        const content = await fs15.promises.readFile(change.filePath, "utf-8");
         newPlan = JSON.parse(content);
       } catch (error2) {
         this.context.logger.error(`Error reading progress file ${change.filePath}:`, error2);
@@ -55274,7 +61360,7 @@ var FileWatcher = class {
       }
       let newFixes;
       try {
-        const content = await fs13.promises.readFile(change.filePath, "utf-8");
+        const content = await fs15.promises.readFile(change.filePath, "utf-8");
         newFixes = JSON.parse(content);
       } catch (error2) {
         this.context.logger.error(`Error reading fixes progress file ${change.filePath}:`, error2);
@@ -55383,7 +61469,7 @@ var FileWatcher = class {
       if (!change.relativePath.endsWith(".md")) {
         return;
       }
-      const fileName = path13.basename(change.relativePath);
+      const fileName = path16.basename(change.relativePath);
       const runId = fileName.replace(/\.md$/, "");
       let repoCache = this.qualityCache.get(repoId);
       if (!repoCache) {
@@ -55402,7 +61488,7 @@ var FileWatcher = class {
       }
       let runData = { runId };
       try {
-        const content = await fs13.promises.readFile(change.filePath, "utf-8");
+        const content = await fs15.promises.readFile(change.filePath, "utf-8");
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (frontmatterMatch) {
           const frontmatter = frontmatterMatch[1];
@@ -55515,7 +61601,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs13.promises.readFile(change.filePath, "utf-8");
+        content = await fs15.promises.readFile(change.filePath, "utf-8");
       } catch (error2) {
         this.context.logger.error(`Error reading PRD doc file ${change.filePath}:`, error2);
         return;
@@ -55574,7 +61660,7 @@ var FileWatcher = class {
         return;
       }
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-      const fixId = path13.basename(change.relativePath, ".md");
+      const fixId = path16.basename(change.relativePath, ".md");
       if (change.type === "deleted") {
         await this.sse.broadcast("fix-doc-change", {
           eventType: "fix:doc:deleted",
@@ -55586,7 +61672,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs13.promises.readFile(change.filePath, "utf-8");
+        content = await fs15.promises.readFile(change.filePath, "utf-8");
       } catch (error2) {
         this.context.logger.error(`Error reading fix doc file ${change.filePath}:`, error2);
         return;
@@ -55652,7 +61738,7 @@ var DashboardServer = class {
       fetch: this.app.fetch,
       port: this.port
     });
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       let errorHandled = false;
       const errorHandler2 = (error2) => {
         if (errorHandled) return;
@@ -55660,7 +61746,7 @@ var DashboardServer = class {
         if (error2?.code === "EADDRINUSE") {
           this.context.logger.info(`Dashboard already running on port ${this.port}`);
           this.server = null;
-          resolve2({
+          resolve3({
             url: `http://localhost:${this.port}`,
             port: this.port
           });
@@ -55678,7 +61764,7 @@ var DashboardServer = class {
         } catch (error2) {
           this.context.logger.warn("Failed to start file watcher, dashboard will run without real-time updates:", error2);
         }
-        resolve2({
+        resolve3({
           url: `http://localhost:${this.port}`,
           port: this.port
         });
@@ -55692,18 +61778,18 @@ var DashboardServer = class {
     await this.watcher.stop();
     this.sse.closeAll();
     if (this.server) {
-      return new Promise((resolve2) => {
+      return new Promise((resolve3) => {
         const timeout = setTimeout(() => {
           this.context.logger.warn("Server close timed out after 5s, forcing cleanup");
           this.server = null;
           this.port = 0;
-          resolve2();
+          resolve3();
         }, 5e3);
         this.server.close(() => {
           clearTimeout(timeout);
           this.server = null;
           this.port = 0;
-          resolve2();
+          resolve3();
         });
       });
     }
@@ -55738,11 +61824,11 @@ var DashboardLauncher = class {
 };
 
 // packages/tiny-brain-mcp/src/tools/plan/plan.tool.ts
-import { promises as fs14 } from "fs";
-import path14 from "path";
-import { exec as exec3 } from "child_process";
+import { promises as fs16 } from "fs";
+import path17 from "path";
+import { exec as exec4 } from "child_process";
 import { promisify as promisify3 } from "util";
-var execAsync3 = promisify3(exec3);
+var execAsync3 = promisify3(exec4);
 var PlanArgsSchema = external_exports.object({
   operation: external_exports.enum(["accept", "feature", "implement", "update", "status", "report", "list", "archive", "adr", "create-adr", "sync", "start-dashboard", "stop-dashboard", "dashboard-status"]),
   // For 'accept' operation
@@ -55830,16 +61916,16 @@ async function findUniqueSlug(baseSlug) {
   let slug = baseSlug;
   let counter = 2;
   try {
-    const checkPath = path14.join(repoRoot, "docs/prd", slug);
-    await fs14.access(checkPath);
+    const checkPath = path17.join(repoRoot, "docs/prd", slug);
+    await fs16.access(checkPath);
   } catch {
     return slug;
   }
   while (counter < 100) {
     slug = `${baseSlug}-${counter}`;
     try {
-      const checkPath = path14.join(repoRoot, "docs/prd", slug);
-      await fs14.access(checkPath);
+      const checkPath = path17.join(repoRoot, "docs/prd", slug);
+      await fs16.access(checkPath);
       counter++;
     } catch {
       return slug;
@@ -55849,8 +61935,8 @@ async function findUniqueSlug(baseSlug) {
 }
 async function countPrdsInRepo(repoRoot) {
   try {
-    const prdDir = path14.join(repoRoot, "docs", "prd");
-    const entries = await fs14.readdir(prdDir, { withFileTypes: true });
+    const prdDir = path17.join(repoRoot, "docs", "prd");
+    const entries = await fs16.readdir(prdDir, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).length;
   } catch {
     return 0;
@@ -55862,7 +61948,7 @@ async function registerRepository(context) {
       return;
     }
     const repoConfigService = new RepoConfigService(context);
-    const repoName = path14.basename(context.repositoryRoot);
+    const repoName = path17.basename(context.repositoryRoot);
     const prdCount = await countPrdsInRepo(context.repositoryRoot);
     await repoConfigService.registerRepo({
       name: repoName,
@@ -56422,9 +62508,9 @@ var PlanTool = class _PlanTool {
       const report = await planningService.formatPlan(plan, true);
       if (args.saveToFile) {
         const filename = `plan-report-${plan.id}-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.md`;
-        const path21 = `reports/${filename}`;
-        await context.storage?.storeUserData(path21, report, context.userId);
-        const response2 = [`Report saved to: ${path21}`, "", report].join("\n");
+        const path24 = `reports/${filename}`;
+        await context.storage?.storeUserData(path24, report, context.userId);
+        const response2 = [`Report saved to: ${path24}`, "", report].join("\n");
         return createSuccessResult(response2);
       }
       const response = report;
@@ -56630,10 +62716,10 @@ Use "plan operation=stop-dashboard" to stop it.`
         return createErrorResult("ADR pattern detected but suggestion generation failed");
       }
       const adrContent = await adrService.generateADRContent(foundSuggestion.suggestion);
-      const tempDir = path14.join(context.repositoryRoot, ".tiny-brain", "temp");
-      await fs14.mkdir(tempDir, { recursive: true });
-      const tempFilePath = path14.join(tempDir, "adr-suggestion.md");
-      await fs14.writeFile(tempFilePath, adrContent, "utf-8");
+      const tempDir = path17.join(context.repositoryRoot, ".tiny-brain", "temp");
+      await fs16.mkdir(tempDir, { recursive: true });
+      const tempFilePath = path17.join(tempDir, "adr-suggestion.md");
+      await fs16.writeFile(tempFilePath, adrContent, "utf-8");
       const response = [
         "\u{1F3AF} ADR Suggestion Detected!",
         "",
@@ -56668,10 +62754,10 @@ Use "plan operation=stop-dashboard" to stop it.`
           "Not in a git repository. ADR creation requires git repository."
         );
       }
-      const tempFilePath = path14.join(context.repositoryRoot, ".tiny-brain", "temp", "adr-suggestion.md");
+      const tempFilePath = path17.join(context.repositoryRoot, ".tiny-brain", "temp", "adr-suggestion.md");
       let adrContent;
       try {
-        adrContent = await fs14.readFile(tempFilePath, "utf-8");
+        adrContent = await fs16.readFile(tempFilePath, "utf-8");
       } catch {
         return createErrorResult(
           'No ADR suggestion found. Run "plan adr" first to analyze commits and generate a suggestion.'
@@ -56691,17 +62777,17 @@ Use "plan operation=stop-dashboard" to stop it.`
       const adrNumber = await adrService.getNextADRNumber();
       const paddedNumber = adrNumber.toString().padStart(4, "0");
       const finalContent = adrContent.replace(/\{adr_number\}/g, paddedNumber);
-      const adrDir = path14.join(context.repositoryRoot, "docs/adr");
-      await fs14.mkdir(adrDir, { recursive: true });
+      const adrDir = path17.join(context.repositoryRoot, "docs/adr");
+      await fs16.mkdir(adrDir, { recursive: true });
       const filename = `${paddedNumber}-${suggestedFileName}`;
-      const filePath = path14.join(adrDir, filename);
-      await fs14.writeFile(filePath, finalContent, "utf-8");
+      const filePath = path17.join(adrDir, filename);
+      await fs16.writeFile(filePath, finalContent, "utf-8");
       try {
-        await fs14.unlink(tempFilePath);
+        await fs16.unlink(tempFilePath);
       } catch (error2) {
         context.logger?.warn?.(`Failed to clean up temp file: ${error2}`);
       }
-      const relativePath = path14.relative(context.repositoryRoot, filePath);
+      const relativePath = path17.relative(context.repositoryRoot, filePath);
       const response = [
         "\u2705 ADR Created Successfully!",
         "",
@@ -56734,7 +62820,7 @@ Use "plan operation=stop-dashboard" to stop it.`
       const planningService = new PlanningService(context);
       let prdPath;
       if (args.planId) {
-        prdPath = path14.join(context.repositoryRoot, "docs", "prd", args.planId);
+        prdPath = path17.join(context.repositoryRoot, "docs", "prd", args.planId);
       } else {
         const activePlan = await planningService.getActivePlan();
         if (!activePlan?.prdDirPath) {
@@ -56742,11 +62828,11 @@ Use "plan operation=stop-dashboard" to stop it.`
             "No active plan found. Specify a planId to sync a specific PRD: plan sync --planId my-prd"
           );
         }
-        prdPath = path14.join(context.repositoryRoot, activePlan.prdDirPath);
+        prdPath = path17.join(context.repositoryRoot, activePlan.prdDirPath);
       }
-      const prdMdPath = path14.join(prdPath, "prd.md");
+      const prdMdPath = path17.join(prdPath, "prd.md");
       try {
-        await fs14.access(prdMdPath);
+        await fs16.access(prdMdPath);
       } catch {
         return createErrorResult(
           `PRD not found at ${prdPath}. Ensure prd.md exists in the specified directory.`
@@ -57048,15 +63134,15 @@ var PersonaService2 = class extends PersonaService {
 };
 
 // packages/tiny-brain-mcp/src/services/repo-service.ts
-import * as fs15 from "fs/promises";
-import { existsSync as existsSync7, readFileSync } from "fs";
-import * as path15 from "path";
+import * as fs17 from "fs/promises";
+import { existsSync as existsSync8, readFileSync } from "fs";
+import * as path18 from "path";
 import { fileURLToPath as fileURLToPath5 } from "url";
 
 // packages/tiny-brain-mcp/src/utils/repo-utils.ts
 import { execSync as execSync2 } from "child_process";
-import { existsSync as existsSync6 } from "fs";
-import { join as join15, dirname as dirname5 } from "path";
+import { existsSync as existsSync7 } from "fs";
+import { join as join18, dirname as dirname6 } from "path";
 import { fileURLToPath as fileURLToPath4 } from "url";
 function findRepoRoot(startPath) {
   const cwd = startPath || process.cwd();
@@ -57067,17 +63153,17 @@ function findRepoRoot(startPath) {
       stdio: ["pipe", "pipe", "ignore"]
       // Ignore stderr
     }).trim();
-    if (gitRoot && existsSync6(gitRoot)) {
+    if (gitRoot && existsSync7(gitRoot)) {
       return gitRoot;
     }
   } catch {
   }
   let currentPath = cwd;
-  while (currentPath !== dirname5(currentPath)) {
-    if (existsSync6(join15(currentPath, ".git"))) {
+  while (currentPath !== dirname6(currentPath)) {
+    if (existsSync7(join18(currentPath, ".git"))) {
       return currentPath;
     }
-    currentPath = dirname5(currentPath);
+    currentPath = dirname6(currentPath);
   }
   console.warn("No git repository found, using current directory:", cwd);
   return cwd;
@@ -57085,7 +63171,7 @@ function findRepoRoot(startPath) {
 var cachedRepoRoot = null;
 function getRepoRoot() {
   if (!cachedRepoRoot) {
-    const thisFileDir = dirname5(fileURLToPath4(import.meta.url));
+    const thisFileDir = dirname6(fileURLToPath4(import.meta.url));
     cachedRepoRoot = findRepoRoot(thisFileDir);
   }
   return cachedRepoRoot;
@@ -57122,8 +63208,8 @@ var RepoService = class _RepoService {
   async readRepoBlockFromContextFile(contextFilePath = "CLAUDE.md") {
     try {
       const repoRoot = getRepoRoot();
-      const fullPath = path15.join(repoRoot, contextFilePath);
-      const content = await fs15.readFile(fullPath, "utf-8");
+      const fullPath = path18.join(repoRoot, contextFilePath);
+      const content = await fs17.readFile(fullPath, "utf-8");
       const startMarker = _RepoService.REPO_BLOCK_START;
       const endMarker = _RepoService.REPO_BLOCK_END;
       const startIndex = content.indexOf(startMarker);
@@ -57177,8 +63263,8 @@ var RepoService = class _RepoService {
     }
     try {
       const repoRoot = getRepoRoot();
-      const analysisPath = path15.join(repoRoot, ".tiny-brain", "analysis.json");
-      return existsSync7(analysisPath);
+      const analysisPath = path18.join(repoRoot, ".tiny-brain", "analysis.json");
+      return existsSync8(analysisPath);
     } catch {
       return false;
     }
@@ -57189,7 +63275,7 @@ var RepoService = class _RepoService {
   getAnalysisVersion() {
     try {
       const currentFilePath = fileURLToPath5(import.meta.url);
-      const packageJsonPath = path15.join(path15.dirname(currentFilePath), "../../package.json");
+      const packageJsonPath = path18.join(path18.dirname(currentFilePath), "../../package.json");
       const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
       return packageJson.version || "0.0.0";
     } catch (error2) {
@@ -57231,10 +63317,10 @@ var RepoService = class _RepoService {
 ${workflowContent}${_RepoService.REPO_BLOCK_END}
 `;
     const repoRoot = getRepoRoot();
-    const fullPath = path15.join(repoRoot, contextPath);
+    const fullPath = path18.join(repoRoot, contextPath);
     let existingContent = "";
     try {
-      existingContent = await fs15.readFile(fullPath, "utf-8");
+      existingContent = await fs17.readFile(fullPath, "utf-8");
     } catch {
     }
     const startMarker = _RepoService.REPO_BLOCK_START;
@@ -57256,8 +63342,8 @@ ${workflowContent}${_RepoService.REPO_BLOCK_END}
     } else {
       existingContent = existingContent.trimEnd() + "\n\n" + repoBlock;
     }
-    await fs15.mkdir(path15.dirname(fullPath), { recursive: true });
-    await fs15.writeFile(fullPath, existingContent, "utf-8");
+    await fs17.mkdir(path18.dirname(fullPath), { recursive: true });
+    await fs17.writeFile(fullPath, existingContent, "utf-8");
     this.context.logger.info(`Updated workflow sections in ${contextPath}`);
   }
   /**
@@ -57716,7 +63802,7 @@ ${exampleSections.join("\n\n")}`;
 
 // packages/tiny-brain-mcp/src/storage/platform-path-builder.ts
 import * as os3 from "os";
-import * as path16 from "path";
+import * as path19 from "path";
 var PlatformPathBuilder = class {
   /**
    * Get Claude Code MCP configuration file path
@@ -57726,7 +63812,7 @@ var PlatformPathBuilder = class {
       case "project":
         return ".mcp.json";
       case "user":
-        return path16.join(os3.homedir(), ".config", "claude", "mcp.json");
+        return path19.join(os3.homedir(), ".config", "claude", "mcp.json");
       case "local":
       default:
         return ".mcp.json";
@@ -57739,7 +63825,7 @@ var PlatformPathBuilder = class {
     const platform2 = os3.platform();
     switch (platform2) {
       case "darwin":
-        return path16.join(
+        return path19.join(
           os3.homedir(),
           "Library",
           "Application Support",
@@ -57747,18 +63833,18 @@ var PlatformPathBuilder = class {
           "claude_desktop_config.json"
         );
       case "win32": {
-        const appData = process.env.APPDATA || path16.join(os3.homedir(), "AppData", "Roaming");
-        return path16.join(appData, "Claude", "claude_desktop_config.json");
+        const appData = process.env.APPDATA || path19.join(os3.homedir(), "AppData", "Roaming");
+        return path19.join(appData, "Claude", "claude_desktop_config.json");
       }
       default:
-        return path16.join(os3.homedir(), ".config", "Claude", "claude_desktop_config.json");
+        return path19.join(os3.homedir(), ".config", "Claude", "claude_desktop_config.json");
     }
   }
   /**
    * Get Cursor IDE configuration file path
    */
   getCursorConfig() {
-    return path16.join(os3.homedir(), ".cursor", "mcp", "config.json");
+    return path19.join(os3.homedir(), ".cursor", "mcp", "config.json");
   }
   /**
    * Get ChatGPT Desktop configuration file path
@@ -57767,13 +63853,13 @@ var PlatformPathBuilder = class {
     const platform2 = os3.platform();
     switch (platform2) {
       case "darwin":
-        return path16.join(os3.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
+        return path19.join(os3.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
       case "win32": {
-        const appData = process.env.APPDATA || path16.join(os3.homedir(), "AppData", "Roaming");
-        return path16.join(appData, "ChatGPT", "config.json");
+        const appData = process.env.APPDATA || path19.join(os3.homedir(), "AppData", "Roaming");
+        return path19.join(appData, "ChatGPT", "config.json");
       }
       default:
-        return path16.join(os3.homedir(), ".config", "ChatGPT", "config.json");
+        return path19.join(os3.homedir(), ".config", "ChatGPT", "config.json");
     }
   }
   /**
@@ -57806,13 +63892,13 @@ var PlatformPathBuilder = class {
    * Get backup directory for platform configs
    */
   getBackupDirectory() {
-    return path16.join(os3.homedir(), ".tiny-brain", "backups");
+    return path19.join(os3.homedir(), ".tiny-brain", "backups");
   }
 };
 
 // packages/tiny-brain-mcp/src/storage/platform-config-adapter.ts
-import { promises as fs16, existsSync as existsSync8 } from "fs";
-import * as path17 from "path";
+import { promises as fs18, existsSync as existsSync9 } from "fs";
+import * as path20 from "path";
 var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystemStorageAdapter {
   platformPathBuilder;
   constructor(config2) {
@@ -57825,7 +63911,7 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
   async readPlatformConfig(platform2, scope) {
     try {
       const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-      const content = await fs16.readFile(configPath, "utf-8");
+      const content = await fs18.readFile(configPath, "utf-8");
       return JSON.parse(content);
     } catch (error2) {
       const err = error2;
@@ -57840,9 +63926,9 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
    */
   async writePlatformConfig(platform2, config2, scope) {
     const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-    const directory = path17.dirname(configPath);
-    await fs16.mkdir(directory, { recursive: true });
-    await fs16.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
+    const directory = path20.dirname(configPath);
+    await fs18.mkdir(directory, { recursive: true });
+    await fs18.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
   }
   /**
    * Backup platform configuration
@@ -57856,9 +63942,9 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/:/g, "-").replace(/\./g, "-");
       const backupDir = this.platformPathBuilder.getBackupDirectory();
       const backupFile = `${platform2}-${timestamp2}.backup`;
-      const backupPath = path17.join(backupDir, backupFile);
-      await fs16.mkdir(backupDir, { recursive: true });
-      await fs16.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
+      const backupPath = path20.join(backupDir, backupFile);
+      await fs18.mkdir(backupDir, { recursive: true });
+      await fs18.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
       return timestamp2;
     } catch (error2) {
       const err = error2;
@@ -57874,8 +63960,8 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
   async restorePlatformConfig(platform2, backupId, scope) {
     const backupDir = this.platformPathBuilder.getBackupDirectory();
     const backupFile = `${platform2}-${backupId}.backup`;
-    const backupPath = path17.join(backupDir, backupFile);
-    const backupContent = await fs16.readFile(backupPath, "utf-8");
+    const backupPath = path20.join(backupDir, backupFile);
+    const backupContent = await fs18.readFile(backupPath, "utf-8");
     const config2 = JSON.parse(backupContent);
     await this.writePlatformConfig(platform2, config2, scope);
   }
@@ -57927,15 +64013,15 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
     const repoRoot = getRepoRoot();
     switch (platform2) {
       case "claude-code":
-        return path17.join(repoRoot, "CLAUDE.md");
+        return path20.join(repoRoot, "CLAUDE.md");
       case "cursor":
-        return path17.join(repoRoot, ".cursorrules");
+        return path20.join(repoRoot, ".cursorrules");
       case "vscode":
-        return path17.join(repoRoot, ".vscode", "context.md");
+        return path20.join(repoRoot, ".vscode", "context.md");
       case "windsurf":
-        return path17.join(repoRoot, ".windsurfrules");
+        return path20.join(repoRoot, ".windsurfrules");
       default:
-        return path17.join(repoRoot, ".claude", "CLAUDE.md");
+        return path20.join(repoRoot, ".claude", "CLAUDE.md");
     }
   }
   /**
@@ -57955,10 +64041,10 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
       return "windsurf";
     }
     const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    if (existsSync8(path17.join(homeDir, ".claude-code"))) {
+    if (existsSync9(path20.join(homeDir, ".claude-code"))) {
       return "claude-code";
     }
-    if (existsSync8(path17.join(homeDir, "Library", "Application Support", "Claude"))) {
+    if (existsSync9(path20.join(homeDir, "Library", "Application Support", "Claude"))) {
       return "claude-desktop";
     }
     return "unknown";
@@ -58023,9 +64109,9 @@ var semver = __toESM(require_semver2(), 1);
 
 // packages/tiny-brain-mcp/src/services/agent-installation-service.ts
 init_src();
-import * as fs17 from "fs/promises";
-import * as path18 from "path";
-import * as crypto3 from "crypto";
+import * as fs19 from "fs/promises";
+import * as path21 from "path";
+import * as crypto4 from "crypto";
 var AgentInstallationService = class {
   constructor(context) {
     this.context = context;
@@ -58043,7 +64129,7 @@ var AgentInstallationService = class {
       return {
         content,
         version: version2,
-        checksum: crypto3.createHash("sha256").update(content).digest("hex")
+        checksum: crypto4.createHash("sha256").update(content).digest("hex")
       };
     } catch (error2) {
       const message = error2 instanceof Error ? error2.message : "Unknown error";
@@ -58087,15 +64173,15 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async installAgent(agentInfo) {
     try {
       const repoRoot = getRepoRoot();
-      const agentsDir = path18.join(repoRoot, ".claude", "agents");
-      await fs17.mkdir(agentsDir, { recursive: true });
+      const agentsDir = path21.join(repoRoot, ".claude", "agents");
+      await fs19.mkdir(agentsDir, { recursive: true });
       let content = agentInfo.content;
       if (!content) {
         const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
         content = downloaded.content;
       }
-      const filePath = path18.join(agentsDir, `${agentInfo.name}.md`);
-      await fs17.writeFile(filePath, content, "utf-8");
+      const filePath = path21.join(agentsDir, `${agentInfo.name}.md`);
+      await fs19.writeFile(filePath, content, "utf-8");
       this.context.logger.info(`Successfully installed agent: ${agentInfo.name}`);
       return { success: true };
     } catch (error2) {
@@ -58120,13 +64206,13 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async updateAgent(agentInfo) {
     try {
       const repoRoot = getRepoRoot();
-      const filePath = path18.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
-      const existingContent = await fs17.readFile(filePath, "utf-8");
+      const filePath = path21.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
+      const existingContent = await fs19.readFile(filePath, "utf-8");
       const hasCustomizations = this.detectCustomizations(existingContent);
       let backupCreated = false;
       if (hasCustomizations) {
         const backupPath = `${filePath}.backup.${Date.now()}`;
-        await fs17.writeFile(backupPath, existingContent, "utf-8");
+        await fs19.writeFile(backupPath, existingContent, "utf-8");
         backupCreated = true;
         this.context.logger.info(`Created backup of customized agent: ${backupPath}`);
       }
@@ -58136,7 +64222,7 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
         newContent = downloaded.content;
       }
       const updatedContent = this.updateAgentMetadata(newContent, agentInfo.version);
-      await fs17.writeFile(filePath, updatedContent, "utf-8");
+      await fs19.writeFile(filePath, updatedContent, "utf-8");
       this.context.logger.info(`Successfully updated agent: ${agentInfo.name} to v${agentInfo.version}`);
       return {
         updated: true,
@@ -58154,9 +64240,9 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async removeAgent(agentName) {
     try {
       const repoRoot = getRepoRoot();
-      const filePath = path18.join(repoRoot, ".claude", "agents", `${agentName}.md`);
-      await fs17.access(filePath);
-      await fs17.unlink(filePath);
+      const filePath = path21.join(repoRoot, ".claude", "agents", `${agentName}.md`);
+      await fs19.access(filePath);
+      await fs19.unlink(filePath);
       this.context.logger.info(`Successfully removed agent: ${agentName}`);
     } catch (error2) {
       if (error2.code === "ENOENT") {
@@ -58176,8 +64262,8 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       failed: []
     };
     const repoRoot = getRepoRoot();
-    const agentsDir = path18.join(repoRoot, ".claude", "agents");
-    await fs17.mkdir(agentsDir, { recursive: true });
+    const agentsDir = path21.join(repoRoot, ".claude", "agents");
+    await fs19.mkdir(agentsDir, { recursive: true });
     for (const agent of agentsToInstall) {
       try {
         const result = await this.installAgent(agent);
@@ -58215,7 +64301,7 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
     );
     validation.hasMetadata = content.includes("<!-- Agent Metadata -->") && content.includes("<!-- Version:") && content.includes("<!-- Generated:");
     if (expectedChecksum) {
-      const actualChecksum = crypto3.createHash("sha256").update(content).digest("hex");
+      const actualChecksum = crypto4.createHash("sha256").update(content).digest("hex");
       validation.checksumValid = actualChecksum === expectedChecksum;
     }
     validation.isValid = validation.hasRequiredSections && validation.hasMetadata && validation.checksumValid;
@@ -58227,14 +64313,14 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async getInstalledAgents() {
     try {
       const repoRoot = getRepoRoot();
-      const agentsDir = path18.join(repoRoot, ".claude", "agents");
-      const files = await fs17.readdir(agentsDir);
+      const agentsDir = path21.join(repoRoot, ".claude", "agents");
+      const files = await fs19.readdir(agentsDir);
       const agentFiles = files.filter((file) => file.endsWith(".md"));
       const installedAgents = [];
       for (const file of agentFiles) {
         try {
-          const filePath = path18.join(agentsDir, file);
-          const content = await fs17.readFile(filePath, "utf-8");
+          const filePath = path21.join(agentsDir, file);
+          const content = await fs19.readFile(filePath, "utf-8");
           const agentName = file.replace(".md", "");
           const metadata = this.extractAgentMetadata(content);
           installedAgents.push({
@@ -58355,20 +64441,20 @@ var AgentService = class {
    * Install formatted agents to the filesystem
    */
   async installAgents(formattedAgents, formatter) {
-    const fs19 = await import("fs/promises");
-    const path21 = await import("path");
+    const fs21 = await import("fs/promises");
+    const path24 = await import("path");
     const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path21.join(repoRoot, activeFormatter.getAgentInstallPath());
+    const agentsPath = path24.join(repoRoot, activeFormatter.getAgentInstallPath());
     this.context.logger.debug("[AgentService] Installing agents:", {
       repoRoot,
       agentsPath,
       agentCount: formattedAgents.length
     });
-    await fs19.mkdir(agentsPath, { recursive: true });
+    await fs21.mkdir(agentsPath, { recursive: true });
     for (const agent of formattedAgents) {
-      const agentPath = path21.join(agentsPath, agent.filename);
-      await fs19.writeFile(agentPath, agent.content, "utf-8");
+      const agentPath = path24.join(agentsPath, agent.filename);
+      await fs21.writeFile(agentPath, agent.content, "utf-8");
       this.context.logger.info(`Agent '${agent.filename}' installed to ${agentPath}`);
     }
     this.context.logger.info(`Installed ${formattedAgents.length} agents to ${agentsPath}`);
@@ -58377,28 +64463,28 @@ var AgentService = class {
    * Install agents with version checking and overwrite strategy
    */
   async installAgentsWithVersionCheck(agents, options = {}) {
-    const fs19 = await import("fs/promises");
-    const path21 = await import("path");
+    const fs21 = await import("fs/promises");
+    const path24 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const formattedAgents = this.formatAgents(agents, formatter);
     const repoRoot = getRepoRoot();
-    const agentsPath = path21.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path24.join(repoRoot, formatter.getAgentInstallPath());
     const result = {
       installed: [],
       skipped: [],
       updated: [],
       errors: []
     };
-    await fs19.mkdir(agentsPath, { recursive: true });
+    await fs21.mkdir(agentsPath, { recursive: true });
     const installedAgents = await this.getInstalledAgents();
     const installedMap = new Map(installedAgents.map((a) => [a.name, a]));
     for (const agent of formattedAgents) {
-      const agentPath = path21.join(agentsPath, agent.filename);
+      const agentPath = path24.join(agentsPath, agent.filename);
       const agentName = agent.filename.replace(".md", "");
       try {
-        const fileExists = await fs19.access(agentPath).then(() => true).catch(() => false);
+        const fileExists = await fs21.access(agentPath).then(() => true).catch(() => false);
         if (!fileExists) {
-          await fs19.writeFile(agentPath, agent.content, "utf-8");
+          await fs21.writeFile(agentPath, agent.content, "utf-8");
           result.installed.push(agentName);
           this.context.logger.info(`Installed new agent: ${agentName}`);
         } else {
@@ -58409,9 +64495,9 @@ var AgentService = class {
           } else if (strategy === "always") {
             if (options.backupExisting) {
               const backupPath = `${agentPath}.backup.${Date.now()}`;
-              await fs19.copyFile(agentPath, backupPath);
+              await fs21.copyFile(agentPath, backupPath);
             }
-            await fs19.writeFile(agentPath, agent.content, "utf-8");
+            await fs21.writeFile(agentPath, agent.content, "utf-8");
             result.updated.push(agentName);
             this.context.logger.info(`Updated agent (forced): ${agentName}`);
           } else {
@@ -58421,9 +64507,9 @@ var AgentService = class {
             if (semver.gt(newVersion, installedVersion)) {
               if (options.backupExisting) {
                 const backupPath = `${agentPath}.backup.${Date.now()}`;
-                await fs19.copyFile(agentPath, backupPath);
+                await fs21.copyFile(agentPath, backupPath);
               }
-              await fs19.writeFile(agentPath, agent.content, "utf-8");
+              await fs21.writeFile(agentPath, agent.content, "utf-8");
               result.updated.push(agentName);
               this.context.logger.info(`Updated agent: ${agentName} (${installedVersion} -> ${newVersion})`);
             } else {
@@ -58448,21 +64534,21 @@ var AgentService = class {
     if (!this.installationService && "platformInfo" in this.context) {
       this.installationService = new AgentInstallationService(this.context);
     }
-    const fs19 = await import("fs/promises");
-    const path21 = await import("path");
+    const fs21 = await import("fs/promises");
+    const path24 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path21.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path24.join(repoRoot, formatter.getAgentInstallPath());
     for (const agentName of agentNames) {
       try {
-        const agentFile = path21.join(agentsPath, `${agentName}.md`);
+        const agentFile = path24.join(agentsPath, `${agentName}.md`);
         try {
-          await fs19.access(agentFile);
+          await fs21.access(agentFile);
         } catch {
           result.errors.push(`Agent ${agentName} not found`);
           continue;
         }
-        await fs19.unlink(agentFile);
+        await fs21.unlink(agentFile);
         result.removed.push(agentName);
         this.context.logger.info(`Removed agent: ${agentName}`);
       } catch (error2) {
@@ -58483,17 +64569,17 @@ var AgentService = class {
     if (this.installationService) {
       return await this.installationService.getInstalledAgents();
     }
-    const fs19 = await import("fs/promises");
-    const path21 = await import("path");
+    const fs21 = await import("fs/promises");
+    const path24 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path21.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path24.join(repoRoot, formatter.getAgentInstallPath());
     try {
-      const files = await fs19.readdir(agentsPath);
+      const files = await fs21.readdir(agentsPath);
       const agentFiles = files.filter((f) => f.endsWith(".md"));
       const agents = [];
       for (const file of agentFiles) {
-        const content = await fs19.readFile(path21.join(agentsPath, file), "utf-8");
+        const content = await fs21.readFile(path24.join(agentsPath, file), "utf-8");
         const name = file.replace(".md", "");
         const version2 = this.extractVersion(content);
         agents.push({ name, version: version2, lastUpdated: (/* @__PURE__ */ new Date()).toISOString() });
@@ -58536,8 +64622,8 @@ var AgentService = class {
 };
 
 // packages/tiny-brain-mcp/src/tools/persona/as.tool.ts
-import { existsSync as existsSync9 } from "fs";
-import { join as join20 } from "path";
+import { existsSync as existsSync10 } from "fs";
+import { join as join23 } from "path";
 var AsArgsSchema = external_exports.object({
   personaName: external_exports.string().optional(),
   confirmCreate: external_exports.boolean().optional()
@@ -58993,8 +65079,8 @@ ${value}
 `;
       try {
         const repoRoot = getRepoRoot();
-        const hasPRD = existsSync9(join20(repoRoot, "docs", "prd"));
-        const hasADR = existsSync9(join20(repoRoot, "docs", "adr"));
+        const hasPRD = existsSync10(join23(repoRoot, "docs", "prd"));
+        const hasADR = existsSync10(join23(repoRoot, "docs", "adr"));
         if (hasPRD) {
           formatted += `      \u2705 Enabled Spec Driven Design workflow with Test Driven Development
 `;
@@ -59321,7 +65407,7 @@ init_zod();
 
 // packages/tiny-brain-mcp/src/services/UpdateService.ts
 import { readFileSync as readFileSync2 } from "fs";
-import { join as join21, dirname as dirname8 } from "path";
+import { join as join24, dirname as dirname9 } from "path";
 import { fileURLToPath as fileURLToPath6 } from "url";
 var UpdateService = class _UpdateService {
   static GITHUB_RELEASES_URL = "https://raw.githubusercontent.com/magic-ingredients/tiny-brain-releases/main/latest/version.json";
@@ -59336,20 +65422,20 @@ var UpdateService = class _UpdateService {
     }
     try {
       const __filename = fileURLToPath6(import.meta.url);
-      const __dirname2 = dirname8(__filename);
-      const packageJsonPath = join21(__dirname2, "../../package.json");
+      const __dirname2 = dirname9(__filename);
+      const packageJsonPath = join24(__dirname2, "../../package.json");
       try {
         const packageJson = JSON.parse(readFileSync2(packageJsonPath, "utf-8"));
         this.currentVersion = packageJson.version;
         return packageJson.version;
       } catch {
-        const manifestPath = join21(__dirname2, "../manifest.json");
+        const manifestPath = join24(__dirname2, "../manifest.json");
         try {
           const manifest = JSON.parse(readFileSync2(manifestPath, "utf-8"));
           this.currentVersion = manifest.version;
           return manifest.version;
         } catch {
-          const extensionsManifestPath = join21(__dirname2, "../../manifest.json");
+          const extensionsManifestPath = join24(__dirname2, "../../manifest.json");
           const manifest = JSON.parse(readFileSync2(extensionsManifestPath, "utf-8"));
           this.currentVersion = manifest.version;
           return manifest.version;
@@ -59976,17 +66062,17 @@ init_src();
 
 // packages/tiny-brain-mcp/src/services/tech-context-service.ts
 var import_minimatch8 = __toESM(require_minimatch(), 1);
-import { promises as fs18 } from "fs";
-import path19 from "path";
-import crypto4 from "crypto";
+import { promises as fs20 } from "fs";
+import path22 from "path";
+import crypto5 from "crypto";
 var TechContextService = class {
   tinyBrainDir;
   techDir;
   agentsDir;
   constructor(repoPath) {
-    this.tinyBrainDir = path19.join(repoPath, ".tiny-brain");
-    this.techDir = path19.join(this.tinyBrainDir, "tech");
-    this.agentsDir = path19.join(repoPath, ".claude", "agents");
+    this.tinyBrainDir = path22.join(repoPath, ".tiny-brain");
+    this.techDir = path22.join(this.tinyBrainDir, "tech");
+    this.agentsDir = path22.join(repoPath, ".claude", "agents");
   }
   /** Get the .tiny-brain directory path */
   getTinyBrainDir() {
@@ -60002,8 +66088,8 @@ var TechContextService = class {
   }
   /** Ensure required directories exist */
   async ensureDirectories() {
-    await fs18.mkdir(this.tinyBrainDir, { recursive: true });
-    await fs18.mkdir(this.techDir, { recursive: true });
+    await fs20.mkdir(this.tinyBrainDir, { recursive: true });
+    await fs20.mkdir(this.techDir, { recursive: true });
   }
   /**
    * Write analysis data to .tiny-brain/analysis.json
@@ -60026,7 +66112,7 @@ var TechContextService = class {
       documentationLocations: analysis.documentationLocations
     };
     const hashInput = JSON.stringify({ stack, analysis: analysisData });
-    const analysisHash = crypto4.createHash("sha256").update(hashInput).digest("hex");
+    const analysisHash = crypto5.createHash("sha256").update(hashInput).digest("hex");
     const file = {
       version: "1.0",
       detectedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -60034,8 +66120,8 @@ var TechContextService = class {
       stack,
       analysis: analysisData
     };
-    const filePath = path19.join(this.tinyBrainDir, "analysis.json");
-    await fs18.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
+    const filePath = path22.join(this.tinyBrainDir, "analysis.json");
+    await fs20.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
   }
   /**
    * Write a tech expertise file with YAML frontmatter
@@ -60055,8 +66141,8 @@ var TechContextService = class {
     const fileContent = `${yamlFrontmatter}
 
 ${content}`;
-    const filePath = path19.join(this.techDir, `${name}.md`);
-    await fs18.writeFile(filePath, fileContent, "utf-8");
+    const filePath = path22.join(this.techDir, `${name}.md`);
+    await fs20.writeFile(filePath, fileContent, "utf-8");
   }
   /**
    * Write raw markdown content to a tech file
@@ -60064,16 +66150,16 @@ ${content}`;
    */
   async writeTechFileRaw(name, content) {
     await this.ensureDirectories();
-    const filePath = path19.join(this.techDir, `${name}.md`);
-    await fs18.writeFile(filePath, content, "utf-8");
+    const filePath = path22.join(this.techDir, `${name}.md`);
+    await fs20.writeFile(filePath, content, "utf-8");
   }
   /**
    * Read analysis data from .tiny-brain/analysis.json
    */
   async readAnalysis() {
-    const filePath = path19.join(this.tinyBrainDir, "analysis.json");
+    const filePath = path22.join(this.tinyBrainDir, "analysis.json");
     try {
-      const content = await fs18.readFile(filePath, "utf-8");
+      const content = await fs20.readFile(filePath, "utf-8");
       return JSON.parse(content);
     } catch {
       return null;
@@ -60084,12 +66170,12 @@ ${content}`;
    */
   async readTechFiles() {
     try {
-      const files = await fs18.readdir(this.techDir);
+      const files = await fs20.readdir(this.techDir);
       const techFiles = [];
       for (const file of files) {
         if (!file.endsWith(".md")) continue;
-        const filePath = path19.join(this.techDir, file);
-        const content = await fs18.readFile(filePath, "utf-8");
+        const filePath = path22.join(this.techDir, file);
+        const content = await fs20.readFile(filePath, "utf-8");
         const parsed = this.parseFrontmatter(content);
         if (parsed) {
           techFiles.push({
@@ -60109,7 +66195,7 @@ ${content}`;
   async getTechForFile(filePath) {
     const techFiles = await this.readTechFiles();
     const matches = [];
-    const basename2 = path19.basename(filePath);
+    const basename2 = path22.basename(filePath);
     for (const techFile of techFiles) {
       for (const pattern of techFile.frontmatter.filePatterns) {
         if ((0, import_minimatch8.default)(filePath, pattern) || (0, import_minimatch8.default)(basename2, pattern) || (0, import_minimatch8.default)(filePath, `**/${pattern}`) || filePath.includes(pattern.replace(/\/$/, ""))) {
@@ -60142,7 +66228,7 @@ ${content}`;
       documentationLocations: analysis.documentationLocations
     };
     const hashInput = JSON.stringify({ stack, analysis: analysisData });
-    const newHash = crypto4.createHash("sha256").update(hashInput).digest("hex");
+    const newHash = crypto5.createHash("sha256").update(hashInput).digest("hex");
     return newHash !== existing.analysisHash;
   }
   /**
@@ -60154,16 +66240,16 @@ ${content}`;
       ...config2,
       lastSynced: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const filePath = path19.join(this.techDir, "config.json");
-    await fs18.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
+    const filePath = path22.join(this.techDir, "config.json");
+    await fs20.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
   }
   /**
    * Read config from .tiny-brain/tech/config.json
    */
   async readConfig() {
-    const filePath = path19.join(this.techDir, "config.json");
+    const filePath = path22.join(this.techDir, "config.json");
     try {
-      const content = await fs18.readFile(filePath, "utf-8");
+      const content = await fs20.readFile(filePath, "utf-8");
       return JSON.parse(content);
     } catch {
       return { useAgents: false };
@@ -60177,12 +66263,12 @@ ${content}`;
    * - Sub-agent invocation context
    */
   async installTechAgents() {
-    await fs18.mkdir(this.agentsDir, { recursive: true });
+    await fs20.mkdir(this.agentsDir, { recursive: true });
     const techFiles = await this.readTechFiles();
     for (const techFile of techFiles) {
       const name = techFile.frontmatter.name;
       const agentFileName = `tech-${name}.md`;
-      const agentPath = path19.join(this.agentsDir, agentFileName);
+      const agentPath = path22.join(this.agentsDir, agentFileName);
       const description = techFile.frontmatter.description || `${name} development specialist. Use for ${techFile.frontmatter.domain} tasks involving ${name}.`;
       const agentContent = `---
 name: tech-${name}
@@ -60198,7 +66284,7 @@ You are a specialized ${name} development agent invoked by the developer agent. 
 ## Tech Expertise
 
 ${techFile.content}`;
-      await fs18.writeFile(agentPath, agentContent, "utf-8");
+      await fs20.writeFile(agentPath, agentContent, "utf-8");
     }
   }
   /**
@@ -60206,10 +66292,10 @@ ${techFile.content}`;
    */
   async removeTechAgents() {
     try {
-      const files = await fs18.readdir(this.agentsDir);
+      const files = await fs20.readdir(this.agentsDir);
       for (const file of files) {
         if (file.startsWith("tech-") && file.endsWith(".md")) {
-          await fs18.unlink(path19.join(this.agentsDir, file));
+          await fs20.unlink(path22.join(this.agentsDir, file));
         }
       }
     } catch {
@@ -60303,18 +66389,18 @@ ${techFile.content}`;
 
 // packages/tiny-brain-mcp/src/services/analyse-service.ts
 import { fileURLToPath as fileURLToPath8 } from "url";
-import { dirname as dirname10, join as join23 } from "path";
-import { existsSync as existsSync10 } from "fs";
-import { mkdir as mkdir4, copyFile, readFile as readFile10, readdir as readdir8, chmod as chmod2, stat as stat2, writeFile as writeFile4 } from "fs/promises";
+import { dirname as dirname11, join as join26 } from "path";
+import { existsSync as existsSync11 } from "fs";
+import { mkdir as mkdir5, copyFile, readFile as readFile13, readdir as readdir11, chmod as chmod2, stat as stat2, writeFile as writeFile5 } from "fs/promises";
 
 // packages/tiny-brain-mcp/src/utils/package-version.ts
 import { readFileSync as readFileSync3 } from "fs";
-import { join as join22, dirname as dirname9 } from "path";
+import { join as join25, dirname as dirname10 } from "path";
 import { fileURLToPath as fileURLToPath7 } from "url";
 function getPackageVersion() {
   const __filename = fileURLToPath7(import.meta.url);
-  const __dirname2 = dirname9(__filename);
-  const packagePath = join22(__dirname2, "..", "..", "package.json");
+  const __dirname2 = dirname10(__filename);
+  const packagePath = join25(__dirname2, "..", "..", "package.json");
   try {
     const packageJson = JSON.parse(readFileSync3(packagePath, "utf-8"));
     return packageJson.version;
@@ -60484,11 +66570,11 @@ var AnalyseService = class {
    */
   async countPrdsInRepo(repoPath) {
     try {
-      const prdDir = join23(repoPath, "docs", "prd");
-      if (!existsSync10(prdDir)) {
+      const prdDir = join26(repoPath, "docs", "prd");
+      if (!existsSync11(prdDir)) {
         return 0;
       }
-      const entries = await readdir8(prdDir, { withFileTypes: true });
+      const entries = await readdir11(prdDir, { withFileTypes: true });
       return entries.filter((e) => e.isDirectory() && !e.name.startsWith("_")).length;
     } catch {
       return 0;
@@ -60506,11 +66592,11 @@ var AnalyseService = class {
         return false;
       }
       const repoRoot = process.cwd();
-      const prdDir = join23(repoRoot, "docs", "prd");
-      if (existsSync10(prdDir)) {
+      const prdDir = join26(repoRoot, "docs", "prd");
+      if (existsSync11(prdDir)) {
         return false;
       }
-      await mkdir4(prdDir, { recursive: true });
+      await mkdir5(prdDir, { recursive: true });
       this.context.logger.info("\u2705 Created docs/prd/ directory");
       return true;
     } catch (error2) {
@@ -60530,11 +66616,11 @@ var AnalyseService = class {
         return false;
       }
       const repoRoot = process.cwd();
-      const adrDir = join23(repoRoot, "docs", "adr");
-      if (existsSync10(adrDir)) {
+      const adrDir = join26(repoRoot, "docs", "adr");
+      if (existsSync11(adrDir)) {
         return false;
       }
-      await mkdir4(adrDir, { recursive: true });
+      await mkdir5(adrDir, { recursive: true });
       this.context.logger.info("\u2705 Created docs/adr/ directory");
       return true;
     } catch (error2) {
@@ -60554,11 +66640,11 @@ var AnalyseService = class {
         return false;
       }
       const repoRoot = process.cwd();
-      const qualityDir = join23(repoRoot, "docs", "quality");
-      if (existsSync10(qualityDir)) {
+      const qualityDir = join26(repoRoot, "docs", "quality");
+      if (existsSync11(qualityDir)) {
         return false;
       }
-      await mkdir4(qualityDir, { recursive: true });
+      await mkdir5(qualityDir, { recursive: true });
       this.context.logger.info("\u2705 Created docs/quality/ directory");
       return true;
     } catch (error2) {
@@ -60578,11 +66664,11 @@ var AnalyseService = class {
         return false;
       }
       const repoRoot = process.cwd();
-      const fixesDir = join23(repoRoot, ".tiny-brain", "fixes");
-      if (existsSync10(fixesDir)) {
+      const fixesDir = join26(repoRoot, ".tiny-brain", "fixes");
+      if (existsSync11(fixesDir)) {
         return false;
       }
-      await mkdir4(fixesDir, { recursive: true });
+      await mkdir5(fixesDir, { recursive: true });
       this.context.logger.info("\u2705 Created .tiny-brain/fixes/ directory");
       return true;
     } catch (error2) {
@@ -60598,30 +66684,30 @@ var AnalyseService = class {
   async initializeGitHooks() {
     try {
       const repoRoot = process.cwd();
-      const gitHooksDir = join23(repoRoot, ".git", "hooks");
-      if (!existsSync10(join23(repoRoot, ".git"))) {
+      const gitHooksDir = join26(repoRoot, ".git", "hooks");
+      if (!existsSync11(join26(repoRoot, ".git"))) {
         this.context.logger.debug("Not a git repository, skipping git hooks initialization");
         return false;
       }
       const __filename = fileURLToPath8(import.meta.url);
-      const __dirname2 = dirname10(__filename);
-      const srcHooksDir = join23(__dirname2, "..", "..", "templates", "hooks");
-      if (!existsSync10(srcHooksDir)) {
+      const __dirname2 = dirname11(__filename);
+      const srcHooksDir = join26(__dirname2, "..", "..", "templates", "hooks");
+      if (!existsSync11(srcHooksDir)) {
         this.context.logger.debug(`Hook templates not found at ${srcHooksDir}, skipping`);
         return false;
       }
-      await mkdir4(gitHooksDir, { recursive: true });
+      await mkdir5(gitHooksDir, { recursive: true });
       const hooks = ["commit-msg", "post-commit", "pre-commit"];
       let anyInstalled = false;
       for (const hookName of hooks) {
-        const srcHook = join23(srcHooksDir, hookName);
-        const destHook = join23(gitHooksDir, hookName);
-        if (!existsSync10(srcHook)) {
+        const srcHook = join26(srcHooksDir, hookName);
+        const destHook = join26(gitHooksDir, hookName);
+        if (!existsSync11(srcHook)) {
           continue;
         }
-        if (existsSync10(destHook)) {
+        if (existsSync11(destHook)) {
           try {
-            const existingContent = await readFile10(destHook, "utf-8");
+            const existingContent = await readFile13(destHook, "utf-8");
             if (!existingContent.includes("Installed by: tiny-brain")) {
               this.context.logger.debug(`Skipping ${hookName} - custom hook already exists`);
               continue;
@@ -60668,13 +66754,13 @@ var AnalyseService = class {
     ];
     try {
       const repoRoot = process.cwd();
-      const settingsDir = join23(repoRoot, ".claude");
-      const settingsPath = join23(settingsDir, "settings.json");
-      await mkdir4(settingsDir, { recursive: true });
+      const settingsDir = join26(repoRoot, ".claude");
+      const settingsPath = join26(settingsDir, "settings.json");
+      await mkdir5(settingsDir, { recursive: true });
       let settings = {};
-      if (existsSync10(settingsPath)) {
+      if (existsSync11(settingsPath)) {
         try {
-          const content = await readFile10(settingsPath, "utf-8");
+          const content = await readFile13(settingsPath, "utf-8");
           settings = JSON.parse(content);
         } catch {
           this.context.logger.warn("Failed to parse existing settings.json, will create new one");
@@ -60697,7 +66783,7 @@ var AnalyseService = class {
         }
       }
       if (addedPermissions.length > 0) {
-        await writeFile4(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+        await writeFile5(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
         this.context.logger.info(`Added ${addedPermissions.length} skill permissions to .claude/settings.json`);
       }
       return addedPermissions;
@@ -61130,11 +67216,11 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
       );
     }
     const lines = ["\u{1F4CA} Quality Run History", ""];
-    for (const run of runs) {
-      const gradeEmoji = run.grade === "A" ? "\u{1F31F}" : run.grade === "F" ? "\u274C" : "\u{1F4CB}";
-      lines.push(`${gradeEmoji} **${run.date}** - Score: ${run.score}/100 (${run.grade})`);
-      lines.push(`   Run ID: ${run.runId}`);
-      lines.push(`   Issues: ${run.issueCount}`);
+    for (const run2 of runs) {
+      const gradeEmoji = run2.grade === "A" ? "\u{1F31F}" : run2.grade === "F" ? "\u274C" : "\u{1F4CB}";
+      lines.push(`${gradeEmoji} **${run2.date}** - Score: ${run2.score}/100 (${run2.grade})`);
+      lines.push(`   Run ID: ${run2.runId}`);
+      lines.push(`   Issues: ${run2.issueCount}`);
       lines.push("");
     }
     lines.push('Use "quality details runId=<id>" to see full details.');
@@ -61144,30 +67230,30 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
     if (!args.runId) {
       return createErrorResult("runId is required for details operation");
     }
-    const run = await service.getRunDetails(args.runId);
-    if (!run) {
+    const run2 = await service.getRunDetails(args.runId);
+    if (!run2) {
       return createErrorResult(`Quality run not found: ${args.runId}`);
     }
     const lines = [
-      `\u{1F4CA} Quality Run Details: ${run.runId}`,
+      `\u{1F4CA} Quality Run Details: ${run2.runId}`,
       "",
       "## Summary",
-      `**Date:** ${run.date}`,
-      `**Score:** ${run.score}/100`,
-      `**Grade:** ${run.grade}`,
-      `**Issues:** ${run.issues.length}`,
+      `**Date:** ${run2.date}`,
+      `**Score:** ${run2.score}/100`,
+      `**Grade:** ${run2.grade}`,
+      `**Issues:** ${run2.issues.length}`,
       ""
     ];
-    if (run.issues.length > 0) {
+    if (run2.issues.length > 0) {
       lines.push("## Issues by Category");
-      for (const [category, count] of Object.entries(run.issuesByCategory)) {
+      for (const [category, count] of Object.entries(run2.issuesByCategory)) {
         if (count > 0) {
           lines.push(`- ${category}: ${count}`);
         }
       }
       lines.push("");
       lines.push("## Issue Details");
-      for (const issue2 of run.issues) {
+      for (const issue2 of run2.issues) {
         const location = issue2.line ? `${issue2.file}:${issue2.line}` : issue2.file;
         lines.push(`- **[${issue2.severity}]** ${issue2.message}`);
         lines.push(`  - Category: ${issue2.category}`);
@@ -61178,23 +67264,23 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
       }
       lines.push("");
     }
-    if (run.recommendations.length > 0) {
+    if (run2.recommendations.length > 0) {
       lines.push("## Recommendations");
-      for (const rec of run.recommendations) {
+      for (const rec of run2.recommendations) {
         lines.push(`- ${rec}`);
       }
       lines.push("");
     }
-    if (run.context) {
+    if (run2.context) {
       lines.push("## Repository Context");
-      if (run.context.languages?.length) {
-        lines.push(`- Languages: ${run.context.languages.join(", ")}`);
+      if (run2.context.languages?.length) {
+        lines.push(`- Languages: ${run2.context.languages.join(", ")}`);
       }
-      if (run.context.frameworks?.length) {
-        lines.push(`- Frameworks: ${run.context.frameworks.join(", ")}`);
+      if (run2.context.frameworks?.length) {
+        lines.push(`- Frameworks: ${run2.context.frameworks.join(", ")}`);
       }
-      if (run.context.projectType) {
-        lines.push(`- Project Type: ${run.context.projectType}`);
+      if (run2.context.projectType) {
+        lines.push(`- Project Type: ${run2.context.projectType}`);
       }
     }
     return createSuccessResult(lines.join("\n"));
@@ -63353,7 +69439,7 @@ var MCPServer = class {
     }
     const logFileName = isDev ? "dev-debug.log" : "debug.log";
     this.logger = new FileLogger({
-      logFilePath: path20.join(resolvedDataDir, logFileName),
+      logFilePath: path23.join(resolvedDataDir, logFileName),
       logLevel,
       enabled: true
     });
@@ -63510,9 +69596,9 @@ var MCPServer = class {
   async initializeRepository() {
     try {
       const cwd = process.cwd();
-      const gitDir = path20.join(cwd, ".git");
-      const { existsSync: existsSync13 } = await import("fs");
-      if (!existsSync13(gitDir)) {
+      const gitDir = path23.join(cwd, ".git");
+      const { existsSync: existsSync14 } = await import("fs");
+      if (!existsSync14(gitDir)) {
         this.logger.debug("Not in a git repository, skipping repo registration");
         return;
       }
@@ -63538,10 +69624,12 @@ var MCPServer = class {
       hasClientSecret: !!this.config.account?.clientSecret,
       configKeys: Object.keys(this.config)
     });
+    const credentialService = new CredentialStorageService();
+    const hasLlmApiKey = await credentialService.hasLlmApiKey();
+    const getLlmApiKey = () => credentialService.getLlmApiKey();
     if (!this.config.account?.clientId || !this.config.account?.clientSecret) {
       this.logger.info("No remote credentials configured in MCP config, checking tiny-brain CLI config...");
       try {
-        const credentialService = new CredentialStorageService();
         const credentials = await credentialService.getCredentials();
         if (credentials && credentials.clientId && credentials.clientSecret) {
           this.logger.info("Found credentials in CLI config, using for authentication");
@@ -63551,11 +69639,25 @@ var MCPServer = class {
           };
         } else {
           this.logger.info("No credentials found in CLI config either, running in local-only mode");
+          this.baseContext.libraryAuth = {
+            clientId: void 0,
+            hasStoredSecret: false,
+            hasLlmApiKey,
+            token: void 0,
+            getLlmApiKey
+          };
           return;
         }
       } catch (error2) {
         this.logger.warn("Error reading CLI config:", error2);
         this.logger.info("Running in local-only mode");
+        this.baseContext.libraryAuth = {
+          clientId: void 0,
+          hasStoredSecret: false,
+          hasLlmApiKey,
+          token: void 0,
+          getLlmApiKey
+        };
         return;
       }
     }
@@ -63575,21 +69677,30 @@ var MCPServer = class {
         this.baseContext.libraryAuth = {
           clientId: this.config.account?.clientId,
           hasStoredSecret: true,
-          token: token.token
+          hasLlmApiKey,
+          token: token.token,
+          getLlmApiKey
         };
       } else {
         this.logger.info("Continuing in local-only mode - authentication returned null");
         this.authToken = void 0;
-        if (this.config.account?.clientId) {
-          this.baseContext.libraryAuth = {
-            clientId: this.config.account.clientId,
-            hasStoredSecret: !!this.config.account.clientSecret,
-            token: void 0
-          };
-        }
+        this.baseContext.libraryAuth = {
+          clientId: this.config.account?.clientId,
+          hasStoredSecret: !!this.config.account?.clientSecret,
+          hasLlmApiKey,
+          token: void 0,
+          getLlmApiKey
+        };
       }
     } catch (error2) {
       this.logger.error("Unexpected error during remote authentication", error2);
+      this.baseContext.libraryAuth = {
+        clientId: this.config.account?.clientId,
+        hasStoredSecret: !!this.config.account?.clientSecret,
+        hasLlmApiKey,
+        token: void 0,
+        getLlmApiKey
+      };
     }
   }
   /**
@@ -63605,8 +69716,8 @@ var MCPServer = class {
       this.logger.debug("CLAUDE_PLUGIN_ROOT not set, skipping bundled personas");
       return;
     }
-    const bundledPersonasDir = path20.join(pluginRoot, "personas");
-    if (!existsSync11(bundledPersonasDir)) {
+    const bundledPersonasDir = path23.join(pluginRoot, "personas");
+    if (!existsSync12(bundledPersonasDir)) {
       this.logger.debug("No bundled personas directory found");
       return;
     }
@@ -63615,10 +69726,10 @@ var MCPServer = class {
       const bundledPersonas = readdirSync3(bundledPersonasDir);
       for (const personaName of bundledPersonas) {
         if (personaName.startsWith(".")) continue;
-        const bundledPath = path20.join(bundledPersonasDir, personaName);
+        const bundledPath = path23.join(bundledPersonasDir, personaName);
         const localStorage = this.storage;
-        const localPath = path20.join(localStorage.personasDir, personaName);
-        if (existsSync11(bundledPath) && !existsSync11(localPath)) {
+        const localPath = path23.join(localStorage.personasDir, personaName);
+        if (existsSync12(bundledPath) && !existsSync12(localPath)) {
           this.logger.info(`Copying bundled persona '${personaName}' to local storage`);
           try {
             cpSync(bundledPath, localPath, { recursive: true });
@@ -63626,7 +69737,7 @@ var MCPServer = class {
           } catch (copyError) {
             this.logger.warn(`Failed to copy bundled persona '${personaName}'`, copyError);
           }
-        } else if (existsSync11(localPath)) {
+        } else if (existsSync12(localPath)) {
           this.logger.debug(`Bundled persona '${personaName}' already exists locally, skipping`);
         }
       }
@@ -63755,6 +69866,7 @@ var MCPServer = class {
         const newPersonaId = persona?.id;
         this.activePersona = newPersonaId;
         this.logger.info(`[${this.instanceId}] Active persona updated to: ${newPersonaId || "none"}, notifying ${this.personaChangeListeners.length} listeners`);
+        this.updatePersonaSession(newPersonaId || null);
         for (const listener of this.personaChangeListeners) {
           try {
             const result = listener(newPersonaId || "");
@@ -63839,6 +69951,7 @@ var MCPServer = class {
         const newPersonaId = persona?.id;
         this.activePersona = newPersonaId;
         this.logger.info(`[${this.instanceId}] Active persona updated to: ${newPersonaId || "none"}, notifying ${this.personaChangeListeners.length} listeners`);
+        this.updatePersonaSession(newPersonaId || null);
         for (const listener of this.personaChangeListeners) {
           try {
             const result = listener(newPersonaId || "");
@@ -63876,6 +69989,60 @@ var MCPServer = class {
     this.logger.setLogLevel(level);
     this.logger.info(`Log level set to: ${level}`);
     return {};
+  }
+  /**
+   * Get the TTY by walking up the process tree
+   * Child processes don't inherit TTY directly, but we can find it from parent processes
+   */
+  getTtyFromProcessTree() {
+    try {
+      let pid = process.pid;
+      for (let i = 0; i < 15; i++) {
+        const info = execSync3(`ps -p ${pid} -o ppid=,tty=`, { encoding: "utf-8" }).trim();
+        const [ppid, tty] = info.split(/\s+/);
+        if (tty && tty !== "??" && tty !== "-") {
+          return "/dev/" + tty;
+        }
+        pid = parseInt(ppid);
+        if (pid <= 1) break;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+  /**
+   * Update sessions.json with the active persona for the current TTY
+   */
+  updatePersonaSession(personaId) {
+    const tty = this.getTtyFromProcessTree();
+    if (!tty) {
+      this.logger.debug("No TTY available for persona session tracking");
+      return;
+    }
+    try {
+      const basePath = process.cwd();
+      const sessionsPath = path23.join(basePath, ".tiny-brain", "sessions.json");
+      let sessions = {};
+      try {
+        const content = readFileSync4(sessionsPath, "utf-8");
+        sessions = JSON.parse(content);
+      } catch {
+        sessions = {};
+      }
+      const existingEntry = sessions[tty];
+      sessions[tty] = {
+        activePrdId: existingEntry?.activePrdId ?? null,
+        activeFixId: existingEntry?.activeFixId ?? null,
+        activePersona: personaId,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      mkdirSync2(path23.dirname(sessionsPath), { recursive: true });
+      writeFileSync(sessionsPath, JSON.stringify(sessions, null, 2), "utf-8");
+      this.logger.debug(`Updated persona session: ${personaId} for TTY ${tty}`);
+    } catch (err) {
+      this.logger.error("Failed to update persona session:", err);
+    }
   }
 };
 
@@ -64088,7 +70255,7 @@ var AgentManager = class {
 
 // packages/tiny-brain-mcp/src/index.ts
 global.mcpServerStarted = false;
-var VERSION = "0.13.1";
+var VERSION2 = "0.13.1";
 function startupLog(message, data) {
   message = `(startup) ${message}`;
   const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
@@ -64105,11 +70272,11 @@ function startupLog(message, data) {
   try {
     let dataDir = process.env.DATADIR || process.env.TINY_BRAIN_DATA_DIR || "~/.tiny-brain";
     if (dataDir.startsWith("~")) {
-      dataDir = join25(homedir5(), dataDir.slice(1));
+      dataDir = join28(homedir5(), dataDir.slice(1));
     }
-    const logPath = join25(dataDir, "debug.log");
-    if (!existsSync12(dataDir)) {
-      mkdirSync2(dataDir, { recursive: true });
+    const logPath = join28(dataDir, "debug.log");
+    if (!existsSync13(dataDir)) {
+      mkdirSync3(dataDir, { recursive: true });
     }
     appendFileSync(logPath, JSON.stringify(logEntry) + "\n");
   } catch (error2) {
@@ -64121,9 +70288,9 @@ function startupLog(message, data) {
 async function main() {
   startupLog("main() function called");
   const __filename = fileURLToPath9(import.meta.url);
-  const __dirname2 = dirname11(__filename);
-  const envPath = join25(__dirname2, "../.env.local");
-  if (existsSync12(envPath)) {
+  const __dirname2 = dirname13(__filename);
+  const envPath = join28(__dirname2, "../.env.local");
+  if (existsSync13(envPath)) {
     try {
       const { config: config2 } = await Promise.resolve().then(() => __toESM(require_main(), 1));
       const result = config2({ path: envPath, debug: false });
@@ -64138,18 +70305,18 @@ async function main() {
   }
   try {
     startupLog("Fetching package.json version...");
-    const packageJson = JSON.parse(readFileSync4(join25(__dirname2, "../package.json"), "utf-8"));
-    const VERSION2 = packageJson.version;
+    const packageJson = JSON.parse(readFileSync5(join28(__dirname2, "../package.json"), "utf-8"));
+    const VERSION3 = packageJson.version;
     startupLog("Starting server", {
       pid: process.pid,
       node: process.version,
-      version: VERSION2,
+      version: VERSION3,
       args: process.argv,
       env: process.env
     });
     const server = new MCPServer({
       name: "tiny-brain-local",
-      version: VERSION2,
+      version: VERSION3,
       autoStartDashboard: process.env.AUTOSTARTDASHBOARD !== "false" && process.env.TINY_BRAIN_AUTO_START_DASHBOARD !== "false",
       dashboardPort: parseInt(process.env.DASHBOARD_PORT || "8765"),
       account: {
@@ -64220,7 +70387,7 @@ export {
   PromptRegistry,
   SystemPersonaService,
   ToolRegistry,
-  VERSION,
+  VERSION2 as VERSION,
   createConsoleLogger,
   main
 };

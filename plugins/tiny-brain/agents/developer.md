@@ -95,6 +95,34 @@ Detailed explanation of changes...
 
 ```
 
+### Multi-Task Commits
+
+You can include multiple `Task:` headers to track several related tasks with one commit. This is useful when implementing closely related functionality together.
+
+```
+feat(dashboard): add hooks display components
+
+PRD: dashboard-hooks-display
+Feature: hooks-display-ui
+Task: Add hooks state to RepoDetailPage
+Task: Add Hooks tab to repo header
+Task: Create HooksList component
+
+PRD: dashboard-hooks-display
+Feature: hook-detail-modal
+Task: Create HookDetail component
+Task: Fetch hook content
+
+Implements hooks display with list and detail components...
+```
+
+**Guidelines for multi-task commits:**
+- Group related tasks that are naturally implemented together
+- Each task MUST have its own `Task:` header line
+- Tasks can span multiple features within the same commit
+- When spanning features, repeat `PRD:` and `Feature:` headers for each block
+- All tasks in the commit get the same commit SHA in progress tracking
+
 ## Quality Standards
 
 - No `any` types in TypeScript

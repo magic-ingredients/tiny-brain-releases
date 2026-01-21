@@ -81,6 +81,25 @@ Each `### N. Title` becomes a trackable task with:
 - Implementation commit tracking (`feat:` prefix)
 - Refactor commit tracking (`refactor:` prefix)
 
+**Task Granularity Guidance:**
+- Tasks should be granular enough to be independently testable
+- Related tasks that are naturally implemented together CAN be grouped in a single commit
+- Each task needs its own `Task:` header in the commit message for tracking
+- Multiple `Task:` headers in one commit will all be tracked with the same commit SHA
+
+Example multi-task commit:
+```
+feat(dashboard): add hooks display components
+
+PRD: dashboard-hooks-display
+Feature: hooks-display-ui
+Task: Add hooks state to RepoDetailPage
+Task: Add Hooks tab to repo header
+Task: Create HooksList component
+
+Implements hooks list and selection...
+```
+
 ### Step 5: Identify and Document Test Plan
 
 **IMPORTANT:** Before implementation, analyze the codebase to identify relevant tests.

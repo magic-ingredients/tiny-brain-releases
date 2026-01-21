@@ -73,26 +73,39 @@ Description of task...
 Description...
 ```
 
-### Step 5: Sync Progress
+**Task Granularity Guidance:**
+- Tasks should be granular enough to be independently testable
+- Related tasks that are naturally implemented together CAN be grouped in a single commit
+- Each task needs its own `Task:` header in the commit message for tracking
+- Multiple `Task:` headers in one commit will all be tracked with the same commit SHA
 
-After creating all markdown files, sync to generate `progress.json`:
+Example multi-task commit:
+```
+feat(api): add user endpoints
 
-**Using MCP tool:**
-```typescript
-mcp__tiny-brain__plan({
-  operation: "sync",
-  planId: "your-prd-id"  // The id from your PRD frontmatter
-})
+PRD: user-management
+Feature: user-api
+Task: Create user service
+Task: Add user endpoints
+Task: Add validation middleware
+
+Implements user management API...
 ```
 
-**What sync does:**
+### Step 5: Automatic Progress Syncing
+
+Progress syncing happens **automatically** when you:
+- **Write/Edit markdown files** - The Claude tool hook (`sync-progress.sh`) detects PRD/feature file changes and syncs them
+- **Commit PRD-tracked work** - The git post-commit hook updates progress with commit SHAs
+
+**What auto-sync does:**
 - Reads `prd.md` and all `features/*.md` files
 - Extracts tasks using the `### N. Task` pattern
 - Generates/updates `.tiny-brain/progress/{prd-id}.json`
 - Preserves existing commit SHAs and task status
 - Makes the PRD visible in the dashboard
 
-**Note:** The `planId` parameter matches the `id` field in your PRD's YAML frontmatter.
+**No manual action required** - just write your markdown files and the sync happens automatically.
 
 ### Step 6: Confirm Creation
 
@@ -120,13 +133,12 @@ Before finalizing:
 
 ## Re-syncing After Changes
 
-If you modify markdown files after initial creation, re-sync to update progress:
+If you modify markdown files using Claude's Write or Edit tools, progress.json is **automatically updated** by the sync-progress hook.
 
-```typescript
-mcp__tiny-brain__plan({
-  operation: "sync",
-  planId: "your-prd-id"
-})
+For manual re-sync (e.g., after external edits), use the CLI:
+
+```bash
+npx tiny-brain sync-file docs/prd/your-prd-id/prd.md
 ```
 
 This preserves existing commit tracking while updating tasks from markdown.
@@ -143,7 +155,6 @@ Claude:
    - docs/prd/code-quality-analysis/prd.md
    - docs/prd/code-quality-analysis/features/quality-service.md
    - docs/prd/code-quality-analysis/features/quality-cli.md
-4. Call sync with planId:
-   mcp__tiny-brain__plan({ operation: "sync", planId: "code-quality-analysis" })
+4. After writing the feature files, progress.json is automatically synced
 5. Confirm creation - PRD now visible in dashboard
 ```
