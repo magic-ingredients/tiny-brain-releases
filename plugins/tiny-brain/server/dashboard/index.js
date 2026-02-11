@@ -915,26 +915,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path17) => {
-  const paths = path17.split("/");
+var splitPath = (path21) => {
+  const paths = path21.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path17 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path17);
+  const { groups, path: path21 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path21);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path17) => {
+var extractGroupsFromPath = (path21) => {
   const groups = [];
-  path17 = path17.replace(/\{[^}]+\}/g, (match3, index) => {
+  path21 = path21.replace(/\{[^}]+\}/g, (match3, index) => {
     const mark = `@${index}`;
     groups.push([mark, match3]);
     return mark;
   });
-  return { groups, path: path17 };
+  return { groups, path: path21 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -989,8 +989,8 @@ var getPath = (request) => {
     const charCode = url.charCodeAt(i);
     if (charCode === 37) {
       const queryIndex = url.indexOf("?", i);
-      const path17 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
-      return tryDecodeURI(path17.includes("%25") ? path17.replace(/%25/g, "%2525") : path17);
+      const path21 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
+      return tryDecodeURI(path21.includes("%25") ? path21.replace(/%25/g, "%2525") : path21);
     } else if (charCode === 63) {
       break;
     }
@@ -1007,11 +1007,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path17) => {
-  if (path17.charCodeAt(path17.length - 1) !== 63 || !path17.includes(":")) {
+var checkOptionalParameter = (path21) => {
+  if (path21.charCodeAt(path21.length - 1) !== 63 || !path21.includes(":")) {
     return null;
   }
-  const segments = path17.split("/");
+  const segments = path21.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -1152,9 +1152,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path17 = "/", matchResult = [[]]) {
+  constructor(request, path21 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path17;
+    this.path = path21;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -1890,8 +1890,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path17, ...handlers) => {
-      for (const p of [path17].flat()) {
+    this.on = (method, path21, ...handlers) => {
+      for (const p of [path21].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -1948,8 +1948,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path17, app) {
-    const subApp = this.basePath(path17);
+  route(path21, app) {
+    const subApp = this.basePath(path21);
     app.routes.map((r) => {
       let handler;
       if (app.errorHandler === errorHandler) {
@@ -1975,9 +1975,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path17) {
+  basePath(path21) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path17);
+    subApp._basePath = mergePath(this._basePath, path21);
     return subApp;
   }
   /**
@@ -2051,7 +2051,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path17, applicationHandler, options) {
+  mount(path21, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -2078,7 +2078,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path17);
+      const mergedPath = mergePath(this._basePath, path21);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -2093,14 +2093,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path17, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path21, "*"), handler);
     return this;
   }
-  #addRoute(method, path17, handler) {
+  #addRoute(method, path21, handler) {
     method = method.toUpperCase();
-    path17 = mergePath(this._basePath, path17);
-    const r = { basePath: this._basePath, path: path17, method, handler };
-    this.router.add(method, path17, [handler, r]);
+    path21 = mergePath(this._basePath, path21);
+    const r = { basePath: this._basePath, path: path21, method, handler };
+    this.router.add(method, path21, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -2113,10 +2113,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path17 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path17);
+    const path21 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path21);
     const c = new Context(request, {
-      path: path17,
+      path: path21,
       matchResult,
       env,
       executionCtx,
@@ -2216,7 +2216,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path17) {
+function match(method, path21) {
   const matchers = this.buildAllMatchers();
   const match22 = (method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -2232,7 +2232,7 @@ function match(method, path17) {
     return [matcher[1][index], match3];
   };
   this.match = match22;
-  return match22(method, path17);
+  return match22(method, path21);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -2347,12 +2347,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path17, index, pathErrorCheckOnly) {
+  insert(path21, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path17 = path17.replace(/\{[^}]+\}/g, (m) => {
+      path21 = path21.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -2363,7 +2363,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path17.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path21.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -2402,9 +2402,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path17) {
-  return wildcardRegExpCache[path17] ??= new RegExp(
-    path17 === "*" ? "" : `^${path17.replace(
+function buildWildcardRegExp(path21) {
+  return wildcardRegExpCache[path21] ??= new RegExp(
+    path21 === "*" ? "" : `^${path21.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -2426,17 +2426,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path17, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path21, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path17] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path21] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path17, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path21, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path17) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path21) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -2470,12 +2470,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path17) {
+function findMiddleware(middleware, path21) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path17)) {
+    if (buildWildcardRegExp(k).test(path21)) {
       return [...middleware[k]];
     }
   }
@@ -2489,7 +2489,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path17, handler) {
+  add(method, path21, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -2504,18 +2504,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path17 === "/*") {
-      path17 = "*";
+    if (path21 === "/*") {
+      path21 = "*";
     }
-    const paramCount = (path17.match(/\/:/g) || []).length;
-    if (/\*$/.test(path17)) {
-      const re = buildWildcardRegExp(path17);
+    const paramCount = (path21.match(/\/:/g) || []).length;
+    if (/\*$/.test(path21)) {
+      const re = buildWildcardRegExp(path21);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path17] ||= findMiddleware(middleware[m], path17) || findMiddleware(middleware[METHOD_NAME_ALL], path17) || [];
+          middleware[m][path21] ||= findMiddleware(middleware[m], path21) || findMiddleware(middleware[METHOD_NAME_ALL], path21) || [];
         });
       } else {
-        middleware[method][path17] ||= findMiddleware(middleware[method], path17) || findMiddleware(middleware[METHOD_NAME_ALL], path17) || [];
+        middleware[method][path21] ||= findMiddleware(middleware[method], path21) || findMiddleware(middleware[METHOD_NAME_ALL], path21) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -2533,7 +2533,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path17) || [path17];
+    const paths = checkOptionalParameter(path21) || [path21];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path22 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -2560,13 +2560,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path17) => [path17, r[method][path17]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path21) => [path21, r[method][path21]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path17) => [path17, r[METHOD_NAME_ALL][path17]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path21) => [path21, r[METHOD_NAME_ALL][path21]])
         );
       }
     });
@@ -2586,13 +2586,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path17, handler) {
+  add(method, path21, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path17, handler]);
+    this.#routes.push([method, path21, handler]);
   }
-  match(method, path17) {
+  match(method, path21) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -2607,7 +2607,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path17);
+        res = router.match(method, path21);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -2651,10 +2651,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path17, handler) {
+  insert(method, path21, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path17);
+    const parts = splitRoutingPath(path21);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -2705,12 +2705,12 @@ var Node2 = class _Node2 {
     }
     return handlerSets;
   }
-  search(method, path17) {
+  search(method, path21) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path17);
+    const parts = splitPath(path21);
     const curNodesQueue = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const part = parts[i];
@@ -2798,18 +2798,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path17, handler) {
-    const results = checkOptionalParameter(path17);
+  add(method, path21, handler) {
+    const results = checkOptionalParameter(path21);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path17, handler);
+    this.#node.insert(method, path21, handler);
   }
-  match(method, path17) {
-    return this.#node.search(method, path17);
+  match(method, path21) {
+    return this.#node.search(method, path21);
   }
 };
 
@@ -3015,10 +3015,10 @@ var createStreamBody = (stream3) => {
   });
   return body;
 };
-var getStats = (path17) => {
+var getStats = (path21) => {
   let stats;
   try {
-    stats = statSync(path17);
+    stats = statSync(path21);
   } catch {
   }
   return stats;
@@ -3047,21 +3047,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path17 = join(
+    let path21 = join(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path17);
+    let stats = getStats(path21);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path17 = join(path17, indexFile);
-      stats = getStats(path17);
+      path21 = join(path21, indexFile);
+      stats = getStats(path21);
     }
     if (!stats) {
-      await options.onNotFound?.(path17, c);
+      await options.onNotFound?.(path21, c);
       return next();
     }
-    const mimeType = getMimeType(path17);
+    const mimeType = getMimeType(path21);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -3071,12 +3071,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path17 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path21 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path17 = path17 + ENCODINGS[encoding];
+          path21 = path21 + ENCODINGS[encoding];
           break;
         }
       }
@@ -3090,7 +3090,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path17)), 200);
+      result = c.body(createStreamBody(createReadStream(path21)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -3101,20 +3101,20 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream3 = createReadStream(path17, { start, end });
+      const stream3 = createReadStream(path21, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
       result = c.body(createStreamBody(stream3), 206);
     }
-    await options.onFound?.(path17, c);
+    await options.onFound?.(path21, c);
     return result;
   };
 };
 
 // packages/tiny-brain-dashboard/server/app.ts
-import path14 from "node:path";
+import path18 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
-import fs12 from "node:fs";
+import fs16 from "node:fs";
 
 // packages/tiny-brain-core/src/types/result.ts
 var ResultHelpers = {
@@ -3634,8 +3634,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path17, errorMaps, issueData } = params;
-  const fullPath = [...path17, ...issueData.path || []];
+  const { data, path: path21, errorMaps, issueData } = params;
+  const fullPath = [...path21, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -3751,11 +3751,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path17, key) {
+  constructor(parent, value, path21, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path17;
+    this._path = path21;
     this._key = key;
   }
   get path() {
@@ -7232,6 +7232,56 @@ var GRADE_THRESHOLDS = {
   [QualityGrade.D]: 60,
   [QualityGrade.F]: 0
 };
+var IssueSeverity = {
+  Critical: "critical",
+  Major: "major",
+  Minor: "minor",
+  Info: "info"
+};
+var EffortLevel = {
+  Trivial: "trivial",
+  Small: "small",
+  Medium: "medium",
+  Large: "large",
+  Epic: "epic"
+};
+var ImpactLevel = {
+  Critical: "critical",
+  High: "high",
+  Medium: "medium",
+  Low: "low"
+};
+var SEVERITY_MULTIPLIERS = {
+  [IssueSeverity.Critical]: 1,
+  [IssueSeverity.Major]: 0.7,
+  [IssueSeverity.Minor]: 0.3,
+  [IssueSeverity.Info]: 0
+};
+var CategoryScoreSchema = external_exports.object({
+  /** Category name */
+  category: external_exports.string(),
+  /** Number of issues found in this category */
+  issueCount: external_exports.number(),
+  /** Total deduction points for this category */
+  deduction: external_exports.number(),
+  /** Maximum weight (points deducted per full-severity issue) */
+  maxWeight: external_exports.number(),
+  /** Grade assigned to this category */
+  grade: external_exports.string()
+});
+var DEFAULT_EFFORT_HOURS = {
+  [EffortLevel.Trivial]: 0.5,
+  [EffortLevel.Small]: 1.5,
+  [EffortLevel.Medium]: 5,
+  [EffortLevel.Large]: 16,
+  [EffortLevel.Epic]: 40
+};
+var SEVERITY_DEFAULT_HOURS = {
+  [IssueSeverity.Critical]: 8,
+  [IssueSeverity.Major]: 4,
+  [IssueSeverity.Minor]: 1,
+  [IssueSeverity.Info]: 0
+};
 var QualityIssueSchema = external_exports.object({
   /** Issue category */
   category: external_exports.enum([
@@ -7253,10 +7303,87 @@ var QualityIssueSchema = external_exports.object({
   /** Issue description */
   message: external_exports.string(),
   /** Suggested fix (optional) */
-  suggestion: external_exports.string().optional()
+  suggestion: external_exports.string().optional(),
+  /** Estimated effort to remediate (optional) */
+  effort: external_exports.nativeEnum(EffortLevel).optional(),
+  /** Impact level if this issue is not addressed (optional) */
+  impact: external_exports.nativeEnum(ImpactLevel).optional(),
+  /** Thematic grouping tag (optional, e.g., "type-safety", "auth-hardening") */
+  theme: external_exports.string().optional(),
+  /** Code snippet or evidence showing the problem (optional) */
+  evidence: external_exports.string().optional(),
+  /** Indices of related issues in the same run (optional) */
+  relatedIssues: external_exports.array(external_exports.number()).optional(),
+  /** External references such as CWE or OWASP identifiers (optional) */
+  references: external_exports.array(external_exports.string()).optional(),
+  /** Points that would be gained if this issue were fixed (optional) */
+  scoreImpact: external_exports.number().optional(),
+  /** Estimated hours to remediate (optional) */
+  effortHours: external_exports.number().optional(),
+  /** Stable rule identifier from the analyzer (e.g., "eslint/no-explicit-any") */
+  ruleId: external_exports.string().optional(),
+  /** Analyzer that found this issue (e.g., "eslint", "typescript") */
+  source: external_exports.string().optional()
+});
+var StructuredRecommendationSchema = external_exports.object({
+  /** Recommendation title (required) */
+  title: external_exports.string(),
+  /** Detailed description of the recommendation (required) */
+  description: external_exports.string(),
+  /** Priority: numeric 1-5 or string level (required) */
+  priority: external_exports.union([external_exports.number().min(1).max(5), external_exports.enum(["critical", "high", "medium", "low"])]),
+  /** Category this recommendation addresses (required) */
+  category: external_exports.string(),
+  /** Estimated effort level (optional) */
+  effort: external_exports.nativeEnum(EffortLevel).optional(),
+  /** Estimated score gain if recommendation is implemented (optional) */
+  estimatedScoreGain: external_exports.number().optional(),
+  /** Estimated hours to implement (optional) */
+  effortHours: external_exports.number().optional(),
+  /** Indices of issues this recommendation addresses (optional) */
+  addressesIssues: external_exports.array(external_exports.number()).optional()
+});
+var TechnicalDebtSummarySchema = external_exports.object({
+  /** Total estimated hours of technical debt */
+  totalHours: external_exports.number(),
+  /** Hours broken down by issue category */
+  hoursByCategory: external_exports.record(external_exports.string(), external_exports.number()),
+  /** Hours broken down by issue severity */
+  hoursBySeverity: external_exports.record(external_exports.string(), external_exports.number()),
+  /** Estimated monetary cost (optional, populated by coordinator) */
+  estimatedCost: external_exports.number().optional(),
+  /** Currency for estimatedCost (optional) */
+  currency: external_exports.string().optional()
+});
+var RunComparisonSchema = external_exports.object({
+  /** ID of the base (earlier) run */
+  baseRunId: external_exports.string(),
+  /** ID of the target (later) run */
+  targetRunId: external_exports.string(),
+  /** Score change: target.score - base.score */
+  scoreDelta: external_exports.number(),
+  /** Grade transition between runs */
+  gradeChange: external_exports.object({
+    from: external_exports.string(),
+    to: external_exports.string()
+  }),
+  /** Issues present in target but not in base */
+  newIssues: external_exports.array(QualityIssueSchema),
+  /** Issues present in base but not in target */
+  resolvedIssues: external_exports.array(QualityIssueSchema),
+  /** Issues present in both runs */
+  persistentIssues: external_exports.array(QualityIssueSchema),
+  /** Per-category count and deduction deltas */
+  categoryChanges: external_exports.record(
+    external_exports.string(),
+    external_exports.object({
+      countDelta: external_exports.number(),
+      deductionDelta: external_exports.number()
+    })
+  )
 });
 var QualityRunSummarySchema = external_exports.object({
-  /** Unique run identifier (YYYY-MM-DD-quality) */
+  /** Unique run identifier (YYYY-MM-DDTHH-mm or legacy YYYY-MM-DD-quality) */
   runId: external_exports.string(),
   /** Run date (ISO string) */
   date: external_exports.string(),
@@ -7267,8 +7394,38 @@ var QualityRunSummarySchema = external_exports.object({
   /** Total number of issues found */
   issueCount: external_exports.number().min(0)
 });
+var SourceBreakdownSchema = external_exports.object({
+  /** Number of issues from automated analyzers */
+  analyzer: external_exports.number(),
+  /** Number of issues from LLM investigation */
+  llm: external_exports.number(),
+  /** Total issue count after deduplication */
+  total: external_exports.number()
+});
+var AnalyzerRunSummarySchema = external_exports.object({
+  /** Analyzer ID from the registry */
+  analyzerId: external_exports.string(),
+  /** Human-readable analyzer name */
+  name: external_exports.string(),
+  /** Number of issues found by this analyzer */
+  issueCount: external_exports.number(),
+  /** Execution status */
+  status: external_exports.enum(["success", "failed", "timeout", "skipped"]),
+  /** Execution duration in milliseconds */
+  durationMs: external_exports.number()
+});
+var InvestigationCoverageSchema = external_exports.object({
+  /** Number of files analyzed */
+  filesAnalyzed: external_exports.number(),
+  /** Total number of eligible files */
+  totalFiles: external_exports.number(),
+  /** Number of checks applied per file */
+  checksPerFile: external_exports.number(),
+  /** Total investigation duration in milliseconds */
+  durationMs: external_exports.number()
+});
 var QualityRunResultSchema = external_exports.object({
-  /** Unique run identifier (YYYY-MM-DD-quality) */
+  /** Unique run identifier (YYYY-MM-DDTHH-mm or legacy YYYY-MM-DD-quality) */
   runId: external_exports.string(),
   /** Run date (ISO string) */
   date: external_exports.string(),
@@ -7287,9 +7444,27 @@ var QualityRunResultSchema = external_exports.object({
     languages: external_exports.array(external_exports.string()).optional(),
     frameworks: external_exports.array(external_exports.string()).optional(),
     projectType: external_exports.string().optional()
-  }).optional()
+  }).optional(),
+  /** Per-category score breakdown (optional for backward compatibility) */
+  categoryScores: external_exports.array(CategoryScoreSchema).optional(),
+  /** Structured recommendations with priority and effort data (optional for backward compatibility) */
+  structuredRecommendations: external_exports.array(StructuredRecommendationSchema).optional(),
+  /** Technical debt summary with hour breakdowns (optional for backward compatibility) */
+  technicalDebt: TechnicalDebtSummarySchema.optional(),
+  /** Source breakdown between analyzer and LLM findings (optional) */
+  sourceBreakdown: SourceBreakdownSchema.optional(),
+  /** Per-analyzer execution summaries (optional) */
+  analyzersRun: external_exports.array(AnalyzerRunSummarySchema).optional(),
+  /** LLM investigation coverage metrics (optional) */
+  investigationCoverage: InvestigationCoverageSchema.optional()
 });
 var SaveQualityRunInputSchema = external_exports.object({
+  /** Optional run ID to save into (e.g. from a prior assembly run directory).
+   *  When provided, the report is written into this run's directory instead
+   *  of generating a new timestamped directory. */
+  runId: external_exports.string().optional(),
+  /** Optional base run ID used for incremental carry-forward */
+  baseRunId: external_exports.string().optional(),
   /** Quality score (0-100) */
   score: external_exports.number().min(0).max(100),
   /** Quality grade (A-F) */
@@ -7303,7 +7478,339 @@ var SaveQualityRunInputSchema = external_exports.object({
     languages: external_exports.array(external_exports.string()).optional(),
     frameworks: external_exports.array(external_exports.string()).optional(),
     projectType: external_exports.string().optional()
+  }).optional(),
+  /** Per-category score breakdown (optional) */
+  categoryScores: external_exports.array(CategoryScoreSchema).optional(),
+  /** Structured recommendations with priority and effort data (optional) */
+  structuredRecommendations: external_exports.array(StructuredRecommendationSchema).optional(),
+  /** Technical debt summary with hour breakdowns (optional) */
+  technicalDebt: TechnicalDebtSummarySchema.optional(),
+  /** Source breakdown between analyzer and LLM findings (optional) */
+  sourceBreakdown: SourceBreakdownSchema.optional(),
+  /** Per-analyzer execution summaries (optional) */
+  analyzersRun: external_exports.array(AnalyzerRunSummarySchema).optional(),
+  /** LLM investigation coverage metrics (optional) */
+  investigationCoverage: InvestigationCoverageSchema.optional()
+});
+var ImprovementInitiativeSchema = external_exports.object({
+  /** Unique identifier for this initiative (kebab-case) */
+  id: external_exports.string(),
+  /** Human-readable title */
+  title: external_exports.string(),
+  /** Description of the improvement work */
+  description: external_exports.string(),
+  /** Thematic grouping tag (matches issue theme or category) */
+  theme: external_exports.string(),
+  /** Most common category among grouped issues */
+  primaryCategory: external_exports.string(),
+  /** Indices of the original issues grouped into this initiative */
+  issueIndices: external_exports.array(external_exports.number()),
+  /** Total estimated effort hours for this initiative */
+  effortHours: external_exports.number(),
+  /** Expected score gain if this initiative is completed */
+  expectedScoreGain: external_exports.number(),
+  /** IDs of initiatives that must be completed first (optional) */
+  dependsOn: external_exports.array(external_exports.string()).optional(),
+  /** Risk level assessment (optional) */
+  risk: external_exports.enum(["low", "medium", "high"]).optional()
+});
+var ImprovementPhaseSchema = external_exports.object({
+  /** Phase number (1, 2, or 3) */
+  phase: external_exports.number(),
+  /** Phase name (e.g., "Quick Wins", "Core Improvements", "Structural Work") */
+  name: external_exports.string(),
+  /** Description of this phase's focus */
+  description: external_exports.string(),
+  /** Initiatives assigned to this phase */
+  initiatives: external_exports.array(ImprovementInitiativeSchema),
+  /** Total effort hours across all initiatives in this phase */
+  totalEffortHours: external_exports.number(),
+  /** Projected cumulative score after completing this phase */
+  projectedScore: external_exports.number(),
+  /** Projected grade after completing this phase */
+  projectedGrade: external_exports.string(),
+  /** Estimated calendar duration (optional) */
+  estimatedDuration: external_exports.string().optional()
+});
+var QualityImprovementPlanSchema = external_exports.object({
+  /** Unique plan identifier (YYYY-MM-DD-quality-plan) */
+  planId: external_exports.string(),
+  /** Plan generation date (ISO string) */
+  date: external_exports.string(),
+  /** Run ID this plan was generated from */
+  sourceRunId: external_exports.string(),
+  /** Current quality score at time of plan generation */
+  currentScore: external_exports.number(),
+  /** Current quality grade at time of plan generation */
+  currentGrade: external_exports.string(),
+  /** Target quality score (optional) */
+  targetScore: external_exports.number().optional(),
+  /** Target quality grade (optional) */
+  targetGrade: external_exports.string().optional(),
+  /** Auto-generated executive summary */
+  executiveSummary: external_exports.string(),
+  /** Ordered improvement phases */
+  phases: external_exports.array(ImprovementPhaseSchema),
+  /** Total effort hours across all phases */
+  totalEffortHours: external_exports.number(),
+  /** Technical debt summary from source run (optional) */
+  technicalDebt: TechnicalDebtSummarySchema.optional(),
+  /** ROI analysis for investment justification (optional) */
+  roiAnalysis: external_exports.object({
+    /** Total estimated cost to fix all issues */
+    estimatedCostToFix: external_exports.number(),
+    /** Currency code */
+    currency: external_exports.string(),
+    /** Hourly rate used for cost calculation */
+    hourlyRate: external_exports.number()
   }).optional()
+});
+var AnalyzerDefinitionSchema = external_exports.object({
+  /** Unique analyzer identifier (kebab-case) */
+  id: external_exports.string(),
+  /** Human-readable analyzer name */
+  name: external_exports.string(),
+  /** Glob patterns used to detect this analyzer's config files */
+  detectPatterns: external_exports.array(external_exports.string()).min(1),
+  /** Command template with {config} and/or {dir} placeholders */
+  commandTemplate: external_exports.string(),
+  /** Flag template to direct output to a file (e.g. '--output-file {outputFile}'). When absent, shell redirection is used. */
+  outputFileFlag: external_exports.string().optional(),
+  /** Expected output format from the analyzer */
+  outputFormat: external_exports.enum(["json", "text", "sarif"]),
+  /** Quality categories this analyzer covers */
+  categories: external_exports.array(external_exports.string()).min(1)
+});
+var DetectedAnalyzerSchema = external_exports.object({
+  /** Analyzer ID from the registry */
+  analyzerId: external_exports.string(),
+  /** Human-readable analyzer name */
+  name: external_exports.string(),
+  /** Config file paths found in the repository */
+  configPaths: external_exports.array(external_exports.string()).min(1),
+  /** Resolved commands (one per config path) */
+  commands: external_exports.array(external_exports.string()).min(1),
+  /** Quality categories this analyzer covers */
+  categories: external_exports.array(external_exports.string()).min(1)
+});
+var AnalyzerExecutionResultSchema = external_exports.object({
+  /** Analyzer ID from the registry */
+  analyzerId: external_exports.string(),
+  /** Human-readable analyzer name */
+  name: external_exports.string(),
+  /** Execution status */
+  status: external_exports.enum(["success", "failed", "timeout", "skipped"]),
+  /** Issues found by this analyzer */
+  issues: external_exports.array(QualityIssueSchema),
+  /** Execution duration in milliseconds */
+  durationMs: external_exports.number(),
+  /** Error message if status is failed or timeout */
+  error: external_exports.string().optional(),
+  /** Command(s) that were executed */
+  command: external_exports.string(),
+  /** Path to the raw output file on disk (when file-based execution is used) */
+  outputFile: external_exports.string().optional()
+});
+var AnalyzerResultsSchema = external_exports.object({
+  /** All normalized issues from all analyzers */
+  issues: external_exports.array(QualityIssueSchema),
+  /** Per-analyzer execution results */
+  executions: external_exports.array(AnalyzerExecutionResultSchema),
+  /** Total execution duration in milliseconds */
+  totalDurationMs: external_exports.number(),
+  /** Summary counts */
+  summary: external_exports.object({
+    total: external_exports.number(),
+    succeeded: external_exports.number(),
+    failed: external_exports.number(),
+    timedOut: external_exports.number(),
+    skipped: external_exports.number()
+  })
+});
+var CheckDefinitionSchema = external_exports.object({
+  /** Unique check identifier (e.g., "SEC-hardcoded-secrets") */
+  id: external_exports.string(),
+  /** Short name for the check */
+  name: external_exports.string(),
+  /** Description of what this check looks for */
+  description: external_exports.string(),
+  /** Patterns to search for (hints for the LLM) */
+  patterns: external_exports.array(external_exports.string()),
+  /** Default severity when this check fires */
+  severity: external_exports.enum(["critical", "major", "minor", "info"])
+});
+var InvestigationChecklistSchema = external_exports.object({
+  /** Quality category this checklist covers */
+  category: external_exports.string(),
+  /** Checks to apply (minimum 1) */
+  checks: external_exports.array(CheckDefinitionSchema).min(1)
+});
+var InvestigationFindingSchema = external_exports.object({
+  /** Check ID that matched (e.g., "SEC-hardcoded-secrets") */
+  checkId: external_exports.string(),
+  /** Quality category */
+  category: external_exports.string(),
+  /** Finding severity */
+  severity: external_exports.enum(["critical", "major", "minor", "info"]),
+  /** Line number where the issue was found */
+  line: external_exports.number(),
+  /** Description of the finding */
+  message: external_exports.string(),
+  /** Code evidence for the finding */
+  evidence: external_exports.string(),
+  /** Suggested fix (optional) */
+  suggestion: external_exports.string().optional()
+});
+var FileInvestigationResultSchema = external_exports.object({
+  /** Path of the investigated file */
+  filePath: external_exports.string(),
+  /** Findings from the investigation */
+  findings: external_exports.array(InvestigationFindingSchema),
+  /** List of check IDs that were applied */
+  checksApplied: external_exports.array(external_exports.string())
+});
+var FileInvestigationSchema = external_exports.object({
+  /** Path of the file */
+  filePath: external_exports.string(),
+  /** Investigation status */
+  status: external_exports.enum(["pending", "completed", "failed", "skipped"]),
+  /** Findings from the investigation */
+  findings: external_exports.array(InvestigationFindingSchema),
+  /** List of check IDs that were applied */
+  checksApplied: external_exports.array(external_exports.string()),
+  /** Error message if status is failed */
+  error: external_exports.string().optional(),
+  /** Duration of the investigation in milliseconds */
+  durationMs: external_exports.number().optional()
+});
+var CategoryInvestigationSchema = external_exports.object({
+  /** Path of the file */
+  filePath: external_exports.string(),
+  /** Quality category this investigation covers */
+  category: external_exports.string(),
+  /** Investigation status */
+  status: external_exports.enum(["pending", "completed", "failed", "skipped"]),
+  /** Findings from the investigation */
+  findings: external_exports.array(InvestigationFindingSchema),
+  /** List of check IDs that were applied */
+  checksApplied: external_exports.array(external_exports.string()),
+  /** Error message if status is failed */
+  error: external_exports.string().optional(),
+  /** Duration of the investigation in milliseconds */
+  durationMs: external_exports.number().optional(),
+  /** SHA-256 hash of file content, for skip-list optimization */
+  fileHash: external_exports.string().optional()
+});
+var InvestigationSummarySchema = external_exports.object({
+  /** Per-file-per-category investigation results */
+  investigations: external_exports.array(CategoryInvestigationSchema),
+  /** All normalized quality issues */
+  issues: external_exports.array(QualityIssueSchema),
+  /** Total duration in milliseconds */
+  totalDurationMs: external_exports.number(),
+  /** Summary counts */
+  summary: external_exports.object({
+    totalFiles: external_exports.number(),
+    totalCategories: external_exports.number(),
+    totalTasks: external_exports.number(),
+    completedTasks: external_exports.number(),
+    failedTasks: external_exports.number(),
+    skippedTasks: external_exports.number(),
+    totalFindings: external_exports.number()
+  })
+});
+var FileTaskProgressSchema = external_exports.object({
+  fileHash: external_exports.string(),
+  status: external_exports.enum(["pending", "in_progress", "completed", "failed", "skipped"]),
+  startedAt: external_exports.string().optional(),
+  completedAt: external_exports.string().optional(),
+  durationMs: external_exports.number().optional(),
+  findingsCount: external_exports.number().optional(),
+  checksApplied: external_exports.array(external_exports.string()).optional(),
+  error: external_exports.string().optional()
+});
+var CategoryProgressSummarySchema = external_exports.object({
+  totalFiles: external_exports.number(),
+  completedFiles: external_exports.number(),
+  failedFiles: external_exports.number(),
+  skippedFiles: external_exports.number(),
+  pendingFiles: external_exports.number(),
+  totalFindings: external_exports.number()
+});
+var CategoryProgressSchema = external_exports.object({
+  version: external_exports.string(),
+  runId: external_exports.string(),
+  category: external_exports.string(),
+  startedAt: external_exports.string(),
+  status: external_exports.enum(["in_progress", "completed", "failed"]),
+  files: external_exports.record(external_exports.string(), FileTaskProgressSchema),
+  summary: CategoryProgressSummarySchema
+});
+var InvestigationProgressSummarySchema = external_exports.object({
+  version: external_exports.string(),
+  runId: external_exports.string(),
+  repoPath: external_exports.string(),
+  startedAt: external_exports.string(),
+  completedAt: external_exports.string().optional(),
+  status: external_exports.enum(["in_progress", "completed", "failed"]),
+  categories: external_exports.array(external_exports.string()),
+  summary: external_exports.object({
+    totalFiles: external_exports.number(),
+    totalCategories: external_exports.number(),
+    totalTasks: external_exports.number(),
+    completedTasks: external_exports.number(),
+    failedTasks: external_exports.number(),
+    skippedTasks: external_exports.number(),
+    totalFindings: external_exports.number()
+  })
+});
+var IssueFingerprintSchema = external_exports.object({
+  /** Primary: stable rule ID (e.g., "eslint/no-explicit-any") */
+  ruleId: external_exports.string().optional(),
+  /** Quality category */
+  category: external_exports.string(),
+  /** File path */
+  file: external_exports.string(),
+  /** Line range bucket (floor(line/10)*10), undefined if no line */
+  lineRange: external_exports.number().optional(),
+  /** Normalized message (lowercase, numbers replaced, capped at 50 chars) */
+  normalizedMessage: external_exports.string()
+});
+var FingerprintMatchSchema = external_exports.object({
+  baseIssue: QualityIssueSchema,
+  targetIssue: QualityIssueSchema,
+  confidence: external_exports.number().min(0).max(1),
+  matchType: external_exports.enum(["exact", "high", "medium", "low"])
+});
+var MatchResultSchema = external_exports.object({
+  persistentIssues: external_exports.array(QualityIssueSchema),
+  newIssues: external_exports.array(QualityIssueSchema),
+  resolvedIssues: external_exports.array(QualityIssueSchema),
+  matches: external_exports.array(FingerprintMatchSchema)
+});
+var AssemblyResultSchema = external_exports.object({
+  /** Unique run identifier (YYYY-MM-DDTHH-mm or legacy YYYY-MM-DD-quality) */
+  runId: external_exports.string(),
+  /** Quality score (0-100) */
+  score: external_exports.number().min(0).max(100),
+  /** Quality grade (A-F) */
+  grade: external_exports.enum(["A", "B", "C", "D", "F"]),
+  /** Total unique issues after deduplication */
+  issueCount: external_exports.number().min(0),
+  /** Breakdown of issue sources */
+  sourceBreakdown: SourceBreakdownSchema,
+  /** Issue counts grouped by category */
+  categoryBreakdown: external_exports.record(external_exports.string(), external_exports.number()),
+  /** Path to the saved quality report markdown */
+  filePath: external_exports.string(),
+  /** True when carry-forward was used (incremental run) */
+  incremental: external_exports.boolean().optional(),
+  /** The base run ID used for carry-forward */
+  baseRunId: external_exports.string().optional(),
+  /** Number of files re-analyzed in this run */
+  filesAnalyzed: external_exports.number().optional(),
+  /** Number of files carried forward from base run */
+  filesCarriedForward: external_exports.number().optional()
 });
 
 // packages/tiny-brain-core/src/config/service-urls.ts
@@ -12662,12 +13169,12 @@ var PathBase = class {
   /**
    * Get the Path object referenced by the string path, resolved from this Path
    */
-  resolve(path17) {
-    if (!path17) {
+  resolve(path21) {
+    if (!path21) {
       return this;
     }
-    const rootPath = this.getRootString(path17);
-    const dir = path17.substring(rootPath.length);
+    const rootPath = this.getRootString(path21);
+    const dir = path21.substring(rootPath.length);
     const dirParts = dir.split(this.splitSep);
     const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
     return result;
@@ -13419,8 +13926,8 @@ var PathWin32 = class _PathWin32 extends PathBase {
   /**
    * @internal
    */
-  getRootString(path17) {
-    return win32.parse(path17).root;
+  getRootString(path21) {
+    return win32.parse(path21).root;
   }
   /**
    * @internal
@@ -13466,8 +13973,8 @@ var PathPosix = class _PathPosix extends PathBase {
   /**
    * @internal
    */
-  getRootString(path17) {
-    return path17.startsWith("/") ? "/" : "";
+  getRootString(path21) {
+    return path21.startsWith("/") ? "/" : "";
   }
   /**
    * @internal
@@ -13516,8 +14023,8 @@ var PathScurryBase = class {
    *
    * @internal
    */
-  constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs15 = defaultFS } = {}) {
-    this.#fs = fsFromOption(fs15);
+  constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs19 = defaultFS } = {}) {
+    this.#fs = fsFromOption(fs19);
     if (cwd instanceof URL || cwd.startsWith("file://")) {
       cwd = fileURLToPath(cwd);
     }
@@ -13556,11 +14063,11 @@ var PathScurryBase = class {
   /**
    * Get the depth of a provided path, string, or the cwd
    */
-  depth(path17 = this.cwd) {
-    if (typeof path17 === "string") {
-      path17 = this.cwd.resolve(path17);
+  depth(path21 = this.cwd) {
+    if (typeof path21 === "string") {
+      path21 = this.cwd.resolve(path21);
     }
-    return path17.depth();
+    return path21.depth();
   }
   /**
    * Return the cache of child entries.  Exposed so subclasses can create
@@ -14047,9 +14554,9 @@ var PathScurryBase = class {
     process2();
     return results;
   }
-  chdir(path17 = this.cwd) {
+  chdir(path21 = this.cwd) {
     const oldCwd = this.cwd;
-    this.cwd = typeof path17 === "string" ? this.cwd.resolve(path17) : path17;
+    this.cwd = typeof path21 === "string" ? this.cwd.resolve(path21) : path21;
     this.cwd[setAsCwd](oldCwd);
   }
 };
@@ -14075,8 +14582,8 @@ var PathScurryWin32 = class extends PathScurryBase {
   /**
    * @internal
    */
-  newRoot(fs15) {
-    return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs15 });
+  newRoot(fs19) {
+    return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs19 });
   }
   /**
    * Return true if the provided path string is an absolute path
@@ -14104,8 +14611,8 @@ var PathScurryPosix = class extends PathScurryBase {
   /**
    * @internal
    */
-  newRoot(fs15) {
-    return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs15 });
+  newRoot(fs19) {
+    return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs19 });
   }
   /**
    * Return true if the provided path string is an absolute path
@@ -14405,8 +14912,8 @@ var MatchRecord = class {
   }
   // match, absolute, ifdir
   entries() {
-    return [...this.store.entries()].map(([path17, n]) => [
-      path17,
+    return [...this.store.entries()].map(([path21, n]) => [
+      path21,
       !!(n & 2),
       !!(n & 1)
     ]);
@@ -14611,9 +15118,9 @@ var GlobUtil = class {
   signal;
   maxDepth;
   includeChildMatches;
-  constructor(patterns, path17, opts) {
+  constructor(patterns, path21, opts) {
     this.patterns = patterns;
-    this.path = path17;
+    this.path = path21;
     this.opts = opts;
     this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
     this.includeChildMatches = opts.includeChildMatches !== false;
@@ -14632,11 +15139,11 @@ var GlobUtil = class {
       });
     }
   }
-  #ignored(path17) {
-    return this.seen.has(path17) || !!this.#ignore?.ignored?.(path17);
+  #ignored(path21) {
+    return this.seen.has(path21) || !!this.#ignore?.ignored?.(path21);
   }
-  #childrenIgnored(path17) {
-    return !!this.#ignore?.childrenIgnored?.(path17);
+  #childrenIgnored(path21) {
+    return !!this.#ignore?.childrenIgnored?.(path21);
   }
   // backpressure mechanism
   pause() {
@@ -14851,8 +15358,8 @@ var GlobUtil = class {
 };
 var GlobWalker = class extends GlobUtil {
   matches = /* @__PURE__ */ new Set();
-  constructor(patterns, path17, opts) {
-    super(patterns, path17, opts);
+  constructor(patterns, path21, opts) {
+    super(patterns, path21, opts);
   }
   matchEmit(e) {
     this.matches.add(e);
@@ -14889,8 +15396,8 @@ var GlobWalker = class extends GlobUtil {
 };
 var GlobStream = class extends GlobUtil {
   results;
-  constructor(patterns, path17, opts) {
-    super(patterns, path17, opts);
+  constructor(patterns, path21, opts) {
+    super(patterns, path21, opts);
     this.results = new Minipass({
       signal: this.signal,
       objectMode: true
@@ -19274,14 +19781,20 @@ var PlanningService = class extends BaseService {
     let id = "";
     let title = "";
     let status = "planned";
+    let number;
     if (frontmatterMatch) {
       const frontmatter = frontmatterMatch[1];
       const idMatch = frontmatter.match(/^id:\s*(.+)$/m);
       const titleMatch = frontmatter.match(/^title:\s*(.+)$/m);
       const statusMatch = frontmatter.match(/^status:\s*(.+)$/m);
+      const numberMatch = frontmatter.match(/^number:\s*(.+)$/m);
       if (idMatch) id = idMatch[1].trim();
       if (titleMatch) title = titleMatch[1].trim();
       if (statusMatch) status = statusMatch[1].trim();
+      if (numberMatch) {
+        const parsed = parseInt(numberMatch[1].trim(), 10);
+        if (!isNaN(parsed)) number = parsed;
+      }
     }
     const taskRegex = /^###\s+(\d+)\.\s+(.+)$/gm;
     const tasks = [];
@@ -19295,7 +19808,7 @@ var PlanningService = class extends BaseService {
         status: "defined"
       });
     }
-    return { id, title, status, tasks };
+    return { id, title, number, status, tasks };
   }
   /**
    * Read PRD markdown file and parse frontmatter
@@ -19387,7 +19900,7 @@ var PlanningService = class extends BaseService {
     const featureMarkdowns = await this.readFeatureMarkdowns(prdPath);
     const existingPlan = await this.loadExistingProgressJson(prdPath);
     const features = featureMarkdowns.map((fm, index) => {
-      const featureNumber = index + 1;
+      const featureNumber = fm.number ?? index + 1;
       const featureId = fm.id || `feature-${featureNumber}`;
       const existingFeature = existingPlan?.features.find((f) => f.id === featureId);
       const tasks = fm.tasks.map((t, taskIndex) => {
@@ -19874,8 +20387,8 @@ var RepoConfigService = class {
   /**
    * Generate a unique repo ID from path
    */
-  generateRepoId(path17) {
-    const hash = createHash("sha256").update(path17).digest("hex");
+  generateRepoId(path21) {
+    const hash = createHash("sha256").update(path21).digest("hex");
     return `repo-${hash.substring(0, 12)}`;
   }
   /**
@@ -19962,7 +20475,7 @@ var RepoConfigSchema = external_exports.object({
   /**
    * Enable Suggestion-Driven Development (SDD)
    */
-  enableSDD: external_exports.boolean().default(false),
+  enableSDD: external_exports.boolean().default(true),
   /**
    * Enable Test-Driven Development (TDD)
    */
@@ -20003,7 +20516,7 @@ var RepoConfigSchema = external_exports.object({
 }).strict().default({
   autoCommitProgress: false,
   enableAgenticCoding: false,
-  enableSDD: false,
+  enableSDD: true,
   enableTDD: true,
   enableADR: true,
   enableQuality: true,
@@ -20359,6 +20872,29 @@ var PluginDiscoveryService = class {
 import { promises as fs4 } from "fs";
 import path5 from "path";
 
+// packages/tiny-brain-core/src/services/quality/analyzer-detection.service.ts
+import path6 from "path";
+
+// packages/tiny-brain-core/src/services/quality/analyzer-executor.service.ts
+import { exec as exec3 } from "child_process";
+import { promises as fs5 } from "fs";
+import { promisify as promisify3 } from "util";
+var execAsync3 = promisify3(exec3);
+var DEFAULT_MAX_BUFFER = 10 * 1024 * 1024;
+
+// packages/tiny-brain-core/src/services/quality/file-investigator.service.ts
+import { createHash as createHash2 } from "crypto";
+import { promises as fs6 } from "fs";
+import path7 from "path";
+
+// packages/tiny-brain-core/src/services/quality/investigation-progress.service.ts
+import { promises as fs7 } from "fs";
+import path8 from "path";
+
+// packages/tiny-brain-core/src/services/quality/assembly.service.ts
+import { promises as fs8 } from "fs";
+import path9 from "path";
+
 // packages/tiny-brain-core/src/services/hooks/hooks-service.ts
 import { existsSync as existsSync3 } from "fs";
 import { readFile as readFile4, readdir as readdir4 } from "fs/promises";
@@ -20501,17 +21037,17 @@ var HooksService = class {
 };
 
 // packages/tiny-brain-core/src/services/analysis/tech-context-service.ts
-import { promises as fs5 } from "fs";
-import path6 from "path";
+import { promises as fs9 } from "fs";
+import path10 from "path";
 import crypto3 from "crypto";
 var TechContextService = class {
   tinyBrainDir;
   techDir;
   agentsDir;
   constructor(repoPath) {
-    this.tinyBrainDir = path6.join(repoPath, ".tiny-brain");
-    this.techDir = path6.join(this.tinyBrainDir, "tech");
-    this.agentsDir = path6.join(repoPath, ".claude", "agents");
+    this.tinyBrainDir = path10.join(repoPath, ".tiny-brain");
+    this.techDir = path10.join(this.tinyBrainDir, "tech");
+    this.agentsDir = path10.join(repoPath, ".claude", "agents");
   }
   /** Get the .tiny-brain directory path */
   getTinyBrainDir() {
@@ -20527,8 +21063,8 @@ var TechContextService = class {
   }
   /** Ensure required directories exist */
   async ensureDirectories() {
-    await fs5.mkdir(this.tinyBrainDir, { recursive: true });
-    await fs5.mkdir(this.techDir, { recursive: true });
+    await fs9.mkdir(this.tinyBrainDir, { recursive: true });
+    await fs9.mkdir(this.techDir, { recursive: true });
   }
   /**
    * Write analysis data to .tiny-brain/analysis.json
@@ -20559,8 +21095,8 @@ var TechContextService = class {
       stack,
       analysis: analysisData
     };
-    const filePath = path6.join(this.tinyBrainDir, "analysis.json");
-    await fs5.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
+    const filePath = path10.join(this.tinyBrainDir, "analysis.json");
+    await fs9.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
   }
   /**
    * Write a tech expertise file with YAML frontmatter
@@ -20580,8 +21116,8 @@ var TechContextService = class {
     const fileContent = `${yamlFrontmatter}
 
 ${content}`;
-    const filePath = path6.join(this.techDir, `${name}.md`);
-    await fs5.writeFile(filePath, fileContent, "utf-8");
+    const filePath = path10.join(this.techDir, `${name}.md`);
+    await fs9.writeFile(filePath, fileContent, "utf-8");
   }
   /**
    * Write raw markdown content to a tech file
@@ -20589,16 +21125,16 @@ ${content}`;
    */
   async writeTechFileRaw(name, content) {
     await this.ensureDirectories();
-    const filePath = path6.join(this.techDir, `${name}.md`);
-    await fs5.writeFile(filePath, content, "utf-8");
+    const filePath = path10.join(this.techDir, `${name}.md`);
+    await fs9.writeFile(filePath, content, "utf-8");
   }
   /**
    * Read analysis data from .tiny-brain/analysis.json
    */
   async readAnalysis() {
-    const filePath = path6.join(this.tinyBrainDir, "analysis.json");
+    const filePath = path10.join(this.tinyBrainDir, "analysis.json");
     try {
-      const content = await fs5.readFile(filePath, "utf-8");
+      const content = await fs9.readFile(filePath, "utf-8");
       return JSON.parse(content);
     } catch {
       return null;
@@ -20609,12 +21145,12 @@ ${content}`;
    */
   async readTechFiles() {
     try {
-      const files = await fs5.readdir(this.techDir);
+      const files = await fs9.readdir(this.techDir);
       const techFiles = [];
       for (const file of files) {
         if (!file.endsWith(".md")) continue;
-        const filePath = path6.join(this.techDir, file);
-        const content = await fs5.readFile(filePath, "utf-8");
+        const filePath = path10.join(this.techDir, file);
+        const content = await fs9.readFile(filePath, "utf-8");
         const parsed = this.parseFrontmatter(content);
         if (parsed) {
           techFiles.push({
@@ -20634,7 +21170,7 @@ ${content}`;
   async getTechForFile(filePath) {
     const techFiles = await this.readTechFiles();
     const matches = [];
-    const basename2 = path6.basename(filePath);
+    const basename2 = path10.basename(filePath);
     for (const techFile of techFiles) {
       for (const pattern of techFile.frontmatter.filePatterns) {
         if (minimatch(filePath, pattern) || minimatch(basename2, pattern) || minimatch(filePath, `**/${pattern}`) || filePath.includes(pattern.replace(/\/$/, ""))) {
@@ -20679,16 +21215,16 @@ ${content}`;
       ...config,
       lastSynced: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const filePath = path6.join(this.techDir, "config.json");
-    await fs5.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
+    const filePath = path10.join(this.techDir, "config.json");
+    await fs9.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
   }
   /**
    * Read config from .tiny-brain/tech/config.json
    */
   async readConfig() {
-    const filePath = path6.join(this.techDir, "config.json");
+    const filePath = path10.join(this.techDir, "config.json");
     try {
-      const content = await fs5.readFile(filePath, "utf-8");
+      const content = await fs9.readFile(filePath, "utf-8");
       return JSON.parse(content);
     } catch {
       return { useAgents: false };
@@ -20702,12 +21238,12 @@ ${content}`;
    * - Sub-agent invocation context
    */
   async installTechAgents() {
-    await fs5.mkdir(this.agentsDir, { recursive: true });
+    await fs9.mkdir(this.agentsDir, { recursive: true });
     const techFiles = await this.readTechFiles();
     for (const techFile of techFiles) {
       const name = techFile.frontmatter.name;
       const agentFileName = `tech-${name}.md`;
-      const agentPath = path6.join(this.agentsDir, agentFileName);
+      const agentPath = path10.join(this.agentsDir, agentFileName);
       const description = techFile.frontmatter.description || `${name} development specialist. Use for ${techFile.frontmatter.domain} tasks involving ${name}.`;
       const agentContent = `---
 name: tech-${name}
@@ -20723,7 +21259,7 @@ You are a specialized ${name} development agent invoked by the developer agent. 
 ## Tech Expertise
 
 ${techFile.content}`;
-      await fs5.writeFile(agentPath, agentContent, "utf-8");
+      await fs9.writeFile(agentPath, agentContent, "utf-8");
     }
   }
   /**
@@ -20731,10 +21267,10 @@ ${techFile.content}`;
    */
   async removeTechAgents() {
     try {
-      const files = await fs5.readdir(this.agentsDir);
+      const files = await fs9.readdir(this.agentsDir);
       for (const file of files) {
         if (file.startsWith("tech-") && file.endsWith(".md")) {
-          await fs5.unlink(path6.join(this.agentsDir, file));
+          await fs9.unlink(path10.join(this.agentsDir, file));
         }
       }
     } catch {
@@ -20827,19 +21363,19 @@ ${techFile.content}`;
 };
 
 // packages/tiny-brain-core/src/analyser/index.ts
-import * as fs8 from "fs/promises";
-import * as path9 from "path";
+import * as fs12 from "fs/promises";
+import * as path13 from "path";
 
 // packages/tiny-brain-core/src/analyser/detectors/base-detector.ts
-import * as fs6 from "fs/promises";
-import * as path7 from "path";
+import * as fs10 from "fs/promises";
+import * as path11 from "path";
 var BaseDetector = class {
   constructor(dirPath) {
     this.dirPath = dirPath;
   }
   async fileExists(filePath) {
     try {
-      await fs6.access(path7.join(this.dirPath, filePath));
+      await fs10.access(path11.join(this.dirPath, filePath));
       return true;
     } catch {
       return false;
@@ -20847,7 +21383,7 @@ var BaseDetector = class {
   }
   async readFile(filePath) {
     try {
-      return await fs6.readFile(path7.join(this.dirPath, filePath), "utf8");
+      return await fs10.readFile(path11.join(this.dirPath, filePath), "utf8");
     } catch {
       return "";
     }
@@ -20862,7 +21398,7 @@ var BaseDetector = class {
   }
   async findFiles(pattern) {
     try {
-      const files = await fs6.readdir(this.dirPath);
+      const files = await fs10.readdir(this.dirPath);
       return files.filter((file) => {
         if (pattern.includes("*")) {
           const regex = new RegExp(pattern.replace("*", ".*"));
@@ -21099,8 +21635,8 @@ var JavaScriptDetector = class extends BaseDetector {
 };
 
 // packages/tiny-brain-core/src/analyser/utils.ts
-import * as path8 from "path";
-import * as fs7 from "fs/promises";
+import * as path12 from "path";
+import * as fs11 from "fs/promises";
 
 // packages/tiny-brain-core/src/analyser/index.ts
 var DEFAULT_OPTIONS = {
@@ -21152,7 +21688,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     if (stack.bundling) buildTools.add(stack.bundling);
   }
   function detectFileType(fileName) {
-    const ext2 = path9.extname(fileName).toLowerCase();
+    const ext2 = path13.extname(fileName).toLowerCase();
     if ([".js", ".mjs", ".cjs", ".jsx"].includes(ext2)) {
       languages.add("javascript");
       languageFileCounts.javascript = (languageFileCounts.javascript || 0) + 1;
@@ -21190,7 +21726,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     for (const pattern of TEST_PATTERNS) {
       if (fileName.includes(pattern)) {
         testFiles.push(fileName);
-        const ext2 = path9.extname(fileName);
+        const ext2 = path13.extname(fileName);
         if (ext2) {
           testPatterns.add(pattern + ext2.substring(1));
         }
@@ -21201,10 +21737,10 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   async function detectOtherLanguages(dirPath, files) {
     try {
       for (const file of files) {
-        const filePath = path9.join(dirPath, file);
+        const filePath = path13.join(dirPath, file);
         if (file === "requirements.txt" || file === "setup.py" || file === "pyproject.toml") {
           languages.add("python");
-          const content = await fs8.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs12.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("django")) frameworks.add("django");
           if (content.includes("flask")) frameworks.add("flask");
           if (content.includes("fastapi")) frameworks.add("fastapi");
@@ -21213,14 +21749,14 @@ async function analyseRepository(rootPath = process.cwd(), options) {
         }
         if (file === "go.mod" || file === "go.sum") {
           languages.add("go");
-          const content = await fs8.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs12.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("testify")) testingTools.add("testify");
           if (content.includes("gin-gonic")) frameworks.add("gin");
           if (content.includes("echo")) frameworks.add("echo");
         }
         if (file === "Gemfile" || file === "Rakefile") {
           languages.add("ruby");
-          const content = await fs8.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs12.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("rails")) frameworks.add("rails");
           if (content.includes("sinatra")) frameworks.add("sinatra");
           if (content.includes("rspec")) testingTools.add("rspec");
@@ -21247,7 +21783,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   });
   const documentationLocations = [];
   let documentationPattern;
-  const rootFiles = await fs8.readdir(rootPath).catch(() => []);
+  const rootFiles = await fs12.readdir(rootPath).catch(() => []);
   const hasRootReadme = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "readme.md");
   const hasDocsFolder = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "docs");
   if (hasRootReadme) {
@@ -21286,7 +21822,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     return;
   }
   try {
-    const entries = await fs8.readdir(dir, { withFileTypes: true });
+    const entries = await fs12.readdir(dir, { withFileTypes: true });
     const files = [];
     const dirs = [];
     for (const entry of entries) {
@@ -21298,7 +21834,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     }
     await callback(dir, files);
     for (const subdir of dirs) {
-      const fullPath = path9.join(dir, subdir);
+      const fullPath = path13.join(dir, subdir);
       await walkDirectory(fullPath, callback, options, currentDepth + 1);
     }
   } catch {
@@ -21524,8 +22060,8 @@ var LibraryClient = class {
   /**
    * Get agent by path (new agent system)
    */
-  async getAgentByPath(token, path17) {
-    const response = await fetch(`${this.apiUrl}/api/agents/${path17}`, {
+  async getAgentByPath(token, path21) {
+    const response = await fetch(`${this.apiUrl}/api/agents/${path21}`, {
       method: "GET",
       headers: {
         "Accept": "application/json",
@@ -21541,8 +22077,8 @@ var LibraryClient = class {
   /**
    * Store agent at specified path (new agent system)
    */
-  async storeAgent(token, path17, agent) {
-    const response = await fetch(`${this.apiUrl}/api/agents/${path17}`, {
+  async storeAgent(token, path21, agent) {
+    const response = await fetch(`${this.apiUrl}/api/agents/${path21}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -21557,8 +22093,8 @@ var LibraryClient = class {
   /**
    * Archive agent at specified path (new agent system)
    */
-  async archiveAgent(token, path17) {
-    const response = await fetch(`${this.apiUrl}/api/agents/${path17}`, {
+  async archiveAgent(token, path21) {
+    const response = await fetch(`${this.apiUrl}/api/agents/${path21}`, {
       method: "DELETE",
       headers: {
         "Authorization": `Bearer ${token}`
@@ -21806,8 +22342,8 @@ var AnalysisService = class {
 };
 
 // packages/tiny-brain-core/src/services/analysis/config-health-service.ts
-import { promises as fs9 } from "fs";
-import path10 from "path";
+import { promises as fs13 } from "fs";
+import path14 from "path";
 var HOOK_SIGNATURE = "Installed by: tiny-brain";
 var REQUIRED_PERMISSIONS = [
   "Write(.tiny-brain/**)",
@@ -21823,20 +22359,20 @@ var ConfigHealthService = class {
   settingsPath;
   constructor(repoPath) {
     this.repoPath = repoPath;
-    this.gitDir = path10.join(repoPath, ".git");
-    this.hooksDir = path10.join(this.gitDir, "hooks");
-    this.claudeMdPath = path10.join(repoPath, "CLAUDE.md");
-    this.settingsPath = path10.join(repoPath, ".claude", "settings.json");
+    this.gitDir = path14.join(repoPath, ".git");
+    this.hooksDir = path14.join(this.gitDir, "hooks");
+    this.claudeMdPath = path14.join(repoPath, "CLAUDE.md");
+    this.settingsPath = path14.join(repoPath, ".claude", "settings.json");
   }
   /**
    * Check status of a single git hook
    */
   async checkHook(hookName) {
-    const hookPath = path10.join(this.hooksDir, hookName);
+    const hookPath = path14.join(this.hooksDir, hookName);
     try {
-      const stats = await fs9.stat(hookPath);
+      const stats = await fs13.stat(hookPath);
       const isExecutable = (stats.mode & 64) !== 0;
-      const content = await fs9.readFile(hookPath, "utf-8");
+      const content = await fs13.readFile(hookPath, "utf-8");
       const isSigned = content.includes(HOOK_SIGNATURE);
       return {
         name: hookName,
@@ -21878,7 +22414,7 @@ var ConfigHealthService = class {
    */
   async checkContextBlock() {
     try {
-      const content = await fs9.readFile(this.claudeMdPath, "utf-8");
+      const content = await fs13.readFile(this.claudeMdPath, "utf-8");
       const hasStartMarker = content.includes(CONTEXT_START_MARKER);
       const hasEndMarker = content.includes(CONTEXT_END_MARKER);
       const present = hasStartMarker && hasEndMarker;
@@ -21929,7 +22465,7 @@ var ConfigHealthService = class {
    */
   async checkSkillPermissions() {
     try {
-      const content = await fs9.readFile(this.settingsPath, "utf-8");
+      const content = await fs13.readFile(this.settingsPath, "utf-8");
       const settings = JSON.parse(content);
       const allowedPermissions = settings.permissions?.allow || [];
       const missing = REQUIRED_PERMISSIONS.filter(
@@ -22002,7 +22538,7 @@ var ConfigHealthService = class {
    */
   async directoryExists(relativePath) {
     try {
-      const stats = await fs9.stat(path10.join(this.repoPath, relativePath));
+      const stats = await fs13.stat(path14.join(this.repoPath, relativePath));
       return stats.isDirectory();
     } catch {
       return false;
@@ -22013,8 +22549,8 @@ var ConfigHealthService = class {
    */
   async getConfigFlags() {
     try {
-      const configPath = path10.join(this.repoPath, ".tiny-brain", "config.json");
-      const content = await fs9.readFile(configPath, "utf-8");
+      const configPath = path14.join(this.repoPath, ".tiny-brain", "config.json");
+      const content = await fs13.readFile(configPath, "utf-8");
       const config = JSON.parse(content);
       return {
         enableSDD: config.repo?.enableSDD ?? true,
@@ -22064,8 +22600,8 @@ var ConfigHealthService = class {
 };
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
-import * as fs10 from "fs/promises";
-import * as path11 from "path";
+import * as fs14 from "fs/promises";
+import * as path15 from "path";
 var SkillLoader = class {
   skillsPath;
   cache = /* @__PURE__ */ new Map();
@@ -22077,9 +22613,9 @@ var SkillLoader = class {
     if (cached) {
       return cached;
     }
-    const skillPath = path11.join(this.skillsPath, skillName);
-    const skillFile = path11.join(skillPath, "SKILL.md");
-    const content = await fs10.readFile(skillFile, "utf-8");
+    const skillPath = path15.join(this.skillsPath, skillName);
+    const skillFile = path15.join(skillPath, "SKILL.md");
+    const content = await fs14.readFile(skillFile, "utf-8");
     const { metadata, body } = this.parseFrontmatter(content);
     const templates = await this.loadTemplates(skillPath);
     const skill = {
@@ -22119,14 +22655,14 @@ var SkillLoader = class {
     return { metadata, body };
   }
   async loadTemplates(skillPath) {
-    const templatesPath = path11.join(skillPath, "templates");
+    const templatesPath = path15.join(skillPath, "templates");
     const templates = {};
     try {
-      const entries = await fs10.readdir(templatesPath, { withFileTypes: true });
+      const entries = await fs14.readdir(templatesPath, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.isFile() && entry.name.endsWith(".md")) {
-          const templatePath = path11.join(templatesPath, entry.name);
-          const content = await fs10.readFile(templatePath, "utf-8");
+          const templatePath = path15.join(templatesPath, entry.name);
+          const content = await fs14.readFile(templatePath, "utf-8");
           templates[entry.name] = content;
         }
       }
@@ -23433,12 +23969,12 @@ function encodeURIPath(str2) {
   return str2.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
 var EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-var createPathTagFunction = (pathEncoder = encodeURIPath) => function path17(statics, ...params) {
+var createPathTagFunction = (pathEncoder = encodeURIPath) => function path21(statics, ...params) {
   if (statics.length === 1)
     return statics[0];
   let postPath = false;
   const invalidSegments = [];
-  const path18 = statics.reduce((previousValue, currentValue, index) => {
+  const path22 = statics.reduce((previousValue, currentValue, index) => {
     if (/[?#]/.test(currentValue)) {
       postPath = true;
     }
@@ -23455,7 +23991,7 @@ var createPathTagFunction = (pathEncoder = encodeURIPath) => function path17(sta
     }
     return previousValue + currentValue + (index === params.length ? "" : encoded);
   }, "");
-  const pathOnly = path18.split(/[?#]/, 1)[0];
+  const pathOnly = path22.split(/[?#]/, 1)[0];
   const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
   let match3;
   while ((match3 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -23476,12 +24012,12 @@ var createPathTagFunction = (pathEncoder = encodeURIPath) => function path17(sta
     }, "");
     throw new AnthropicError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e) => e.error).join("\n")}
-${path18}
+${path22}
 ${underline}`);
   }
-  return path18;
+  return path22;
 };
-var path12 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+var path16 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
 
 // node_modules/@anthropic-ai/sdk/resources/beta/files.mjs
 var Files = class extends APIResource {
@@ -23519,7 +24055,7 @@ var Files = class extends APIResource {
    */
   delete(fileID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.delete(path12`/v1/files/${fileID}`, {
+    return this._client.delete(path16`/v1/files/${fileID}`, {
       ...options,
       headers: buildHeaders([
         { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
@@ -23542,7 +24078,7 @@ var Files = class extends APIResource {
    */
   download(fileID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.get(path12`/v1/files/${fileID}/content`, {
+    return this._client.get(path16`/v1/files/${fileID}/content`, {
       ...options,
       headers: buildHeaders([
         {
@@ -23565,7 +24101,7 @@ var Files = class extends APIResource {
    */
   retrieveMetadata(fileID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.get(path12`/v1/files/${fileID}`, {
+    return this._client.get(path16`/v1/files/${fileID}`, {
       ...options,
       headers: buildHeaders([
         { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
@@ -23613,7 +24149,7 @@ var Models = class extends APIResource {
    */
   retrieve(modelID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.get(path12`/v1/models/${modelID}?beta=true`, {
+    return this._client.get(path16`/v1/models/${modelID}?beta=true`, {
       ...options,
       headers: buildHeaders([
         { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
@@ -24996,7 +25532,7 @@ var Batches = class extends APIResource {
    */
   retrieve(messageBatchID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.get(path12`/v1/messages/batches/${messageBatchID}?beta=true`, {
+    return this._client.get(path16`/v1/messages/batches/${messageBatchID}?beta=true`, {
       ...options,
       headers: buildHeaders([
         { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
@@ -25049,7 +25585,7 @@ var Batches = class extends APIResource {
    */
   delete(messageBatchID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.delete(path12`/v1/messages/batches/${messageBatchID}?beta=true`, {
+    return this._client.delete(path16`/v1/messages/batches/${messageBatchID}?beta=true`, {
       ...options,
       headers: buildHeaders([
         { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
@@ -25081,7 +25617,7 @@ var Batches = class extends APIResource {
    */
   cancel(messageBatchID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.post(path12`/v1/messages/batches/${messageBatchID}/cancel?beta=true`, {
+    return this._client.post(path16`/v1/messages/batches/${messageBatchID}/cancel?beta=true`, {
       ...options,
       headers: buildHeaders([
         { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
@@ -25251,7 +25787,7 @@ var Versions = class extends APIResource {
    */
   create(skillID, params = {}, options) {
     const { betas, ...body } = params ?? {};
-    return this._client.post(path12`/v1/skills/${skillID}/versions?beta=true`, multipartFormRequestOptions({
+    return this._client.post(path16`/v1/skills/${skillID}/versions?beta=true`, multipartFormRequestOptions({
       body,
       ...options,
       headers: buildHeaders([
@@ -25273,7 +25809,7 @@ var Versions = class extends APIResource {
    */
   retrieve(version, params, options) {
     const { skill_id, betas } = params;
-    return this._client.get(path12`/v1/skills/${skill_id}/versions/${version}?beta=true`, {
+    return this._client.get(path16`/v1/skills/${skill_id}/versions/${version}?beta=true`, {
       ...options,
       headers: buildHeaders([
         { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -25296,7 +25832,7 @@ var Versions = class extends APIResource {
    */
   list(skillID, params = {}, options) {
     const { betas, ...query } = params ?? {};
-    return this._client.getAPIList(path12`/v1/skills/${skillID}/versions?beta=true`, PageCursor, {
+    return this._client.getAPIList(path16`/v1/skills/${skillID}/versions?beta=true`, PageCursor, {
       query,
       ...options,
       headers: buildHeaders([
@@ -25318,7 +25854,7 @@ var Versions = class extends APIResource {
    */
   delete(version, params, options) {
     const { skill_id, betas } = params;
-    return this._client.delete(path12`/v1/skills/${skill_id}/versions/${version}?beta=true`, {
+    return this._client.delete(path16`/v1/skills/${skill_id}/versions/${version}?beta=true`, {
       ...options,
       headers: buildHeaders([
         { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -25363,7 +25899,7 @@ var Skills = class extends APIResource {
    */
   retrieve(skillID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.get(path12`/v1/skills/${skillID}?beta=true`, {
+    return this._client.get(path16`/v1/skills/${skillID}?beta=true`, {
       ...options,
       headers: buildHeaders([
         { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -25403,7 +25939,7 @@ var Skills = class extends APIResource {
    */
   delete(skillID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.delete(path12`/v1/skills/${skillID}?beta=true`, {
+    return this._client.delete(path16`/v1/skills/${skillID}?beta=true`, {
       ...options,
       headers: buildHeaders([
         { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -26077,7 +26613,7 @@ var Batches2 = class extends APIResource {
    * ```
    */
   retrieve(messageBatchID, options) {
-    return this._client.get(path12`/v1/messages/batches/${messageBatchID}`, options);
+    return this._client.get(path16`/v1/messages/batches/${messageBatchID}`, options);
   }
   /**
    * List all Message Batches within a Workspace. Most recently created batches are
@@ -26113,7 +26649,7 @@ var Batches2 = class extends APIResource {
    * ```
    */
   delete(messageBatchID, options) {
-    return this._client.delete(path12`/v1/messages/batches/${messageBatchID}`, options);
+    return this._client.delete(path16`/v1/messages/batches/${messageBatchID}`, options);
   }
   /**
    * Batches may be canceled any time before processing ends. Once cancellation is
@@ -26137,7 +26673,7 @@ var Batches2 = class extends APIResource {
    * ```
    */
   cancel(messageBatchID, options) {
-    return this._client.post(path12`/v1/messages/batches/${messageBatchID}/cancel`, options);
+    return this._client.post(path16`/v1/messages/batches/${messageBatchID}/cancel`, options);
   }
   /**
    * Streams the results of a Message Batch as a `.jsonl` file.
@@ -26245,7 +26781,7 @@ var Models2 = class extends APIResource {
    */
   retrieve(modelID, params = {}, options) {
     const { betas } = params ?? {};
-    return this._client.get(path12`/v1/models/${modelID}`, {
+    return this._client.get(path16`/v1/models/${modelID}`, {
       ...options,
       headers: buildHeaders([
         { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
@@ -26409,9 +26945,9 @@ var BaseAnthropic = class {
   makeStatusError(status, error, message, headers) {
     return APIError.generate(status, error, message, headers);
   }
-  buildURL(path17, query, defaultBaseURL) {
+  buildURL(path21, query, defaultBaseURL) {
     const baseURL = !__classPrivateFieldGet(this, _BaseAnthropic_instances, "m", _BaseAnthropic_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-    const url = isAbsoluteURL(path17) ? new URL(path17) : new URL(baseURL + (baseURL.endsWith("/") && path17.startsWith("/") ? path17.slice(1) : path17));
+    const url = isAbsoluteURL(path21) ? new URL(path21) : new URL(baseURL + (baseURL.endsWith("/") && path21.startsWith("/") ? path21.slice(1) : path21));
     const defaultQuery = this.defaultQuery();
     if (!isEmptyObj(defaultQuery)) {
       query = { ...defaultQuery, ...query };
@@ -26442,24 +26978,24 @@ var BaseAnthropic = class {
    */
   async prepareRequest(request, { url, options }) {
   }
-  get(path17, opts) {
-    return this.methodRequest("get", path17, opts);
+  get(path21, opts) {
+    return this.methodRequest("get", path21, opts);
   }
-  post(path17, opts) {
-    return this.methodRequest("post", path17, opts);
+  post(path21, opts) {
+    return this.methodRequest("post", path21, opts);
   }
-  patch(path17, opts) {
-    return this.methodRequest("patch", path17, opts);
+  patch(path21, opts) {
+    return this.methodRequest("patch", path21, opts);
   }
-  put(path17, opts) {
-    return this.methodRequest("put", path17, opts);
+  put(path21, opts) {
+    return this.methodRequest("put", path21, opts);
   }
-  delete(path17, opts) {
-    return this.methodRequest("delete", path17, opts);
+  delete(path21, opts) {
+    return this.methodRequest("delete", path21, opts);
   }
-  methodRequest(method, path17, opts) {
+  methodRequest(method, path21, opts) {
     return this.request(Promise.resolve(opts).then((opts2) => {
-      return { method, path: path17, ...opts2 };
+      return { method, path: path21, ...opts2 };
     }));
   }
   request(options, remainingRetries = null) {
@@ -26563,8 +27099,8 @@ var BaseAnthropic = class {
     }));
     return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
   }
-  getAPIList(path17, Page2, opts) {
-    return this.requestAPIList(Page2, { method: "get", path: path17, ...opts });
+  getAPIList(path21, Page2, opts) {
+    return this.requestAPIList(Page2, { method: "get", path: path21, ...opts });
   }
   requestAPIList(Page2, options) {
     const request = this.makeRequest(options, null, void 0);
@@ -26651,8 +27187,8 @@ var BaseAnthropic = class {
   }
   async buildRequest(inputOptions, { retryCount = 0 } = {}) {
     const options = { ...inputOptions };
-    const { method, path: path17, query, defaultBaseURL } = options;
-    const url = this.buildURL(path17, query, defaultBaseURL);
+    const { method, path: path21, query, defaultBaseURL } = options;
+    const url = this.buildURL(path21, query, defaultBaseURL);
     if ("timeout" in options)
       validatePositiveInteger("timeout", options.timeout);
     options.timeout = options.timeout ?? this.timeout;
@@ -26932,9 +27468,9 @@ var ClaudeClient = class {
 };
 
 // packages/tiny-brain-core/src/services/api/tool-executor.ts
-import * as fs11 from "fs/promises";
-import * as path13 from "path";
-import { exec as exec3 } from "child_process";
+import * as fs15 from "fs/promises";
+import * as path17 from "path";
+import { exec as exec4 } from "child_process";
 var ToolExecutor = class {
   repositoryRoot;
   defaultTimeout;
@@ -26968,7 +27504,7 @@ var ToolExecutor = class {
     }
   }
   validatePath(inputPath) {
-    const resolvedPath = path13.resolve(this.repositoryRoot, inputPath);
+    const resolvedPath = path17.resolve(this.repositoryRoot, inputPath);
     if (!resolvedPath.startsWith(this.repositoryRoot)) {
       return {
         valid: false,
@@ -26984,7 +27520,7 @@ var ToolExecutor = class {
       return { success: false, error: validation.error };
     }
     try {
-      const content = await fs11.readFile(validation.resolvedPath, "utf-8");
+      const content = await fs15.readFile(validation.resolvedPath, "utf-8");
       return { success: true, result: content };
     } catch (error) {
       return {
@@ -26999,9 +27535,9 @@ var ToolExecutor = class {
       return { success: false, error: validation.error };
     }
     try {
-      const dir = path13.dirname(validation.resolvedPath);
-      await fs11.mkdir(dir, { recursive: true });
-      await fs11.writeFile(validation.resolvedPath, input.content, "utf-8");
+      const dir = path17.dirname(validation.resolvedPath);
+      await fs15.mkdir(dir, { recursive: true });
+      await fs15.writeFile(validation.resolvedPath, input.content, "utf-8");
       return { success: true, result: "File written successfully" };
     } catch (error) {
       return {
@@ -27029,7 +27565,7 @@ var ToolExecutor = class {
     }
   }
   async listDirectoryRecursive(dirPath, recursive, prefix = "") {
-    const entries = await fs11.readdir(dirPath, { withFileTypes: true });
+    const entries = await fs15.readdir(dirPath, { withFileTypes: true });
     const result = [];
     for (const entry of entries) {
       const entryPath = prefix ? `${prefix}/${entry.name}` : entry.name;
@@ -27037,7 +27573,7 @@ var ToolExecutor = class {
       result.push({ name: entryPath, type: type2 });
       if (recursive && entry.isDirectory()) {
         const subEntries = await this.listDirectoryRecursive(
-          path13.join(dirPath, entry.name),
+          path17.join(dirPath, entry.name),
           recursive,
           entryPath
         );
@@ -27049,7 +27585,7 @@ var ToolExecutor = class {
   async executeBash(input) {
     const timeout = input.timeout ?? this.defaultTimeout;
     return new Promise((resolve3) => {
-      exec3(
+      exec4(
         input.command,
         {
           cwd: this.repositoryRoot,
@@ -27102,6 +27638,11 @@ Stderr: ${stderr}` : stdout;
     };
   }
 };
+
+// packages/tiny-brain-core/src/utils/git.ts
+import { exec as exec5, execSync } from "child_process";
+import { promisify as promisify4 } from "util";
+var execAsync4 = promisify4(exec5);
 
 // packages/tiny-brain-core/src/constants/test-plan-emojis.ts
 var TEST_PLAN_EMOJIS = Object.freeze({
@@ -27624,7 +28165,7 @@ function createSettingsRoutes(bridge) {
 // packages/tiny-brain-dashboard/server/routes/repos.routes.ts
 import { readdir as readdir9, readFile as readFile10 } from "fs/promises";
 import { join as join12 } from "path";
-import { createHash as createHash2 } from "crypto";
+import { createHash as createHash3 } from "crypto";
 function toRepoAnalysisFile(result) {
   const analysis = result.analysis;
   const hashInput = JSON.stringify({
@@ -27633,7 +28174,7 @@ function toRepoAnalysisFile(result) {
     testingTools: analysis.testingTools,
     buildTools: analysis.buildTools
   });
-  const analysisHash = createHash2("md5").update(hashInput).digest("hex").slice(0, 8);
+  const analysisHash = createHash3("md5").update(hashInput).digest("hex").slice(0, 8);
   return {
     version: "1.0",
     detectedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -27985,21 +28526,49 @@ function createRepoRoutes(bridge, sse) {
       const qualityRunsPath = join12(repo.path, "docs", "quality", "runs");
       const runs = [];
       try {
-        const files = await readdir9(qualityRunsPath);
-        const qualityFiles = files.filter((f) => f.endsWith("-quality.md"));
-        qualityFiles.sort((a, b) => b.localeCompare(a));
-        for (const file of qualityFiles) {
-          const content = await readFile10(join12(qualityRunsPath, file), "utf-8");
-          const frontmatter = parseFrontmatter(content);
-          const runId = file.replace(".md", "");
-          runs.push({
-            runId,
-            date: frontmatter.run_date || "",
-            score: parseInt(frontmatter.score || "0", 10),
-            grade: frontmatter.grade || "",
-            issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10)
-          });
+        const entries = await readdir9(qualityRunsPath, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)) {
+            try {
+              const dateDirPath = join12(qualityRunsPath, entry.name);
+              const timeEntries = await readdir9(dateDirPath, { withFileTypes: true });
+              for (const timeEntry of timeEntries) {
+                if (timeEntry.isDirectory() && /^\d{2}-\d{2}$/.test(timeEntry.name)) {
+                  const qualityFile = join12(dateDirPath, timeEntry.name, "quality.md");
+                  try {
+                    const content = await readFile10(qualityFile, "utf-8");
+                    const frontmatter = parseFrontmatter(content);
+                    const runId = `${entry.name}T${timeEntry.name}`;
+                    runs.push({
+                      runId,
+                      date: frontmatter.run_date || "",
+                      score: parseInt(frontmatter.score || "0", 10),
+                      grade: frontmatter.grade || "",
+                      issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10)
+                    });
+                  } catch {
+                  }
+                }
+              }
+            } catch {
+            }
+          }
         }
+        for (const entry of entries) {
+          if (!entry.isDirectory() && entry.name.endsWith("-quality.md")) {
+            const content = await readFile10(join12(qualityRunsPath, entry.name), "utf-8");
+            const frontmatter = parseFrontmatter(content);
+            const runId = entry.name.replace(".md", "");
+            runs.push({
+              runId,
+              date: frontmatter.run_date || "",
+              score: parseInt(frontmatter.score || "0", 10),
+              grade: frontmatter.grade || "",
+              issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10)
+            });
+          }
+        }
+        runs.sort((a, b) => b.runId.localeCompare(a.runId));
       } catch (err) {
         if (err.code !== "ENOENT") {
           throw err;
@@ -28021,7 +28590,8 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const runPath = join12(repo.path, "docs", "quality", "runs", `${runId}.md`);
+      const isNested = runId.includes("T");
+      const runPath = isNested ? join12(repo.path, "docs", "quality", "runs", runId.replace("T", "/"), "quality.md") : join12(repo.path, "docs", "quality", "runs", `${runId}.md`);
       try {
         const content = await readFile10(runPath, "utf-8");
         const frontmatter = parseFrontmatter(content);
@@ -28064,7 +28634,7 @@ function createRepoRoutes(bridge, sse) {
 }
 
 // packages/tiny-brain-dashboard/server/routes/git.routes.ts
-import { execSync } from "node:child_process";
+import { execSync as execSync2 } from "node:child_process";
 function createGitRoutes(bridge) {
   const app = new Hono2();
   app.get("/commits/:sha", async (c) => {
@@ -28079,7 +28649,7 @@ function createGitRoutes(bridge) {
     }
     const repositoryRoot = repo.path;
     try {
-      const commitInfo = execSync(
+      const commitInfo = execSync2(
         `git show --no-patch --format='%H%n%an%n%ae%n%aI%n%s%n%b' ${sha}`,
         { encoding: "utf-8", cwd: repositoryRoot }
       ).split("\n");
@@ -28092,7 +28662,7 @@ function createGitRoutes(bridge) {
       const message = body ? `${subject}
 
 ${body}` : subject;
-      const filesChangedOutput = execSync(
+      const filesChangedOutput = execSync2(
         `git show --stat --format='' ${sha}`,
         { encoding: "utf-8", cwd: repositoryRoot }
       );
@@ -28511,9 +29081,13 @@ function createSkillsRoutes(bridge) {
     const session = sessionManager.createSession();
     const repositoryRoot = bridge.context.repositoryRoot || process.cwd();
     return streamSSE(c, async (stream3) => {
+      bridge.context.logger.info("[skills.routes] SSE stream started");
       try {
         const toolExecutor = new ToolExecutor({ repositoryRoot });
+        bridge.context.logger.info("[skills.routes] ToolExecutor created");
+        bridge.context.logger.info("[skills.routes] Creating ClaudeClient", { apiKeyLength: apiKey?.length });
         const client = new ClaudeClient({ apiKey });
+        bridge.context.logger.info("[skills.routes] ClaudeClient created");
         let userMessage = prompt;
         if (userContext) {
           userMessage = `Context:
@@ -28534,6 +29108,7 @@ ${content}
 `;
           }
         }
+        bridge.context.logger.info("[skills.routes] Calling client.invokeSkill");
         await client.invokeSkill(
           {
             systemPrompt,
@@ -28581,11 +29156,16 @@ ${content}
           }
         );
       } catch (error) {
+        bridge.context.logger.error("[skills.routes] Caught error in SSE handler", { error: error instanceof Error ? error.message : String(error) });
         const message = error instanceof Error ? error.message : "Unknown error";
-        await stream3.writeSSE({
-          event: "error",
-          data: JSON.stringify({ error: message })
-        });
+        try {
+          await stream3.writeSSE({
+            event: "error",
+            data: JSON.stringify({ error: message })
+          });
+        } catch (writeError) {
+          bridge.context.logger.error("[skills.routes] Failed to write error event", { writeError: writeError instanceof Error ? writeError.message : String(writeError) });
+        }
         sessionManager.endSession(session.id);
       }
     });
@@ -28602,7 +29182,7 @@ ${content}
 }
 
 // packages/tiny-brain-dashboard/server/app.ts
-var __dirname = path14.dirname(fileURLToPath3(import.meta.url));
+var __dirname = path18.dirname(fileURLToPath3(import.meta.url));
 function createApp(context, sse) {
   const app = new Hono2();
   const bridge = new ServiceBridge(context);
@@ -28664,12 +29244,12 @@ data: ${JSON.stringify(initialData)}
   app.get("/health", (c) => {
     return c.json({ status: "ok" });
   });
-  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path14.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path14.resolve(__dirname, "../dist");
-  const distExists = fs12.existsSync(distPath);
+  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path18.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path18.resolve(__dirname, "../dist");
+  const distExists = fs16.existsSync(distPath);
   if (distExists) {
     app.use("/assets/*", serveStatic({
       root: distPath,
-      rewriteRequestPath: (path17) => path17.replace("/assets", "/assets")
+      rewriteRequestPath: (path21) => path21.replace("/assets", "/assets")
     }));
     app.use("/favicon.png", serveStatic({
       root: distPath,
@@ -28680,9 +29260,9 @@ data: ${JSON.stringify(initialData)}
       if (reqPath.startsWith("/api") || reqPath.startsWith("/events") || reqPath === "/health") {
         return c.notFound();
       }
-      const indexPath = path14.join(distPath, "index.html");
-      if (fs12.existsSync(indexPath)) {
-        const indexHtml = fs12.readFileSync(indexPath, "utf-8");
+      const indexPath = path18.join(distPath, "index.html");
+      if (fs16.existsSync(indexPath)) {
+        const indexHtml = fs16.readFileSync(indexPath, "utf-8");
         return c.html(indexHtml);
       }
       return c.html(`<!DOCTYPE html>
@@ -28756,13 +29336,13 @@ data: ${JSON.stringify(data)}
 };
 
 // packages/tiny-brain-dashboard/server/services/file-watcher.service.ts
-import * as path16 from "path";
-import * as fs14 from "fs";
+import * as path20 from "path";
+import * as fs18 from "fs";
 import * as os from "os";
 
 // packages/tiny-brain-dashboard/server/services/generic-file-watcher.ts
-import * as fs13 from "fs";
-import * as path15 from "path";
+import * as fs17 from "fs";
+import * as path19 from "path";
 import { EventEmitter as EventEmitter2 } from "events";
 var FileWatcherService = class extends EventEmitter2 {
   watchInterval = null;
@@ -28792,10 +29372,10 @@ var FileWatcherService = class extends EventEmitter2 {
       ...this.options,
       ...options
     };
-    if (!fs13.existsSync(watchPath)) {
+    if (!fs17.existsSync(watchPath)) {
       throw new Error(`Watch path does not exist: ${watchPath}`);
     }
-    const stats = fs13.statSync(watchPath);
+    const stats = fs17.statSync(watchPath);
     if (!stats.isDirectory()) {
       throw new Error(`Watch path is not a directory: ${watchPath}`);
     }
@@ -28826,9 +29406,9 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = [];
     const scanDir = (currentPath) => {
       try {
-        const entries = fs13.readdirSync(currentPath, { withFileTypes: true });
+        const entries = fs17.readdirSync(currentPath, { withFileTypes: true });
         for (const entry of entries) {
-          const fullPath = path15.join(currentPath, entry.name);
+          const fullPath = path19.join(currentPath, entry.name);
           if (entry.name.startsWith(".")) {
             continue;
           }
@@ -28855,7 +29435,7 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = this.getAllFiles(this.watchPath);
     for (const filePath of files) {
       try {
-        const stats = fs13.statSync(filePath);
+        const stats = fs17.statSync(filePath);
         this.fileTimestamps.set(filePath, stats.mtimeMs);
       } catch (error) {
         this.logger.error(`Error getting stats for ${filePath}:`, error);
@@ -28877,7 +29457,7 @@ var FileWatcherService = class extends EventEmitter2 {
         const change = {
           type: "deleted",
           filePath,
-          relativePath: path15.relative(this.watchPath, filePath)
+          relativePath: path19.relative(this.watchPath, filePath)
         };
         this.emit("change", change);
         this.logger.debug(`File deleted: ${filePath}`);
@@ -28885,14 +29465,14 @@ var FileWatcherService = class extends EventEmitter2 {
     }
     for (const filePath of currentFiles) {
       try {
-        const stats = fs13.statSync(filePath);
+        const stats = fs17.statSync(filePath);
         const previousMtime = this.fileTimestamps.get(filePath);
         if (!previousMtime) {
           this.fileTimestamps.set(filePath, stats.mtimeMs);
           const change = {
             type: "added",
             filePath,
-            relativePath: path15.relative(this.watchPath, filePath),
+            relativePath: path19.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -28902,7 +29482,7 @@ var FileWatcherService = class extends EventEmitter2 {
           const change = {
             type: "modified",
             filePath,
-            relativePath: path15.relative(this.watchPath, filePath),
+            relativePath: path19.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -28988,9 +29568,9 @@ var FileWatcher = class {
     if (!this.plansCache.has(repoId)) {
       this.plansCache.set(repoId, /* @__PURE__ */ new Map());
     }
-    const tinyBrainPath = path16.join(repoPath, ".tiny-brain");
-    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs14.existsSync(tinyBrainPath)}`);
-    if (fs14.existsSync(tinyBrainPath)) {
+    const tinyBrainPath = path20.join(repoPath, ".tiny-brain");
+    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs18.existsSync(tinyBrainPath)}`);
+    if (fs18.existsSync(tinyBrainPath)) {
       try {
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -29011,7 +29591,7 @@ var FileWatcher = class {
       }
     } else {
       try {
-        await fs14.promises.mkdir(tinyBrainPath, { recursive: true });
+        await fs18.promises.mkdir(tinyBrainPath, { recursive: true });
         this.context.logger.info(`[FileWatcher] Created .tiny-brain directory for repo ${repoId}`);
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -29030,9 +29610,9 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to create .tiny-brain and start PRD watcher for ${repoId}:`, error);
       }
     }
-    const fixesPath = path16.join(repoPath, ".tiny-brain/fixes");
-    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs14.existsSync(fixesPath)}`);
-    if (fs14.existsSync(fixesPath)) {
+    const fixesPath = path20.join(repoPath, ".tiny-brain/fixes");
+    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs18.existsSync(fixesPath)}`);
+    if (fs18.existsSync(fixesPath)) {
       try {
         watchers.fixesWatcher = new FileWatcherService(this.context.logger);
         watchers.fixesWatcher.on("change", (change) => {
@@ -29049,31 +29629,33 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start fixes watcher for ${repoId}:`, error);
       }
     }
-    const qualityPath = path16.join(repoPath, "docs/quality/runs");
-    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs14.existsSync(qualityPath)}`);
-    if (fs14.existsSync(qualityPath)) {
-      try {
-        if (!this.qualityCache.has(repoId)) {
-          this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
-        }
-        watchers.qualityWatcher = new FileWatcherService(this.context.logger);
-        watchers.qualityWatcher.on("change", (change) => {
-          this.context.logger.info(`[FileWatcher] Quality change detected in ${repoId}: ${change.type} ${change.relativePath}`);
-          this.handleQualityChange(repoId, change);
-        });
-        await watchers.qualityWatcher.start(qualityPath, {
-          pollInterval: 1e3,
-          recursive: false,
-          fileFilter: (filePath) => filePath.endsWith(".md")
-        });
-        this.context.logger.info(`[FileWatcher] Quality watcher started for repo ${repoId}: ${qualityPath}`);
-      } catch (error) {
-        this.context.logger.error(`[FileWatcher] Failed to start quality watcher for ${repoId}:`, error);
-      }
+    const qualityPath = path20.join(repoPath, "docs/quality/runs");
+    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs18.existsSync(qualityPath)}`);
+    if (!fs18.existsSync(qualityPath)) {
+      await fs18.promises.mkdir(qualityPath, { recursive: true });
+      this.context.logger.info(`[FileWatcher] Created quality runs directory for repo ${repoId}`);
     }
-    const prdDocsPath = path16.join(repoPath, "docs/prd");
-    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs14.existsSync(prdDocsPath)}`);
-    if (fs14.existsSync(prdDocsPath)) {
+    try {
+      if (!this.qualityCache.has(repoId)) {
+        this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
+      }
+      watchers.qualityWatcher = new FileWatcherService(this.context.logger);
+      watchers.qualityWatcher.on("change", (change) => {
+        this.context.logger.info(`[FileWatcher] Quality change detected in ${repoId}: ${change.type} ${change.relativePath}`);
+        this.handleQualityChange(repoId, change);
+      });
+      await watchers.qualityWatcher.start(qualityPath, {
+        pollInterval: 1e3,
+        recursive: true,
+        fileFilter: (filePath) => filePath.endsWith(".md")
+      });
+      this.context.logger.info(`[FileWatcher] Quality watcher started for repo ${repoId}: ${qualityPath}`);
+    } catch (error) {
+      this.context.logger.error(`[FileWatcher] Failed to start quality watcher for ${repoId}:`, error);
+    }
+    const prdDocsPath = path20.join(repoPath, "docs/prd");
+    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs18.existsSync(prdDocsPath)}`);
+    if (fs18.existsSync(prdDocsPath)) {
       try {
         watchers.prdDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.prdDocsWatcher.on("change", (change) => {
@@ -29091,8 +29673,8 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start PRD docs watcher for ${repoId}:`, error);
       }
     }
-    const fixDocsPath = path16.join(repoPath, ".tiny-brain/fixes");
-    if (fs14.existsSync(fixDocsPath)) {
+    const fixDocsPath = path20.join(repoPath, ".tiny-brain/fixes");
+    if (fs18.existsSync(fixDocsPath)) {
       try {
         watchers.fixDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.fixDocsWatcher.on("change", (change) => {
@@ -29118,8 +29700,8 @@ var FileWatcher = class {
    * Start watching ~/.tiny-brain/repos/repos.json for new repo registrations
    */
   async startReposConfigWatcher() {
-    const reposDir = path16.join(os.homedir(), ".tiny-brain", "repos");
-    if (!fs14.existsSync(reposDir)) {
+    const reposDir = path20.join(os.homedir(), ".tiny-brain", "repos");
+    if (!fs18.existsSync(reposDir)) {
       this.context.logger.info(`[FileWatcher] Repos config directory does not exist: ${reposDir}`);
       return;
     }
@@ -29201,7 +29783,7 @@ var FileWatcher = class {
         this.context.logger.info(`[FileWatcher] No SSE clients connected - skipping file processing`);
         return;
       }
-      const fileName = path16.basename(change.relativePath);
+      const fileName = path20.basename(change.relativePath);
       this.context.logger.debug(`[FileWatcher] File name:`, fileName);
       if (!fileName.endsWith(".json")) {
         this.context.logger.debug(`[FileWatcher] Not a valid progress file - skipping`);
@@ -29236,7 +29818,7 @@ var FileWatcher = class {
       let newPlan;
       try {
         this.context.logger.debug(`[FileWatcher] Reading file: ${change.filePath}`);
-        const content = await fs14.promises.readFile(change.filePath, "utf-8");
+        const content = await fs18.promises.readFile(change.filePath, "utf-8");
         newPlan = JSON.parse(content);
       } catch (error) {
         this.context.logger.error(`Error reading progress file ${change.filePath}:`, error);
@@ -29283,6 +29865,7 @@ var FileWatcher = class {
     for (const newFeature of newFeatures) {
       const oldFeature = oldFeatures.find((f) => f.id === newFeature.id);
       if (!oldFeature) {
+        const newTasks2 = newFeature.tasks || [];
         events.push({
           eventType: "prd:feature:added",
           repoId,
@@ -29293,12 +29876,16 @@ var FileWatcher = class {
             id: newFeature.id,
             number: newFeature.number,
             title: newFeature.title,
-            status: newFeature.status
+            status: newFeature.status,
+            tasks: newTasks2.map((t) => ({
+              id: t.id,
+              description: t.description,
+              status: t.status
+            }))
           }
         });
-        continue;
       }
-      if (oldFeature.status !== newFeature.status) {
+      if (oldFeature && oldFeature.status !== newFeature.status) {
         events.push({
           eventType: "prd:feature:updated",
           repoId,
@@ -29318,7 +29905,7 @@ var FileWatcher = class {
           }
         });
       }
-      const oldTasks = oldFeature.tasks || [];
+      const oldTasks = oldFeature?.tasks || [];
       const newTasks = newFeature.tasks || [];
       for (const newTask of newTasks) {
         const oldTask = oldTasks.find((t) => t.id === newTask.id);
@@ -29440,7 +30027,7 @@ var FileWatcher = class {
       }
       let newFixes;
       try {
-        const content = await fs14.promises.readFile(change.filePath, "utf-8");
+        const content = await fs18.promises.readFile(change.filePath, "utf-8");
         newFixes = JSON.parse(content);
       } catch (error) {
         this.context.logger.error(`Error reading fixes progress file ${change.filePath}:`, error);
@@ -29549,8 +30136,8 @@ var FileWatcher = class {
       if (!change.relativePath.endsWith(".md")) {
         return;
       }
-      const fileName = path16.basename(change.relativePath);
-      const runId = fileName.replace(/\.md$/, "");
+      const nestedMatch = change.relativePath.match(/^(\d{4}-\d{2}-\d{2})\/(\d{2}-\d{2})\/quality\.md$/);
+      const runId = nestedMatch ? `${nestedMatch[1]}T${nestedMatch[2]}` : path20.basename(change.relativePath).replace(/\.md$/, "");
       let repoCache = this.qualityCache.get(repoId);
       if (!repoCache) {
         repoCache = /* @__PURE__ */ new Map();
@@ -29568,7 +30155,7 @@ var FileWatcher = class {
       }
       let runData = { runId };
       try {
-        const content = await fs14.promises.readFile(change.filePath, "utf-8");
+        const content = await fs18.promises.readFile(change.filePath, "utf-8");
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (frontmatterMatch) {
           const frontmatter = frontmatterMatch[1];
@@ -29681,7 +30268,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs14.promises.readFile(change.filePath, "utf-8");
+        content = await fs18.promises.readFile(change.filePath, "utf-8");
       } catch (error) {
         this.context.logger.error(`Error reading PRD doc file ${change.filePath}:`, error);
         return;
@@ -29740,7 +30327,7 @@ var FileWatcher = class {
         return;
       }
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-      const fixId = path16.basename(change.relativePath, ".md");
+      const fixId = path20.basename(change.relativePath, ".md");
       if (change.type === "deleted") {
         await this.sse.broadcast("fix-doc-change", {
           eventType: "fix:doc:deleted",
@@ -29752,7 +30339,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs14.promises.readFile(change.filePath, "utf-8");
+        content = await fs18.promises.readFile(change.filePath, "utf-8");
       } catch (error) {
         this.context.logger.error(`Error reading fix doc file ${change.filePath}:`, error);
         return;

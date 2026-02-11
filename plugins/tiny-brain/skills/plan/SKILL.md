@@ -57,6 +57,21 @@ For each feature identified, create a file at `docs/prd/{prd-id}/features/{featu
 
 Use the template at `templates/feature-template.md`.
 
+**Feature Numbering (Critical for Sync):**
+Each feature MUST have a unique `number` field in its YAML frontmatter, starting at 1 and incrementing sequentially. This number determines task ID prefixes (`task-{number}-{n}`) and feature ordering in the dashboard.
+
+```yaml
+---
+id: feature-kebab-case-id
+prd_id: parent-prd-id
+number: 1  # Increment for each feature: 1, 2, 3...
+title: Feature Title
+status: defined
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+```
+
 **Task Format (Critical for Sync):**
 Tasks MUST use this format for automatic extraction:
 ```markdown

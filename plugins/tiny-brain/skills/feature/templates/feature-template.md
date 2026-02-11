@@ -1,6 +1,7 @@
 ---
 id: feature-id
 prd_id: parent-prd-id
+number: 1
 title: Feature Title
 status: defined
 created: YYYY-MM-DD

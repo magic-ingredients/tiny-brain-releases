@@ -44,12 +44,15 @@ Save to: `docs/prd/{prd-id}/features/{feature-id}.md`
 ---
 id: feature-kebab-case-id
 prd_id: parent-prd-id
+number: N  # Next number after existing features (check docs/prd/{prd-id}/features/)
 title: Feature Title
 status: defined
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
 ```
+
+**Feature Numbering:** The `number` field determines task ID prefixes (`task-{number}-{n}`) and feature ordering. Check existing features in the PRD to find the next available number.
 
 ### Step 4: Define Tasks
 

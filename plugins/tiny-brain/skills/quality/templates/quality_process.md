@@ -1,149 +1,194 @@
 # Quality Analysis Process
 
-This document describes the 5-phase methodology for conducting comprehensive code quality analysis.
+This document describes the three-layer specialist architecture for conducting comprehensive code quality analysis.
 
 ## Overview
 
-The quality-coordinator agent orchestrates analysis by spawning specialist agents in parallel, collecting their findings, and aggregating results into a final score and grade.
+The quality skill uses a **thin orchestrator** in the main conversation that delegates heavy work to three layers:
+
+```
+Main Conversation (thin orchestrator, ~10-15K tokens)
+  |
+  |-- Layer 1: MCP run-analyzers -> writes analysis.json (zero context cost)
+  |-- Layer 2: 4 specialist Task agents (background) -> write domain.json files
+  |-- Layer 3: MCP assemble-run -> reads all files, merges, scores, saves report
+```
+
+This ensures:
+
+1. **No context overflow** - all heavy data goes to disk, never through conversation context
+2. **Domain expertise** - each specialist agent has focused domain knowledge and checklists
+3. **Full coverage** - 42 checks across 8 categories via 4 specialists
+4. **Visible progress** - the user sees each analyzer and specialist complete
+5. **Auditability** - all intermediate files are preserved in nested run directories
+
+## Specialist Agent Mapping
+
+| Agent (subagent_type) | Model | Categories | Checklists | File Types |
+|---|---|---|---|---|
+| `tiny-brain:security-reviewer` | opus | Security | SEC-* (7) | Source files |
+| `tiny-brain:performance-engineer` | sonnet | Performance, Reliability | PERF-* (5), REL-* (6) | Source files |
+| `tiny-brain:tdd-validator` | sonnet | Testing | TEST-* (4) | Test + source files |
+| `tiny-brain:reviewer` | sonnet | Maint, Arch, Doc, Ops | MAINT-* (6), ARCH-* (5), DOC-* (4), OPS-* (4) | Source files |
+
+## Run Directory Structure
+
+Each quality run gets a nested directory based on timestamp:
+
+**RunId format:** `YYYY-MM-DDTHH-mm` (e.g., `2026-02-10T18-03`)
+**Disk path:** `docs/quality/runs/YYYY-MM-DD/HH-mm/`
+
+Files within a run directory:
+| File | Source | Content |
+|------|--------|---------|
+| `files.txt` | Phase 1 (Discovery) | File list for agents (source + test files) |
+| `analysers/` | MCP run-analyzers | Raw per-analyzer output files (e.g., `eslint-0.json`, `typescript-0.txt`) |
+| `analysis.json` | MCP run-analyzers | Merged/normalized analyzer issues |
+| `security.json` | security-reviewer agent | Security findings |
+| `performance-reliability.json` | performance-engineer agent | Performance & Reliability findings |
+| `testing.json` | tdd-validator agent | Testing findings |
+| `review.json` | reviewer agent | Maintainability, Architecture, Documentation, Operations findings |
+| `quality.md` | MCP assemble-run | Final merged report |
+
+Legacy runs (pre-v3) use flat `docs/quality/runs/YYYY-MM-DD-*.json` naming.
 
 ## Phase 1: Discovery
 
-**Purpose**: Understand the repository structure and technology stack.
+**Purpose**: Detect available analyzers, list eligible files, and prepare the run directory.
+
+**Executed by**: Skill (main conversation)
 
 **Actions**:
-1. Read repository configuration (package.json, tsconfig.json, etc.)
-2. Identify primary languages and frameworks
-3. Detect testing frameworks and coverage tools
-4. Map directory structure
-5. Note any existing quality configuration
+1. Read `templates/agent_findings.md` for the output schema
+2. Call `mcp quality detect-analyzers` to find configured CLI analyzers
+3. Glob for eligible source files (excluding `node_modules`, `dist`, etc.)
+4. Separate test files from source files
+5. Read `.tiny-brain/analysis.json` for detected tech stack
+6. Generate runId and create nested run directory
+7. Write `files.txt` to run directory (source files, then `---TESTS---` separator, then test files)
 
-**Output**: Repository context object with:
-- Languages detected
-- Frameworks in use
-- Build tools
-- Test configuration
-- Project type (library, application, monorepo)
-
-## Phase 2: Parallel Analysis
-
-**Purpose**: Conduct specialized analysis across all quality categories simultaneously.
-
-**Agent Assignments**:
-
-| Agent | Categories | Focus Areas |
-|-------|------------|-------------|
-| security-reviewer | Security | Vulnerabilities, auth, secrets |
-| performance-engineer | Performance, Reliability | Speed, stability, error handling |
-| tdd-validator | Testing | Coverage, test quality |
-| reviewer | Maintainability, Documentation | Code quality, docs |
-| architect | Architecture, Operations | Design, deployability |
-
-**Process**:
-1. Spawn all specialist agents in parallel via Task tool
-2. Each agent analyzes their assigned categories
-3. Agents return structured findings:
-   ```json
-   {
-     "category": "Security",
-     "issues": [
-       {
-         "severity": "major",
-         "file": "src/api.ts",
-         "line": 42,
-         "message": "Hardcoded API key",
-         "suggestion": "Use environment variable"
-       }
-     ],
-     "observations": ["Uses helmet for headers"],
-     "score_impact": -10.5
-   }
-   ```
-
-## Phase 3: Aggregation
-
-**Purpose**: Combine findings from all agents into a unified view.
-
-**Process**:
-1. Collect responses from all specialist agents
-2. Deduplicate overlapping issues
-3. Validate issue severity against criteria
-4. Group issues by category
-5. Calculate category-level scores
-
-**Deduplication Rules**:
-- Same file + line + message = single issue
-- Take highest severity when duplicated
-- Merge suggestions from different agents
-
-## Phase 4: Scoring
-
-**Purpose**: Calculate final score and grade.
-
-**Algorithm**:
+**User output**:
 ```
-score = 100
-for each issue:
-    weight = CATEGORY_WEIGHTS[issue.category]
-    multiplier = SEVERITY_MULTIPLIERS[issue.severity]
-    deduction = weight * multiplier
-    score -= deduction
-score = max(0, score)  # Floor at 0
+Analyzing repository...
+  Found 87 source files, 34 test files
+  Detected 3 analyzers: ESLint, TypeScript, npm audit
+  Run directory: docs/quality/runs/2026-02-10/18-03/
 ```
 
-**Grade Thresholds**:
-| Grade | Score Range | Description |
-|-------|-------------|-------------|
-| A | 90-100 | Excellent quality |
-| B | 80-89 | Good with minor issues |
-| C | 70-79 | Acceptable, needs work |
-| D | 60-69 | Below standard |
-| F | <60 | Significant issues |
+## Phase 2: Parallel Launch
 
-## Phase 5: Reporting
+**Purpose**: Launch ALL operations simultaneously in a single message.
 
-**Purpose**: Generate actionable output and persist results.
+**Executed by**: Skill (main conversation)
+
+**Operations launched**:
+1. **MCP run-analyzers** with `outputPath={runDir}/analysis.json` (writes to file, returns summary only)
+2. **4 specialist Task agents** with `run_in_background: true` - each reads `files.txt` from the run directory
+
+Task prompts are minimal (~10 lines each). Specialist agents have their domain checklists built into their agent definitions - no need to embed checklists in the prompt.
+
+**User output**:
+```
+Launching specialist investigations...
+  Security Review: analyzing 87 files...
+  Performance & Reliability: analyzing 87 files...
+  Testing Review: analyzing 34 test + 87 source files...
+  Code Review: analyzing 87 files...
+```
+
+## Phase 3: Monitor & Report Progress
+
+**Purpose**: Track completion and report progress to user.
+
+**Executed by**: Skill (main conversation)
 
 **Actions**:
-1. Generate markdown report from template
-2. Prioritize recommendations by impact
-3. Call MCP `quality save` to persist:
-   - Score and grade
-   - All issues with details
-   - Recommendations
-   - Repository context
-4. Display summary to user
+1. When MCP run-analyzers returns, report analyzer summary
+2. Use **TaskOutput** with each agent's task_id to check completion - agents' final messages include summary counts, so no need to Read full JSON files
+3. When ALL complete, announce assembly
 
-**Report Structure**:
+**User output**:
+```
+Running analyzers...
+  ESLint: 12 issues
+  TypeScript: 0 errors
+  npm audit: 2 vulnerabilities
+
+  Testing Review: complete (3 issues)
+  Security Review: complete (5 issues)
+  Performance & Reliability: complete (2 issues)
+  Code Review: complete (8 issues)
+
+All investigations complete. Assembling report...
+```
+
+## Phase 4: Assemble
+
+**Purpose**: Read all intermediate files, merge, score, and save the final report.
+
+**Executed by**: MCP assemble-run (server-side, zero context cost)
+
+**Actions**:
+1. Read all `*.json` files from `runs/{date}/{time}/` directory
+2. Separate analyzer findings from specialist (LLM) findings
+3. Merge analyzer + specialist issues using fingerprint deduplication
+4. Calculate score and grade
+5. Save final quality report as `quality.md` in the run directory
+
+**User output**:
+```
+  14 analyzer + 18 specialist -> 28 unique (4 duplicates removed)
+```
+
+## Phase 5: Present Results
+
+**Purpose**: Display actionable results to the user.
+
+**Executed by**: Skill (main conversation)
+
+**Report structure**:
 1. Executive summary (score, grade, issue count)
-2. Category breakdown
-3. Top issues (critical/major first)
-4. Actionable recommendations
-5. Comparison to previous run (if available)
+2. Source breakdown (analyzers vs specialist investigation)
+3. Category breakdown with per-category grades
+4. Top issues (critical/major first) with evidence and effort estimates
+5. Technical debt summary
+6. Recommendations
+
+## Phase 6: Offer Follow-ups
+
+**Purpose**: Provide next steps for the user.
+
+- View full report: `quality details runId=<id>`
+- View history: `quality history`
+- Generate improvement plan: `/quality plan`
+- Compare with previous run: `/quality compare`
+
+## Progress Reporting Format
+
+Progress is reported to the user at BOTH layers:
+
+### Analyzer Stage
+Each analyzer completion is reported with its issue count. Since `run-analyzers` uses `outputPath`, only the summary text flows through conversation context.
+
+### Specialist Agent Stage
+Each specialist agent completion is checked via **TaskOutput**. The agent's final message includes summary counts. No JSON files are read into the main context.
 
 ## Error Handling
 
 **Agent Timeout**:
-- Default timeout: 60 seconds per agent
-- On timeout: Score category as 0 (worst case)
 - Log warning about incomplete analysis
+- Use whatever results are available from completed agents
+- Note in report: "Analysis incomplete for {domain}"
 
 **Agent Failure**:
-- Catch errors from individual agents
-- Continue with remaining agents
-- Note failed categories in report
-- Suggest manual review for failed categories
+- Check if the output file was partially written
+- Continue with results from other specialists
+- Note failed domains in recommendations
+
+**Analyzer Failure**:
+- MCP run-analyzers handles individual analyzer failures internally
+- Summary still returned for successful analyzers
 
 **No Issues Found**:
 - Valid result (perfect score possible)
 - Still persist run for tracking
-- Note in report that no issues detected
-
-## Customization
-
-The analysis process can be customized by:
-1. Modifying `quality_criteria.md` weights
-2. Adding project-specific standards
-3. Excluding certain files/directories
-4. Adjusting severity thresholds
-
-Configuration is read from `docs/quality/quality_criteria.md` if present, otherwise defaults from the skill template are used.

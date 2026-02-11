@@ -449,8 +449,8 @@ var init_parseUtil = __esm({
     init_errors();
     init_en();
     makeIssue = (params) => {
-      const { data, path: path25, errorMaps, issueData } = params;
-      const fullPath = [...path25, ...issueData.path || []];
+      const { data, path: path30, errorMaps, issueData } = params;
+      const fullPath = [...path30, ...issueData.path || []];
       const fullIssue = {
         ...issueData,
         path: fullPath
@@ -758,11 +758,11 @@ var init_types = __esm({
     init_parseUtil();
     init_util();
     ParseInputLazyPath = class {
-      constructor(parent, value, path25, key) {
+      constructor(parent, value, path30, key) {
         this._cachedPath = [];
         this.parent = parent;
         this.data = value;
-        this._path = path25;
+        this._path = path30;
         this._key = key;
       }
       get path() {
@@ -7328,8 +7328,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path25) {
-      let input = path25;
+    function removeDotSegments(path30) {
+      let input = path30;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -7528,8 +7528,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path25, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path25 && path25 !== "/" ? path25 : void 0;
+        const [path30, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path30 && path30 !== "/" ? path30 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -16568,12 +16568,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs22, exportName) {
+    function addFormats(ajv, list, fs27, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs22[f]);
+        ajv.addFormat(f, fs27[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -16678,7 +16678,7 @@ var init_zod = __esm({
 });
 
 // packages/tiny-brain-core/src/types/quality.ts
-var QualityCategory, CATEGORY_WEIGHTS, QualityGrade, GRADE_THRESHOLDS, IssueSeverity, QualityIssueSchema, QualityRunSummarySchema, QualityRunResultSchema, SaveQualityRunInputSchema;
+var QualityCategory, CATEGORY_WEIGHTS, QualityGrade, GRADE_THRESHOLDS, IssueSeverity, EffortLevel, ImpactLevel, SEVERITY_MULTIPLIERS, CategoryScoreSchema, DEFAULT_EFFORT_HOURS, SEVERITY_DEFAULT_HOURS, QualityIssueSchema, StructuredRecommendationSchema, TechnicalDebtSummarySchema, RunComparisonSchema, QualityRunSummarySchema, SourceBreakdownSchema, AnalyzerRunSummarySchema, InvestigationCoverageSchema, QualityRunResultSchema, SaveQualityRunInputSchema, ImprovementInitiativeSchema, ImprovementPhaseSchema, QualityImprovementPlanSchema, AnalyzerOutputFormat, AnalyzerDefinitionSchema, DetectedAnalyzerSchema, AnalyzerExecutionStatus, AnalyzerExecutionResultSchema, AnalyzerResultsSchema, CheckDefinitionSchema, InvestigationChecklistSchema, InvestigationFindingSchema, FileInvestigationResultSchema, InvestigationFileStatus, FileInvestigationSchema, CategoryInvestigationSchema, InvestigationSummarySchema, PROGRESS_SCHEMA_VERSION, FileTaskProgressSchema, CategoryProgressSummarySchema, CategoryProgressSchema, InvestigationProgressSummarySchema, IssueFingerprintSchema, FingerprintMatchSchema, MatchResultSchema, AssemblyResultSchema;
 var init_quality = __esm({
   "packages/tiny-brain-core/src/types/quality.ts"() {
     "use strict";
@@ -16723,6 +16723,50 @@ var init_quality = __esm({
       Minor: "minor",
       Info: "info"
     };
+    EffortLevel = {
+      Trivial: "trivial",
+      Small: "small",
+      Medium: "medium",
+      Large: "large",
+      Epic: "epic"
+    };
+    ImpactLevel = {
+      Critical: "critical",
+      High: "high",
+      Medium: "medium",
+      Low: "low"
+    };
+    SEVERITY_MULTIPLIERS = {
+      [IssueSeverity.Critical]: 1,
+      [IssueSeverity.Major]: 0.7,
+      [IssueSeverity.Minor]: 0.3,
+      [IssueSeverity.Info]: 0
+    };
+    CategoryScoreSchema = external_exports.object({
+      /** Category name */
+      category: external_exports.string(),
+      /** Number of issues found in this category */
+      issueCount: external_exports.number(),
+      /** Total deduction points for this category */
+      deduction: external_exports.number(),
+      /** Maximum weight (points deducted per full-severity issue) */
+      maxWeight: external_exports.number(),
+      /** Grade assigned to this category */
+      grade: external_exports.string()
+    });
+    DEFAULT_EFFORT_HOURS = {
+      [EffortLevel.Trivial]: 0.5,
+      [EffortLevel.Small]: 1.5,
+      [EffortLevel.Medium]: 5,
+      [EffortLevel.Large]: 16,
+      [EffortLevel.Epic]: 40
+    };
+    SEVERITY_DEFAULT_HOURS = {
+      [IssueSeverity.Critical]: 8,
+      [IssueSeverity.Major]: 4,
+      [IssueSeverity.Minor]: 1,
+      [IssueSeverity.Info]: 0
+    };
     QualityIssueSchema = external_exports.object({
       /** Issue category */
       category: external_exports.enum([
@@ -16744,10 +16788,87 @@ var init_quality = __esm({
       /** Issue description */
       message: external_exports.string(),
       /** Suggested fix (optional) */
-      suggestion: external_exports.string().optional()
+      suggestion: external_exports.string().optional(),
+      /** Estimated effort to remediate (optional) */
+      effort: external_exports.nativeEnum(EffortLevel).optional(),
+      /** Impact level if this issue is not addressed (optional) */
+      impact: external_exports.nativeEnum(ImpactLevel).optional(),
+      /** Thematic grouping tag (optional, e.g., "type-safety", "auth-hardening") */
+      theme: external_exports.string().optional(),
+      /** Code snippet or evidence showing the problem (optional) */
+      evidence: external_exports.string().optional(),
+      /** Indices of related issues in the same run (optional) */
+      relatedIssues: external_exports.array(external_exports.number()).optional(),
+      /** External references such as CWE or OWASP identifiers (optional) */
+      references: external_exports.array(external_exports.string()).optional(),
+      /** Points that would be gained if this issue were fixed (optional) */
+      scoreImpact: external_exports.number().optional(),
+      /** Estimated hours to remediate (optional) */
+      effortHours: external_exports.number().optional(),
+      /** Stable rule identifier from the analyzer (e.g., "eslint/no-explicit-any") */
+      ruleId: external_exports.string().optional(),
+      /** Analyzer that found this issue (e.g., "eslint", "typescript") */
+      source: external_exports.string().optional()
+    });
+    StructuredRecommendationSchema = external_exports.object({
+      /** Recommendation title (required) */
+      title: external_exports.string(),
+      /** Detailed description of the recommendation (required) */
+      description: external_exports.string(),
+      /** Priority: numeric 1-5 or string level (required) */
+      priority: external_exports.union([external_exports.number().min(1).max(5), external_exports.enum(["critical", "high", "medium", "low"])]),
+      /** Category this recommendation addresses (required) */
+      category: external_exports.string(),
+      /** Estimated effort level (optional) */
+      effort: external_exports.nativeEnum(EffortLevel).optional(),
+      /** Estimated score gain if recommendation is implemented (optional) */
+      estimatedScoreGain: external_exports.number().optional(),
+      /** Estimated hours to implement (optional) */
+      effortHours: external_exports.number().optional(),
+      /** Indices of issues this recommendation addresses (optional) */
+      addressesIssues: external_exports.array(external_exports.number()).optional()
+    });
+    TechnicalDebtSummarySchema = external_exports.object({
+      /** Total estimated hours of technical debt */
+      totalHours: external_exports.number(),
+      /** Hours broken down by issue category */
+      hoursByCategory: external_exports.record(external_exports.string(), external_exports.number()),
+      /** Hours broken down by issue severity */
+      hoursBySeverity: external_exports.record(external_exports.string(), external_exports.number()),
+      /** Estimated monetary cost (optional, populated by coordinator) */
+      estimatedCost: external_exports.number().optional(),
+      /** Currency for estimatedCost (optional) */
+      currency: external_exports.string().optional()
+    });
+    RunComparisonSchema = external_exports.object({
+      /** ID of the base (earlier) run */
+      baseRunId: external_exports.string(),
+      /** ID of the target (later) run */
+      targetRunId: external_exports.string(),
+      /** Score change: target.score - base.score */
+      scoreDelta: external_exports.number(),
+      /** Grade transition between runs */
+      gradeChange: external_exports.object({
+        from: external_exports.string(),
+        to: external_exports.string()
+      }),
+      /** Issues present in target but not in base */
+      newIssues: external_exports.array(QualityIssueSchema),
+      /** Issues present in base but not in target */
+      resolvedIssues: external_exports.array(QualityIssueSchema),
+      /** Issues present in both runs */
+      persistentIssues: external_exports.array(QualityIssueSchema),
+      /** Per-category count and deduction deltas */
+      categoryChanges: external_exports.record(
+        external_exports.string(),
+        external_exports.object({
+          countDelta: external_exports.number(),
+          deductionDelta: external_exports.number()
+        })
+      )
     });
     QualityRunSummarySchema = external_exports.object({
-      /** Unique run identifier (YYYY-MM-DD-quality) */
+      /** Unique run identifier (YYYY-MM-DDTHH-mm or legacy YYYY-MM-DD-quality) */
       runId: external_exports.string(),
       /** Run date (ISO string) */
       date: external_exports.string(),
@@ -16758,8 +16879,38 @@ var init_quality = __esm({
       /** Total number of issues found */
       issueCount: external_exports.number().min(0)
     });
+    SourceBreakdownSchema = external_exports.object({
+      /** Number of issues from automated analyzers */
+      analyzer: external_exports.number(),
+      /** Number of issues from LLM investigation */
+      llm: external_exports.number(),
+      /** Total issue count after deduplication */
+      total: external_exports.number()
+    });
+    AnalyzerRunSummarySchema = external_exports.object({
+      /** Analyzer ID from the registry */
+      analyzerId: external_exports.string(),
+      /** Human-readable analyzer name */
+      name: external_exports.string(),
+      /** Number of issues found by this analyzer */
+      issueCount: external_exports.number(),
+      /** Execution status */
+      status: external_exports.enum(["success", "failed", "timeout", "skipped"]),
+      /** Execution duration in milliseconds */
+      durationMs: external_exports.number()
+    });
+    InvestigationCoverageSchema = external_exports.object({
+      /** Number of files analyzed */
+      filesAnalyzed: external_exports.number(),
+      /** Total number of eligible files */
+      totalFiles: external_exports.number(),
+      /** Number of checks applied per file */
+      checksPerFile: external_exports.number(),
+      /** Total investigation duration in milliseconds */
+      durationMs: external_exports.number()
+    });
     QualityRunResultSchema = external_exports.object({
-      /** Unique run identifier (YYYY-MM-DD-quality) */
+      /** Unique run identifier (YYYY-MM-DDTHH-mm or legacy YYYY-MM-DD-quality) */
       runId: external_exports.string(),
       /** Run date (ISO string) */
       date: external_exports.string(),
@@ -16778,9 +16929,27 @@ var init_quality = __esm({
         languages: external_exports.array(external_exports.string()).optional(),
         frameworks: external_exports.array(external_exports.string()).optional(),
         projectType: external_exports.string().optional()
-      }).optional()
+      }).optional(),
+      /** Per-category score breakdown (optional for backward compatibility) */
+      categoryScores: external_exports.array(CategoryScoreSchema).optional(),
+      /** Structured recommendations with priority and effort data (optional for backward compatibility) */
+      structuredRecommendations: external_exports.array(StructuredRecommendationSchema).optional(),
+      /** Technical debt summary with hour breakdowns (optional for backward compatibility) */
+      technicalDebt: TechnicalDebtSummarySchema.optional(),
+      /** Source breakdown between analyzer and LLM findings (optional) */
+      sourceBreakdown: SourceBreakdownSchema.optional(),
+      /** Per-analyzer execution summaries (optional) */
+      analyzersRun: external_exports.array(AnalyzerRunSummarySchema).optional(),
+      /** LLM investigation coverage metrics (optional) */
+      investigationCoverage: InvestigationCoverageSchema.optional()
     });
     SaveQualityRunInputSchema = external_exports.object({
+      /** Optional run ID to save into (e.g. from a prior assembly run directory).
+       *  When provided, the report is written into this run's directory instead
+       *  of generating a new timestamped directory. */
+      runId: external_exports.string().optional(),
+      /** Optional base run ID used for incremental carry-forward */
+      baseRunId: external_exports.string().optional(),
       /** Quality score (0-100) */
       score: external_exports.number().min(0).max(100),
       /** Quality grade (A-F) */
@@ -16794,7 +16963,357 @@ var init_quality = __esm({
         languages: external_exports.array(external_exports.string()).optional(),
         frameworks: external_exports.array(external_exports.string()).optional(),
         projectType: external_exports.string().optional()
+      }).optional(),
+      /** Per-category score breakdown (optional) */
+      categoryScores: external_exports.array(CategoryScoreSchema).optional(),
+      /** Structured recommendations with priority and effort data (optional) */
+      structuredRecommendations: external_exports.array(StructuredRecommendationSchema).optional(),
+      /** Technical debt summary with hour breakdowns (optional) */
+      technicalDebt: TechnicalDebtSummarySchema.optional(),
+      /** Source breakdown between analyzer and LLM findings (optional) */
+      sourceBreakdown: SourceBreakdownSchema.optional(),
+      /** Per-analyzer execution summaries (optional) */
+      analyzersRun: external_exports.array(AnalyzerRunSummarySchema).optional(),
+      /** LLM investigation coverage metrics (optional) */
+      investigationCoverage: InvestigationCoverageSchema.optional()
+    });
+    ImprovementInitiativeSchema = external_exports.object({
+      /** Unique identifier for this initiative (kebab-case) */
+      id: external_exports.string(),
+      /** Human-readable title */
+      title: external_exports.string(),
+      /** Description of the improvement work */
+      description: external_exports.string(),
+      /** Thematic grouping tag (matches issue theme or category) */
+      theme: external_exports.string(),
+      /** Most common category among grouped issues */
+      primaryCategory: external_exports.string(),
+      /** Indices of the original issues grouped into this initiative */
+      issueIndices: external_exports.array(external_exports.number()),
+      /** Total estimated effort hours for this initiative */
+      effortHours: external_exports.number(),
+      /** Expected score gain if this initiative is completed */
+      expectedScoreGain: external_exports.number(),
+      /** IDs of initiatives that must be completed first (optional) */
+      dependsOn: external_exports.array(external_exports.string()).optional(),
+      /** Risk level assessment (optional) */
+      risk: external_exports.enum(["low", "medium", "high"]).optional()
+    });
+    ImprovementPhaseSchema = external_exports.object({
+      /** Phase number (1, 2, or 3) */
+      phase: external_exports.number(),
+      /** Phase name (e.g., "Quick Wins", "Core Improvements", "Structural Work") */
+      name: external_exports.string(),
+      /** Description of this phase's focus */
+      description: external_exports.string(),
+      /** Initiatives assigned to this phase */
+      initiatives: external_exports.array(ImprovementInitiativeSchema),
+      /** Total effort hours across all initiatives in this phase */
+      totalEffortHours: external_exports.number(),
+      /** Projected cumulative score after completing this phase */
+      projectedScore: external_exports.number(),
+      /** Projected grade after completing this phase */
+      projectedGrade: external_exports.string(),
+      /** Estimated calendar duration (optional) */
+      estimatedDuration: external_exports.string().optional()
+    });
+    QualityImprovementPlanSchema = external_exports.object({
+      /** Unique plan identifier (YYYY-MM-DD-quality-plan) */
+      planId: external_exports.string(),
+      /** Plan generation date (ISO string) */
+      date: external_exports.string(),
+      /** Run ID this plan was generated from */
+      sourceRunId: external_exports.string(),
+      /** Current quality score at time of plan generation */
+      currentScore: external_exports.number(),
+      /** Current quality grade at time of plan generation */
+      currentGrade: external_exports.string(),
+      /** Target quality score (optional) */
+      targetScore: external_exports.number().optional(),
+      /** Target quality grade (optional) */
+      targetGrade: external_exports.string().optional(),
+      /** Auto-generated executive summary */
+      executiveSummary: external_exports.string(),
+      /** Ordered improvement phases */
+      phases: external_exports.array(ImprovementPhaseSchema),
+      /** Total effort hours across all phases */
+      totalEffortHours: external_exports.number(),
+      /** Technical debt summary from source run (optional) */
+      technicalDebt: TechnicalDebtSummarySchema.optional(),
+      /** ROI analysis for investment justification (optional) */
+      roiAnalysis: external_exports.object({
+        /** Total estimated cost to fix all issues */
+        estimatedCostToFix: external_exports.number(),
+        /** Currency code */
+        currency: external_exports.string(),
+        /** Hourly rate used for cost calculation */
+        hourlyRate: external_exports.number()
       }).optional()
+    });
+    AnalyzerOutputFormat = {
+      Json: "json",
+      Text: "text",
+      Sarif: "sarif"
+    };
+    AnalyzerDefinitionSchema = external_exports.object({
+      /** Unique analyzer identifier (kebab-case) */
+      id: external_exports.string(),
+      /** Human-readable analyzer name */
+      name: external_exports.string(),
+      /** Glob patterns used to detect this analyzer's config files */
+      detectPatterns: external_exports.array(external_exports.string()).min(1),
+      /** Command template with {config} and/or {dir} placeholders */
+      commandTemplate: external_exports.string(),
+      /** Flag template to direct output to a file (e.g. '--output-file {outputFile}'). When absent, shell redirection is used. */
+      outputFileFlag: external_exports.string().optional(),
+      /** Expected output format from the analyzer */
+      outputFormat: external_exports.enum(["json", "text", "sarif"]),
+      /** Quality categories this analyzer covers */
+      categories: external_exports.array(external_exports.string()).min(1)
+    });
+    DetectedAnalyzerSchema = external_exports.object({
+      /** Analyzer ID from the registry */
+      analyzerId: external_exports.string(),
+      /** Human-readable analyzer name */
+      name: external_exports.string(),
+      /** Config file paths found in the repository */
+      configPaths: external_exports.array(external_exports.string()).min(1),
+      /** Resolved commands (one per config path) */
+      commands: external_exports.array(external_exports.string()).min(1),
+      /** Quality categories this analyzer covers */
+      categories: external_exports.array(external_exports.string()).min(1)
+    });
+    AnalyzerExecutionStatus = {
+      Success: "success",
+      Failed: "failed",
+      Timeout: "timeout",
+      Skipped: "skipped"
+    };
+    AnalyzerExecutionResultSchema = external_exports.object({
+      /** Analyzer ID from the registry */
+      analyzerId: external_exports.string(),
+      /** Human-readable analyzer name */
+      name: external_exports.string(),
+      /** Execution status */
+      status: external_exports.enum(["success", "failed", "timeout", "skipped"]),
+      /** Issues found by this analyzer */
+      issues: external_exports.array(QualityIssueSchema),
+      /** Execution duration in milliseconds */
+      durationMs: external_exports.number(),
+      /** Error message if status is failed or timeout */
+      error: external_exports.string().optional(),
+      /** Command(s) that were executed */
+      command: external_exports.string(),
+      /** Path to the raw output file on disk (when file-based execution is used) */
+      outputFile: external_exports.string().optional()
+    });
+    AnalyzerResultsSchema = external_exports.object({
+      /** All normalized issues from all analyzers */
+      issues: external_exports.array(QualityIssueSchema),
+      /** Per-analyzer execution results */
+      executions: external_exports.array(AnalyzerExecutionResultSchema),
+      /** Total execution duration in milliseconds */
+      totalDurationMs: external_exports.number(),
+      /** Summary counts */
+      summary: external_exports.object({
+        total: external_exports.number(),
+        succeeded: external_exports.number(),
+        failed: external_exports.number(),
+        timedOut: external_exports.number(),
+        skipped: external_exports.number()
+      })
+    });
+    CheckDefinitionSchema = external_exports.object({
+      /** Unique check identifier (e.g., "SEC-hardcoded-secrets") */
+      id: external_exports.string(),
+      /** Short name for the check */
+      name: external_exports.string(),
+      /** Description of what this check looks for */
+      description: external_exports.string(),
+      /** Patterns to search for (hints for the LLM) */
+      patterns: external_exports.array(external_exports.string()),
+      /** Default severity when this check fires */
+      severity: external_exports.enum(["critical", "major", "minor", "info"])
+    });
+    InvestigationChecklistSchema = external_exports.object({
+      /** Quality category this checklist covers */
+      category: external_exports.string(),
+      /** Checks to apply (minimum 1) */
+      checks: external_exports.array(CheckDefinitionSchema).min(1)
+    });
+    InvestigationFindingSchema = external_exports.object({
+      /** Check ID that matched (e.g., "SEC-hardcoded-secrets") */
+      checkId: external_exports.string(),
+      /** Quality category */
+      category: external_exports.string(),
+      /** Finding severity */
+      severity: external_exports.enum(["critical", "major", "minor", "info"]),
+      /** Line number where the issue was found */
+      line: external_exports.number(),
+      /** Description of the finding */
+      message: external_exports.string(),
+      /** Code evidence for the finding */
+      evidence: external_exports.string(),
+      /** Suggested fix (optional) */
+      suggestion: external_exports.string().optional()
+    });
+    FileInvestigationResultSchema = external_exports.object({
+      /** Path of the investigated file */
+      filePath: external_exports.string(),
+      /** Findings from the investigation */
+      findings: external_exports.array(InvestigationFindingSchema),
+      /** List of check IDs that were applied */
+      checksApplied: external_exports.array(external_exports.string())
+    });
+    InvestigationFileStatus = {
+      Pending: "pending",
+      Completed: "completed",
+      Failed: "failed",
+      Skipped: "skipped"
+    };
+    FileInvestigationSchema = external_exports.object({
+      /** Path of the file */
+      filePath: external_exports.string(),
+      /** Investigation status */
+      status: external_exports.enum(["pending", "completed", "failed", "skipped"]),
+      /** Findings from the investigation */
+      findings: external_exports.array(InvestigationFindingSchema),
+      /** List of check IDs that were applied */
+      checksApplied: external_exports.array(external_exports.string()),
+      /** Error message if status is failed */
+      error: external_exports.string().optional(),
+      /** Duration of the investigation in milliseconds */
+      durationMs: external_exports.number().optional()
+    });
+    CategoryInvestigationSchema = external_exports.object({
+      /** Path of the file */
+      filePath: external_exports.string(),
+      /** Quality category this investigation covers */
+      category: external_exports.string(),
+      /** Investigation status */
+      status: external_exports.enum(["pending", "completed", "failed", "skipped"]),
+      /** Findings from the investigation */
+      findings: external_exports.array(InvestigationFindingSchema),
+      /** List of check IDs that were applied */
+      checksApplied: external_exports.array(external_exports.string()),
+      /** Error message if status is failed */
+      error: external_exports.string().optional(),
+      /** Duration of the investigation in milliseconds */
+      durationMs: external_exports.number().optional(),
+      /** SHA-256 hash of file content, for skip-list optimization */
+      fileHash: external_exports.string().optional()
+    });
+    InvestigationSummarySchema = external_exports.object({
+      /** Per-file-per-category investigation results */
+      investigations: external_exports.array(CategoryInvestigationSchema),
+      /** All normalized quality issues */
+      issues: external_exports.array(QualityIssueSchema),
+      /** Total duration in milliseconds */
+      totalDurationMs: external_exports.number(),
+      /** Summary counts */
+      summary: external_exports.object({
+        totalFiles: external_exports.number(),
+        totalCategories: external_exports.number(),
+        totalTasks: external_exports.number(),
+        completedTasks: external_exports.number(),
+        failedTasks: external_exports.number(),
+        skippedTasks: external_exports.number(),
+        totalFindings: external_exports.number()
+      })
+    });
+    PROGRESS_SCHEMA_VERSION = "1.0.0";
+    FileTaskProgressSchema = external_exports.object({
+      fileHash: external_exports.string(),
+      status: external_exports.enum(["pending", "in_progress", "completed", "failed", "skipped"]),
+      startedAt: external_exports.string().optional(),
+      completedAt: external_exports.string().optional(),
+      durationMs: external_exports.number().optional(),
+      findingsCount: external_exports.number().optional(),
+      checksApplied: external_exports.array(external_exports.string()).optional(),
+      error: external_exports.string().optional()
+    });
+    CategoryProgressSummarySchema = external_exports.object({
+      totalFiles: external_exports.number(),
+      completedFiles: external_exports.number(),
+      failedFiles: external_exports.number(),
+      skippedFiles: external_exports.number(),
+      pendingFiles: external_exports.number(),
+      totalFindings: external_exports.number()
+    });
+    CategoryProgressSchema = external_exports.object({
+      version: external_exports.string(),
+      runId: external_exports.string(),
+      category: external_exports.string(),
+      startedAt: external_exports.string(),
+      status: external_exports.enum(["in_progress", "completed", "failed"]),
+      files: external_exports.record(external_exports.string(), FileTaskProgressSchema),
+      summary: CategoryProgressSummarySchema
+    });
+    InvestigationProgressSummarySchema = external_exports.object({
+      version: external_exports.string(),
+      runId: external_exports.string(),
+      repoPath: external_exports.string(),
+      startedAt: external_exports.string(),
+      completedAt: external_exports.string().optional(),
+      status: external_exports.enum(["in_progress", "completed", "failed"]),
+      categories: external_exports.array(external_exports.string()),
+      summary: external_exports.object({
+        totalFiles: external_exports.number(),
+        totalCategories: external_exports.number(),
+        totalTasks: external_exports.number(),
+        completedTasks: external_exports.number(),
+        failedTasks: external_exports.number(),
+        skippedTasks: external_exports.number(),
+        totalFindings: external_exports.number()
+      })
+    });
+    IssueFingerprintSchema = external_exports.object({
+      /** Primary: stable rule ID (e.g., "eslint/no-explicit-any") */
+      ruleId: external_exports.string().optional(),
+      /** Quality category */
+      category: external_exports.string(),
+      /** File path */
+      file: external_exports.string(),
+      /** Line range bucket (floor(line/10)*10), undefined if no line */
+      lineRange: external_exports.number().optional(),
+      /** Normalized message (lowercase, numbers replaced, capped at 50 chars) */
+      normalizedMessage: external_exports.string()
+    });
+    FingerprintMatchSchema = external_exports.object({
+      baseIssue: QualityIssueSchema,
+      targetIssue: QualityIssueSchema,
+      confidence: external_exports.number().min(0).max(1),
+      matchType: external_exports.enum(["exact", "high", "medium", "low"])
+    });
+    MatchResultSchema = external_exports.object({
+      persistentIssues: external_exports.array(QualityIssueSchema),
+      newIssues: external_exports.array(QualityIssueSchema),
+      resolvedIssues: external_exports.array(QualityIssueSchema),
+      matches: external_exports.array(FingerprintMatchSchema)
+    });
+    AssemblyResultSchema = external_exports.object({
+      /** Unique run identifier (YYYY-MM-DDTHH-mm or legacy YYYY-MM-DD-quality) */
+      runId: external_exports.string(),
+      /** Quality score (0-100) */
+      score: external_exports.number().min(0).max(100),
+      /** Quality grade (A-F) */
+      grade: external_exports.enum(["A", "B", "C", "D", "F"]),
+      /** Total unique issues after deduplication */
+      issueCount: external_exports.number().min(0),
+      /** Breakdown of issue sources */
+      sourceBreakdown: SourceBreakdownSchema,
+      /** Issue counts grouped by category */
+      categoryBreakdown: external_exports.record(external_exports.string(), external_exports.number()),
+      /** Path to the saved quality report markdown */
+      filePath: external_exports.string(),
+      /** True when carry-forward was used (incremental run) */
+      incremental: external_exports.boolean().optional(),
+      /** The base run ID used for carry-forward */
+      baseRunId: external_exports.string().optional(),
+      /** Number of files re-analyzed in this run */
+      filesAnalyzed: external_exports.number().optional(),
+      /** Number of files carried forward from base run */
+      filesCarriedForward: external_exports.number().optional()
     });
   }
 });
@@ -23689,12 +24208,12 @@ var init_esm4 = __esm({
       /**
        * Get the Path object referenced by the string path, resolved from this Path
        */
-      resolve(path25) {
-        if (!path25) {
+      resolve(path30) {
+        if (!path30) {
           return this;
         }
-        const rootPath = this.getRootString(path25);
-        const dir = path25.substring(rootPath.length);
+        const rootPath = this.getRootString(path30);
+        const dir = path30.substring(rootPath.length);
         const dirParts = dir.split(this.splitSep);
         const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
         return result;
@@ -24446,8 +24965,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      getRootString(path25) {
-        return win32.parse(path25).root;
+      getRootString(path30) {
+        return win32.parse(path30).root;
       }
       /**
        * @internal
@@ -24493,8 +25012,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      getRootString(path25) {
-        return path25.startsWith("/") ? "/" : "";
+      getRootString(path30) {
+        return path30.startsWith("/") ? "/" : "";
       }
       /**
        * @internal
@@ -24543,8 +25062,8 @@ var init_esm4 = __esm({
        *
        * @internal
        */
-      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs22 = defaultFS } = {}) {
-        this.#fs = fsFromOption(fs22);
+      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs27 = defaultFS } = {}) {
+        this.#fs = fsFromOption(fs27);
         if (cwd instanceof URL || cwd.startsWith("file://")) {
           cwd = fileURLToPath(cwd);
         }
@@ -24583,11 +25102,11 @@ var init_esm4 = __esm({
       /**
        * Get the depth of a provided path, string, or the cwd
        */
-      depth(path25 = this.cwd) {
-        if (typeof path25 === "string") {
-          path25 = this.cwd.resolve(path25);
+      depth(path30 = this.cwd) {
+        if (typeof path30 === "string") {
+          path30 = this.cwd.resolve(path30);
         }
-        return path25.depth();
+        return path30.depth();
       }
       /**
        * Return the cache of child entries.  Exposed so subclasses can create
@@ -25074,9 +25593,9 @@ var init_esm4 = __esm({
         process3();
         return results;
       }
-      chdir(path25 = this.cwd) {
+      chdir(path30 = this.cwd) {
         const oldCwd = this.cwd;
-        this.cwd = typeof path25 === "string" ? this.cwd.resolve(path25) : path25;
+        this.cwd = typeof path30 === "string" ? this.cwd.resolve(path30) : path30;
         this.cwd[setAsCwd](oldCwd);
       }
     };
@@ -25102,8 +25621,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      newRoot(fs22) {
-        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs22 });
+      newRoot(fs27) {
+        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs27 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -25131,8 +25650,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      newRoot(fs22) {
-        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs22 });
+      newRoot(fs27) {
+        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs27 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -25451,8 +25970,8 @@ var init_processor = __esm({
       }
       // match, absolute, ifdir
       entries() {
-        return [...this.store.entries()].map(([path25, n]) => [
-          path25,
+        return [...this.store.entries()].map(([path30, n]) => [
+          path30,
           !!(n & 2),
           !!(n & 1)
         ]);
@@ -25665,9 +26184,9 @@ var init_walker = __esm({
       signal;
       maxDepth;
       includeChildMatches;
-      constructor(patterns, path25, opts) {
+      constructor(patterns, path30, opts) {
         this.patterns = patterns;
-        this.path = path25;
+        this.path = path30;
         this.opts = opts;
         this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
         this.includeChildMatches = opts.includeChildMatches !== false;
@@ -25686,11 +26205,11 @@ var init_walker = __esm({
           });
         }
       }
-      #ignored(path25) {
-        return this.seen.has(path25) || !!this.#ignore?.ignored?.(path25);
+      #ignored(path30) {
+        return this.seen.has(path30) || !!this.#ignore?.ignored?.(path30);
       }
-      #childrenIgnored(path25) {
-        return !!this.#ignore?.childrenIgnored?.(path25);
+      #childrenIgnored(path30) {
+        return !!this.#ignore?.childrenIgnored?.(path30);
       }
       // backpressure mechanism
       pause() {
@@ -25905,8 +26424,8 @@ var init_walker = __esm({
     };
     GlobWalker = class extends GlobUtil {
       matches = /* @__PURE__ */ new Set();
-      constructor(patterns, path25, opts) {
-        super(patterns, path25, opts);
+      constructor(patterns, path30, opts) {
+        super(patterns, path30, opts);
       }
       matchEmit(e) {
         this.matches.add(e);
@@ -25943,8 +26462,8 @@ var init_walker = __esm({
     };
     GlobStream = class extends GlobUtil {
       results;
-      constructor(patterns, path25, opts) {
-        super(patterns, path25, opts);
+      constructor(patterns, path30, opts) {
+        super(patterns, path30, opts);
         this.results = new Minipass({
           signal: this.signal,
           objectMode: true
@@ -30388,14 +30907,20 @@ var init_planning_service = __esm({
         let id = "";
         let title = "";
         let status = "planned";
+        let number3;
         if (frontmatterMatch) {
           const frontmatter = frontmatterMatch[1];
           const idMatch = frontmatter.match(/^id:\s*(.+)$/m);
           const titleMatch = frontmatter.match(/^title:\s*(.+)$/m);
           const statusMatch = frontmatter.match(/^status:\s*(.+)$/m);
+          const numberMatch = frontmatter.match(/^number:\s*(.+)$/m);
           if (idMatch) id = idMatch[1].trim();
           if (titleMatch) title = titleMatch[1].trim();
           if (statusMatch) status = statusMatch[1].trim();
+          if (numberMatch) {
+            const parsed = parseInt(numberMatch[1].trim(), 10);
+            if (!isNaN(parsed)) number3 = parsed;
+          }
         }
         const taskRegex = /^###\s+(\d+)\.\s+(.+)$/gm;
         const tasks = [];
@@ -30409,7 +30934,7 @@ var init_planning_service = __esm({
             status: "defined"
           });
         }
-        return { id, title, status, tasks };
+        return { id, title, number: number3, status, tasks };
       }
       /**
        * Read PRD markdown file and parse frontmatter
@@ -30501,7 +31026,7 @@ var init_planning_service = __esm({
         const featureMarkdowns = await this.readFeatureMarkdowns(prdPath);
         const existingPlan = await this.loadExistingProgressJson(prdPath);
         const features = featureMarkdowns.map((fm, index) => {
-          const featureNumber = index + 1;
+          const featureNumber = fm.number ?? index + 1;
           const featureId = fm.id || `feature-${featureNumber}`;
           const existingFeature = existingPlan?.features.find((f) => f.id === featureId);
           const tasks = fm.tasks.map((t, taskIndex) => {
@@ -34514,8 +35039,8 @@ var init_repo_config_service = __esm({
       /**
        * Generate a unique repo ID from path
        */
-      generateRepoId(path25) {
-        const hash = createHash("sha256").update(path25).digest("hex");
+      generateRepoId(path30) {
+        const hash = createHash("sha256").update(path30).digest("hex");
         return `repo-${hash.substring(0, 12)}`;
       }
       /**
@@ -34600,7 +35125,7 @@ var init_user_preferences = __esm({
       repo: {
         autoCommitProgress: false,
         enableAgenticCoding: false,
-        enableSDD: false,
+        enableSDD: true,
         enableTDD: true,
         enableADR: true,
         enableQuality: true,
@@ -34633,7 +35158,7 @@ var init_user_preferences_schema = __esm({
       /**
        * Enable Suggestion-Driven Development (SDD)
        */
-      enableSDD: external_exports.boolean().default(false),
+      enableSDD: external_exports.boolean().default(true),
       /**
        * Enable Test-Driven Development (TDD)
        */
@@ -34674,7 +35199,7 @@ var init_user_preferences_schema = __esm({
     }).strict().default({
       autoCommitProgress: false,
       enableAgenticCoding: false,
-      enableSDD: false,
+      enableSDD: true,
       enableTDD: true,
       enableADR: true,
       enableQuality: true,
@@ -36371,14 +36896,170 @@ var init_plugin_discovery_service = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/services/quality/message-normalizer.ts
+function normalizeMessage(message) {
+  let result = message.toLowerCase();
+  result = result.replace(/'[^']*'/g, "");
+  result = result.replace(/"[^"]*"/g, "");
+  result = result.replace(/\S+\.\w{1,4}(:\d+)?/g, "");
+  result = result.replace(/\d+/g, "n");
+  result = result.replace(/\s+/g, " ");
+  result = result.trim();
+  return result.slice(0, 50);
+}
+var init_message_normalizer = __esm({
+  "packages/tiny-brain-core/src/services/quality/message-normalizer.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/fingerprint.service.ts
+function generateFingerprint(issue2) {
+  return {
+    ruleId: issue2.ruleId,
+    category: issue2.category,
+    file: issue2.file,
+    lineRange: issue2.line !== void 0 ? Math.floor(issue2.line / 10) * 10 : void 0,
+    normalizedMessage: normalizeMessage(issue2.message)
+  };
+}
+function fingerprintKey(fp) {
+  if (fp.ruleId !== void 0) {
+    return `${fp.ruleId}::${fp.file}`;
+  }
+  if (fp.lineRange !== void 0) {
+    return `${fp.category}::${fp.file}::${fp.lineRange}`;
+  }
+  return `${fp.category}::${fp.file}::${fp.normalizedMessage}`;
+}
+var init_fingerprint_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/fingerprint.service.ts"() {
+    "use strict";
+    init_message_normalizer();
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/fingerprint-matcher.service.ts
+function matchIssues(baseIssues, targetIssues) {
+  const baseIndexed = baseIssues.map((issue2, index) => {
+    const fingerprint = generateFingerprint(issue2);
+    return { issue: issue2, fingerprint, key: fingerprintKey(fingerprint), index };
+  });
+  const targetIndexed = targetIssues.map((issue2, index) => {
+    const fingerprint = generateFingerprint(issue2);
+    return { issue: issue2, fingerprint, key: fingerprintKey(fingerprint), index };
+  });
+  const unmatchedBase = new Set(baseIndexed.map((_, i) => i));
+  const unmatchedTarget = new Set(targetIndexed.map((_, i) => i));
+  const matches = [];
+  for (const tIdx of [...unmatchedTarget]) {
+    const target = targetIndexed[tIdx];
+    for (const bIdx of [...unmatchedBase]) {
+      const base = baseIndexed[bIdx];
+      if (target.key === base.key) {
+        matches.push({
+          baseIssue: base.issue,
+          targetIssue: target.issue,
+          confidence: 1,
+          matchType: "exact"
+        });
+        unmatchedBase.delete(bIdx);
+        unmatchedTarget.delete(tIdx);
+        break;
+      }
+    }
+  }
+  for (const tIdx of [...unmatchedTarget]) {
+    const target = targetIndexed[tIdx];
+    if (target.fingerprint.ruleId === void 0) continue;
+    for (const bIdx of [...unmatchedBase]) {
+      const base = baseIndexed[bIdx];
+      if (base.fingerprint.ruleId !== void 0 && base.fingerprint.ruleId === target.fingerprint.ruleId && base.fingerprint.file === target.fingerprint.file) {
+        matches.push({
+          baseIssue: base.issue,
+          targetIssue: target.issue,
+          confidence: 0.9,
+          matchType: "high"
+        });
+        unmatchedBase.delete(bIdx);
+        unmatchedTarget.delete(tIdx);
+        break;
+      }
+    }
+  }
+  for (const tIdx of [...unmatchedTarget]) {
+    const target = targetIndexed[tIdx];
+    const targetNorm = normalizeMessage(target.issue.message);
+    for (const bIdx of [...unmatchedBase]) {
+      const base = baseIndexed[bIdx];
+      const baseNorm = normalizeMessage(base.issue.message);
+      if (base.fingerprint.category === target.fingerprint.category && base.fingerprint.file === target.fingerprint.file && baseNorm === targetNorm) {
+        matches.push({
+          baseIssue: base.issue,
+          targetIssue: target.issue,
+          confidence: 0.7,
+          matchType: "medium"
+        });
+        unmatchedBase.delete(bIdx);
+        unmatchedTarget.delete(tIdx);
+        break;
+      }
+    }
+  }
+  return {
+    persistentIssues: matches.map((m) => m.targetIssue),
+    newIssues: [...unmatchedTarget].map((i) => targetIndexed[i].issue),
+    resolvedIssues: [...unmatchedBase].map((i) => baseIndexed[i].issue),
+    matches
+  };
+}
+var init_fingerprint_matcher_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/fingerprint-matcher.service.ts"() {
+    "use strict";
+    init_fingerprint_service();
+    init_message_normalizer();
+  }
+});
+
 // packages/tiny-brain-core/src/services/quality/quality-service.ts
 import { promises as fs4 } from "fs";
 import path5 from "path";
+function generateRunId(date3) {
+  const d = date3 ?? /* @__PURE__ */ new Date();
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const hours = String(d.getUTCHours()).padStart(2, "0");
+  const minutes = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}-${minutes}`;
+}
+function runIdToPath(runId) {
+  const tIndex = runId.indexOf("T");
+  if (tIndex === -1) {
+    return runId;
+  }
+  const datePart = runId.slice(0, tIndex);
+  const timePart = runId.slice(tIndex + 1);
+  return `${datePart}/${timePart}`;
+}
+function pathToRunId(pathSegment) {
+  const slashIndex = pathSegment.indexOf("/");
+  if (slashIndex === -1) {
+    return pathSegment;
+  }
+  const datePart = pathSegment.slice(0, slashIndex);
+  const timePart = pathSegment.slice(slashIndex + 1);
+  return `${datePart}T${timePart}`;
+}
+function isNestedRunId(runId) {
+  return runId.includes("T");
+}
 var QualityService;
 var init_quality_service = __esm({
   "packages/tiny-brain-core/src/services/quality/quality-service.ts"() {
     "use strict";
     init_quality();
+    init_fingerprint_matcher_service();
     QualityService = class _QualityService {
       repoPath;
       /**
@@ -36410,7 +37091,8 @@ var init_quality_service = __esm({
         let score = 100;
         for (const issue2 of issues) {
           const weight = CATEGORY_WEIGHTS[issue2.category];
-          score -= weight;
+          const multiplier = SEVERITY_MULTIPLIERS[issue2.severity];
+          score -= weight * multiplier;
         }
         return Math.max(0, Math.min(100, score));
       }
@@ -36465,25 +37147,96 @@ var init_quality_service = __esm({
         return counts;
       }
       /**
-       * Generate run ID based on current date
+       * Calculate per-category score breakdowns with grades
+       *
+       * For each category that has issues, computes the total severity-weighted
+       * deduction, the category score percentage, and assigns a grade.
+       *
+       * Only categories with at least one issue are included in the result.
+       *
+       * @param issues - Array of quality issues found during analysis
+       * @returns Array of CategoryScore objects for categories with issues
        */
-      generateRunId() {
-        const date3 = /* @__PURE__ */ new Date();
-        const year = date3.getFullYear();
-        const month = String(date3.getMonth() + 1).padStart(2, "0");
-        const day = String(date3.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}-quality`;
+      static calculateCategoryScores(issues) {
+        if (issues.length === 0) {
+          return [];
+        }
+        const scores = [];
+        for (const [category, maxWeight] of Object.entries(CATEGORY_WEIGHTS)) {
+          const categoryIssues = issues.filter((issue2) => issue2.category === category);
+          if (categoryIssues.length === 0) {
+            continue;
+          }
+          let deduction = 0;
+          for (const issue2 of categoryIssues) {
+            const multiplier = SEVERITY_MULTIPLIERS[issue2.severity];
+            deduction += maxWeight * multiplier;
+          }
+          const scorePercentage = Math.max(0, Math.min(100, (maxWeight - deduction) / maxWeight * 100));
+          const grade = _QualityService.getGrade(scorePercentage);
+          scores.push({
+            category,
+            issueCount: categoryIssues.length,
+            deduction,
+            maxWeight,
+            grade
+          });
+        }
+        return scores;
       }
       /**
-       * Save quality run result to docs/quality/runs/
+       * Estimate technical debt from quality issues.
+       *
+       * For each issue, hours are determined with this priority:
+       * 1. Explicit `effortHours` on the issue
+       * 2. `DEFAULT_EFFORT_HOURS[issue.effort]` when effort level is set
+       * 3. `SEVERITY_DEFAULT_HOURS[issue.severity]` as final fallback
+       *
+       * @param issues - Array of quality issues
+       * @returns TechnicalDebtSummary with totals and breakdowns
+       */
+      static estimateTechnicalDebt(issues) {
+        if (issues.length === 0) {
+          return {
+            totalHours: 0,
+            hoursByCategory: {},
+            hoursBySeverity: {}
+          };
+        }
+        let totalHours = 0;
+        const hoursByCategory = {};
+        const hoursBySeverity = {};
+        for (const issue2 of issues) {
+          let hours;
+          if (issue2.effortHours !== void 0) {
+            hours = issue2.effortHours;
+          } else if (issue2.effort !== void 0) {
+            hours = DEFAULT_EFFORT_HOURS[issue2.effort];
+          } else {
+            hours = SEVERITY_DEFAULT_HOURS[issue2.severity];
+          }
+          totalHours += hours;
+          hoursByCategory[issue2.category] = (hoursByCategory[issue2.category] ?? 0) + hours;
+          hoursBySeverity[issue2.severity] = (hoursBySeverity[issue2.severity] ?? 0) + hours;
+        }
+        return {
+          totalHours,
+          hoursByCategory,
+          hoursBySeverity
+        };
+      }
+      /**
+       * Save quality run result to docs/quality/runs/YYYY-MM-DD/HH-mm/quality.md
        *
        * @param input - Run result data to save
        * @returns Save result with runId and file path
        */
       async saveRunResult(input) {
-        const runId = this.generateRunId();
-        const date3 = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-        await fs4.mkdir(this.runsDir, { recursive: true });
+        const runId = input.runId ?? generateRunId();
+        const date3 = runId.includes("T") ? runId.split("T")[0] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+        const runPath = runIdToPath(runId);
+        const runDir = path5.join(this.runsDir, runPath);
+        await fs4.mkdir(runDir, { recursive: true });
         const issuesByCategory = _QualityService.getIssuesByCategory(input.issues);
         const content = this.formatRunMarkdown({
           runId,
@@ -36493,9 +37246,15 @@ var init_quality_service = __esm({
           issues: input.issues,
           issuesByCategory,
           recommendations: input.recommendations,
-          context: input.context
+          context: input.context,
+          categoryScores: input.categoryScores,
+          structuredRecommendations: input.structuredRecommendations,
+          technicalDebt: input.technicalDebt,
+          sourceBreakdown: input.sourceBreakdown,
+          analyzersRun: input.analyzersRun,
+          investigationCoverage: input.investigationCoverage
         });
-        const filePath = path5.join(this.runsDir, `${runId}.md`);
+        const filePath = path5.join(runDir, "quality.md");
         await fs4.writeFile(filePath, content, "utf-8");
         return {
           runId,
@@ -36564,10 +37323,93 @@ var init_quality_service = __esm({
           }
           lines.push("");
         }
+        if (result.technicalDebt) {
+          lines.push("## Technical Debt");
+          lines.push("");
+          lines.push(`**Total Estimated Hours:** ${result.technicalDebt.totalHours}`);
+          lines.push("");
+          const categoryEntries = Object.entries(result.technicalDebt.hoursByCategory);
+          if (categoryEntries.length > 0) {
+            lines.push("### Hours by Category");
+            lines.push("");
+            lines.push("| Category | Hours |");
+            lines.push("|----------|-------|");
+            for (const [category, hours] of categoryEntries) {
+              lines.push(`| ${category} | ${hours} |`);
+            }
+            lines.push("");
+          }
+          const severityEntries = Object.entries(result.technicalDebt.hoursBySeverity);
+          if (severityEntries.length > 0) {
+            lines.push("### Hours by Severity");
+            lines.push("");
+            lines.push("| Severity | Hours |");
+            lines.push("|----------|-------|");
+            for (const [severity, hours] of severityEntries) {
+              lines.push(`| ${severity} | ${hours} |`);
+            }
+            lines.push("");
+          }
+        }
+        if (result.structuredRecommendations && result.structuredRecommendations.length > 0) {
+          lines.push("## Structured Recommendations");
+          lines.push("");
+          const sorted = [...result.structuredRecommendations].sort((a, b) => {
+            const priorityToNum = (p) => {
+              if (typeof p === "number") return p;
+              const map2 = { critical: 1, high: 2, medium: 3, low: 4 };
+              return map2[p] ?? 5;
+            };
+            return priorityToNum(a.priority) - priorityToNum(b.priority);
+          });
+          for (const rec of sorted) {
+            const priorityLabel = typeof rec.priority === "number" ? `P${rec.priority}` : rec.priority;
+            lines.push(`### ${priorityLabel}: ${rec.title}`);
+            lines.push("");
+            lines.push(`**Category:** ${rec.category}`);
+            if (rec.effort) {
+              lines.push(`**Effort:** ${rec.effort}`);
+            }
+            if (rec.estimatedScoreGain !== void 0) {
+              lines.push(`**Estimated Score Gain:** +${rec.estimatedScoreGain}`);
+            }
+            if (rec.effortHours !== void 0) {
+              lines.push(`**Effort Hours:** ${rec.effortHours}`);
+            }
+            lines.push("");
+            lines.push(rec.description);
+            lines.push("");
+          }
+        }
+        if (result.sourceBreakdown) {
+          lines.push("## Source Breakdown");
+          lines.push("");
+          lines.push("| Source | Issues |");
+          lines.push("|--------|--------|");
+          lines.push(`| Analyzers | ${result.sourceBreakdown.analyzer} |`);
+          lines.push(`| LLM Investigation | ${result.sourceBreakdown.llm} |`);
+          lines.push("");
+        }
+        if (result.analyzersRun && result.analyzersRun.length > 0) {
+          lines.push("## Analyzers Executed");
+          lines.push("");
+          for (const analyzer of result.analyzersRun) {
+            lines.push(`- ${analyzer.name}: ${analyzer.issueCount} issues (${analyzer.status})`);
+          }
+          lines.push("");
+        }
+        if (result.investigationCoverage) {
+          lines.push("## Investigation Coverage");
+          lines.push("");
+          lines.push(`- Files analyzed: ${result.investigationCoverage.filesAnalyzed}/${result.investigationCoverage.totalFiles}`);
+          lines.push(`- Checks per file: ${result.investigationCoverage.checksPerFile}`);
+          lines.push(`- Duration: ${result.investigationCoverage.durationMs}ms`);
+          lines.push("");
+        }
         lines.push("## Raw Data");
         lines.push("");
         lines.push("```json");
-        lines.push(JSON.stringify({
+        const rawData = {
           runId: result.runId,
           date: result.date,
           score: result.score,
@@ -36576,43 +37418,85 @@ var init_quality_service = __esm({
           issues: result.issues,
           recommendations: result.recommendations,
           context: result.context
-        }, null, 2));
+        };
+        if (result.categoryScores) {
+          rawData.categoryScores = result.categoryScores;
+        }
+        if (result.structuredRecommendations) {
+          rawData.structuredRecommendations = result.structuredRecommendations;
+        }
+        if (result.technicalDebt) {
+          rawData.technicalDebt = result.technicalDebt;
+        }
+        if (result.sourceBreakdown) {
+          rawData.sourceBreakdown = result.sourceBreakdown;
+        }
+        if (result.analyzersRun) {
+          rawData.analyzersRun = result.analyzersRun;
+        }
+        if (result.investigationCoverage) {
+          rawData.investigationCoverage = result.investigationCoverage;
+        }
+        lines.push(JSON.stringify(rawData, null, 2));
         lines.push("```");
         return lines.join("\n");
       }
       /**
        * Get previous quality runs
        *
+       * Scans nested date/time directories (new format) and legacy flat files.
+       *
        * @param limit - Maximum number of runs to return (default: all)
        * @returns Array of run summaries sorted by date (newest first)
        */
       async getPreviousRuns(limit) {
+        const runs = [];
         try {
-          const files = await fs4.readdir(this.runsDir);
-          const runFiles = files.filter((f) => f.endsWith("-quality.md"));
-          const runs = [];
-          for (const file of runFiles) {
-            const filePath = path5.join(this.runsDir, file);
-            const content = await fs4.readFile(filePath, "utf-8");
-            const summary = this.parseRunSummary(file, content);
-            if (summary) {
-              runs.push(summary);
+          const entries = await fs4.readdir(this.runsDir, { withFileTypes: true });
+          for (const entry of entries) {
+            if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)) {
+              const dateDir = path5.join(this.runsDir, entry.name);
+              try {
+                const timeEntries = await fs4.readdir(dateDir, { withFileTypes: true });
+                for (const timeEntry of timeEntries) {
+                  if (timeEntry.isDirectory() && /^\d{2}-\d{2}$/.test(timeEntry.name)) {
+                    const qualityFile = path5.join(dateDir, timeEntry.name, "quality.md");
+                    try {
+                      const content = await fs4.readFile(qualityFile, "utf-8");
+                      const runId = pathToRunId(`${entry.name}/${timeEntry.name}`);
+                      const summary = this.parseRunSummary(runId, content);
+                      if (summary) {
+                        runs.push(summary);
+                      }
+                    } catch {
+                    }
+                  }
+                }
+              } catch {
+              }
+            } else if (entry.isFile() && entry.name.endsWith("-quality.md")) {
+              const filePath = path5.join(this.runsDir, entry.name);
+              const content = await fs4.readFile(filePath, "utf-8");
+              const runId = entry.name.replace(".md", "");
+              const summary = this.parseRunSummary(runId, content);
+              if (summary) {
+                runs.push(summary);
+              }
             }
           }
-          runs.sort((a, b) => b.date.localeCompare(a.date));
-          if (limit !== void 0 && limit > 0) {
-            return runs.slice(0, limit);
-          }
-          return runs;
         } catch {
           return [];
         }
+        runs.sort((a, b) => b.runId.localeCompare(a.runId));
+        if (limit !== void 0 && limit > 0) {
+          return runs.slice(0, limit);
+        }
+        return runs;
       }
       /**
        * Parse run summary from file content
        */
-      parseRunSummary(filename, content) {
-        const runId = filename.replace(".md", "");
+      parseRunSummary(runId, content) {
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (!frontmatterMatch) {
           return null;
@@ -36636,19 +37520,19 @@ var init_quality_service = __esm({
       /**
        * Get full details for a specific run
        *
-       * @param runId - Run identifier (e.g., "2025-01-03-quality")
+       * @param runId - Run identifier (e.g., "2026-02-10T18-03" or legacy "2025-01-03-quality")
        * @returns Full run result or null if not found
        */
       async getRunDetails(runId) {
         try {
-          const filePath = path5.join(this.runsDir, `${runId}.md`);
+          const filePath = isNestedRunId(runId) ? path5.join(this.runsDir, runIdToPath(runId), "quality.md") : path5.join(this.runsDir, `${runId}.md`);
           const content = await fs4.readFile(filePath, "utf-8");
           const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
           if (!jsonMatch) {
             return null;
           }
           const data = JSON.parse(jsonMatch[1]);
-          return {
+          const result = {
             runId: data.runId,
             date: data.date,
             score: data.score,
@@ -36658,8 +37542,1992 @@ var init_quality_service = __esm({
             recommendations: data.recommendations,
             context: data.context
           };
+          if (data.structuredRecommendations) {
+            result.structuredRecommendations = data.structuredRecommendations;
+          }
+          if (data.technicalDebt) {
+            result.technicalDebt = data.technicalDebt;
+          }
+          if (data.sourceBreakdown) {
+            result.sourceBreakdown = data.sourceBreakdown;
+          }
+          if (data.analyzersRun) {
+            result.analyzersRun = data.analyzersRun;
+          }
+          if (data.investigationCoverage) {
+            result.investigationCoverage = data.investigationCoverage;
+          }
+          return result;
         } catch {
           return null;
+        }
+      }
+      /**
+       * Compare two quality runs to identify new, resolved, and persistent issues.
+       *
+       * Issues are matched by fingerprint: `${issue.file}::${issue.message}`.
+       * Line numbers are excluded from matching since they shift between runs.
+       *
+       * @param baseRunId - ID of the earlier (base) run
+       * @param targetRunId - ID of the later (target) run
+       * @returns Comparison result, or null if either run does not exist
+       */
+      async compareRuns(baseRunId, targetRunId) {
+        const baseRun = await this.getRunDetails(baseRunId);
+        if (!baseRun) {
+          return null;
+        }
+        const targetRun = await this.getRunDetails(targetRunId);
+        if (!targetRun) {
+          return null;
+        }
+        const { persistentIssues, newIssues, resolvedIssues } = matchIssues(
+          baseRun.issues,
+          targetRun.issues
+        );
+        const categoryChanges = {};
+        const issueDeduction = (issue2) => {
+          const weight = CATEGORY_WEIGHTS[issue2.category];
+          const multiplier = SEVERITY_MULTIPLIERS[issue2.severity];
+          return weight * multiplier;
+        };
+        const allCategories = /* @__PURE__ */ new Set();
+        for (const issue2 of baseRun.issues) {
+          allCategories.add(issue2.category);
+        }
+        for (const issue2 of targetRun.issues) {
+          allCategories.add(issue2.category);
+        }
+        for (const category of allCategories) {
+          const baseIssuesInCat = baseRun.issues.filter((i) => i.category === category);
+          const targetIssuesInCat = targetRun.issues.filter((i) => i.category === category);
+          const baseDeduction = baseIssuesInCat.reduce((sum, i) => sum + issueDeduction(i), 0);
+          const targetDeduction = targetIssuesInCat.reduce((sum, i) => sum + issueDeduction(i), 0);
+          categoryChanges[category] = {
+            countDelta: targetIssuesInCat.length - baseIssuesInCat.length,
+            deductionDelta: targetDeduction - baseDeduction
+          };
+        }
+        return {
+          baseRunId,
+          targetRunId,
+          scoreDelta: targetRun.score - baseRun.score,
+          gradeChange: {
+            from: baseRun.grade,
+            to: targetRun.grade
+          },
+          newIssues,
+          resolvedIssues,
+          persistentIssues,
+          categoryChanges
+        };
+      }
+      /**
+       * Get the plans directory path
+       */
+      get plansDir() {
+        return path5.join(this.repoPath, "docs", "quality", "plans");
+      }
+      /**
+       * Group quality issues into themed improvement initiatives.
+       *
+       * Groups by `theme` when present on issues, otherwise falls back to `category`.
+       * Each group becomes an initiative with summed effort/score metrics.
+       *
+       * @param issues - Array of quality issues from a run
+       * @returns Array of improvement initiatives
+       */
+      static groupIntoInitiatives(issues) {
+        if (issues.length === 0) {
+          return [];
+        }
+        const groups = /* @__PURE__ */ new Map();
+        for (let i = 0; i < issues.length; i++) {
+          const issue2 = issues[i];
+          const groupKey = issue2.theme ?? issue2.category;
+          const existing = groups.get(groupKey);
+          if (existing) {
+            existing.indices.push(i);
+            existing.issues.push(issue2);
+          } else {
+            groups.set(groupKey, { indices: [i], issues: [issue2] });
+          }
+        }
+        const initiatives = [];
+        for (const [groupKey, group] of groups) {
+          let totalEffortHours = 0;
+          for (const issue2 of group.issues) {
+            if (issue2.effortHours !== void 0) {
+              totalEffortHours += issue2.effortHours;
+            } else if (issue2.effort !== void 0) {
+              totalEffortHours += DEFAULT_EFFORT_HOURS[issue2.effort];
+            } else {
+              totalEffortHours += SEVERITY_DEFAULT_HOURS[issue2.severity];
+            }
+          }
+          let totalScoreGain = 0;
+          for (const issue2 of group.issues) {
+            if (issue2.scoreImpact !== void 0) {
+              totalScoreGain += issue2.scoreImpact;
+            } else {
+              const weight = CATEGORY_WEIGHTS[issue2.category];
+              const multiplier = SEVERITY_MULTIPLIERS[issue2.severity];
+              totalScoreGain += weight * multiplier;
+            }
+          }
+          const categoryCounts = /* @__PURE__ */ new Map();
+          for (const issue2 of group.issues) {
+            categoryCounts.set(issue2.category, (categoryCounts.get(issue2.category) ?? 0) + 1);
+          }
+          let primaryCategory = group.issues[0].category;
+          let maxCount = 0;
+          for (const [category, count] of categoryCounts) {
+            if (count > maxCount) {
+              maxCount = count;
+              primaryCategory = category;
+            }
+          }
+          const id = groupKey.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+          const title = groupKey.split(/[-_]/).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+          initiatives.push({
+            id,
+            title,
+            description: `Address ${group.issues.length} ${primaryCategory.toLowerCase()} issue${group.issues.length > 1 ? "s" : ""} related to ${groupKey}`,
+            theme: groupKey,
+            primaryCategory,
+            issueIndices: group.indices,
+            effortHours: totalEffortHours,
+            expectedScoreGain: totalScoreGain
+          });
+        }
+        return initiatives;
+      }
+      /**
+       * Assign initiatives to phases based on ROI (expectedScoreGain / effortHours).
+       *
+       * Phase 1 "Quick Wins": top third by ROI (excluding large/epic efforts)
+       * Phase 2 "Core Improvements": middle third
+       * Phase 3 "Structural Work": bottom third + large/epic efforts
+       *
+       * Calculates cumulative projectedScore per phase.
+       *
+       * @param initiatives - Array of improvement initiatives
+       * @param currentScore - Current quality score
+       * @returns Array of 3 improvement phases
+       */
+      static assignToPhases(initiatives, currentScore) {
+        const largeEfforts = [];
+        const normalEfforts = [];
+        for (const init of initiatives) {
+          if (init.effortHours >= 16) {
+            largeEfforts.push(init);
+          } else {
+            normalEfforts.push(init);
+          }
+        }
+        const withRoi = normalEfforts.map((init) => ({
+          init,
+          roi: init.effortHours > 0 ? init.expectedScoreGain / init.effortHours : Infinity
+        }));
+        withRoi.sort((a, b) => b.roi - a.roi);
+        const totalNormal = withRoi.length;
+        const thirdSize = Math.ceil(totalNormal / 3);
+        const phase1Initiatives = withRoi.slice(0, thirdSize).map((item) => item.init);
+        const phase2Initiatives = withRoi.slice(thirdSize, thirdSize * 2).map((item) => item.init);
+        const phase3Normal = withRoi.slice(thirdSize * 2).map((item) => item.init);
+        const phase3Initiatives = [...phase3Normal, ...largeEfforts];
+        const phase1Score = _QualityService.projectScore(currentScore, phase1Initiatives);
+        const phase2Score = _QualityService.projectScore(phase1Score, phase2Initiatives);
+        const phase3Score = _QualityService.projectScore(phase2Score, phase3Initiatives);
+        const sumEffort = (inits) => inits.reduce((sum, init) => sum + init.effortHours, 0);
+        const phases = [
+          {
+            phase: 1,
+            name: "Quick Wins",
+            description: "High-ROI, low-effort improvements that deliver the fastest score gains",
+            initiatives: phase1Initiatives,
+            totalEffortHours: sumEffort(phase1Initiatives),
+            projectedScore: phase1Score,
+            projectedGrade: _QualityService.getGrade(phase1Score)
+          },
+          {
+            phase: 2,
+            name: "Core Improvements",
+            description: "Medium-effort improvements that address core quality gaps",
+            initiatives: phase2Initiatives,
+            totalEffortHours: sumEffort(phase2Initiatives),
+            projectedScore: phase2Score,
+            projectedGrade: _QualityService.getGrade(phase2Score)
+          },
+          {
+            phase: 3,
+            name: "Structural Work",
+            description: "High-effort structural changes and architectural improvements",
+            initiatives: phase3Initiatives,
+            totalEffortHours: sumEffort(phase3Initiatives),
+            projectedScore: phase3Score,
+            projectedGrade: _QualityService.getGrade(phase3Score)
+          }
+        ];
+        return phases;
+      }
+      /**
+       * Calculate the projected score after completing a set of initiatives.
+       * Sum of expectedScoreGain from all initiatives, added to currentScore, capped at 100.
+       *
+       * @param currentScore - Starting quality score
+       * @param completedInitiatives - Initiatives that have been completed
+       * @returns Projected score, capped at 100
+       */
+      static projectScore(currentScore, completedInitiatives) {
+        const totalGain = completedInitiatives.reduce(
+          (sum, init) => sum + init.expectedScoreGain,
+          0
+        );
+        return Math.min(100, currentScore + totalGain);
+      }
+      /**
+       * Generate a Quality Improvement Plan from a quality run result.
+       *
+       * Orchestrates initiative grouping, phase assignment, and score projection
+       * to produce a complete QIP document.
+       *
+       * @param run - Quality run result to generate plan from
+       * @param targetGrade - Optional target grade to aim for
+       * @returns Complete Quality Improvement Plan
+       */
+      static generateImprovementPlan(run2, targetGrade) {
+        const initiatives = _QualityService.groupIntoInitiatives(run2.issues);
+        const phases = _QualityService.assignToPhases(initiatives, run2.score);
+        const totalEffortHours = phases.reduce(
+          (sum, phase) => sum + phase.totalEffortHours,
+          0
+        );
+        const totalInitiatives = phases.reduce(
+          (sum, phase) => sum + phase.initiatives.length,
+          0
+        );
+        const finalPhase = phases[phases.length - 1];
+        const finalGrade = targetGrade ?? finalPhase.projectedGrade;
+        const date3 = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+        const executiveSummary = `This codebase currently scores ${run2.score}/100 (Grade ${run2.grade}). This plan outlines ${totalInitiatives} initiatives across ${phases.length} phases to reach Grade ${finalGrade}, requiring an estimated ${totalEffortHours} developer-hours.`;
+        const hourlyRate = 150;
+        const plan = {
+          planId: `${date3}-quality-plan`,
+          date: date3,
+          sourceRunId: run2.runId,
+          currentScore: run2.score,
+          currentGrade: run2.grade,
+          executiveSummary,
+          phases,
+          totalEffortHours,
+          roiAnalysis: {
+            estimatedCostToFix: totalEffortHours * hourlyRate,
+            currency: "USD",
+            hourlyRate
+          }
+        };
+        if (targetGrade) {
+          plan.targetGrade = targetGrade;
+        }
+        if (run2.technicalDebt) {
+          plan.technicalDebt = run2.technicalDebt;
+        }
+        return plan;
+      }
+      /**
+       * Format a Quality Improvement Plan as markdown.
+       *
+       * Includes executive summary, current vs target state, per-phase breakdowns,
+       * ROI analysis, and raw JSON data for machine parsing.
+       *
+       * @param plan - The Quality Improvement Plan to format
+       * @returns Markdown string
+       */
+      static formatPlanMarkdown(plan) {
+        const lines = [];
+        lines.push(`# Quality Improvement Plan - ${plan.date}`);
+        lines.push("");
+        lines.push("## Executive Summary");
+        lines.push("");
+        lines.push(plan.executiveSummary);
+        lines.push("");
+        lines.push("## Current State vs Target");
+        lines.push("");
+        lines.push(`| Metric | Current | Target |`);
+        lines.push(`|--------|---------|--------|`);
+        lines.push(`| Score | ${plan.currentScore}/100 | ${plan.targetScore ?? plan.phases[plan.phases.length - 1].projectedScore}/100 |`);
+        lines.push(`| Grade | ${plan.currentGrade} | ${plan.targetGrade ?? plan.phases[plan.phases.length - 1].projectedGrade} |`);
+        lines.push(`| Total Effort | - | ${plan.totalEffortHours} hours |`);
+        lines.push("");
+        for (const phase of plan.phases) {
+          lines.push(`## Phase ${phase.phase}: ${phase.name}`);
+          lines.push("");
+          lines.push(phase.description);
+          lines.push("");
+          lines.push(`**Projected Score:** ${phase.projectedScore}/100 (Grade ${phase.projectedGrade})`);
+          lines.push(`**Total Effort:** ${phase.totalEffortHours} hours`);
+          if (phase.estimatedDuration) {
+            lines.push(`**Estimated Duration:** ${phase.estimatedDuration}`);
+          }
+          lines.push("");
+          if (phase.initiatives.length > 0) {
+            lines.push("| Initiative | Category | Effort (hrs) | Score Gain |");
+            lines.push("|------------|----------|-------------|------------|");
+            for (const init of phase.initiatives) {
+              lines.push(`| ${init.title} | ${init.primaryCategory} | ${init.effortHours} | +${init.expectedScoreGain.toFixed(1)} |`);
+            }
+            lines.push("");
+          } else {
+            lines.push("*No initiatives in this phase.*");
+            lines.push("");
+          }
+        }
+        if (plan.roiAnalysis) {
+          lines.push("## ROI Analysis");
+          lines.push("");
+          lines.push(`**Estimated Cost to Fix:** ${plan.roiAnalysis.currency} ${plan.roiAnalysis.estimatedCostToFix.toLocaleString()}`);
+          lines.push(`**Hourly Rate:** ${plan.roiAnalysis.currency} ${plan.roiAnalysis.hourlyRate}/hr`);
+          lines.push(`**Total Developer-Hours:** ${plan.totalEffortHours}`);
+          lines.push("");
+        }
+        if (plan.technicalDebt) {
+          lines.push("## Technical Debt");
+          lines.push("");
+          lines.push(`**Total Estimated Hours:** ${plan.technicalDebt.totalHours}`);
+          lines.push("");
+        }
+        lines.push("## Raw Data");
+        lines.push("");
+        lines.push("```json");
+        lines.push(JSON.stringify(plan, null, 2));
+        lines.push("```");
+        return lines.join("\n");
+      }
+      /**
+       * Save a Quality Improvement Plan to docs/quality/plans/ directory.
+       *
+       * @param plan - The Quality Improvement Plan to save
+       * @returns Result with planId and file path
+       */
+      async saveImprovementPlan(plan) {
+        await fs4.mkdir(this.plansDir, { recursive: true });
+        const markdown = _QualityService.formatPlanMarkdown(plan);
+        const filePath = path5.join(this.plansDir, `${plan.planId}.md`);
+        await fs4.writeFile(filePath, markdown, "utf-8");
+        return {
+          planId: plan.planId,
+          filePath
+        };
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/analyzer-registry.ts
+var ANALYZER_REGISTRY;
+var init_analyzer_registry = __esm({
+  "packages/tiny-brain-core/src/services/quality/analyzer-registry.ts"() {
+    "use strict";
+    ANALYZER_REGISTRY = [
+      {
+        id: "typescript",
+        name: "TypeScript",
+        detectPatterns: ["**/tsconfig.json"],
+        commandTemplate: "npx tsc --noEmit -p {config}",
+        outputFormat: "text",
+        categories: ["Reliability", "Maintainability"]
+      },
+      {
+        id: "eslint",
+        name: "ESLint",
+        detectPatterns: ["**/.eslintrc*", "**/eslint.config.*"],
+        commandTemplate: "npx eslint {dir} --format json",
+        outputFileFlag: "--output-file {outputFile}",
+        outputFormat: "json",
+        categories: ["Maintainability", "Reliability"]
+      },
+      {
+        id: "npm-audit",
+        name: "npm Audit",
+        detectPatterns: ["**/package-lock.json"],
+        commandTemplate: "npm audit --json --prefix {dir}",
+        outputFormat: "json",
+        categories: ["Security"]
+      },
+      {
+        id: "yarn-audit",
+        name: "Yarn Audit",
+        detectPatterns: ["**/yarn.lock"],
+        commandTemplate: "yarn audit --json --cwd {dir}",
+        outputFormat: "json",
+        categories: ["Security"]
+      },
+      {
+        id: "rubocop",
+        name: "RuboCop",
+        detectPatterns: ["**/.rubocop.yml"],
+        commandTemplate: "rubocop {dir} --format json",
+        outputFileFlag: "--out {outputFile}",
+        outputFormat: "json",
+        categories: ["Maintainability", "Reliability"]
+      },
+      {
+        id: "bundler-audit",
+        name: "Bundler Audit",
+        detectPatterns: ["**/Gemfile.lock"],
+        commandTemplate: "bundle audit check --format json --gemfile-lock {config}",
+        outputFormat: "json",
+        categories: ["Security"]
+      },
+      {
+        id: "ruff",
+        name: "Ruff",
+        detectPatterns: ["**/pyproject.toml", "**/ruff.toml"],
+        commandTemplate: "ruff check {dir} --output-format json",
+        outputFileFlag: "--output-file {outputFile}",
+        outputFormat: "json",
+        categories: ["Maintainability", "Reliability"]
+      },
+      {
+        id: "go-vet",
+        name: "Go Vet",
+        detectPatterns: ["**/go.mod"],
+        commandTemplate: "cd {dir} && go vet ./...",
+        outputFormat: "text",
+        categories: ["Reliability"]
+      }
+    ];
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/analyzer-detection.service.ts
+import path6 from "path";
+var IGNORE_PATTERNS, AnalyzerDetectionService;
+var init_analyzer_detection_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/analyzer-detection.service.ts"() {
+    "use strict";
+    init_esm5();
+    init_analyzer_registry();
+    IGNORE_PATTERNS = [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/dist/**",
+      "**/vendor/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/coverage/**"
+    ];
+    AnalyzerDetectionService = class {
+      repoPath;
+      constructor(repoPath) {
+        this.repoPath = repoPath;
+      }
+      async detectAnalyzers() {
+        const results = [];
+        for (const definition of ANALYZER_REGISTRY) {
+          const configPaths = await this.findConfigFiles(definition.detectPatterns);
+          if (configPaths.length === 0) continue;
+          const commands = configPaths.map(
+            (configPath) => this.resolveCommand(definition.commandTemplate, configPath)
+          );
+          results.push({
+            analyzerId: definition.id,
+            name: definition.name,
+            configPaths,
+            commands,
+            categories: [...definition.categories]
+          });
+        }
+        return results;
+      }
+      async findConfigFiles(patterns) {
+        const allMatches = [];
+        for (const pattern of patterns) {
+          const matches = await glob(pattern, {
+            cwd: this.repoPath,
+            absolute: true,
+            ignore: IGNORE_PATTERNS
+          });
+          allMatches.push(...matches);
+        }
+        return [...new Set(allMatches)].sort();
+      }
+      resolveCommand(template, configPath) {
+        const dir = path6.dirname(configPath);
+        return template.replace("{config}", configPath).replace("{dir}", dir);
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/parsers/eslint-parser.ts
+function stripRepoPath(filePath, repoPath) {
+  const prefix = repoPath.endsWith("/") ? repoPath : `${repoPath}/`;
+  return filePath.startsWith(prefix) ? filePath.slice(prefix.length) : filePath;
+}
+function parseEslintOutput(output, repoPath) {
+  if (!output.trim()) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(output);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const issues = [];
+  for (const file of parsed) {
+    if (!file.messages || !Array.isArray(file.messages)) continue;
+    for (const msg of file.messages) {
+      const ruleId = msg.ruleId ? `eslint/${msg.ruleId}` : "eslint/parse-error";
+      const severity = msg.severity === 2 ? "major" : "minor";
+      const filePath = repoPath ? stripRepoPath(file.filePath, repoPath) : file.filePath;
+      issues.push({
+        file: filePath,
+        line: msg.line,
+        message: msg.message,
+        severity,
+        category: "Maintainability",
+        ruleId,
+        source: "eslint"
+      });
+    }
+  }
+  return issues;
+}
+var init_eslint_parser = __esm({
+  "packages/tiny-brain-core/src/services/quality/parsers/eslint-parser.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/parsers/typescript-parser.ts
+function stripRepoPath2(filePath, repoPath) {
+  const prefix = repoPath.endsWith("/") ? repoPath : `${repoPath}/`;
+  return filePath.startsWith(prefix) ? filePath.slice(prefix.length) : filePath;
+}
+function parseTypescriptOutput(output, repoPath) {
+  if (!output.trim()) return [];
+  const issues = [];
+  let match3;
+  TSC_ERROR_REGEX.lastIndex = 0;
+  while ((match3 = TSC_ERROR_REGEX.exec(output)) !== null) {
+    const [, file, lineStr, , code, message] = match3;
+    if (!file || !lineStr || !code || !message) continue;
+    const filePath = repoPath ? stripRepoPath2(file, repoPath) : file;
+    issues.push({
+      file: filePath,
+      line: parseInt(lineStr, 10),
+      message,
+      severity: "major",
+      category: "Maintainability",
+      ruleId: `typescript/${code}`,
+      source: "typescript"
+    });
+  }
+  return issues;
+}
+var TSC_ERROR_REGEX;
+var init_typescript_parser = __esm({
+  "packages/tiny-brain-core/src/services/quality/parsers/typescript-parser.ts"() {
+    "use strict";
+    TSC_ERROR_REGEX = /^(.+?)\((\d+),(\d+)\):\s*error\s+(TS\d+):\s*(.+)$/gm;
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/parsers/npm-audit-parser.ts
+function parseNpmAuditOutput(output) {
+  if (!output.trim()) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(output);
+  } catch {
+    return [];
+  }
+  if (!parsed.vulnerabilities || typeof parsed.vulnerabilities !== "object") return [];
+  const issues = [];
+  for (const [name, vuln] of Object.entries(parsed.vulnerabilities)) {
+    const severity = SEVERITY_MAP[vuln.severity] ?? "info";
+    const references = [];
+    for (const via of vuln.via) {
+      if (typeof via === "string") continue;
+      if (via.cwe && Array.isArray(via.cwe)) {
+        references.push(...via.cwe);
+      }
+    }
+    const titles = vuln.via.filter((v) => typeof v !== "string" && typeof v === "object" && "title" in v).map((v) => v.title).filter(Boolean);
+    const message = titles.length > 0 ? `${name}: ${titles.join(", ")}` : `${name}: vulnerability detected (${vuln.severity})`;
+    const issue2 = {
+      file: "package.json",
+      message,
+      severity,
+      category: "Security",
+      ruleId: `npm-audit/${name}`,
+      source: "npm-audit"
+    };
+    if (references.length > 0) {
+      issue2.references = references;
+    }
+    issues.push(issue2);
+  }
+  return issues;
+}
+var SEVERITY_MAP;
+var init_npm_audit_parser = __esm({
+  "packages/tiny-brain-core/src/services/quality/parsers/npm-audit-parser.ts"() {
+    "use strict";
+    SEVERITY_MAP = {
+      critical: "critical",
+      high: "major",
+      moderate: "minor",
+      low: "info"
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/parsers/rubocop-parser.ts
+function stripRepoPath3(filePath, repoPath) {
+  const prefix = repoPath.endsWith("/") ? repoPath : `${repoPath}/`;
+  return filePath.startsWith(prefix) ? filePath.slice(prefix.length) : filePath;
+}
+function mapSeverity(severity) {
+  switch (severity) {
+    case "fatal":
+    case "error":
+      return "major";
+    case "warning":
+      return "minor";
+    case "convention":
+    case "refactor":
+    default:
+      return "info";
+  }
+}
+function mapCategory(copName) {
+  const department = copName.split("/")[0];
+  switch (department) {
+    case "Security":
+      return "Security";
+    case "Lint":
+      return "Reliability";
+    case "Layout":
+    case "Style":
+    case "Naming":
+    case "Metrics":
+      return "Maintainability";
+    default:
+      return "Maintainability";
+  }
+}
+function parseRubocopOutput(output, repoPath) {
+  if (!output.trim()) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(output);
+  } catch {
+    return [];
+  }
+  if (!parsed.files || !Array.isArray(parsed.files)) return [];
+  const issues = [];
+  for (const file of parsed.files) {
+    if (!file.offenses || !Array.isArray(file.offenses)) continue;
+    for (const offense of file.offenses) {
+      const filePath = repoPath ? stripRepoPath3(file.path, repoPath) : file.path;
+      issues.push({
+        file: filePath,
+        line: offense.location.start_line,
+        message: offense.message,
+        severity: mapSeverity(offense.severity),
+        category: mapCategory(offense.cop_name),
+        ruleId: `rubocop/${offense.cop_name}`,
+        source: "rubocop"
+      });
+    }
+  }
+  return issues;
+}
+var init_rubocop_parser = __esm({
+  "packages/tiny-brain-core/src/services/quality/parsers/rubocop-parser.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/parsers/ruff-parser.ts
+function stripRepoPath4(filePath, repoPath) {
+  const prefix = repoPath.endsWith("/") ? repoPath : `${repoPath}/`;
+  return filePath.startsWith(prefix) ? filePath.slice(prefix.length) : filePath;
+}
+function mapCategoryAndSeverity(code) {
+  const prefix = code.charAt(0);
+  switch (prefix) {
+    case "S":
+      return { category: "Security", severity: "major" };
+    case "F":
+    case "B":
+      return { category: "Reliability", severity: "minor" };
+    case "D":
+      return { category: "Documentation", severity: "info" };
+    default:
+      return { category: "Maintainability", severity: "info" };
+  }
+}
+function parseRuffOutput(output, repoPath) {
+  if (!output.trim()) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(output);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const issues = [];
+  for (const diag of parsed) {
+    const { category, severity } = mapCategoryAndSeverity(diag.code);
+    const filePath = repoPath ? stripRepoPath4(diag.filename, repoPath) : diag.filename;
+    const issue2 = {
+      file: filePath,
+      line: diag.location.row,
+      message: diag.message,
+      severity,
+      category,
+      ruleId: `ruff/${diag.code}`,
+      source: "ruff"
+    };
+    if (diag.fix?.message) {
+      issue2.suggestion = diag.fix.message;
+    }
+    issues.push(issue2);
+  }
+  return issues;
+}
+var init_ruff_parser = __esm({
+  "packages/tiny-brain-core/src/services/quality/parsers/ruff-parser.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/parsers/index.ts
+var PARSER_MAP;
+var init_parsers = __esm({
+  "packages/tiny-brain-core/src/services/quality/parsers/index.ts"() {
+    "use strict";
+    init_eslint_parser();
+    init_typescript_parser();
+    init_npm_audit_parser();
+    init_rubocop_parser();
+    init_ruff_parser();
+    init_eslint_parser();
+    init_typescript_parser();
+    init_npm_audit_parser();
+    init_rubocop_parser();
+    init_ruff_parser();
+    PARSER_MAP = {
+      eslint: parseEslintOutput,
+      typescript: parseTypescriptOutput,
+      "npm-audit": parseNpmAuditOutput,
+      rubocop: parseRubocopOutput,
+      ruff: parseRuffOutput
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/analyzer-executor.service.ts
+import { exec as exec3 } from "child_process";
+import { promises as fs5 } from "fs";
+import { promisify as promisify3 } from "util";
+function lookupOutputFileFlag(analyzerId) {
+  const def = ANALYZER_REGISTRY.find((d) => d.id === analyzerId);
+  return def?.outputFileFlag;
+}
+function lookupOutputFormat(analyzerId) {
+  const def = ANALYZER_REGISTRY.find((d) => d.id === analyzerId);
+  return def?.outputFormat ?? "text";
+}
+function outputExtension(format) {
+  return format === "json" || format === "sarif" ? ".json" : ".txt";
+}
+var execAsync3, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_BUFFER, AnalyzerExecutorService;
+var init_analyzer_executor_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/analyzer-executor.service.ts"() {
+    "use strict";
+    init_quality();
+    init_parsers();
+    init_analyzer_registry();
+    execAsync3 = promisify3(exec3);
+    DEFAULT_TIMEOUT_MS = 3e4;
+    DEFAULT_MAX_BUFFER = 10 * 1024 * 1024;
+    AnalyzerExecutorService = class {
+      repoPath;
+      timeout;
+      maxBuffer;
+      constructor(repoPath, options) {
+        this.repoPath = repoPath;
+        this.timeout = options?.timeout ?? DEFAULT_TIMEOUT_MS;
+        this.maxBuffer = options?.maxBuffer ?? DEFAULT_MAX_BUFFER;
+      }
+      async executeAnalyzers(analyzers, outputDir) {
+        if (outputDir) {
+          await fs5.mkdir(outputDir, { recursive: true });
+        }
+        const startTime = Date.now();
+        const allIssues = [];
+        const executions = [];
+        for (const analyzer of analyzers) {
+          const result = outputDir ? await this.executeToFile(analyzer, outputDir) : await this.executeInMemory(analyzer);
+          executions.push(result);
+          allIssues.push(...result.issues);
+        }
+        const totalDurationMs = Date.now() - startTime;
+        return {
+          issues: allIssues,
+          executions,
+          totalDurationMs,
+          summary: {
+            total: executions.length,
+            succeeded: executions.filter((e) => e.status === AnalyzerExecutionStatus.Success).length,
+            failed: executions.filter((e) => e.status === AnalyzerExecutionStatus.Failed).length,
+            timedOut: executions.filter((e) => e.status === AnalyzerExecutionStatus.Timeout).length,
+            skipped: executions.filter((e) => e.status === AnalyzerExecutionStatus.Skipped).length
+          }
+        };
+      }
+      /**
+       * File-based execution: commands write output to files, which are then read back for parsing.
+       */
+      async executeToFile(analyzer, outputDir) {
+        const startTime = Date.now();
+        const parser = PARSER_MAP[analyzer.analyzerId];
+        const commandStr = analyzer.commands.join(" && ");
+        if (!parser) {
+          return {
+            analyzerId: analyzer.analyzerId,
+            name: analyzer.name,
+            status: AnalyzerExecutionStatus.Skipped,
+            issues: [],
+            durationMs: Date.now() - startTime,
+            command: commandStr
+          };
+        }
+        const format = lookupOutputFormat(analyzer.analyzerId);
+        const ext2 = outputExtension(format);
+        const flag = lookupOutputFileFlag(analyzer.analyzerId);
+        const allIssues = [];
+        const outputFiles = [];
+        for (let i = 0; i < analyzer.commands.length; i++) {
+          const outputFile = `${outputDir}/${analyzer.analyzerId}-${i}${ext2}`;
+          outputFiles.push(outputFile);
+          const command = flag ? `${analyzer.commands[i]} ${flag.replace("{outputFile}", outputFile)}` : `${analyzer.commands[i]} > ${outputFile} 2>&1`;
+          try {
+            await this.runCommand(command);
+          } catch (error2) {
+            const execError = error2;
+            if (execError.killed) {
+              return {
+                analyzerId: analyzer.analyzerId,
+                name: analyzer.name,
+                status: AnalyzerExecutionStatus.Timeout,
+                issues: [],
+                durationMs: Date.now() - startTime,
+                error: `Command timed out after ${this.timeout}ms`,
+                command: commandStr
+              };
+            }
+          }
+          try {
+            const fileContent = await fs5.readFile(outputFile, "utf-8");
+            if (!fileContent.trim()) {
+              await fs5.unlink(outputFile);
+              continue;
+            }
+            const issues = parser(fileContent, this.repoPath);
+            allIssues.push(...issues);
+          } catch (readError) {
+            return {
+              analyzerId: analyzer.analyzerId,
+              name: analyzer.name,
+              status: AnalyzerExecutionStatus.Failed,
+              issues: [],
+              durationMs: Date.now() - startTime,
+              error: readError instanceof Error ? readError.message : "Failed to read output file",
+              command: commandStr
+            };
+          }
+        }
+        return {
+          analyzerId: analyzer.analyzerId,
+          name: analyzer.name,
+          status: AnalyzerExecutionStatus.Success,
+          issues: allIssues,
+          durationMs: Date.now() - startTime,
+          command: commandStr,
+          outputFile: outputFiles[0]
+        };
+      }
+      /**
+       * In-memory execution: output is captured from stdout (legacy path).
+       */
+      async executeInMemory(analyzer) {
+        const startTime = Date.now();
+        const parser = PARSER_MAP[analyzer.analyzerId];
+        const commandStr = analyzer.commands.join(" && ");
+        if (!parser) {
+          return {
+            analyzerId: analyzer.analyzerId,
+            name: analyzer.name,
+            status: AnalyzerExecutionStatus.Skipped,
+            issues: [],
+            durationMs: Date.now() - startTime,
+            command: commandStr
+          };
+        }
+        const allIssues = [];
+        for (const command of analyzer.commands) {
+          try {
+            const { stdout } = await this.runCommand(command);
+            const issues = parser(stdout, this.repoPath);
+            allIssues.push(...issues);
+          } catch (error2) {
+            const execError = error2;
+            if (execError.killed) {
+              return {
+                analyzerId: analyzer.analyzerId,
+                name: analyzer.name,
+                status: AnalyzerExecutionStatus.Timeout,
+                issues: [],
+                durationMs: Date.now() - startTime,
+                error: `Command timed out after ${this.timeout}ms`,
+                command: commandStr
+              };
+            }
+            if (execError.stdout && execError.stdout.trim()) {
+              const issues = parser(execError.stdout, this.repoPath);
+              allIssues.push(...issues);
+              continue;
+            }
+            return {
+              analyzerId: analyzer.analyzerId,
+              name: analyzer.name,
+              status: AnalyzerExecutionStatus.Failed,
+              issues: [],
+              durationMs: Date.now() - startTime,
+              error: execError.message ?? "Unknown error",
+              command: commandStr
+            };
+          }
+        }
+        return {
+          analyzerId: analyzer.analyzerId,
+          name: analyzer.name,
+          status: AnalyzerExecutionStatus.Success,
+          issues: allIssues,
+          durationMs: Date.now() - startTime,
+          command: commandStr
+        };
+      }
+      async runCommand(command) {
+        return execAsync3(command, {
+          cwd: this.repoPath,
+          timeout: this.timeout,
+          maxBuffer: this.maxBuffer
+        });
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/file-listing.service.ts
+var IGNORE_DIRECTORIES, IGNORE_BINARY_EXTENSIONS, IGNORE_GENERATED, FileListingService;
+var init_file_listing_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/file-listing.service.ts"() {
+    "use strict";
+    init_esm5();
+    IGNORE_DIRECTORIES = [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/dist/**",
+      "**/vendor/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/coverage/**",
+      "**/__pycache__/**",
+      "**/.venv/**",
+      "**/.tiny-brain/**"
+    ];
+    IGNORE_BINARY_EXTENSIONS = [
+      "**/*.png",
+      "**/*.jpg",
+      "**/*.jpeg",
+      "**/*.gif",
+      "**/*.ico",
+      "**/*.svg",
+      "**/*.woff",
+      "**/*.woff2",
+      "**/*.ttf",
+      "**/*.eot",
+      "**/*.exe",
+      "**/*.dll",
+      "**/*.so",
+      "**/*.dylib",
+      "**/*.pdf",
+      "**/*.wasm",
+      "**/*.pyc",
+      "**/*.pyo",
+      "**/*.class",
+      "**/*.o",
+      "**/*.a",
+      "**/*.zip",
+      "**/*.tar",
+      "**/*.gz",
+      "**/*.bz2",
+      "**/*.7z",
+      "**/*.rar",
+      "**/*.mp3",
+      "**/*.mp4",
+      "**/*.wav",
+      "**/*.avi",
+      "**/*.mov"
+    ];
+    IGNORE_GENERATED = [
+      "**/*.min.js",
+      "**/*.min.css",
+      "**/*.bundle.js",
+      "**/*.d.ts",
+      "**/package-lock.json",
+      "**/yarn.lock",
+      "**/pnpm-lock.yaml",
+      "**/*.map"
+    ];
+    FileListingService = class {
+      repoPath;
+      constructor(repoPath) {
+        this.repoPath = repoPath;
+      }
+      async listEligibleFiles() {
+        const files = await glob("**/*", {
+          cwd: this.repoPath,
+          nodir: true,
+          ignore: [
+            ...IGNORE_DIRECTORIES,
+            ...IGNORE_BINARY_EXTENSIONS,
+            ...IGNORE_GENERATED
+          ]
+        });
+        return [...files].sort();
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/investigation-checklists.ts
+var ALL_INVESTIGATION_CHECKLISTS;
+var init_investigation_checklists = __esm({
+  "packages/tiny-brain-core/src/services/quality/investigation-checklists.ts"() {
+    "use strict";
+    ALL_INVESTIGATION_CHECKLISTS = [
+      {
+        category: "Security",
+        checks: [
+          {
+            id: "SEC-hardcoded-secrets",
+            name: "hardcoded-secrets",
+            description: "Look for hardcoded API keys, passwords, tokens, or secrets",
+            patterns: ["api_key", "apiKey", "API_KEY", "password", "secret", "token", "private_key"],
+            severity: "critical"
+          },
+          {
+            id: "SEC-sql-injection",
+            name: "sql-injection",
+            description: "Look for string concatenation or template literals in SQL queries",
+            patterns: ["query(`", 'query("', "${", "execute(", "raw("],
+            severity: "critical"
+          },
+          {
+            id: "SEC-command-injection",
+            name: "command-injection",
+            description: "Look for user input passed to exec, spawn, or system calls",
+            patterns: ["exec(", "spawn(", "system(", "eval(", "execSync("],
+            severity: "critical"
+          },
+          {
+            id: "SEC-xss",
+            name: "xss",
+            description: "Look for unsanitized user input rendered in HTML or DOM manipulation",
+            patterns: ["innerHTML", "dangerouslySetInnerHTML", "document.write", "outerHTML"],
+            severity: "critical"
+          },
+          {
+            id: "SEC-auth-bypass",
+            name: "auth-bypass",
+            description: "Look for missing authentication or authorization checks on sensitive operations",
+            patterns: ["isAdmin", "authorize", "authenticate", "middleware", "guard"],
+            severity: "critical"
+          },
+          {
+            id: "SEC-insecure-crypto",
+            name: "insecure-crypto",
+            description: "Look for weak cryptographic algorithms or insecure random number generation",
+            patterns: ["MD5", "SHA1", "Math.random", "createHash", "DES"],
+            severity: "major"
+          },
+          {
+            id: "SEC-path-traversal",
+            name: "path-traversal",
+            description: "Look for user input used in file paths without sanitization",
+            patterns: ["path.join", "readFile", "writeFile", "fs.", "../"],
+            severity: "critical"
+          }
+        ]
+      },
+      {
+        category: "Reliability",
+        checks: [
+          {
+            id: "REL-unhandled-errors",
+            name: "unhandled-errors",
+            description: "Look for missing error handling in async operations or try/catch blocks",
+            patterns: ["await", "async", ".then(", "try", "catch"],
+            severity: "major"
+          },
+          {
+            id: "REL-missing-null-checks",
+            name: "missing-null-checks",
+            description: "Look for potential null/undefined dereferences without guards",
+            patterns: [".", "?.", "null", "undefined", "optional"],
+            severity: "major"
+          },
+          {
+            id: "REL-resource-leaks",
+            name: "resource-leaks",
+            description: "Look for opened resources (files, connections, streams) that are not properly closed",
+            patterns: ["open(", "createConnection", "createStream", "addEventListener", "setInterval"],
+            severity: "major"
+          },
+          {
+            id: "REL-race-conditions",
+            name: "race-conditions",
+            description: "Look for shared mutable state accessed concurrently or TOCTOU patterns",
+            patterns: ["global", "shared", "static", "mutex", "lock"],
+            severity: "major"
+          },
+          {
+            id: "REL-unhandled-promises",
+            name: "unhandled-promises",
+            description: "Look for promises without await, catch, or void operator",
+            patterns: ["Promise", "async", ".then(", "reject"],
+            severity: "major"
+          },
+          {
+            id: "REL-missing-error-boundaries",
+            name: "missing-error-boundaries",
+            description: "Look for UI components or service layers missing error boundaries",
+            patterns: ["render", "component", "ErrorBoundary", "componentDidCatch"],
+            severity: "minor"
+          }
+        ]
+      },
+      {
+        category: "Performance",
+        checks: [
+          {
+            id: "PERF-n-plus-one",
+            name: "n-plus-one",
+            description: "Look for database queries or API calls inside loops",
+            patterns: ["for", "forEach", "map", "query", "fetch", "find"],
+            severity: "major"
+          },
+          {
+            id: "PERF-blocking-io",
+            name: "blocking-io",
+            description: "Look for synchronous file or network operations on the main thread",
+            patterns: ["readFileSync", "writeFileSync", "execSync", "Sync("],
+            severity: "major"
+          },
+          {
+            id: "PERF-memory-leaks",
+            name: "memory-leaks",
+            description: "Look for patterns that cause memory leaks (event listeners, closures, caches without eviction)",
+            patterns: ["addEventListener", "setInterval", "cache", "Map", "WeakRef"],
+            severity: "major"
+          },
+          {
+            id: "PERF-inefficient-loops",
+            name: "inefficient-loops",
+            description: "Look for nested loops, repeated array scans, or O(n^2) patterns",
+            patterns: ["for", "while", "forEach", "filter", "find", "includes"],
+            severity: "minor"
+          },
+          {
+            id: "PERF-unbounded-data",
+            name: "unbounded-data",
+            description: "Look for data structures or queries that grow without limits",
+            patterns: ["push", "concat", "findAll", "SELECT *", "limit"],
+            severity: "minor"
+          }
+        ]
+      },
+      {
+        category: "Maintainability",
+        checks: [
+          {
+            id: "MAINT-god-classes",
+            name: "god-classes",
+            description: "Look for classes or modules with too many responsibilities or methods",
+            patterns: ["class", "export", "method", "function"],
+            severity: "major"
+          },
+          {
+            id: "MAINT-long-methods",
+            name: "long-methods",
+            description: "Look for functions or methods that are excessively long (>50 lines)",
+            patterns: ["function", "=>", "method"],
+            severity: "minor"
+          },
+          {
+            id: "MAINT-deep-nesting",
+            name: "deep-nesting",
+            description: "Look for deeply nested if/else, loops, or callback chains (>3 levels)",
+            patterns: ["if", "else", "for", "while", "then"],
+            severity: "minor"
+          },
+          {
+            id: "MAINT-code-duplication",
+            name: "code-duplication",
+            description: "Look for duplicated logic that should be extracted into shared functions",
+            patterns: ["copy", "duplicate", "similar"],
+            severity: "minor"
+          },
+          {
+            id: "MAINT-magic-numbers",
+            name: "magic-numbers",
+            description: "Look for unexplained numeric literals that should be named constants",
+            patterns: ["0", "1", "100", "1000", "60", "24"],
+            severity: "info"
+          },
+          {
+            id: "MAINT-complex-conditionals",
+            name: "complex-conditionals",
+            description: "Look for complex boolean expressions that are hard to understand",
+            patterns: ["&&", "||", "!", "ternary", "?"],
+            severity: "minor"
+          }
+        ]
+      },
+      {
+        category: "Architecture",
+        checks: [
+          {
+            id: "ARCH-srp-violation",
+            name: "srp-violation",
+            description: "Look for single responsibility principle violations where a class or module handles multiple unrelated concerns",
+            patterns: ["class", "module", "service", "controller"],
+            severity: "major"
+          },
+          {
+            id: "ARCH-ocp-violation",
+            name: "ocp-violation",
+            description: "Look for open/closed principle violations where modification is required instead of extension",
+            patterns: ["switch", "if/else chain", "instanceof", "typeof"],
+            severity: "minor"
+          },
+          {
+            id: "ARCH-dip-violation",
+            name: "dip-violation",
+            description: "Look for dependency inversion violations where high-level modules depend on low-level implementation details",
+            patterns: ["import", "require", "new ", "concrete"],
+            severity: "minor"
+          },
+          {
+            id: "ARCH-circular-deps",
+            name: "circular-deps",
+            description: "Look for circular dependency patterns between modules",
+            patterns: ["import", "require", "from"],
+            severity: "major"
+          },
+          {
+            id: "ARCH-layer-violations",
+            name: "layer-violations",
+            description: "Look for architectural layer violations (e.g., UI code accessing database directly)",
+            patterns: ["import", "require", "controller", "service", "repository"],
+            severity: "major"
+          }
+        ]
+      },
+      {
+        category: "Testing",
+        checks: [
+          {
+            id: "TEST-missing-edge-cases",
+            name: "missing-edge-cases",
+            description: "Look for code paths with missing edge case coverage (empty arrays, null values, boundary conditions)",
+            patterns: ["if", "switch", "throw", "return", "edge"],
+            severity: "minor"
+          },
+          {
+            id: "TEST-flaky-patterns",
+            name: "flaky-patterns",
+            description: "Look for patterns that cause test flakiness (timing dependencies, shared state, network calls)",
+            patterns: ["setTimeout", "Date.now", "Math.random", "fetch", "global"],
+            severity: "minor"
+          },
+          {
+            id: "TEST-poor-assertions",
+            name: "poor-assertions",
+            description: "Look for weak or missing assertions in test files",
+            patterns: ["expect", "assert", "toBe", "toEqual", "toBeTruthy"],
+            severity: "minor"
+          },
+          {
+            id: "TEST-test-coupling",
+            name: "test-coupling",
+            description: "Look for tests tightly coupled to implementation details rather than behavior",
+            patterns: ["mock", "spy", "private", "internal", "implementation"],
+            severity: "minor"
+          }
+        ]
+      },
+      {
+        category: "Documentation",
+        checks: [
+          {
+            id: "DOC-missing-api-docs",
+            name: "missing-api-docs",
+            description: "Look for public APIs, exported functions, or interfaces missing documentation",
+            patterns: ["export", "public", "interface", "type", "function"],
+            severity: "minor"
+          },
+          {
+            id: "DOC-stale-comments",
+            name: "stale-comments",
+            description: "Look for comments that contradict the actual code behavior",
+            patterns: ["//", "/*", "TODO", "FIXME", "HACK"],
+            severity: "info"
+          },
+          {
+            id: "DOC-undocumented-side-effects",
+            name: "undocumented-side-effects",
+            description: "Look for functions with side effects not mentioned in documentation",
+            patterns: ["write", "delete", "update", "send", "emit", "dispatch"],
+            severity: "minor"
+          },
+          {
+            id: "DOC-missing-error-docs",
+            name: "missing-error-docs",
+            description: "Look for functions that throw errors without documenting possible exceptions",
+            patterns: ["throw", "Error", "reject", "@throws"],
+            severity: "info"
+          }
+        ]
+      },
+      {
+        category: "Operations",
+        checks: [
+          {
+            id: "OPS-missing-logging",
+            name: "missing-logging",
+            description: "Look for error handlers or critical operations without logging",
+            patterns: ["catch", "error", "console", "logger", "log"],
+            severity: "minor"
+          },
+          {
+            id: "OPS-hardcoded-config",
+            name: "hardcoded-config",
+            description: "Look for hardcoded configuration values that should be externalized",
+            patterns: ["localhost", "http://", "port", "host", "127.0.0.1"],
+            severity: "minor"
+          },
+          {
+            id: "OPS-no-error-reporting",
+            name: "no-error-reporting",
+            description: "Look for missing error reporting or alerting in production error paths",
+            patterns: ["catch", "error", "sentry", "bugsnag", "report"],
+            severity: "minor"
+          },
+          {
+            id: "OPS-missing-health-checks",
+            name: "missing-health-checks",
+            description: "Look for services missing health check endpoints or readiness probes",
+            patterns: ["health", "ready", "alive", "status", "ping"],
+            severity: "info"
+          }
+        ]
+      }
+    ];
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/investigation-prompt-builder.ts
+function buildInvestigationPrompt(filePath, fileContent, checklists) {
+  const checklistSections = checklists.map((checklist) => {
+    const checkLines = checklist.checks.map(
+      (check2) => [
+        `  - **${check2.id}** (${check2.name}): ${check2.description}`,
+        `    Severity: ${check2.severity}`,
+        `    Patterns: ${check2.patterns.join(", ")}`
+      ].join("\n")
+    );
+    return `### ${checklist.category}
+${checkLines.join("\n")}`;
+  });
+  return `You are a code quality investigator. Analyze the following file against all checklists below.
+
+## File: \`${filePath}\`
+
+\`\`\`
+${fileContent}
+\`\`\`
+
+## Investigation Checklists
+
+${checklistSections.join("\n\n")}
+
+## Instructions
+
+1. Apply EVERY check from EVERY checklist above to the file.
+2. For each issue found, provide the exact line number and code evidence.
+3. Only report real issues \u2014 do not fabricate findings.
+4. If no issues are found for a check, do not include it in findings.
+5. List ALL check IDs in checksApplied, even those that found no issues.
+
+## Required JSON Output Format
+
+Respond with ONLY a JSON object in this exact format (no markdown fences, no explanation):
+
+{
+  "filePath": "${filePath}",
+  "findings": [
+    {
+      "checkId": "CHECK-ID",
+      "category": "CategoryName",
+      "severity": "critical|major|minor|info",
+      "line": 42,
+      "message": "Description of the issue",
+      "evidence": "The exact code snippet showing the problem",
+      "suggestion": "Optional suggestion for fixing the issue"
+    }
+  ],
+  "checksApplied": ["CHECK-ID-1", "CHECK-ID-2"]
+}`;
+}
+var init_investigation_prompt_builder = __esm({
+  "packages/tiny-brain-core/src/services/quality/investigation-prompt-builder.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/investigation-response-parser.ts
+function stripCodeFences(raw2) {
+  const trimmed = raw2.trim();
+  const fencePattern = /^```(?:json)?\s*\n([\s\S]*?)\n```\s*$/;
+  const match3 = trimmed.match(fencePattern);
+  return match3 ? match3[1] : trimmed;
+}
+function parseInvestigationResponse(rawResponse) {
+  if (!rawResponse || !rawResponse.trim()) {
+    return null;
+  }
+  const cleaned = stripCodeFences(rawResponse);
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    return null;
+  }
+  const result = FileInvestigationResultSchema.safeParse(parsed);
+  if (!result.success) {
+    return null;
+  }
+  return result.data;
+}
+function findingsToQualityIssues(filePath, findings) {
+  return findings.map((finding) => ({
+    category: finding.category,
+    severity: finding.severity,
+    file: filePath,
+    line: finding.line,
+    message: finding.message,
+    evidence: finding.evidence,
+    suggestion: finding.suggestion,
+    ruleId: `investigation/${finding.checkId}`,
+    source: "llm-investigation"
+  }));
+}
+var init_investigation_response_parser = __esm({
+  "packages/tiny-brain-core/src/services/quality/investigation-response-parser.ts"() {
+    "use strict";
+    init_quality();
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/file-investigator.service.ts
+import { createHash as createHash2 } from "crypto";
+import { promises as fs6 } from "fs";
+import path7 from "path";
+var FileInvestigatorService;
+var init_file_investigator_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/file-investigator.service.ts"() {
+    "use strict";
+    init_investigation_prompt_builder();
+    init_investigation_response_parser();
+    FileInvestigatorService = class {
+      repoPath;
+      llmInvoke;
+      constructor(repoPath, llmInvoke) {
+        this.repoPath = repoPath;
+        this.llmInvoke = llmInvoke;
+      }
+      async investigateFileContent(filePath, fileContent, checklist) {
+        const startTime = Date.now();
+        const fileHash = createHash2("sha256").update(fileContent).digest("hex");
+        const prompt = buildInvestigationPrompt(filePath, fileContent, [checklist]);
+        let rawResponse;
+        try {
+          rawResponse = await this.llmInvoke(prompt);
+        } catch (error2) {
+          const message = error2 instanceof Error ? error2.message : "Unknown error";
+          return {
+            filePath,
+            category: checklist.category,
+            status: "failed",
+            findings: [],
+            checksApplied: [],
+            error: `LLM invocation failed: ${message}`,
+            durationMs: Date.now() - startTime,
+            fileHash
+          };
+        }
+        const parsed = parseInvestigationResponse(rawResponse);
+        if (!parsed) {
+          return {
+            filePath,
+            category: checklist.category,
+            status: "failed",
+            findings: [],
+            checksApplied: [],
+            error: "Failed to parse LLM response",
+            durationMs: Date.now() - startTime,
+            fileHash
+          };
+        }
+        return {
+          filePath,
+          category: checklist.category,
+          status: "completed",
+          findings: parsed.findings,
+          checksApplied: parsed.checksApplied,
+          durationMs: Date.now() - startTime,
+          fileHash
+        };
+      }
+      async readFileContent(filePath) {
+        return fs6.readFile(path7.join(this.repoPath, filePath), "utf-8");
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/investigation-orchestrator.service.ts
+async function runWithConcurrency(items, fn, concurrency) {
+  const queue = [...items];
+  const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift();
+      if (item !== void 0) {
+        await fn(item);
+      }
+    }
+  });
+  await Promise.all(workers);
+}
+var InvestigationOrchestratorService;
+var init_investigation_orchestrator_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/investigation-orchestrator.service.ts"() {
+    "use strict";
+    init_file_listing_service();
+    init_file_investigator_service();
+    init_investigation_checklists();
+    init_investigation_response_parser();
+    InvestigationOrchestratorService = class {
+      repoPath;
+      llmInvoke;
+      constructor(repoPath, llmInvoke) {
+        this.repoPath = repoPath;
+        this.llmInvoke = llmInvoke;
+      }
+      async runInvestigation(options) {
+        const startTime = Date.now();
+        const checklists = options?.checklists ?? ALL_INVESTIGATION_CHECKLISTS;
+        const concurrency = options?.concurrency ?? checklists.length;
+        const fileListingService = new FileListingService(this.repoPath);
+        const eligibleFiles = await fileListingService.listEligibleFiles();
+        const investigator = new FileInvestigatorService(this.repoPath, this.llmInvoke);
+        const fileContents = /* @__PURE__ */ new Map();
+        const unreadableFiles = /* @__PURE__ */ new Set();
+        for (const filePath of eligibleFiles) {
+          try {
+            const content = await investigator.readFileContent(filePath);
+            fileContents.set(filePath, content);
+          } catch {
+            unreadableFiles.add(filePath);
+          }
+        }
+        const totalTasks = fileContents.size * checklists.length + unreadableFiles.size * checklists.length;
+        const allInvestigations = [];
+        let completedCount = 0;
+        const categoryTasks = checklists.map((checklist) => ({
+          checklist,
+          files: [...fileContents.entries()]
+        }));
+        await runWithConcurrency(
+          categoryTasks,
+          async ({ checklist, files }) => {
+            for (const [filePath, content] of files) {
+              const result = await investigator.investigateFileContent(filePath, content, checklist);
+              allInvestigations.push(result);
+              completedCount++;
+              options?.onTaskComplete?.(result, completedCount, totalTasks);
+            }
+          },
+          concurrency
+        );
+        for (const filePath of unreadableFiles) {
+          for (const checklist of checklists) {
+            const skipped = {
+              filePath,
+              category: checklist.category,
+              status: "skipped",
+              findings: [],
+              checksApplied: [],
+              error: "Failed to read file"
+            };
+            allInvestigations.push(skipped);
+            completedCount++;
+            options?.onTaskComplete?.(skipped, completedCount, totalTasks);
+          }
+        }
+        const allIssues = [];
+        for (const inv of allInvestigations) {
+          if (inv.status === "completed" && inv.findings.length > 0) {
+            const issues = findingsToQualityIssues(inv.filePath, inv.findings);
+            allIssues.push(...issues);
+          }
+        }
+        const totalDurationMs = Date.now() - startTime;
+        const completedTasks = allInvestigations.filter((i) => i.status === "completed").length;
+        const failedTasks = allInvestigations.filter((i) => i.status === "failed").length;
+        const skippedTasks = allInvestigations.filter((i) => i.status === "skipped").length;
+        const totalFindings = allInvestigations.reduce((sum, i) => sum + i.findings.length, 0);
+        const uniqueFiles = new Set(allInvestigations.map((i) => i.filePath)).size;
+        const uniqueCategories = new Set(allInvestigations.map((i) => i.category)).size;
+        return {
+          investigations: allInvestigations,
+          issues: allIssues,
+          totalDurationMs,
+          summary: {
+            totalFiles: uniqueFiles,
+            totalCategories: uniqueCategories,
+            totalTasks: allInvestigations.length,
+            completedTasks,
+            failedTasks,
+            skippedTasks,
+            totalFindings
+          }
+        };
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/investigation-progress.service.ts
+import { promises as fs7 } from "fs";
+import path8 from "path";
+var init_investigation_progress_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/investigation-progress.service.ts"() {
+    "use strict";
+    init_quality();
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/result-merger.service.ts
+function tagSource(issue2, source) {
+  if (issue2.source) {
+    return issue2;
+  }
+  return { ...issue2, source };
+}
+function mergeResults(analyzerIssues, llmIssues, options) {
+  const preferSource = options?.preferSource ?? "analyzer";
+  const taggedAnalyzer = analyzerIssues.map((issue2) => tagSource(issue2, "analyzer"));
+  const taggedLlm = llmIssues.map((issue2) => tagSource(issue2, "llm"));
+  if (taggedAnalyzer.length === 0 && taggedLlm.length === 0) {
+    return {
+      issues: [],
+      sourceBreakdown: { analyzer: 0, llm: 0, total: 0 },
+      duplicatesRemoved: 0
+    };
+  }
+  if (taggedAnalyzer.length === 0) {
+    return {
+      issues: taggedLlm,
+      sourceBreakdown: { analyzer: 0, llm: taggedLlm.length, total: taggedLlm.length },
+      duplicatesRemoved: 0
+    };
+  }
+  if (taggedLlm.length === 0) {
+    return {
+      issues: taggedAnalyzer,
+      sourceBreakdown: { analyzer: taggedAnalyzer.length, llm: 0, total: taggedAnalyzer.length },
+      duplicatesRemoved: 0
+    };
+  }
+  const matchResult = matchIssues(taggedAnalyzer, taggedLlm);
+  const merged = [];
+  for (const issue2 of matchResult.resolvedIssues) {
+    merged.push(issue2);
+  }
+  for (const match3 of matchResult.matches) {
+    if (preferSource === "analyzer") {
+      merged.push(match3.baseIssue);
+    } else {
+      merged.push(match3.targetIssue);
+    }
+  }
+  for (const issue2 of matchResult.newIssues) {
+    merged.push(issue2);
+  }
+  const duplicatesRemoved = matchResult.matches.length;
+  let analyzerCount = 0;
+  let llmCount = 0;
+  for (const issue2 of merged) {
+    if (issue2.source === "llm") {
+      llmCount++;
+    } else {
+      analyzerCount++;
+    }
+  }
+  return {
+    issues: merged,
+    sourceBreakdown: {
+      analyzer: analyzerCount,
+      llm: llmCount,
+      total: merged.length
+    },
+    duplicatesRemoved
+  };
+}
+var init_result_merger_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/result-merger.service.ts"() {
+    "use strict";
+    init_fingerprint_matcher_service();
+  }
+});
+
+// packages/tiny-brain-core/src/services/quality/assembly.service.ts
+import { promises as fs8 } from "fs";
+import path9 from "path";
+var AssemblyService;
+var init_assembly_service = __esm({
+  "packages/tiny-brain-core/src/services/quality/assembly.service.ts"() {
+    "use strict";
+    init_quality_service();
+    init_result_merger_service();
+    AssemblyService = class {
+      repoPath;
+      constructor(repoPath) {
+        this.repoPath = repoPath;
+      }
+      get runsDir() {
+        return path9.join(this.repoPath, "docs", "quality", "runs");
+      }
+      /**
+       * Assemble a quality run from intermediate files.
+       *
+       * For nested format (runId contains `T`, e.g. "2026-02-10T14-30"):
+       *   Reads all `*.json` from `docs/quality/runs/2026-02-10/14-30/`
+       *
+       * For legacy flat format (e.g. "2026-02-10"):
+       *   Reads all `{runDate}-*.json` from `docs/quality/runs/`
+       *
+       * Separates analyzer findings from specialist (LLM) findings, merges with
+       * deduplication, scores, saves the final markdown report, and returns a summary.
+       *
+       * When `baseRunId` is provided, performs incremental carry-forward:
+       * loads issues from the base run, keeps issues for files NOT re-analyzed
+       * in the current run, and replaces issues for files that were re-analyzed.
+       *
+       * @param runId - Run identifier (nested "YYYY-MM-DDTHH-mm" or legacy "YYYY-MM-DD")
+       * @param baseRunId - Optional base run ID for incremental carry-forward
+       * @returns AssemblyResult summary
+       */
+      async assembleRun(runId, baseRunId) {
+        const isNested = runId.includes("T");
+        const analyzerIssues = isNested ? await this.readNestedAnalyzerIssues(runId) : await this.readAnalyzerIssues(runId);
+        const specialistIssues = isNested ? await this.readNestedSpecialistIssues(runId) : await this.readSpecialistIssues(runId);
+        const mergeResult = mergeResults(analyzerIssues, specialistIssues);
+        let issues = [...mergeResult.issues];
+        let incremental;
+        let resolvedBaseRunId;
+        let filesAnalyzed;
+        let filesCarriedForward;
+        if (baseRunId) {
+          const baseIssues = await this.loadBaseIssues(baseRunId);
+          if (baseIssues !== null) {
+            incremental = true;
+            resolvedBaseRunId = baseRunId;
+            const analyzedFiles = this.getAnalyzedFiles(issues);
+            const carriedIssues = baseIssues.filter(
+              (issue2) => !analyzedFiles.has(issue2.file)
+            );
+            filesAnalyzed = analyzedFiles.size;
+            const carriedFiles = new Set(carriedIssues.map((i) => i.file));
+            filesCarriedForward = carriedFiles.size;
+            issues = [...issues, ...carriedIssues];
+          }
+        }
+        const score = QualityService.calculateScore(issues);
+        const grade = QualityService.getGrade(score);
+        const issuesByCategory = QualityService.getIssuesByCategory(issues);
+        const categoryScores = QualityService.calculateCategoryScores(issues);
+        const technicalDebt = QualityService.estimateTechnicalDebt(issues);
+        const service = new QualityService(this.repoPath);
+        const saveResult = await service.saveRunResult({
+          runId,
+          baseRunId: resolvedBaseRunId,
+          score,
+          grade,
+          issues,
+          recommendations: [],
+          sourceBreakdown: mergeResult.sourceBreakdown,
+          categoryScores,
+          technicalDebt
+        });
+        const categoryBreakdown = {};
+        for (const [category, count] of Object.entries(issuesByCategory)) {
+          if (count > 0) {
+            categoryBreakdown[category] = count;
+          }
+        }
+        return {
+          runId: saveResult.runId,
+          score,
+          grade,
+          issueCount: issues.length,
+          sourceBreakdown: mergeResult.sourceBreakdown,
+          categoryBreakdown,
+          filePath: saveResult.filePath,
+          incremental,
+          baseRunId: resolvedBaseRunId,
+          filesAnalyzed,
+          filesCarriedForward
+        };
+      }
+      /**
+       * Load all issues from a base run's saved quality.md report.
+       * Returns null if the base run cannot be found or parsed.
+       */
+      async loadBaseIssues(baseRunId) {
+        const service = new QualityService(this.repoPath);
+        const baseRun = await service.getRunDetails(baseRunId);
+        if (!baseRun) {
+          return null;
+        }
+        return baseRun.issues;
+      }
+      /**
+       * Determine which files were analyzed in the current run
+       * by collecting unique file paths from the current issues.
+       */
+      getAnalyzedFiles(currentIssues) {
+        return new Set(currentIssues.map((issue2) => issue2.file));
+      }
+      /**
+       * Read analyzer issues from the `{runDate}-analysis.json` file.
+       */
+      async readAnalyzerIssues(runDate) {
+        const filePath = path9.join(this.runsDir, `${runDate}-analysis.json`);
+        return this.readFindingsFile(filePath);
+      }
+      /**
+       * Read specialist (LLM) issues from all domain JSON files.
+       * Supports both single files (`-security-quality-reviewer-output.json`) and batched files
+       * (`-security-quality-reviewer-output-1.json`, `-security-quality-reviewer-output-2.json`).
+       */
+      async readSpecialistIssues(runDate) {
+        const allIssues = [];
+        try {
+          const files = await fs8.readdir(this.runsDir);
+          const prefix = `${runDate}-`;
+          for (const file of files) {
+            if (!file.startsWith(prefix) || !file.endsWith(".json")) {
+              continue;
+            }
+            if (file === `${runDate}-analysis.json`) {
+              continue;
+            }
+            if (file === `${runDate}-quality.json`) {
+              continue;
+            }
+            const filePath = path9.join(this.runsDir, file);
+            const issues = await this.readFindingsFile(filePath);
+            allIssues.push(...issues);
+          }
+        } catch {
+        }
+        return allIssues;
+      }
+      /**
+       * Get the directory for a nested run.
+       */
+      nestedRunDir(runId) {
+        return path9.join(this.runsDir, runIdToPath(runId));
+      }
+      /**
+       * Read analyzer issues from nested `{runDir}/analysis.json`.
+       */
+      async readNestedAnalyzerIssues(runId) {
+        const filePath = path9.join(this.nestedRunDir(runId), "analysis.json");
+        return this.readFindingsFile(filePath);
+      }
+      /**
+       * Read specialist (LLM) issues from all JSON files in nested run directory.
+       * Skips `analysis.json`, `quality.json`, and non-JSON files.
+       */
+      async readNestedSpecialistIssues(runId) {
+        const allIssues = [];
+        const dir = this.nestedRunDir(runId);
+        try {
+          const files = await fs8.readdir(dir);
+          for (const file of files) {
+            if (!file.endsWith(".json")) {
+              continue;
+            }
+            if (file === "analysis.json") {
+              continue;
+            }
+            if (file === "quality.json") {
+              continue;
+            }
+            const filePath = path9.join(dir, file);
+            const issues = await this.readFindingsFile(filePath);
+            allIssues.push(...issues);
+          }
+        } catch {
+        }
+        return allIssues;
+      }
+      /**
+       * Read and parse an agent findings JSON file.
+       * Returns empty array if file doesn't exist or is malformed.
+       */
+      async readFindingsFile(filePath) {
+        try {
+          const content = await fs8.readFile(filePath, "utf-8");
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed.issues)) {
+            return parsed.issues;
+          }
+          return [];
+        } catch {
+          return [];
         }
       }
     };
@@ -36671,6 +39539,22 @@ var init_quality2 = __esm({
   "packages/tiny-brain-core/src/services/quality/index.ts"() {
     "use strict";
     init_quality_service();
+    init_analyzer_registry();
+    init_analyzer_detection_service();
+    init_analyzer_executor_service();
+    init_parsers();
+    init_file_listing_service();
+    init_investigation_checklists();
+    init_investigation_prompt_builder();
+    init_investigation_response_parser();
+    init_file_investigator_service();
+    init_investigation_orchestrator_service();
+    init_investigation_progress_service();
+    init_message_normalizer();
+    init_fingerprint_service();
+    init_fingerprint_matcher_service();
+    init_result_merger_service();
+    init_assembly_service();
   }
 });
 
@@ -36830,8 +39714,8 @@ var init_hooks = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/tech-context-service.ts
-import { promises as fs5 } from "fs";
-import path6 from "path";
+import { promises as fs9 } from "fs";
+import path10 from "path";
 import crypto2 from "crypto";
 var TechContextService;
 var init_tech_context_service = __esm({
@@ -36843,9 +39727,9 @@ var init_tech_context_service = __esm({
       techDir;
       agentsDir;
       constructor(repoPath) {
-        this.tinyBrainDir = path6.join(repoPath, ".tiny-brain");
-        this.techDir = path6.join(this.tinyBrainDir, "tech");
-        this.agentsDir = path6.join(repoPath, ".claude", "agents");
+        this.tinyBrainDir = path10.join(repoPath, ".tiny-brain");
+        this.techDir = path10.join(this.tinyBrainDir, "tech");
+        this.agentsDir = path10.join(repoPath, ".claude", "agents");
       }
       /** Get the .tiny-brain directory path */
       getTinyBrainDir() {
@@ -36861,8 +39745,8 @@ var init_tech_context_service = __esm({
       }
       /** Ensure required directories exist */
       async ensureDirectories() {
-        await fs5.mkdir(this.tinyBrainDir, { recursive: true });
-        await fs5.mkdir(this.techDir, { recursive: true });
+        await fs9.mkdir(this.tinyBrainDir, { recursive: true });
+        await fs9.mkdir(this.techDir, { recursive: true });
       }
       /**
        * Write analysis data to .tiny-brain/analysis.json
@@ -36893,8 +39777,8 @@ var init_tech_context_service = __esm({
           stack,
           analysis: analysisData
         };
-        const filePath = path6.join(this.tinyBrainDir, "analysis.json");
-        await fs5.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
+        const filePath = path10.join(this.tinyBrainDir, "analysis.json");
+        await fs9.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
       }
       /**
        * Write a tech expertise file with YAML frontmatter
@@ -36914,8 +39798,8 @@ var init_tech_context_service = __esm({
         const fileContent = `${yamlFrontmatter}
 
 ${content}`;
-        const filePath = path6.join(this.techDir, `${name}.md`);
-        await fs5.writeFile(filePath, fileContent, "utf-8");
+        const filePath = path10.join(this.techDir, `${name}.md`);
+        await fs9.writeFile(filePath, fileContent, "utf-8");
       }
       /**
        * Write raw markdown content to a tech file
@@ -36923,16 +39807,16 @@ ${content}`;
        */
       async writeTechFileRaw(name, content) {
         await this.ensureDirectories();
-        const filePath = path6.join(this.techDir, `${name}.md`);
-        await fs5.writeFile(filePath, content, "utf-8");
+        const filePath = path10.join(this.techDir, `${name}.md`);
+        await fs9.writeFile(filePath, content, "utf-8");
       }
       /**
        * Read analysis data from .tiny-brain/analysis.json
        */
       async readAnalysis() {
-        const filePath = path6.join(this.tinyBrainDir, "analysis.json");
+        const filePath = path10.join(this.tinyBrainDir, "analysis.json");
         try {
-          const content = await fs5.readFile(filePath, "utf-8");
+          const content = await fs9.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return null;
@@ -36943,12 +39827,12 @@ ${content}`;
        */
       async readTechFiles() {
         try {
-          const files = await fs5.readdir(this.techDir);
+          const files = await fs9.readdir(this.techDir);
           const techFiles = [];
           for (const file of files) {
             if (!file.endsWith(".md")) continue;
-            const filePath = path6.join(this.techDir, file);
-            const content = await fs5.readFile(filePath, "utf-8");
+            const filePath = path10.join(this.techDir, file);
+            const content = await fs9.readFile(filePath, "utf-8");
             const parsed = this.parseFrontmatter(content);
             if (parsed) {
               techFiles.push({
@@ -36968,7 +39852,7 @@ ${content}`;
       async getTechForFile(filePath) {
         const techFiles = await this.readTechFiles();
         const matches = [];
-        const basename2 = path6.basename(filePath);
+        const basename2 = path10.basename(filePath);
         for (const techFile of techFiles) {
           for (const pattern of techFile.frontmatter.filePatterns) {
             if (minimatch(filePath, pattern) || minimatch(basename2, pattern) || minimatch(filePath, `**/${pattern}`) || filePath.includes(pattern.replace(/\/$/, ""))) {
@@ -37013,16 +39897,16 @@ ${content}`;
           ...config2,
           lastSynced: (/* @__PURE__ */ new Date()).toISOString()
         };
-        const filePath = path6.join(this.techDir, "config.json");
-        await fs5.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
+        const filePath = path10.join(this.techDir, "config.json");
+        await fs9.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
       }
       /**
        * Read config from .tiny-brain/tech/config.json
        */
       async readConfig() {
-        const filePath = path6.join(this.techDir, "config.json");
+        const filePath = path10.join(this.techDir, "config.json");
         try {
-          const content = await fs5.readFile(filePath, "utf-8");
+          const content = await fs9.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return { useAgents: false };
@@ -37036,12 +39920,12 @@ ${content}`;
        * - Sub-agent invocation context
        */
       async installTechAgents() {
-        await fs5.mkdir(this.agentsDir, { recursive: true });
+        await fs9.mkdir(this.agentsDir, { recursive: true });
         const techFiles = await this.readTechFiles();
         for (const techFile of techFiles) {
           const name = techFile.frontmatter.name;
           const agentFileName = `tech-${name}.md`;
-          const agentPath = path6.join(this.agentsDir, agentFileName);
+          const agentPath = path10.join(this.agentsDir, agentFileName);
           const description = techFile.frontmatter.description || `${name} development specialist. Use for ${techFile.frontmatter.domain} tasks involving ${name}.`;
           const agentContent = `---
 name: tech-${name}
@@ -37057,7 +39941,7 @@ You are a specialized ${name} development agent invoked by the developer agent. 
 ## Tech Expertise
 
 ${techFile.content}`;
-          await fs5.writeFile(agentPath, agentContent, "utf-8");
+          await fs9.writeFile(agentPath, agentContent, "utf-8");
         }
       }
       /**
@@ -37065,10 +39949,10 @@ ${techFile.content}`;
        */
       async removeTechAgents() {
         try {
-          const files = await fs5.readdir(this.agentsDir);
+          const files = await fs9.readdir(this.agentsDir);
           for (const file of files) {
             if (file.startsWith("tech-") && file.endsWith(".md")) {
-              await fs5.unlink(path6.join(this.agentsDir, file));
+              await fs9.unlink(path10.join(this.agentsDir, file));
             }
           }
         } catch {
@@ -37163,8 +40047,8 @@ ${techFile.content}`;
 });
 
 // packages/tiny-brain-core/src/analyser/detectors/base-detector.ts
-import * as fs6 from "fs/promises";
-import * as path7 from "path";
+import * as fs10 from "fs/promises";
+import * as path11 from "path";
 var BaseDetector;
 var init_base_detector = __esm({
   "packages/tiny-brain-core/src/analyser/detectors/base-detector.ts"() {
@@ -37175,7 +40059,7 @@ var init_base_detector = __esm({
       }
       async fileExists(filePath) {
         try {
-          await fs6.access(path7.join(this.dirPath, filePath));
+          await fs10.access(path11.join(this.dirPath, filePath));
           return true;
         } catch {
           return false;
@@ -37183,7 +40067,7 @@ var init_base_detector = __esm({
       }
       async readFile(filePath) {
         try {
-          return await fs6.readFile(path7.join(this.dirPath, filePath), "utf8");
+          return await fs10.readFile(path11.join(this.dirPath, filePath), "utf8");
         } catch {
           return "";
         }
@@ -37198,7 +40082,7 @@ var init_base_detector = __esm({
       }
       async findFiles(pattern) {
         try {
-          const files = await fs6.readdir(this.dirPath);
+          const files = await fs10.readdir(this.dirPath);
           return files.filter((file) => {
             if (pattern.includes("*")) {
               const regex = new RegExp(pattern.replace("*", ".*"));
@@ -37444,20 +40328,20 @@ var init_javascript_detector = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/utils.ts
-import * as path8 from "path";
-import * as fs7 from "fs/promises";
+import * as path12 from "path";
+import * as fs11 from "fs/promises";
 async function findProjectRoot(startPath) {
-  let currentPath = path8.resolve(startPath);
+  let currentPath = path12.resolve(startPath);
   while (currentPath !== "/") {
     try {
-      const gitPath = path8.join(currentPath, ".git");
-      const stats = await fs7.stat(gitPath);
+      const gitPath = path12.join(currentPath, ".git");
+      const stats = await fs11.stat(gitPath);
       if (stats.isDirectory()) {
         return currentPath;
       }
     } catch {
     }
-    currentPath = path8.dirname(currentPath);
+    currentPath = path12.dirname(currentPath);
   }
   return startPath;
 }
@@ -37631,8 +40515,8 @@ var init_script_analyzer = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/index.ts
-import * as fs8 from "fs/promises";
-import * as path9 from "path";
+import * as fs12 from "fs/promises";
+import * as path13 from "path";
 async function analyseRepository(rootPath = process.cwd(), options) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const languages = /* @__PURE__ */ new Set();
@@ -37677,7 +40561,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     if (stack.bundling) buildTools.add(stack.bundling);
   }
   function detectFileType(fileName) {
-    const ext2 = path9.extname(fileName).toLowerCase();
+    const ext2 = path13.extname(fileName).toLowerCase();
     if ([".js", ".mjs", ".cjs", ".jsx"].includes(ext2)) {
       languages.add("javascript");
       languageFileCounts.javascript = (languageFileCounts.javascript || 0) + 1;
@@ -37715,7 +40599,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     for (const pattern of TEST_PATTERNS) {
       if (fileName.includes(pattern)) {
         testFiles.push(fileName);
-        const ext2 = path9.extname(fileName);
+        const ext2 = path13.extname(fileName);
         if (ext2) {
           testPatterns.add(pattern + ext2.substring(1));
         }
@@ -37726,10 +40610,10 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   async function detectOtherLanguages(dirPath, files) {
     try {
       for (const file of files) {
-        const filePath = path9.join(dirPath, file);
+        const filePath = path13.join(dirPath, file);
         if (file === "requirements.txt" || file === "setup.py" || file === "pyproject.toml") {
           languages.add("python");
-          const content = await fs8.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs12.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("django")) frameworks.add("django");
           if (content.includes("flask")) frameworks.add("flask");
           if (content.includes("fastapi")) frameworks.add("fastapi");
@@ -37738,14 +40622,14 @@ async function analyseRepository(rootPath = process.cwd(), options) {
         }
         if (file === "go.mod" || file === "go.sum") {
           languages.add("go");
-          const content = await fs8.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs12.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("testify")) testingTools.add("testify");
           if (content.includes("gin-gonic")) frameworks.add("gin");
           if (content.includes("echo")) frameworks.add("echo");
         }
         if (file === "Gemfile" || file === "Rakefile") {
           languages.add("ruby");
-          const content = await fs8.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs12.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("rails")) frameworks.add("rails");
           if (content.includes("sinatra")) frameworks.add("sinatra");
           if (content.includes("rspec")) testingTools.add("rspec");
@@ -37772,7 +40656,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   });
   const documentationLocations = [];
   let documentationPattern;
-  const rootFiles = await fs8.readdir(rootPath).catch(() => []);
+  const rootFiles = await fs12.readdir(rootPath).catch(() => []);
   const hasRootReadme = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "readme.md");
   const hasDocsFolder = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "docs");
   if (hasRootReadme) {
@@ -37811,7 +40695,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     return;
   }
   try {
-    const entries = await fs8.readdir(dir, { withFileTypes: true });
+    const entries = await fs12.readdir(dir, { withFileTypes: true });
     const files = [];
     const dirs = [];
     for (const entry of entries) {
@@ -37823,7 +40707,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     }
     await callback(dir, files);
     for (const subdir of dirs) {
-      const fullPath = path9.join(dir, subdir);
+      const fullPath = path13.join(dir, subdir);
       await walkDirectory(fullPath, callback, options, currentDepth + 1);
     }
   } catch {
@@ -38101,8 +40985,8 @@ var init_library_client = __esm({
       /**
        * Get agent by path (new agent system)
        */
-      async getAgentByPath(token, path25) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path25}`, {
+      async getAgentByPath(token, path30) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path30}`, {
           method: "GET",
           headers: {
             "Accept": "application/json",
@@ -38118,8 +41002,8 @@ var init_library_client = __esm({
       /**
        * Store agent at specified path (new agent system)
        */
-      async storeAgent(token, path25, agent) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path25}`, {
+      async storeAgent(token, path30, agent) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path30}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -38134,8 +41018,8 @@ var init_library_client = __esm({
       /**
        * Archive agent at specified path (new agent system)
        */
-      async archiveAgent(token, path25) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path25}`, {
+      async archiveAgent(token, path30) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path30}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -38394,8 +41278,8 @@ var init_analysis_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/config-health-service.ts
-import { promises as fs9 } from "fs";
-import path10 from "path";
+import { promises as fs13 } from "fs";
+import path14 from "path";
 var HOOK_SIGNATURE, REQUIRED_PERMISSIONS, CONTEXT_START_MARKER, CONTEXT_END_MARKER, ConfigHealthService;
 var init_config_health_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/config-health-service.ts"() {
@@ -38415,20 +41299,20 @@ var init_config_health_service = __esm({
       settingsPath;
       constructor(repoPath) {
         this.repoPath = repoPath;
-        this.gitDir = path10.join(repoPath, ".git");
-        this.hooksDir = path10.join(this.gitDir, "hooks");
-        this.claudeMdPath = path10.join(repoPath, "CLAUDE.md");
-        this.settingsPath = path10.join(repoPath, ".claude", "settings.json");
+        this.gitDir = path14.join(repoPath, ".git");
+        this.hooksDir = path14.join(this.gitDir, "hooks");
+        this.claudeMdPath = path14.join(repoPath, "CLAUDE.md");
+        this.settingsPath = path14.join(repoPath, ".claude", "settings.json");
       }
       /**
        * Check status of a single git hook
        */
       async checkHook(hookName) {
-        const hookPath = path10.join(this.hooksDir, hookName);
+        const hookPath = path14.join(this.hooksDir, hookName);
         try {
-          const stats = await fs9.stat(hookPath);
+          const stats = await fs13.stat(hookPath);
           const isExecutable = (stats.mode & 64) !== 0;
-          const content = await fs9.readFile(hookPath, "utf-8");
+          const content = await fs13.readFile(hookPath, "utf-8");
           const isSigned = content.includes(HOOK_SIGNATURE);
           return {
             name: hookName,
@@ -38470,7 +41354,7 @@ var init_config_health_service = __esm({
        */
       async checkContextBlock() {
         try {
-          const content = await fs9.readFile(this.claudeMdPath, "utf-8");
+          const content = await fs13.readFile(this.claudeMdPath, "utf-8");
           const hasStartMarker = content.includes(CONTEXT_START_MARKER);
           const hasEndMarker = content.includes(CONTEXT_END_MARKER);
           const present = hasStartMarker && hasEndMarker;
@@ -38521,7 +41405,7 @@ var init_config_health_service = __esm({
        */
       async checkSkillPermissions() {
         try {
-          const content = await fs9.readFile(this.settingsPath, "utf-8");
+          const content = await fs13.readFile(this.settingsPath, "utf-8");
           const settings = JSON.parse(content);
           const allowedPermissions = settings.permissions?.allow || [];
           const missing = REQUIRED_PERMISSIONS.filter(
@@ -38594,7 +41478,7 @@ var init_config_health_service = __esm({
        */
       async directoryExists(relativePath) {
         try {
-          const stats = await fs9.stat(path10.join(this.repoPath, relativePath));
+          const stats = await fs13.stat(path14.join(this.repoPath, relativePath));
           return stats.isDirectory();
         } catch {
           return false;
@@ -38605,8 +41489,8 @@ var init_config_health_service = __esm({
        */
       async getConfigFlags() {
         try {
-          const configPath = path10.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs9.readFile(configPath, "utf-8");
+          const configPath = path14.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs13.readFile(configPath, "utf-8");
           const config2 = JSON.parse(content);
           return {
             enableSDD: config2.repo?.enableSDD ?? true,
@@ -38696,8 +41580,8 @@ var init_repo_config = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
-import * as fs10 from "fs/promises";
-import * as path11 from "path";
+import * as fs14 from "fs/promises";
+import * as path15 from "path";
 var SkillLoader;
 var init_skill_loader = __esm({
   "packages/tiny-brain-core/src/services/api/skill-loader.ts"() {
@@ -38714,9 +41598,9 @@ var init_skill_loader = __esm({
         if (cached2) {
           return cached2;
         }
-        const skillPath = path11.join(this.skillsPath, skillName);
-        const skillFile = path11.join(skillPath, "SKILL.md");
-        const content = await fs10.readFile(skillFile, "utf-8");
+        const skillPath = path15.join(this.skillsPath, skillName);
+        const skillFile = path15.join(skillPath, "SKILL.md");
+        const content = await fs14.readFile(skillFile, "utf-8");
         const { metadata, body } = this.parseFrontmatter(content);
         const templates = await this.loadTemplates(skillPath);
         const skill = {
@@ -38756,14 +41640,14 @@ var init_skill_loader = __esm({
         return { metadata, body };
       }
       async loadTemplates(skillPath) {
-        const templatesPath = path11.join(skillPath, "templates");
+        const templatesPath = path15.join(skillPath, "templates");
         const templates = {};
         try {
-          const entries = await fs10.readdir(templatesPath, { withFileTypes: true });
+          const entries = await fs14.readdir(templatesPath, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isFile() && entry.name.endsWith(".md")) {
-              const templatePath = path11.join(templatesPath, entry.name);
-              const content = await fs10.readFile(templatePath, "utf-8");
+              const templatePath = path15.join(templatesPath, entry.name);
+              const content = await fs14.readFile(templatePath, "utf-8");
               templates[entry.name] = content;
             }
           }
@@ -40207,17 +43091,17 @@ var init_headers = __esm({
 function encodeURIPath(str2) {
   return str2.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path12;
+var EMPTY, createPathTagFunction, path16;
 var init_path = __esm({
   "node_modules/@anthropic-ai/sdk/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path25(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path30(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path26 = statics.reduce((previousValue, currentValue, index) => {
+      const path31 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -40234,7 +43118,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path26.split(/[?#]/, 1)[0];
+      const pathOnly = path31.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match3;
       while ((match3 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -40255,12 +43139,12 @@ var init_path = __esm({
         }, "");
         throw new AnthropicError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e) => e.error).join("\n")}
-${path26}
+${path31}
 ${underline}`);
       }
-      return path26;
+      return path31;
     };
-    path12 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path16 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
@@ -40308,7 +43192,7 @@ var init_files = __esm({
        */
       delete(fileID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path12`/v1/files/${fileID}`, {
+        return this._client.delete(path16`/v1/files/${fileID}`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
@@ -40331,7 +43215,7 @@ var init_files = __esm({
        */
       download(fileID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path12`/v1/files/${fileID}/content`, {
+        return this._client.get(path16`/v1/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([
             {
@@ -40354,7 +43238,7 @@ var init_files = __esm({
        */
       retrieveMetadata(fileID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path12`/v1/files/${fileID}`, {
+        return this._client.get(path16`/v1/files/${fileID}`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
@@ -40411,7 +43295,7 @@ var init_models = __esm({
        */
       retrieve(modelID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path12`/v1/models/${modelID}?beta=true`, {
+        return this._client.get(path16`/v1/models/${modelID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
@@ -41832,7 +44716,7 @@ var init_batches = __esm({
        */
       retrieve(messageBatchID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path12`/v1/messages/batches/${messageBatchID}?beta=true`, {
+        return this._client.get(path16`/v1/messages/batches/${messageBatchID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
@@ -41885,7 +44769,7 @@ var init_batches = __esm({
        */
       delete(messageBatchID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path12`/v1/messages/batches/${messageBatchID}?beta=true`, {
+        return this._client.delete(path16`/v1/messages/batches/${messageBatchID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
@@ -41917,7 +44801,7 @@ var init_batches = __esm({
        */
       cancel(messageBatchID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path12`/v1/messages/batches/${messageBatchID}/cancel?beta=true`, {
+        return this._client.post(path16`/v1/messages/batches/${messageBatchID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
@@ -42111,7 +44995,7 @@ var init_versions = __esm({
        */
       create(skillID, params = {}, options) {
         const { betas, ...body } = params ?? {};
-        return this._client.post(path12`/v1/skills/${skillID}/versions?beta=true`, multipartFormRequestOptions({
+        return this._client.post(path16`/v1/skills/${skillID}/versions?beta=true`, multipartFormRequestOptions({
           body,
           ...options,
           headers: buildHeaders([
@@ -42133,7 +45017,7 @@ var init_versions = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id, betas } = params;
-        return this._client.get(path12`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
+        return this._client.get(path16`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -42156,7 +45040,7 @@ var init_versions = __esm({
        */
       list(skillID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path12`/v1/skills/${skillID}/versions?beta=true`, PageCursor, {
+        return this._client.getAPIList(path16`/v1/skills/${skillID}/versions?beta=true`, PageCursor, {
           query,
           ...options,
           headers: buildHeaders([
@@ -42178,7 +45062,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id, betas } = params;
-        return this._client.delete(path12`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
+        return this._client.delete(path16`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -42235,7 +45119,7 @@ var init_skills = __esm({
        */
       retrieve(skillID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path12`/v1/skills/${skillID}?beta=true`, {
+        return this._client.get(path16`/v1/skills/${skillID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -42275,7 +45159,7 @@ var init_skills = __esm({
        */
       delete(skillID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path12`/v1/skills/${skillID}?beta=true`, {
+        return this._client.delete(path16`/v1/skills/${skillID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -42969,7 +45853,7 @@ var init_batches2 = __esm({
        * ```
        */
       retrieve(messageBatchID, options) {
-        return this._client.get(path12`/v1/messages/batches/${messageBatchID}`, options);
+        return this._client.get(path16`/v1/messages/batches/${messageBatchID}`, options);
       }
       /**
        * List all Message Batches within a Workspace. Most recently created batches are
@@ -43005,7 +45889,7 @@ var init_batches2 = __esm({
        * ```
        */
       delete(messageBatchID, options) {
-        return this._client.delete(path12`/v1/messages/batches/${messageBatchID}`, options);
+        return this._client.delete(path16`/v1/messages/batches/${messageBatchID}`, options);
       }
       /**
        * Batches may be canceled any time before processing ends. Once cancellation is
@@ -43029,7 +45913,7 @@ var init_batches2 = __esm({
        * ```
        */
       cancel(messageBatchID, options) {
-        return this._client.post(path12`/v1/messages/batches/${messageBatchID}/cancel`, options);
+        return this._client.post(path16`/v1/messages/batches/${messageBatchID}/cancel`, options);
       }
       /**
        * Streams the results of a Message Batch as a `.jsonl` file.
@@ -43156,7 +46040,7 @@ var init_models2 = __esm({
        */
       retrieve(modelID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path12`/v1/models/${modelID}`, {
+        return this._client.get(path16`/v1/models/${modelID}`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
@@ -43360,9 +46244,9 @@ var init_client = __esm({
       makeStatusError(status, error2, message, headers) {
         return APIError.generate(status, error2, message, headers);
       }
-      buildURL(path25, query, defaultBaseURL) {
+      buildURL(path30, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _BaseAnthropic_instances, "m", _BaseAnthropic_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path25) ? new URL(path25) : new URL(baseURL + (baseURL.endsWith("/") && path25.startsWith("/") ? path25.slice(1) : path25));
+        const url = isAbsoluteURL(path30) ? new URL(path30) : new URL(baseURL + (baseURL.endsWith("/") && path30.startsWith("/") ? path30.slice(1) : path30));
         const defaultQuery = this.defaultQuery();
         if (!isEmptyObj(defaultQuery)) {
           query = { ...defaultQuery, ...query };
@@ -43393,24 +46277,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path25, opts) {
-        return this.methodRequest("get", path25, opts);
+      get(path30, opts) {
+        return this.methodRequest("get", path30, opts);
       }
-      post(path25, opts) {
-        return this.methodRequest("post", path25, opts);
+      post(path30, opts) {
+        return this.methodRequest("post", path30, opts);
       }
-      patch(path25, opts) {
-        return this.methodRequest("patch", path25, opts);
+      patch(path30, opts) {
+        return this.methodRequest("patch", path30, opts);
       }
-      put(path25, opts) {
-        return this.methodRequest("put", path25, opts);
+      put(path30, opts) {
+        return this.methodRequest("put", path30, opts);
       }
-      delete(path25, opts) {
-        return this.methodRequest("delete", path25, opts);
+      delete(path30, opts) {
+        return this.methodRequest("delete", path30, opts);
       }
-      methodRequest(method, path25, opts) {
+      methodRequest(method, path30, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path25, ...opts2 };
+          return { method, path: path30, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -43514,8 +46398,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path25, Page2, opts) {
-        return this.requestAPIList(Page2, { method: "get", path: path25, ...opts });
+      getAPIList(path30, Page2, opts) {
+        return this.requestAPIList(Page2, { method: "get", path: path30, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -43602,8 +46486,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path25, query, defaultBaseURL } = options;
-        const url = this.buildURL(path25, query, defaultBaseURL);
+        const { method, path: path30, query, defaultBaseURL } = options;
+        const url = this.buildURL(path30, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -43911,9 +46795,9 @@ var init_claude_client = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/tool-executor.ts
-import * as fs11 from "fs/promises";
-import * as path13 from "path";
-import { exec as exec3 } from "child_process";
+import * as fs15 from "fs/promises";
+import * as path17 from "path";
+import { exec as exec4 } from "child_process";
 var ToolExecutor;
 var init_tool_executor = __esm({
   "packages/tiny-brain-core/src/services/api/tool-executor.ts"() {
@@ -43952,7 +46836,7 @@ var init_tool_executor = __esm({
         }
       }
       validatePath(inputPath) {
-        const resolvedPath = path13.resolve(this.repositoryRoot, inputPath);
+        const resolvedPath = path17.resolve(this.repositoryRoot, inputPath);
         if (!resolvedPath.startsWith(this.repositoryRoot)) {
           return {
             valid: false,
@@ -43968,7 +46852,7 @@ var init_tool_executor = __esm({
           return { success: false, error: validation.error };
         }
         try {
-          const content = await fs11.readFile(validation.resolvedPath, "utf-8");
+          const content = await fs15.readFile(validation.resolvedPath, "utf-8");
           return { success: true, result: content };
         } catch (error2) {
           return {
@@ -43983,9 +46867,9 @@ var init_tool_executor = __esm({
           return { success: false, error: validation.error };
         }
         try {
-          const dir = path13.dirname(validation.resolvedPath);
-          await fs11.mkdir(dir, { recursive: true });
-          await fs11.writeFile(validation.resolvedPath, input.content, "utf-8");
+          const dir = path17.dirname(validation.resolvedPath);
+          await fs15.mkdir(dir, { recursive: true });
+          await fs15.writeFile(validation.resolvedPath, input.content, "utf-8");
           return { success: true, result: "File written successfully" };
         } catch (error2) {
           return {
@@ -44013,7 +46897,7 @@ var init_tool_executor = __esm({
         }
       }
       async listDirectoryRecursive(dirPath, recursive, prefix = "") {
-        const entries = await fs11.readdir(dirPath, { withFileTypes: true });
+        const entries = await fs15.readdir(dirPath, { withFileTypes: true });
         const result = [];
         for (const entry of entries) {
           const entryPath = prefix ? `${prefix}/${entry.name}` : entry.name;
@@ -44021,7 +46905,7 @@ var init_tool_executor = __esm({
           result.push({ name: entryPath, type: type2 });
           if (recursive && entry.isDirectory()) {
             const subEntries = await this.listDirectoryRecursive(
-              path13.join(dirPath, entry.name),
+              path17.join(dirPath, entry.name),
               recursive,
               entryPath
             );
@@ -44033,7 +46917,7 @@ var init_tool_executor = __esm({
       async executeBash(input) {
         const timeout = input.timeout ?? this.defaultTimeout;
         return new Promise((resolve3) => {
-          exec3(
+          exec4(
             input.command,
             {
               cwd: this.repositoryRoot,
@@ -45033,6 +47917,36 @@ var init_parallel_executor = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/utils/git.ts
+import { exec as exec5, execSync } from "child_process";
+import { promisify as promisify4 } from "util";
+async function detectRepositoryRoot() {
+  try {
+    const { stdout } = await execAsync4("git rev-parse --show-toplevel");
+    return stdout.trim();
+  } catch {
+    return void 0;
+  }
+}
+function detectRepositoryRootSync() {
+  try {
+    const result = execSync("git rev-parse --show-toplevel", {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    return result.trim();
+  } catch {
+    return void 0;
+  }
+}
+var execAsync4;
+var init_git = __esm({
+  "packages/tiny-brain-core/src/utils/git.ts"() {
+    "use strict";
+    execAsync4 = promisify4(exec5);
+  }
+});
+
 // packages/tiny-brain-core/src/utils/index.ts
 var init_utils2 = __esm({
   "packages/tiny-brain-core/src/utils/index.ts"() {
@@ -45045,6 +47959,7 @@ var init_utils2 = __esm({
     init_array();
     init_object();
     init_parallel_executor();
+    init_git();
     init_commit_parser();
     init_adr_pattern_detector();
     init_adr_suggestion_generator();
@@ -45084,31 +47999,68 @@ var src_exports = {};
 __export(src_exports, {
   ADRService: () => ADRService,
   AnalysisService: () => AnalysisService,
+  AnalyzerDefinitionSchema: () => AnalyzerDefinitionSchema,
+  AnalyzerDetectionService: () => AnalyzerDetectionService,
+  AnalyzerExecutionResultSchema: () => AnalyzerExecutionResultSchema,
+  AnalyzerExecutionStatus: () => AnalyzerExecutionStatus,
+  AnalyzerExecutorService: () => AnalyzerExecutorService,
+  AnalyzerOutputFormat: () => AnalyzerOutputFormat,
+  AnalyzerResultsSchema: () => AnalyzerResultsSchema,
+  AnalyzerRunSummarySchema: () => AnalyzerRunSummarySchema,
+  AssemblyResultSchema: () => AssemblyResultSchema,
+  AssemblyService: () => AssemblyService,
   BaseDetector: () => BaseDetector,
   BaseService: () => BaseService,
   CATEGORY_WEIGHTS: () => CATEGORY_WEIGHTS,
+  CategoryInvestigationSchema: () => CategoryInvestigationSchema,
+  CategoryProgressSchema: () => CategoryProgressSchema,
+  CategoryProgressSummarySchema: () => CategoryProgressSummarySchema,
+  CategoryScoreSchema: () => CategoryScoreSchema,
   ChatAnalysisService: () => ChatAnalysisService,
+  CheckDefinitionSchema: () => CheckDefinitionSchema,
   ClaudeClient: () => ClaudeClient,
   ConfigHealthService: () => ConfigHealthService,
   ConfigService: () => ConfigService,
+  DEFAULT_EFFORT_HOURS: () => DEFAULT_EFFORT_HOURS,
   DEFAULT_PREFERENCES: () => DEFAULT_PREFERENCES,
   DefaultModuleRegistry: () => DefaultModuleRegistry,
+  DetectedAnalyzerSchema: () => DetectedAnalyzerSchema,
+  EffortLevel: () => EffortLevel,
+  FileInvestigationResultSchema: () => FileInvestigationResultSchema,
+  FileInvestigationSchema: () => FileInvestigationSchema,
+  FileListingService: () => FileListingService,
+  FileTaskProgressSchema: () => FileTaskProgressSchema,
+  FingerprintMatchSchema: () => FingerprintMatchSchema,
   FixService: () => FixService,
   GRADE_THRESHOLDS: () => GRADE_THRESHOLDS,
   HooksService: () => HooksService,
+  ImpactLevel: () => ImpactLevel,
+  ImprovementInitiativeSchema: () => ImprovementInitiativeSchema,
+  ImprovementPhaseSchema: () => ImprovementPhaseSchema,
+  InvestigationChecklistSchema: () => InvestigationChecklistSchema,
+  InvestigationCoverageSchema: () => InvestigationCoverageSchema,
+  InvestigationFileStatus: () => InvestigationFileStatus,
+  InvestigationFindingSchema: () => InvestigationFindingSchema,
+  InvestigationOrchestratorService: () => InvestigationOrchestratorService,
+  InvestigationProgressSummarySchema: () => InvestigationProgressSummarySchema,
+  InvestigationSummarySchema: () => InvestigationSummarySchema,
+  IssueFingerprintSchema: () => IssueFingerprintSchema,
   IssueSeverity: () => IssueSeverity,
   JavaScriptDetector: () => JavaScriptDetector,
   LOG_LEVEL_PRIORITY: () => LOG_LEVEL_PRIORITY,
   LibraryClient: () => LibraryClient,
+  MatchResultSchema: () => MatchResultSchema,
   MemoryService: () => MemoryService,
   MessageDomain: () => MessageDomain,
   MessageIntent: () => MessageIntent,
+  PROGRESS_SCHEMA_VERSION: () => PROGRESS_SCHEMA_VERSION,
   PersonaLearningService: () => PersonaLearningService,
   PersonaService: () => PersonaService,
   PlanningService: () => PlanningService,
   PluginDiscoveryService: () => PluginDiscoveryService,
   QualityCategory: () => QualityCategory,
   QualityGrade: () => QualityGrade,
+  QualityImprovementPlanSchema: () => QualityImprovementPlanSchema,
   QualityIssueSchema: () => QualityIssueSchema,
   QualityRunResultSchema: () => QualityRunResultSchema,
   QualityRunSummarySchema: () => QualityRunSummarySchema,
@@ -45117,12 +48069,18 @@ __export(src_exports, {
   ResponseValidationService: () => ResponseValidationService,
   Result: () => ResultHelpers,
   RulesService: () => RulesService,
+  RunComparisonSchema: () => RunComparisonSchema,
+  SEVERITY_DEFAULT_HOURS: () => SEVERITY_DEFAULT_HOURS,
+  SEVERITY_MULTIPLIERS: () => SEVERITY_MULTIPLIERS,
   SaveQualityRunInputSchema: () => SaveQualityRunInputSchema,
   ScriptAnalyzer: () => ScriptAnalyzer,
   SkillLoader: () => SkillLoader,
+  SourceBreakdownSchema: () => SourceBreakdownSchema,
   StrategyService: () => StrategyService,
+  StructuredRecommendationSchema: () => StructuredRecommendationSchema,
   TEST_PLAN_EMOJIS: () => TEST_PLAN_EMOJIS,
   TechContextService: () => TechContextService,
+  TechnicalDebtSummarySchema: () => TechnicalDebtSummarySchema,
   ThinkingService: () => ThinkingService,
   ToolExecutor: () => ToolExecutor,
   analyseForCLI: () => analyseForCLI,
@@ -45159,6 +48117,8 @@ __export(src_exports, {
   deepClone: () => deepClone,
   deepMerge: () => deepMerge,
   detectADRPatterns: () => detectADRPatterns,
+  detectRepositoryRoot: () => detectRepositoryRoot,
+  detectRepositoryRootSync: () => detectRepositoryRootSync,
   detectTechStackChanges: () => detectTechStackChanges,
   evaluateStrategy: () => evaluateStrategy,
   executeParallel: () => executeParallel,
@@ -45197,6 +48157,7 @@ __export(src_exports, {
   generateMarkdown: () => generateMarkdown,
   generatePersonaMarkdown: () => generatePersonaMarkdown,
   generateResponseStrategy: () => generateResponseStrategy,
+  generateRunId: () => generateRunId,
   generateStatusReport: () => generateStatusReport,
   generateThinkingReport: () => generateThinkingReport,
   getBootstrapInfo: () => getBootstrapInfo,
@@ -45228,6 +48189,7 @@ __export(src_exports, {
   last: () => last,
   logServiceConfig: () => logServiceConfig,
   mergePersonaBlocks: () => mergePersonaBlocks,
+  mergeResults: () => mergeResults,
   mergeSimilarFacts: () => mergeSimilarFacts,
   mergeUpdates: () => mergeUpdates,
   omit: () => omit2,
@@ -45237,10 +48199,12 @@ __export(src_exports, {
   parseProfile: () => parseProfile,
   parseTestPlan: () => parseTestPlan,
   parseTestPlanTable: () => parseTestPlanTable,
+  pathToRunId: () => pathToRunId,
   pick: () => pick2,
   planContentStrategy: () => planContentStrategy,
   planResponseStructure: () => planResponseStructure,
   processThought: () => processThought,
+  runIdToPath: () => runIdToPath,
   scoreMemoryRelevance: () => scoreMemoryRelevance,
   selectEnhancementTechniques: () => selectEnhancementTechniques,
   serializeTestPlan: () => serializeTestPlan,
@@ -47544,8 +50508,8 @@ var require_package = __commonJS({
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs22 = __require("fs");
-    var path25 = __require("path");
+    var fs27 = __require("fs");
+    var path30 = __require("path");
     var os4 = __require("os");
     var crypto6 = __require("crypto");
     var packageJson = require_package();
@@ -47683,7 +50647,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs22.existsSync(filepath)) {
+            if (fs27.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -47691,15 +50655,15 @@ var require_main = __commonJS({
           possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
         }
       } else {
-        possibleVaultPath = path25.resolve(process.cwd(), ".env.vault");
+        possibleVaultPath = path30.resolve(process.cwd(), ".env.vault");
       }
-      if (fs22.existsSync(possibleVaultPath)) {
+      if (fs27.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path25.join(os4.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path30.join(os4.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -47716,7 +50680,7 @@ var require_main = __commonJS({
       return { parsed };
     }
     function configDotenv(options) {
-      const dotenvPath = path25.resolve(process.cwd(), ".env");
+      const dotenvPath = path30.resolve(process.cwd(), ".env");
       let encoding = "utf8";
       let processEnv = process.env;
       if (options && options.processEnv != null) {
@@ -47744,13 +50708,13 @@ var require_main = __commonJS({
       }
       let lastError;
       const parsedAll = {};
-      for (const path26 of optionPaths) {
+      for (const path31 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs22.readFileSync(path26, { encoding }));
+          const parsed = DotenvModule.parse(fs27.readFileSync(path31, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
-            _debug(`Failed to load ${path26} ${e.message}`);
+            _debug(`Failed to load ${path31} ${e.message}`);
           }
           lastError = e;
         }
@@ -47763,7 +50727,7 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative2 = path25.relative(process.cwd(), filePath);
+            const relative2 = path30.relative(process.cwd(), filePath);
             shortPaths.push(relative2);
           } catch (e) {
             if (debug) {
@@ -48066,10 +51030,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path25) {
-  if (!path25)
+function getElementAtPath(obj, path30) {
+  if (!path30)
     return obj;
-  return path25.reduce((acc, key) => acc?.[key], obj);
+  return path30.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -48389,11 +51353,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path25, issues) {
+function prefixIssues(path30, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path25);
+    iss.path.unshift(path30);
     return iss;
   });
 }
@@ -53198,15 +56162,15 @@ var StdioServerTransport = class {
 };
 
 // packages/tiny-brain-mcp/src/index.ts
-import { readFileSync as readFileSync5, appendFileSync, existsSync as existsSync13, mkdirSync as mkdirSync3 } from "fs";
+import { readFileSync as readFileSync5, appendFileSync, existsSync as existsSync12, mkdirSync as mkdirSync3 } from "fs";
 import { fileURLToPath as fileURLToPath9 } from "url";
-import { dirname as dirname13, join as join29 } from "path";
+import { dirname as dirname13, join as join28 } from "path";
 import { homedir as homedir5 } from "os";
 
 // packages/tiny-brain-mcp/src/core/mcp-server.ts
-import * as path24 from "path";
-import { existsSync as existsSync12, cpSync, readdirSync as readdirSync3, readFileSync as readFileSync4, writeFileSync, mkdirSync as mkdirSync2 } from "fs";
-import { execSync as execSync3 } from "child_process";
+import * as path29 from "path";
+import { existsSync as existsSync11, cpSync, readdirSync as readdirSync3, readFileSync as readFileSync4, writeFileSync, mkdirSync as mkdirSync2 } from "fs";
+import { execSync as execSync4 } from "child_process";
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s) {
@@ -54969,8 +57933,8 @@ var AuthTokenService = class extends BaseService {
 };
 
 // packages/tiny-brain-mcp/src/services/credential-storage.service.ts
-import * as fs12 from "fs/promises";
-import * as path14 from "path";
+import * as fs16 from "fs/promises";
+import * as path18 from "path";
 import * as os from "os";
 import * as crypto3 from "crypto";
 var CredentialStorageService = class {
@@ -54980,7 +57944,7 @@ var CredentialStorageService = class {
   keyLength = 32;
   constructor() {
     const homeDir = os.homedir();
-    this.credentialsPath = path14.join(homeDir, ".tiny-brain", "config", "credentials.json");
+    this.credentialsPath = path18.join(homeDir, ".tiny-brain", "config", "credentials.json");
   }
   async setCredential(key, value) {
     const validKeys = ["clientId", "clientSecret", "llmProvider", "llmApiKey"];
@@ -55071,7 +58035,7 @@ var CredentialStorageService = class {
   }
   async clearCredentials() {
     try {
-      await fs12.unlink(this.credentialsPath);
+      await fs16.unlink(this.credentialsPath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -55134,7 +58098,7 @@ var CredentialStorageService = class {
   }
   async loadStoredCredentials() {
     try {
-      const data = await fs12.readFile(this.credentialsPath, "utf8");
+      const data = await fs16.readFile(this.credentialsPath, "utf8");
       return JSON.parse(data);
     } catch (error2) {
       if (error2.code === "ENOENT") {
@@ -55144,14 +58108,14 @@ var CredentialStorageService = class {
     }
   }
   async saveStoredCredentials(credentials) {
-    const dir = path14.dirname(this.credentialsPath);
-    await fs12.mkdir(dir, { recursive: true });
-    await fs12.writeFile(
+    const dir = path18.dirname(this.credentialsPath);
+    await fs16.mkdir(dir, { recursive: true });
+    await fs16.writeFile(
       this.credentialsPath,
       JSON.stringify(credentials, null, 2),
       "utf8"
     );
-    await fs12.chmod(this.credentialsPath, 384);
+    await fs16.chmod(this.credentialsPath, 384);
   }
 };
 
@@ -55412,7 +58376,7 @@ var SystemPersonaService = class extends BaseService {
 };
 
 // packages/tiny-brain-mcp/src/storage/local-filesystem-adapter.ts
-import { promises as fs13 } from "fs";
+import { promises as fs17 } from "fs";
 import { dirname as dirname4, join as join13 } from "path";
 
 // packages/tiny-brain-mcp/src/storage/storage-path-builder.ts
@@ -55434,8 +58398,8 @@ var LocalStoragePathBuilder = class {
   buildUserBasePath(_userId) {
     return this.basePath;
   }
-  extractPersonaId(path25) {
-    const parts = path25.split(/[/\\]/);
+  extractPersonaId(path30) {
+    const parts = path30.split(/[/\\]/);
     const personasIndex = parts.findIndex((part) => part === "personas");
     return personasIndex !== -1 && personasIndex + 1 < parts.length ? parts[personasIndex + 1] : null;
   }
@@ -55467,12 +58431,12 @@ var LocalFilesystemStorageAdapter = class {
     if (this.autoCreate) {
       await this.ensureDirectoryExists(directory);
     }
-    await fs13.writeFile(filePath, content, "utf8");
+    await fs17.writeFile(filePath, content, "utf8");
   }
   async getPersonaFile(personaId, fileName, _userId) {
     const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
     try {
-      return await fs13.readFile(filePath, "utf8");
+      return await fs17.readFile(filePath, "utf8");
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return null;
@@ -55483,7 +58447,7 @@ var LocalFilesystemStorageAdapter = class {
   async deletePersonaFile(personaId, fileName, _userId) {
     const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
     try {
-      await fs13.unlink(filePath);
+      await fs17.unlink(filePath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -55494,7 +58458,7 @@ var LocalFilesystemStorageAdapter = class {
     const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
     try {
       const getAllFiles = async (dir, basePath = "") => {
-        const entries = await fs13.readdir(dir, { withFileTypes: true });
+        const entries = await fs17.readdir(dir, { withFileTypes: true });
         const files = [];
         for (const entry of entries) {
           const fullPath = join13(dir, entry.name);
@@ -55520,11 +58484,11 @@ var LocalFilesystemStorageAdapter = class {
   async listPersonas(_userId) {
     const personasDir = join13(this.pathBuilder.buildUserBasePath(), "personas");
     try {
-      const directories = await fs13.readdir(personasDir);
+      const directories = await fs17.readdir(personasDir);
       const dirStats = await Promise.all(
         directories.map(async (dir) => {
           const dirPath = join13(personasDir, dir);
-          const stat3 = await fs13.stat(dirPath);
+          const stat3 = await fs17.stat(dirPath);
           return { name: dir, isDirectory: stat3.isDirectory() };
         })
       );
@@ -55539,7 +58503,7 @@ var LocalFilesystemStorageAdapter = class {
   async deletePersona(personaId, _userId) {
     const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
     try {
-      await fs13.rm(personaDir, { recursive: true, force: true });
+      await fs17.rm(personaDir, { recursive: true, force: true });
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -55561,12 +58525,12 @@ var LocalFilesystemStorageAdapter = class {
     if (this.autoCreate) {
       await this.ensureDirectoryExists(directory);
     }
-    await fs13.writeFile(filePath, content, "utf8");
+    await fs17.writeFile(filePath, content, "utf8");
   }
   async getUserData(key, _userId) {
     const filePath = this.pathBuilder.buildUserDataPath(key);
     try {
-      return await fs13.readFile(filePath, "utf8");
+      return await fs17.readFile(filePath, "utf8");
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return null;
@@ -55577,7 +58541,7 @@ var LocalFilesystemStorageAdapter = class {
   async deleteUserData(key, _userId) {
     const filePath = this.pathBuilder.buildUserDataPath(key);
     try {
-      await fs13.unlink(filePath);
+      await fs17.unlink(filePath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -55590,7 +58554,7 @@ var LocalFilesystemStorageAdapter = class {
       if (this.autoCreate) {
         await this.ensureDirectoryExists(basePath);
       }
-      await fs13.access(basePath, fs13.constants.R_OK | fs13.constants.W_OK);
+      await fs17.access(basePath, fs17.constants.R_OK | fs17.constants.W_OK);
       return true;
     } catch {
       return false;
@@ -55600,33 +58564,33 @@ var LocalFilesystemStorageAdapter = class {
     const oldPath = dirname4(this.pathBuilder.buildPersonaPath(oldPersonaId, ""));
     const newPath = dirname4(this.pathBuilder.buildPersonaPath(newPersonaId, ""));
     try {
-      await fs13.access(oldPath);
+      await fs17.access(oldPath);
     } catch {
       throw new Error(`Persona '${oldPersonaId}' does not exist`);
     }
     try {
-      await fs13.access(newPath);
+      await fs17.access(newPath);
       throw new Error(`Persona '${newPersonaId}' already exists`);
     } catch {
     }
-    await fs13.rename(oldPath, newPath);
+    await fs17.rename(oldPath, newPath);
     const profilePath = join13(newPath, "profile.md");
     try {
-      const profileContent = await fs13.readFile(profilePath, "utf-8");
+      const profileContent = await fs17.readFile(profilePath, "utf-8");
       const lines = profileContent.split("\n");
       if (lines[0].startsWith("#")) {
         lines[0] = `# ${newPersonaId}`;
-        await fs13.writeFile(profilePath, lines.join("\n"), "utf-8");
+        await fs17.writeFile(profilePath, lines.join("\n"), "utf-8");
       }
     } catch {
     }
     const metadataPath = join13(newPath, "metadata.json");
     try {
-      const metadataContent = await fs13.readFile(metadataPath, "utf-8");
+      const metadataContent = await fs17.readFile(metadataPath, "utf-8");
       const metadata = JSON.parse(metadataContent);
       metadata.name = newPersonaId;
       metadata.lastRenamed = (/* @__PURE__ */ new Date()).toISOString();
-      await fs13.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
+      await fs17.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
     } catch {
     }
   }
@@ -55642,7 +58606,7 @@ var LocalFilesystemStorageAdapter = class {
    */
   async ensureDirectoryExists(dirPath) {
     try {
-      await fs13.mkdir(dirPath, { recursive: true });
+      await fs17.mkdir(dirPath, { recursive: true });
     } catch (error2) {
       if (error2.code !== "EEXIST") {
         throw error2;
@@ -55658,8 +58622,8 @@ var LocalFilesystemStorageAdapter = class {
 };
 
 // packages/tiny-brain-mcp/src/core/file-logger.ts
-import * as fs14 from "fs";
-import * as path15 from "path";
+import * as fs18 from "fs";
+import * as path19 from "path";
 var LOG_LEVELS = {
   debug: 0,
   info: 1,
@@ -55676,7 +58640,7 @@ var FileLogger = class {
   currentFileSize = 0;
   constructor(config2 = {}) {
     const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    const defaultLogPath = path15.join(homeDir, ".tiny-brain", "debug.log");
+    const defaultLogPath = path19.join(homeDir, ".tiny-brain", "debug.log");
     this.config = {
       logFilePath: config2.logFilePath || defaultLogPath,
       maxFileSize: config2.maxFileSize || 10 * 1024 * 1024,
@@ -55699,19 +58663,19 @@ var FileLogger = class {
   }
   initialize() {
     try {
-      const logDir = path15.dirname(this.config.logFilePath);
-      if (!fs14.existsSync(logDir)) {
-        fs14.mkdirSync(logDir, { recursive: true });
+      const logDir = path19.dirname(this.config.logFilePath);
+      if (!fs18.existsSync(logDir)) {
+        fs18.mkdirSync(logDir, { recursive: true });
       }
-      if (fs14.existsSync(this.config.logFilePath)) {
-        const stats = fs14.statSync(this.config.logFilePath);
+      if (fs18.existsSync(this.config.logFilePath)) {
+        const stats = fs18.statSync(this.config.logFilePath);
         this.currentFileSize = stats.size;
         if (this.currentFileSize >= this.config.maxFileSize) {
           this.rotateLogFile();
           this.currentFileSize = 0;
         }
       }
-      this.fileStream = fs14.createWriteStream(this.config.logFilePath, {
+      this.fileStream = fs18.createWriteStream(this.config.logFilePath, {
         flags: this.config.appendMode ? "a" : "w"
       });
       this.writeLog("info", "FileLogger initialized", {
@@ -55726,11 +58690,11 @@ var FileLogger = class {
       for (let i = this.config.maxRotatedFiles - 1; i >= 0; i--) {
         const oldPath = i === 0 ? this.config.logFilePath : `${this.config.logFilePath}.${i}`;
         const newPath = `${this.config.logFilePath}.${i + 1}`;
-        if (fs14.existsSync(oldPath)) {
+        if (fs18.existsSync(oldPath)) {
           if (i === this.config.maxRotatedFiles - 1) {
-            fs14.unlinkSync(oldPath);
+            fs18.unlinkSync(oldPath);
           } else {
-            fs14.renameSync(oldPath, newPath);
+            fs18.renameSync(oldPath, newPath);
           }
         }
       }
@@ -55760,7 +58724,7 @@ var FileLogger = class {
         this.fileStream?.end();
         this.rotateLogFile();
         this.currentFileSize = 0;
-        this.fileStream = fs14.createWriteStream(this.config.logFilePath, {
+        this.fileStream = fs18.createWriteStream(this.config.logFilePath, {
           flags: "a"
         });
       }
@@ -56965,26 +59929,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path25) => {
-  const paths = path25.split("/");
+var splitPath = (path30) => {
+  const paths = path30.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path25 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path25);
+  const { groups, path: path30 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path30);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path25) => {
+var extractGroupsFromPath = (path30) => {
   const groups = [];
-  path25 = path25.replace(/\{[^}]+\}/g, (match3, index) => {
+  path30 = path30.replace(/\{[^}]+\}/g, (match3, index) => {
     const mark = `@${index}`;
     groups.push([mark, match3]);
     return mark;
   });
-  return { groups, path: path25 };
+  return { groups, path: path30 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -57039,8 +60003,8 @@ var getPath = (request) => {
     const charCode = url.charCodeAt(i);
     if (charCode === 37) {
       const queryIndex = url.indexOf("?", i);
-      const path25 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
-      return tryDecodeURI(path25.includes("%25") ? path25.replace(/%25/g, "%2525") : path25);
+      const path30 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
+      return tryDecodeURI(path30.includes("%25") ? path30.replace(/%25/g, "%2525") : path30);
     } else if (charCode === 63) {
       break;
     }
@@ -57057,11 +60021,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path25) => {
-  if (path25.charCodeAt(path25.length - 1) !== 63 || !path25.includes(":")) {
+var checkOptionalParameter = (path30) => {
+  if (path30.charCodeAt(path30.length - 1) !== 63 || !path30.includes(":")) {
     return null;
   }
-  const segments = path25.split("/");
+  const segments = path30.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -57202,9 +60166,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path25 = "/", matchResult = [[]]) {
+  constructor(request, path30 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path25;
+    this.path = path30;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -57940,8 +60904,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path25, ...handlers) => {
-      for (const p of [path25].flat()) {
+    this.on = (method, path30, ...handlers) => {
+      for (const p of [path30].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -57998,8 +60962,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path25, app) {
-    const subApp = this.basePath(path25);
+  route(path30, app) {
+    const subApp = this.basePath(path30);
     app.routes.map((r) => {
       let handler;
       if (app.errorHandler === errorHandler) {
@@ -58025,9 +60989,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path25) {
+  basePath(path30) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path25);
+    subApp._basePath = mergePath(this._basePath, path30);
     return subApp;
   }
   /**
@@ -58101,7 +61065,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path25, applicationHandler, options) {
+  mount(path30, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -58128,7 +61092,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path25);
+      const mergedPath = mergePath(this._basePath, path30);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -58143,14 +61107,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path25, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path30, "*"), handler);
     return this;
   }
-  #addRoute(method, path25, handler) {
+  #addRoute(method, path30, handler) {
     method = method.toUpperCase();
-    path25 = mergePath(this._basePath, path25);
-    const r = { basePath: this._basePath, path: path25, method, handler };
-    this.router.add(method, path25, [handler, r]);
+    path30 = mergePath(this._basePath, path30);
+    const r = { basePath: this._basePath, path: path30, method, handler };
+    this.router.add(method, path30, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -58163,10 +61127,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path25 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path25);
+    const path30 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path30);
     const c = new Context(request, {
-      path: path25,
+      path: path30,
       matchResult,
       env,
       executionCtx,
@@ -58266,15 +61230,15 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match2(method, path25) {
+function match2(method, path30) {
   const matchers = this.buildAllMatchers();
-  const match22 = (method2, path26) => {
+  const match22 = (method2, path210) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
-    const staticMatch = matcher[2][path26];
+    const staticMatch = matcher[2][path210];
     if (staticMatch) {
       return staticMatch;
     }
-    const match3 = path26.match(matcher[0]);
+    const match3 = path210.match(matcher[0]);
     if (!match3) {
       return [[], emptyParam];
     }
@@ -58282,7 +61246,7 @@ function match2(method, path25) {
     return [matcher[1][index], match3];
   };
   this.match = match22;
-  return match22(method, path25);
+  return match22(method, path30);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -58397,12 +61361,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path25, index, pathErrorCheckOnly) {
+  insert(path30, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path25 = path25.replace(/\{[^}]+\}/g, (m) => {
+      path30 = path30.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -58413,7 +61377,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path25.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path30.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -58452,9 +61416,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path25) {
-  return wildcardRegExpCache[path25] ??= new RegExp(
-    path25 === "*" ? "" : `^${path25.replace(
+function buildWildcardRegExp(path30) {
+  return wildcardRegExpCache[path30] ??= new RegExp(
+    path30 === "*" ? "" : `^${path30.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -58476,17 +61440,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path25, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path30, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path25] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path30] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path25, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path30, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path25) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path30) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -58520,12 +61484,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path25) {
+function findMiddleware(middleware, path30) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path25)) {
+    if (buildWildcardRegExp(k).test(path30)) {
       return [...middleware[k]];
     }
   }
@@ -58539,7 +61503,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path25, handler) {
+  add(method, path30, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -58554,18 +61518,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path25 === "/*") {
-      path25 = "*";
+    if (path30 === "/*") {
+      path30 = "*";
     }
-    const paramCount = (path25.match(/\/:/g) || []).length;
-    if (/\*$/.test(path25)) {
-      const re = buildWildcardRegExp(path25);
+    const paramCount = (path30.match(/\/:/g) || []).length;
+    if (/\*$/.test(path30)) {
+      const re = buildWildcardRegExp(path30);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path25] ||= findMiddleware(middleware[m], path25) || findMiddleware(middleware[METHOD_NAME_ALL], path25) || [];
+          middleware[m][path30] ||= findMiddleware(middleware[m], path30) || findMiddleware(middleware[METHOD_NAME_ALL], path30) || [];
         });
       } else {
-        middleware[method][path25] ||= findMiddleware(middleware[method], path25) || findMiddleware(middleware[METHOD_NAME_ALL], path25) || [];
+        middleware[method][path30] ||= findMiddleware(middleware[method], path30) || findMiddleware(middleware[METHOD_NAME_ALL], path30) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -58583,15 +61547,15 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path25) || [path25];
+    const paths = checkOptionalParameter(path30) || [path30];
     for (let i = 0, len = paths.length; i < len; i++) {
-      const path26 = paths[i];
+      const path210 = paths[i];
       Object.keys(routes).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
-          routes[m][path26] ||= [
-            ...findMiddleware(middleware[m], path26) || findMiddleware(middleware[METHOD_NAME_ALL], path26) || []
+          routes[m][path210] ||= [
+            ...findMiddleware(middleware[m], path210) || findMiddleware(middleware[METHOD_NAME_ALL], path210) || []
           ];
-          routes[m][path26].push([handler, paramCount - len + i + 1]);
+          routes[m][path210].push([handler, paramCount - len + i + 1]);
         }
       });
     }
@@ -58610,13 +61574,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path25) => [path25, r[method][path25]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path30) => [path30, r[method][path30]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path25) => [path25, r[METHOD_NAME_ALL][path25]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path30) => [path30, r[METHOD_NAME_ALL][path30]])
         );
       }
     });
@@ -58636,13 +61600,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path25, handler) {
+  add(method, path30, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path25, handler]);
+    this.#routes.push([method, path30, handler]);
   }
-  match(method, path25) {
+  match(method, path30) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -58657,7 +61621,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path25);
+        res = router.match(method, path30);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -58701,10 +61665,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path25, handler) {
+  insert(method, path30, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path25);
+    const parts = splitRoutingPath(path30);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -58755,12 +61719,12 @@ var Node2 = class _Node2 {
     }
     return handlerSets;
   }
-  search(method, path25) {
+  search(method, path30) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path25);
+    const parts = splitPath(path30);
     const curNodesQueue = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const part = parts[i];
@@ -58848,18 +61812,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path25, handler) {
-    const results = checkOptionalParameter(path25);
+  add(method, path30, handler) {
+    const results = checkOptionalParameter(path30);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path25, handler);
+    this.#node.insert(method, path30, handler);
   }
-  match(method, path25) {
-    return this.#node.search(method, path25);
+  match(method, path30) {
+    return this.#node.search(method, path30);
   }
 };
 
@@ -59065,10 +62029,10 @@ var createStreamBody = (stream3) => {
   });
   return body;
 };
-var getStats = (path25) => {
+var getStats = (path30) => {
   let stats;
   try {
-    stats = statSync2(path25);
+    stats = statSync2(path30);
   } catch {
   }
   return stats;
@@ -59097,21 +62061,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path25 = join15(
+    let path30 = join15(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path25);
+    let stats = getStats(path30);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path25 = join15(path25, indexFile);
-      stats = getStats(path25);
+      path30 = join15(path30, indexFile);
+      stats = getStats(path30);
     }
     if (!stats) {
-      await options.onNotFound?.(path25, c);
+      await options.onNotFound?.(path30, c);
       return next();
     }
-    const mimeType = getMimeType(path25);
+    const mimeType = getMimeType(path30);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -59121,12 +62085,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path25 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path30 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path25 = path25 + ENCODINGS[encoding];
+          path30 = path30 + ENCODINGS[encoding];
           break;
         }
       }
@@ -59140,7 +62104,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path25)), 200);
+      result = c.body(createStreamBody(createReadStream(path30)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -59151,20 +62115,20 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream3 = createReadStream(path25, { start, end });
+      const stream3 = createReadStream(path30, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
       result = c.body(createStreamBody(stream3), 206);
     }
-    await options.onFound?.(path25, c);
+    await options.onFound?.(path30, c);
     return result;
   };
 };
 
 // packages/tiny-brain-dashboard/server/app.ts
-import path16 from "node:path";
+import path20 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
-import fs15 from "node:fs";
+import fs19 from "node:fs";
 
 // packages/tiny-brain-dashboard/server/services/bridge.service.ts
 init_src();
@@ -59676,7 +62640,7 @@ function createSettingsRoutes(bridge) {
 init_src();
 import { readdir as readdir9, readFile as readFile11 } from "fs/promises";
 import { join as join16 } from "path";
-import { createHash as createHash2 } from "crypto";
+import { createHash as createHash3 } from "crypto";
 function toRepoAnalysisFile(result) {
   const analysis = result.analysis;
   const hashInput = JSON.stringify({
@@ -59685,7 +62649,7 @@ function toRepoAnalysisFile(result) {
     testingTools: analysis.testingTools,
     buildTools: analysis.buildTools
   });
-  const analysisHash = createHash2("md5").update(hashInput).digest("hex").slice(0, 8);
+  const analysisHash = createHash3("md5").update(hashInput).digest("hex").slice(0, 8);
   return {
     version: "1.0",
     detectedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -60037,21 +63001,49 @@ function createRepoRoutes(bridge, sse) {
       const qualityRunsPath = join16(repo.path, "docs", "quality", "runs");
       const runs = [];
       try {
-        const files = await readdir9(qualityRunsPath);
-        const qualityFiles = files.filter((f) => f.endsWith("-quality.md"));
-        qualityFiles.sort((a, b) => b.localeCompare(a));
-        for (const file of qualityFiles) {
-          const content = await readFile11(join16(qualityRunsPath, file), "utf-8");
-          const frontmatter = parseFrontmatter(content);
-          const runId = file.replace(".md", "");
-          runs.push({
-            runId,
-            date: frontmatter.run_date || "",
-            score: parseInt(frontmatter.score || "0", 10),
-            grade: frontmatter.grade || "",
-            issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10)
-          });
+        const entries = await readdir9(qualityRunsPath, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)) {
+            try {
+              const dateDirPath = join16(qualityRunsPath, entry.name);
+              const timeEntries = await readdir9(dateDirPath, { withFileTypes: true });
+              for (const timeEntry of timeEntries) {
+                if (timeEntry.isDirectory() && /^\d{2}-\d{2}$/.test(timeEntry.name)) {
+                  const qualityFile = join16(dateDirPath, timeEntry.name, "quality.md");
+                  try {
+                    const content = await readFile11(qualityFile, "utf-8");
+                    const frontmatter = parseFrontmatter(content);
+                    const runId = `${entry.name}T${timeEntry.name}`;
+                    runs.push({
+                      runId,
+                      date: frontmatter.run_date || "",
+                      score: parseInt(frontmatter.score || "0", 10),
+                      grade: frontmatter.grade || "",
+                      issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10)
+                    });
+                  } catch {
+                  }
+                }
+              }
+            } catch {
+            }
+          }
         }
+        for (const entry of entries) {
+          if (!entry.isDirectory() && entry.name.endsWith("-quality.md")) {
+            const content = await readFile11(join16(qualityRunsPath, entry.name), "utf-8");
+            const frontmatter = parseFrontmatter(content);
+            const runId = entry.name.replace(".md", "");
+            runs.push({
+              runId,
+              date: frontmatter.run_date || "",
+              score: parseInt(frontmatter.score || "0", 10),
+              grade: frontmatter.grade || "",
+              issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10)
+            });
+          }
+        }
+        runs.sort((a, b) => b.runId.localeCompare(a.runId));
       } catch (err) {
         if (err.code !== "ENOENT") {
           throw err;
@@ -60073,7 +63065,8 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const runPath = join16(repo.path, "docs", "quality", "runs", `${runId}.md`);
+      const isNested = runId.includes("T");
+      const runPath = isNested ? join16(repo.path, "docs", "quality", "runs", runId.replace("T", "/"), "quality.md") : join16(repo.path, "docs", "quality", "runs", `${runId}.md`);
       try {
         const content = await readFile11(runPath, "utf-8");
         const frontmatter = parseFrontmatter(content);
@@ -60116,7 +63109,7 @@ function createRepoRoutes(bridge, sse) {
 }
 
 // packages/tiny-brain-dashboard/server/routes/git.routes.ts
-import { execSync } from "node:child_process";
+import { execSync as execSync2 } from "node:child_process";
 function createGitRoutes(bridge) {
   const app = new Hono2();
   app.get("/commits/:sha", async (c) => {
@@ -60131,7 +63124,7 @@ function createGitRoutes(bridge) {
     }
     const repositoryRoot = repo.path;
     try {
-      const commitInfo = execSync(
+      const commitInfo = execSync2(
         `git show --no-patch --format='%H%n%an%n%ae%n%aI%n%s%n%b' ${sha}`,
         { encoding: "utf-8", cwd: repositoryRoot }
       ).split("\n");
@@ -60144,7 +63137,7 @@ function createGitRoutes(bridge) {
       const message = body ? `${subject}
 
 ${body}` : subject;
-      const filesChangedOutput = execSync(
+      const filesChangedOutput = execSync2(
         `git show --stat --format='' ${sha}`,
         { encoding: "utf-8", cwd: repositoryRoot }
       );
@@ -60568,9 +63561,13 @@ function createSkillsRoutes(bridge) {
     const session = sessionManager.createSession();
     const repositoryRoot = bridge.context.repositoryRoot || process.cwd();
     return streamSSE(c, async (stream3) => {
+      bridge.context.logger.info("[skills.routes] SSE stream started");
       try {
         const toolExecutor = new ToolExecutor({ repositoryRoot });
+        bridge.context.logger.info("[skills.routes] ToolExecutor created");
+        bridge.context.logger.info("[skills.routes] Creating ClaudeClient", { apiKeyLength: apiKey?.length });
         const client = new ClaudeClient({ apiKey });
+        bridge.context.logger.info("[skills.routes] ClaudeClient created");
         let userMessage = prompt;
         if (userContext) {
           userMessage = `Context:
@@ -60591,6 +63588,7 @@ ${content}
 `;
           }
         }
+        bridge.context.logger.info("[skills.routes] Calling client.invokeSkill");
         await client.invokeSkill(
           {
             systemPrompt,
@@ -60638,11 +63636,16 @@ ${content}
           }
         );
       } catch (error2) {
+        bridge.context.logger.error("[skills.routes] Caught error in SSE handler", { error: error2 instanceof Error ? error2.message : String(error2) });
         const message = error2 instanceof Error ? error2.message : "Unknown error";
-        await stream3.writeSSE({
-          event: "error",
-          data: JSON.stringify({ error: message })
-        });
+        try {
+          await stream3.writeSSE({
+            event: "error",
+            data: JSON.stringify({ error: message })
+          });
+        } catch (writeError) {
+          bridge.context.logger.error("[skills.routes] Failed to write error event", { writeError: writeError instanceof Error ? writeError.message : String(writeError) });
+        }
         sessionManager.endSession(session.id);
       }
     });
@@ -60659,7 +63662,7 @@ ${content}
 }
 
 // packages/tiny-brain-dashboard/server/app.ts
-var __dirname = path16.dirname(fileURLToPath3(import.meta.url));
+var __dirname = path20.dirname(fileURLToPath3(import.meta.url));
 function createApp(context, sse) {
   const app = new Hono2();
   const bridge = new ServiceBridge(context);
@@ -60721,12 +63724,12 @@ data: ${JSON.stringify(initialData)}
   app.get("/health", (c) => {
     return c.json({ status: "ok" });
   });
-  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path16.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path16.resolve(__dirname, "../dist");
-  const distExists = fs15.existsSync(distPath);
+  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path20.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path20.resolve(__dirname, "../dist");
+  const distExists = fs19.existsSync(distPath);
   if (distExists) {
     app.use("/assets/*", serveStatic({
       root: distPath,
-      rewriteRequestPath: (path25) => path25.replace("/assets", "/assets")
+      rewriteRequestPath: (path30) => path30.replace("/assets", "/assets")
     }));
     app.use("/favicon.png", serveStatic({
       root: distPath,
@@ -60737,9 +63740,9 @@ data: ${JSON.stringify(initialData)}
       if (reqPath.startsWith("/api") || reqPath.startsWith("/events") || reqPath === "/health") {
         return c.notFound();
       }
-      const indexPath = path16.join(distPath, "index.html");
-      if (fs15.existsSync(indexPath)) {
-        const indexHtml = fs15.readFileSync(indexPath, "utf-8");
+      const indexPath = path20.join(distPath, "index.html");
+      if (fs19.existsSync(indexPath)) {
+        const indexHtml = fs19.readFileSync(indexPath, "utf-8");
         return c.html(indexHtml);
       }
       return c.html(`<!DOCTYPE html>
@@ -60814,13 +63817,13 @@ data: ${JSON.stringify(data)}
 
 // packages/tiny-brain-dashboard/server/services/file-watcher.service.ts
 init_src();
-import * as path18 from "path";
-import * as fs17 from "fs";
+import * as path22 from "path";
+import * as fs21 from "fs";
 import * as os2 from "os";
 
 // packages/tiny-brain-dashboard/server/services/generic-file-watcher.ts
-import * as fs16 from "fs";
-import * as path17 from "path";
+import * as fs20 from "fs";
+import * as path21 from "path";
 import { EventEmitter as EventEmitter2 } from "events";
 var FileWatcherService = class extends EventEmitter2 {
   watchInterval = null;
@@ -60850,10 +63853,10 @@ var FileWatcherService = class extends EventEmitter2 {
       ...this.options,
       ...options
     };
-    if (!fs16.existsSync(watchPath)) {
+    if (!fs20.existsSync(watchPath)) {
       throw new Error(`Watch path does not exist: ${watchPath}`);
     }
-    const stats = fs16.statSync(watchPath);
+    const stats = fs20.statSync(watchPath);
     if (!stats.isDirectory()) {
       throw new Error(`Watch path is not a directory: ${watchPath}`);
     }
@@ -60884,9 +63887,9 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = [];
     const scanDir = (currentPath) => {
       try {
-        const entries = fs16.readdirSync(currentPath, { withFileTypes: true });
+        const entries = fs20.readdirSync(currentPath, { withFileTypes: true });
         for (const entry of entries) {
-          const fullPath = path17.join(currentPath, entry.name);
+          const fullPath = path21.join(currentPath, entry.name);
           if (entry.name.startsWith(".")) {
             continue;
           }
@@ -60913,7 +63916,7 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = this.getAllFiles(this.watchPath);
     for (const filePath of files) {
       try {
-        const stats = fs16.statSync(filePath);
+        const stats = fs20.statSync(filePath);
         this.fileTimestamps.set(filePath, stats.mtimeMs);
       } catch (error2) {
         this.logger.error(`Error getting stats for ${filePath}:`, error2);
@@ -60935,7 +63938,7 @@ var FileWatcherService = class extends EventEmitter2 {
         const change = {
           type: "deleted",
           filePath,
-          relativePath: path17.relative(this.watchPath, filePath)
+          relativePath: path21.relative(this.watchPath, filePath)
         };
         this.emit("change", change);
         this.logger.debug(`File deleted: ${filePath}`);
@@ -60943,14 +63946,14 @@ var FileWatcherService = class extends EventEmitter2 {
     }
     for (const filePath of currentFiles) {
       try {
-        const stats = fs16.statSync(filePath);
+        const stats = fs20.statSync(filePath);
         const previousMtime = this.fileTimestamps.get(filePath);
         if (!previousMtime) {
           this.fileTimestamps.set(filePath, stats.mtimeMs);
           const change = {
             type: "added",
             filePath,
-            relativePath: path17.relative(this.watchPath, filePath),
+            relativePath: path21.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -60960,7 +63963,7 @@ var FileWatcherService = class extends EventEmitter2 {
           const change = {
             type: "modified",
             filePath,
-            relativePath: path17.relative(this.watchPath, filePath),
+            relativePath: path21.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -61046,9 +64049,9 @@ var FileWatcher = class {
     if (!this.plansCache.has(repoId)) {
       this.plansCache.set(repoId, /* @__PURE__ */ new Map());
     }
-    const tinyBrainPath = path18.join(repoPath, ".tiny-brain");
-    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs17.existsSync(tinyBrainPath)}`);
-    if (fs17.existsSync(tinyBrainPath)) {
+    const tinyBrainPath = path22.join(repoPath, ".tiny-brain");
+    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs21.existsSync(tinyBrainPath)}`);
+    if (fs21.existsSync(tinyBrainPath)) {
       try {
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -61069,7 +64072,7 @@ var FileWatcher = class {
       }
     } else {
       try {
-        await fs17.promises.mkdir(tinyBrainPath, { recursive: true });
+        await fs21.promises.mkdir(tinyBrainPath, { recursive: true });
         this.context.logger.info(`[FileWatcher] Created .tiny-brain directory for repo ${repoId}`);
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -61088,9 +64091,9 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to create .tiny-brain and start PRD watcher for ${repoId}:`, error2);
       }
     }
-    const fixesPath = path18.join(repoPath, ".tiny-brain/fixes");
-    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs17.existsSync(fixesPath)}`);
-    if (fs17.existsSync(fixesPath)) {
+    const fixesPath = path22.join(repoPath, ".tiny-brain/fixes");
+    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs21.existsSync(fixesPath)}`);
+    if (fs21.existsSync(fixesPath)) {
       try {
         watchers.fixesWatcher = new FileWatcherService(this.context.logger);
         watchers.fixesWatcher.on("change", (change) => {
@@ -61107,31 +64110,33 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start fixes watcher for ${repoId}:`, error2);
       }
     }
-    const qualityPath = path18.join(repoPath, "docs/quality/runs");
-    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs17.existsSync(qualityPath)}`);
-    if (fs17.existsSync(qualityPath)) {
-      try {
-        if (!this.qualityCache.has(repoId)) {
-          this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
-        }
-        watchers.qualityWatcher = new FileWatcherService(this.context.logger);
-        watchers.qualityWatcher.on("change", (change) => {
-          this.context.logger.info(`[FileWatcher] Quality change detected in ${repoId}: ${change.type} ${change.relativePath}`);
-          this.handleQualityChange(repoId, change);
-        });
-        await watchers.qualityWatcher.start(qualityPath, {
-          pollInterval: 1e3,
-          recursive: false,
-          fileFilter: (filePath) => filePath.endsWith(".md")
-        });
-        this.context.logger.info(`[FileWatcher] Quality watcher started for repo ${repoId}: ${qualityPath}`);
-      } catch (error2) {
-        this.context.logger.error(`[FileWatcher] Failed to start quality watcher for ${repoId}:`, error2);
-      }
+    const qualityPath = path22.join(repoPath, "docs/quality/runs");
+    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs21.existsSync(qualityPath)}`);
+    if (!fs21.existsSync(qualityPath)) {
+      await fs21.promises.mkdir(qualityPath, { recursive: true });
+      this.context.logger.info(`[FileWatcher] Created quality runs directory for repo ${repoId}`);
     }
-    const prdDocsPath = path18.join(repoPath, "docs/prd");
-    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs17.existsSync(prdDocsPath)}`);
-    if (fs17.existsSync(prdDocsPath)) {
+    try {
+      if (!this.qualityCache.has(repoId)) {
+        this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
+      }
+      watchers.qualityWatcher = new FileWatcherService(this.context.logger);
+      watchers.qualityWatcher.on("change", (change) => {
+        this.context.logger.info(`[FileWatcher] Quality change detected in ${repoId}: ${change.type} ${change.relativePath}`);
+        this.handleQualityChange(repoId, change);
+      });
+      await watchers.qualityWatcher.start(qualityPath, {
+        pollInterval: 1e3,
+        recursive: true,
+        fileFilter: (filePath) => filePath.endsWith(".md")
+      });
+      this.context.logger.info(`[FileWatcher] Quality watcher started for repo ${repoId}: ${qualityPath}`);
+    } catch (error2) {
+      this.context.logger.error(`[FileWatcher] Failed to start quality watcher for ${repoId}:`, error2);
+    }
+    const prdDocsPath = path22.join(repoPath, "docs/prd");
+    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs21.existsSync(prdDocsPath)}`);
+    if (fs21.existsSync(prdDocsPath)) {
       try {
         watchers.prdDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.prdDocsWatcher.on("change", (change) => {
@@ -61149,8 +64154,8 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start PRD docs watcher for ${repoId}:`, error2);
       }
     }
-    const fixDocsPath = path18.join(repoPath, ".tiny-brain/fixes");
-    if (fs17.existsSync(fixDocsPath)) {
+    const fixDocsPath = path22.join(repoPath, ".tiny-brain/fixes");
+    if (fs21.existsSync(fixDocsPath)) {
       try {
         watchers.fixDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.fixDocsWatcher.on("change", (change) => {
@@ -61176,8 +64181,8 @@ var FileWatcher = class {
    * Start watching ~/.tiny-brain/repos/repos.json for new repo registrations
    */
   async startReposConfigWatcher() {
-    const reposDir = path18.join(os2.homedir(), ".tiny-brain", "repos");
-    if (!fs17.existsSync(reposDir)) {
+    const reposDir = path22.join(os2.homedir(), ".tiny-brain", "repos");
+    if (!fs21.existsSync(reposDir)) {
       this.context.logger.info(`[FileWatcher] Repos config directory does not exist: ${reposDir}`);
       return;
     }
@@ -61259,7 +64264,7 @@ var FileWatcher = class {
         this.context.logger.info(`[FileWatcher] No SSE clients connected - skipping file processing`);
         return;
       }
-      const fileName = path18.basename(change.relativePath);
+      const fileName = path22.basename(change.relativePath);
       this.context.logger.debug(`[FileWatcher] File name:`, fileName);
       if (!fileName.endsWith(".json")) {
         this.context.logger.debug(`[FileWatcher] Not a valid progress file - skipping`);
@@ -61294,7 +64299,7 @@ var FileWatcher = class {
       let newPlan;
       try {
         this.context.logger.debug(`[FileWatcher] Reading file: ${change.filePath}`);
-        const content = await fs17.promises.readFile(change.filePath, "utf-8");
+        const content = await fs21.promises.readFile(change.filePath, "utf-8");
         newPlan = JSON.parse(content);
       } catch (error2) {
         this.context.logger.error(`Error reading progress file ${change.filePath}:`, error2);
@@ -61341,6 +64346,7 @@ var FileWatcher = class {
     for (const newFeature of newFeatures) {
       const oldFeature = oldFeatures.find((f) => f.id === newFeature.id);
       if (!oldFeature) {
+        const newTasks2 = newFeature.tasks || [];
         events.push({
           eventType: "prd:feature:added",
           repoId,
@@ -61351,12 +64357,16 @@ var FileWatcher = class {
             id: newFeature.id,
             number: newFeature.number,
             title: newFeature.title,
-            status: newFeature.status
+            status: newFeature.status,
+            tasks: newTasks2.map((t) => ({
+              id: t.id,
+              description: t.description,
+              status: t.status
+            }))
           }
         });
-        continue;
       }
-      if (oldFeature.status !== newFeature.status) {
+      if (oldFeature && oldFeature.status !== newFeature.status) {
         events.push({
           eventType: "prd:feature:updated",
           repoId,
@@ -61376,7 +64386,7 @@ var FileWatcher = class {
           }
         });
       }
-      const oldTasks = oldFeature.tasks || [];
+      const oldTasks = oldFeature?.tasks || [];
       const newTasks = newFeature.tasks || [];
       for (const newTask of newTasks) {
         const oldTask = oldTasks.find((t) => t.id === newTask.id);
@@ -61498,7 +64508,7 @@ var FileWatcher = class {
       }
       let newFixes;
       try {
-        const content = await fs17.promises.readFile(change.filePath, "utf-8");
+        const content = await fs21.promises.readFile(change.filePath, "utf-8");
         newFixes = JSON.parse(content);
       } catch (error2) {
         this.context.logger.error(`Error reading fixes progress file ${change.filePath}:`, error2);
@@ -61607,8 +64617,8 @@ var FileWatcher = class {
       if (!change.relativePath.endsWith(".md")) {
         return;
       }
-      const fileName = path18.basename(change.relativePath);
-      const runId = fileName.replace(/\.md$/, "");
+      const nestedMatch = change.relativePath.match(/^(\d{4}-\d{2}-\d{2})\/(\d{2}-\d{2})\/quality\.md$/);
+      const runId = nestedMatch ? `${nestedMatch[1]}T${nestedMatch[2]}` : path22.basename(change.relativePath).replace(/\.md$/, "");
       let repoCache = this.qualityCache.get(repoId);
       if (!repoCache) {
         repoCache = /* @__PURE__ */ new Map();
@@ -61626,7 +64636,7 @@ var FileWatcher = class {
       }
       let runData = { runId };
       try {
-        const content = await fs17.promises.readFile(change.filePath, "utf-8");
+        const content = await fs21.promises.readFile(change.filePath, "utf-8");
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (frontmatterMatch) {
           const frontmatter = frontmatterMatch[1];
@@ -61739,7 +64749,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs17.promises.readFile(change.filePath, "utf-8");
+        content = await fs21.promises.readFile(change.filePath, "utf-8");
       } catch (error2) {
         this.context.logger.error(`Error reading PRD doc file ${change.filePath}:`, error2);
         return;
@@ -61798,7 +64808,7 @@ var FileWatcher = class {
         return;
       }
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-      const fixId = path18.basename(change.relativePath, ".md");
+      const fixId = path22.basename(change.relativePath, ".md");
       if (change.type === "deleted") {
         await this.sse.broadcast("fix-doc-change", {
           eventType: "fix:doc:deleted",
@@ -61810,7 +64820,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs17.promises.readFile(change.filePath, "utf-8");
+        content = await fs21.promises.readFile(change.filePath, "utf-8");
       } catch (error2) {
         this.context.logger.error(`Error reading fix doc file ${change.filePath}:`, error2);
         return;
@@ -61962,11 +64972,11 @@ var DashboardLauncher = class {
 };
 
 // packages/tiny-brain-mcp/src/tools/plan/plan.tool.ts
-import { promises as fs18 } from "fs";
-import path19 from "path";
-import { exec as exec4 } from "child_process";
-import { promisify as promisify3 } from "util";
-var execAsync3 = promisify3(exec4);
+import { promises as fs22 } from "fs";
+import path23 from "path";
+import { exec as exec6 } from "child_process";
+import { promisify as promisify5 } from "util";
+var execAsync5 = promisify5(exec6);
 var PlanArgsSchema = external_exports.object({
   operation: external_exports.enum(["accept", "feature", "implement", "update", "status", "report", "list", "archive", "adr", "create-adr", "sync", "start-dashboard", "stop-dashboard", "dashboard-status"]),
   // For 'accept' operation
@@ -62035,10 +65045,10 @@ var PlanArgsSchema = external_exports.object({
   showAll: external_exports.boolean().optional().default(false)
 });
 var dashboardLauncher = null;
-async function detectRepositoryRoot() {
+async function detectRepositoryRoot2() {
   const cwd = process.cwd();
   try {
-    const { stdout } = await execAsync3("git rev-parse --show-toplevel", {
+    const { stdout } = await execAsync5("git rev-parse --show-toplevel", {
       cwd
     });
     const repoRoot = stdout.trim();
@@ -62054,16 +65064,16 @@ async function findUniqueSlug(baseSlug) {
   let slug = baseSlug;
   let counter = 2;
   try {
-    const checkPath = path19.join(repoRoot, "docs/prd", slug);
-    await fs18.access(checkPath);
+    const checkPath = path23.join(repoRoot, "docs/prd", slug);
+    await fs22.access(checkPath);
   } catch {
     return slug;
   }
   while (counter < 100) {
     slug = `${baseSlug}-${counter}`;
     try {
-      const checkPath = path19.join(repoRoot, "docs/prd", slug);
-      await fs18.access(checkPath);
+      const checkPath = path23.join(repoRoot, "docs/prd", slug);
+      await fs22.access(checkPath);
       counter++;
     } catch {
       return slug;
@@ -62073,8 +65083,8 @@ async function findUniqueSlug(baseSlug) {
 }
 async function countPrdsInRepo(repoRoot) {
   try {
-    const prdDir = path19.join(repoRoot, "docs", "prd");
-    const entries = await fs18.readdir(prdDir, { withFileTypes: true });
+    const prdDir = path23.join(repoRoot, "docs", "prd");
+    const entries = await fs22.readdir(prdDir, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).length;
   } catch {
     return 0;
@@ -62086,7 +65096,7 @@ async function registerRepository(context) {
       return;
     }
     const repoConfigService = new RepoConfigService(context);
-    const repoName = path19.basename(context.repositoryRoot);
+    const repoName = path23.basename(context.repositoryRoot);
     const prdCount = await countPrdsInRepo(context.repositoryRoot);
     await repoConfigService.registerRepo({
       name: repoName,
@@ -62294,7 +65304,7 @@ var PlanTool = class _PlanTool {
         }
       }
       context.logger?.info?.("[PLAN TOOL] Detecting repository root...", { cwd: process.cwd() });
-      const repositoryRoot = await detectRepositoryRoot();
+      const repositoryRoot = await detectRepositoryRoot2();
       context.logger?.info?.("[PLAN TOOL] Repository root detected", { repositoryRoot });
       const contextWithRepo = {
         ...context,
@@ -62646,9 +65656,9 @@ var PlanTool = class _PlanTool {
       const report = await planningService.formatPlan(plan, true);
       if (args.saveToFile) {
         const filename = `plan-report-${plan.id}-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.md`;
-        const path25 = `reports/${filename}`;
-        await context.storage?.storeUserData(path25, report, context.userId);
-        const response2 = [`Report saved to: ${path25}`, "", report].join("\n");
+        const path30 = `reports/${filename}`;
+        await context.storage?.storeUserData(path30, report, context.userId);
+        const response2 = [`Report saved to: ${path30}`, "", report].join("\n");
         return createSuccessResult(response2);
       }
       const response = report;
@@ -62819,7 +65829,7 @@ Use "plan operation=stop-dashboard" to stop it.`
       }
       const commitCount = args.commits || 3;
       const adrService = new ADRService(context);
-      const { stdout } = await execAsync3(
+      const { stdout } = await execAsync5(
         `git log -${commitCount} --pretty=format:%h`,
         { cwd: context.repositoryRoot }
       );
@@ -62854,10 +65864,10 @@ Use "plan operation=stop-dashboard" to stop it.`
         return createErrorResult("ADR pattern detected but suggestion generation failed");
       }
       const adrContent = await adrService.generateADRContent(foundSuggestion.suggestion);
-      const tempDir = path19.join(context.repositoryRoot, ".tiny-brain", "temp");
-      await fs18.mkdir(tempDir, { recursive: true });
-      const tempFilePath = path19.join(tempDir, "adr-suggestion.md");
-      await fs18.writeFile(tempFilePath, adrContent, "utf-8");
+      const tempDir = path23.join(context.repositoryRoot, ".tiny-brain", "temp");
+      await fs22.mkdir(tempDir, { recursive: true });
+      const tempFilePath = path23.join(tempDir, "adr-suggestion.md");
+      await fs22.writeFile(tempFilePath, adrContent, "utf-8");
       const response = [
         "\u{1F3AF} ADR Suggestion Detected!",
         "",
@@ -62892,10 +65902,10 @@ Use "plan operation=stop-dashboard" to stop it.`
           "Not in a git repository. ADR creation requires git repository."
         );
       }
-      const tempFilePath = path19.join(context.repositoryRoot, ".tiny-brain", "temp", "adr-suggestion.md");
+      const tempFilePath = path23.join(context.repositoryRoot, ".tiny-brain", "temp", "adr-suggestion.md");
       let adrContent;
       try {
-        adrContent = await fs18.readFile(tempFilePath, "utf-8");
+        adrContent = await fs22.readFile(tempFilePath, "utf-8");
       } catch {
         return createErrorResult(
           'No ADR suggestion found. Run "plan adr" first to analyze commits and generate a suggestion.'
@@ -62915,17 +65925,17 @@ Use "plan operation=stop-dashboard" to stop it.`
       const adrNumber = await adrService.getNextADRNumber();
       const paddedNumber = adrNumber.toString().padStart(4, "0");
       const finalContent = adrContent.replace(/\{adr_number\}/g, paddedNumber);
-      const adrDir = path19.join(context.repositoryRoot, "docs/adr");
-      await fs18.mkdir(adrDir, { recursive: true });
+      const adrDir = path23.join(context.repositoryRoot, "docs/adr");
+      await fs22.mkdir(adrDir, { recursive: true });
       const filename = `${paddedNumber}-${suggestedFileName}`;
-      const filePath = path19.join(adrDir, filename);
-      await fs18.writeFile(filePath, finalContent, "utf-8");
+      const filePath = path23.join(adrDir, filename);
+      await fs22.writeFile(filePath, finalContent, "utf-8");
       try {
-        await fs18.unlink(tempFilePath);
+        await fs22.unlink(tempFilePath);
       } catch (error2) {
         context.logger?.warn?.(`Failed to clean up temp file: ${error2}`);
       }
-      const relativePath = path19.relative(context.repositoryRoot, filePath);
+      const relativePath = path23.relative(context.repositoryRoot, filePath);
       const response = [
         "\u2705 ADR Created Successfully!",
         "",
@@ -62958,7 +65968,7 @@ Use "plan operation=stop-dashboard" to stop it.`
       const planningService = new PlanningService(context);
       let prdPath;
       if (args.planId) {
-        prdPath = path19.join(context.repositoryRoot, "docs", "prd", args.planId);
+        prdPath = path23.join(context.repositoryRoot, "docs", "prd", args.planId);
       } else {
         const activePlan = await planningService.getActivePlan();
         if (!activePlan?.prdDirPath) {
@@ -62966,11 +65976,11 @@ Use "plan operation=stop-dashboard" to stop it.`
             "No active plan found. Specify a planId to sync a specific PRD: plan sync --planId my-prd"
           );
         }
-        prdPath = path19.join(context.repositoryRoot, activePlan.prdDirPath);
+        prdPath = path23.join(context.repositoryRoot, activePlan.prdDirPath);
       }
-      const prdMdPath = path19.join(prdPath, "prd.md");
+      const prdMdPath = path23.join(prdPath, "prd.md");
       try {
-        await fs18.access(prdMdPath);
+        await fs22.access(prdMdPath);
       } catch {
         return createErrorResult(
           `PRD not found at ${prdPath}. Ensure prd.md exists in the specified directory.`
@@ -63272,20 +66282,20 @@ var PersonaService2 = class extends PersonaService {
 };
 
 // packages/tiny-brain-mcp/src/services/repo-service.ts
-import * as fs19 from "fs/promises";
+import * as fs23 from "fs/promises";
 import { existsSync as existsSync8, readFileSync } from "fs";
-import * as path20 from "path";
+import * as path24 from "path";
 import { fileURLToPath as fileURLToPath5 } from "url";
 
 // packages/tiny-brain-mcp/src/utils/repo-utils.ts
-import { execSync as execSync2 } from "child_process";
+import { execSync as execSync3 } from "child_process";
 import { existsSync as existsSync7 } from "fs";
 import { join as join19, dirname as dirname6 } from "path";
 import { fileURLToPath as fileURLToPath4 } from "url";
 function findRepoRoot(startPath) {
   const cwd = startPath || process.cwd();
   try {
-    const gitRoot = execSync2("git rev-parse --show-toplevel", {
+    const gitRoot = execSync3("git rev-parse --show-toplevel", {
       cwd,
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "ignore"]
@@ -63346,8 +66356,8 @@ var RepoService = class _RepoService {
   async readRepoBlockFromContextFile(contextFilePath = "CLAUDE.md") {
     try {
       const repoRoot = getRepoRoot();
-      const fullPath = path20.join(repoRoot, contextFilePath);
-      const content = await fs19.readFile(fullPath, "utf-8");
+      const fullPath = path24.join(repoRoot, contextFilePath);
+      const content = await fs23.readFile(fullPath, "utf-8");
       const startMarker = _RepoService.REPO_BLOCK_START;
       const endMarker = _RepoService.REPO_BLOCK_END;
       const startIndex = content.indexOf(startMarker);
@@ -63401,7 +66411,7 @@ var RepoService = class _RepoService {
     }
     try {
       const repoRoot = getRepoRoot();
-      const analysisPath = path20.join(repoRoot, ".tiny-brain", "analysis.json");
+      const analysisPath = path24.join(repoRoot, ".tiny-brain", "analysis.json");
       return existsSync8(analysisPath);
     } catch {
       return false;
@@ -63413,7 +66423,7 @@ var RepoService = class _RepoService {
   getAnalysisVersion() {
     try {
       const currentFilePath = fileURLToPath5(import.meta.url);
-      const packageJsonPath = path20.join(path20.dirname(currentFilePath), "../../package.json");
+      const packageJsonPath = path24.join(path24.dirname(currentFilePath), "../../package.json");
       const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
       return packageJson.version || "0.0.0";
     } catch (error2) {
@@ -63434,10 +66444,12 @@ var RepoService = class _RepoService {
     const { contextPath = "CLAUDE.md" } = options;
     const enableSDD = await this.configService.isSDDEnabled();
     const enableTDD = await this.configService.isTDDEnabled();
+    const enableAgentic = await this.configService.isAgenticCodingEnabled();
     if (!enableSDD && !enableTDD) {
       return;
     }
     let workflowContent = "";
+    workflowContent += this.formatRepoContextSection(enableAgentic);
     if (enableSDD) {
       workflowContent += this.formatCommitMessageSection();
     }
@@ -63450,15 +66462,19 @@ var RepoService = class _RepoService {
     if (enableSDD) {
       workflowContent += this.formatOperationalTrackingSection();
     }
+    const version2 = this.getAnalysisVersion();
     const repoBlock = `${_RepoService.REPO_BLOCK_START}
+---
+version: ${version2}
+---
 
 ${workflowContent}${_RepoService.REPO_BLOCK_END}
 `;
     const repoRoot = getRepoRoot();
-    const fullPath = path20.join(repoRoot, contextPath);
+    const fullPath = path24.join(repoRoot, contextPath);
     let existingContent = "";
     try {
-      existingContent = await fs19.readFile(fullPath, "utf-8");
+      existingContent = await fs23.readFile(fullPath, "utf-8");
     } catch {
     }
     const startMarker = _RepoService.REPO_BLOCK_START;
@@ -63480,9 +66496,35 @@ ${workflowContent}${_RepoService.REPO_BLOCK_END}
     } else {
       existingContent = existingContent.trimEnd() + "\n\n" + repoBlock;
     }
-    await fs19.mkdir(path20.dirname(fullPath), { recursive: true });
-    await fs19.writeFile(fullPath, existingContent, "utf-8");
+    await fs23.mkdir(path24.dirname(fullPath), { recursive: true });
+    await fs23.writeFile(fullPath, existingContent, "utf-8");
     this.context.logger.info(`Updated workflow sections in ${contextPath}`);
+  }
+  /**
+   * Format the Repository Context section
+   * When agentic coding is enabled, includes a mandatory agent delegation section
+   */
+  formatRepoContextSection(enableAgenticCoding) {
+    let content = `## Repository Context
+
+Before starting work, read \`.tiny-brain/analysis.json\` for the detected tech stack, test patterns, and documentation locations.
+
+`;
+    if (enableAgenticCoding) {
+      content += `## Agent Delegation (MANDATORY)
+
+IMPORTANT: You MUST delegate implementation work to specialized agents using the Task tool. Do NOT write production code or tests directly.
+
+When the user asks you to implement a feature, fix a bug, or refactor code:
+1. Use the Task tool with \`subagent_type="tiny-brain:developer"\`
+2. Provide the full task context in the prompt
+3. Let the agent handle the TDD workflow (red/green/refactor)
+
+Only skip delegation for trivial tasks (single-line fixes, config changes).
+
+`;
+    }
+    return content;
   }
   /**
    * Format the Commit Message Format section
@@ -63716,6 +66758,10 @@ The \`.tiny-brain/\` directory stores operational tracking data separate from do
 
 \`\`\`
 .tiny-brain/
+\u251C\u2500\u2500 analysis.json       # Detected tech stack and repo analysis
+\u251C\u2500\u2500 tech/               # Technology-specific context files
+\u2502   \u251C\u2500\u2500 config.json     # Tech context mode configuration
+\u2502   \u2514\u2500\u2500 {name}.md       # One file per detected technology
 \u251C\u2500\u2500 progress/           # PRD progress tracking
 \u2502   \u2514\u2500\u2500 {prd-id}.json   # One file per PRD
 \u2514\u2500\u2500 fixes/              # Fix progress tracking
@@ -63950,7 +66996,7 @@ ${exampleSections.join("\n\n")}`;
 
 // packages/tiny-brain-mcp/src/storage/platform-path-builder.ts
 import * as os3 from "os";
-import * as path21 from "path";
+import * as path25 from "path";
 var PlatformPathBuilder = class {
   /**
    * Get Claude Code MCP configuration file path
@@ -63960,7 +67006,7 @@ var PlatformPathBuilder = class {
       case "project":
         return ".mcp.json";
       case "user":
-        return path21.join(os3.homedir(), ".config", "claude", "mcp.json");
+        return path25.join(os3.homedir(), ".config", "claude", "mcp.json");
       case "local":
       default:
         return ".mcp.json";
@@ -63973,7 +67019,7 @@ var PlatformPathBuilder = class {
     const platform2 = os3.platform();
     switch (platform2) {
       case "darwin":
-        return path21.join(
+        return path25.join(
           os3.homedir(),
           "Library",
           "Application Support",
@@ -63981,18 +67027,18 @@ var PlatformPathBuilder = class {
           "claude_desktop_config.json"
         );
       case "win32": {
-        const appData = process.env.APPDATA || path21.join(os3.homedir(), "AppData", "Roaming");
-        return path21.join(appData, "Claude", "claude_desktop_config.json");
+        const appData = process.env.APPDATA || path25.join(os3.homedir(), "AppData", "Roaming");
+        return path25.join(appData, "Claude", "claude_desktop_config.json");
       }
       default:
-        return path21.join(os3.homedir(), ".config", "Claude", "claude_desktop_config.json");
+        return path25.join(os3.homedir(), ".config", "Claude", "claude_desktop_config.json");
     }
   }
   /**
    * Get Cursor IDE configuration file path
    */
   getCursorConfig() {
-    return path21.join(os3.homedir(), ".cursor", "mcp", "config.json");
+    return path25.join(os3.homedir(), ".cursor", "mcp", "config.json");
   }
   /**
    * Get ChatGPT Desktop configuration file path
@@ -64001,13 +67047,13 @@ var PlatformPathBuilder = class {
     const platform2 = os3.platform();
     switch (platform2) {
       case "darwin":
-        return path21.join(os3.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
+        return path25.join(os3.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
       case "win32": {
-        const appData = process.env.APPDATA || path21.join(os3.homedir(), "AppData", "Roaming");
-        return path21.join(appData, "ChatGPT", "config.json");
+        const appData = process.env.APPDATA || path25.join(os3.homedir(), "AppData", "Roaming");
+        return path25.join(appData, "ChatGPT", "config.json");
       }
       default:
-        return path21.join(os3.homedir(), ".config", "ChatGPT", "config.json");
+        return path25.join(os3.homedir(), ".config", "ChatGPT", "config.json");
     }
   }
   /**
@@ -64040,13 +67086,13 @@ var PlatformPathBuilder = class {
    * Get backup directory for platform configs
    */
   getBackupDirectory() {
-    return path21.join(os3.homedir(), ".tiny-brain", "backups");
+    return path25.join(os3.homedir(), ".tiny-brain", "backups");
   }
 };
 
 // packages/tiny-brain-mcp/src/storage/platform-config-adapter.ts
-import { promises as fs20, existsSync as existsSync9 } from "fs";
-import * as path22 from "path";
+import { promises as fs24, existsSync as existsSync9 } from "fs";
+import * as path26 from "path";
 var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystemStorageAdapter {
   platformPathBuilder;
   constructor(config2) {
@@ -64059,7 +67105,7 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
   async readPlatformConfig(platform2, scope) {
     try {
       const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-      const content = await fs20.readFile(configPath, "utf-8");
+      const content = await fs24.readFile(configPath, "utf-8");
       return JSON.parse(content);
     } catch (error2) {
       const err = error2;
@@ -64074,9 +67120,9 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
    */
   async writePlatformConfig(platform2, config2, scope) {
     const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-    const directory = path22.dirname(configPath);
-    await fs20.mkdir(directory, { recursive: true });
-    await fs20.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
+    const directory = path26.dirname(configPath);
+    await fs24.mkdir(directory, { recursive: true });
+    await fs24.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
   }
   /**
    * Backup platform configuration
@@ -64090,9 +67136,9 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/:/g, "-").replace(/\./g, "-");
       const backupDir = this.platformPathBuilder.getBackupDirectory();
       const backupFile = `${platform2}-${timestamp2}.backup`;
-      const backupPath = path22.join(backupDir, backupFile);
-      await fs20.mkdir(backupDir, { recursive: true });
-      await fs20.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
+      const backupPath = path26.join(backupDir, backupFile);
+      await fs24.mkdir(backupDir, { recursive: true });
+      await fs24.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
       return timestamp2;
     } catch (error2) {
       const err = error2;
@@ -64108,8 +67154,8 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
   async restorePlatformConfig(platform2, backupId, scope) {
     const backupDir = this.platformPathBuilder.getBackupDirectory();
     const backupFile = `${platform2}-${backupId}.backup`;
-    const backupPath = path22.join(backupDir, backupFile);
-    const backupContent = await fs20.readFile(backupPath, "utf-8");
+    const backupPath = path26.join(backupDir, backupFile);
+    const backupContent = await fs24.readFile(backupPath, "utf-8");
     const config2 = JSON.parse(backupContent);
     await this.writePlatformConfig(platform2, config2, scope);
   }
@@ -64161,15 +67207,15 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
     const repoRoot = getRepoRoot();
     switch (platform2) {
       case "claude-code":
-        return path22.join(repoRoot, "CLAUDE.md");
+        return path26.join(repoRoot, "CLAUDE.md");
       case "cursor":
-        return path22.join(repoRoot, ".cursorrules");
+        return path26.join(repoRoot, ".cursorrules");
       case "vscode":
-        return path22.join(repoRoot, ".vscode", "context.md");
+        return path26.join(repoRoot, ".vscode", "context.md");
       case "windsurf":
-        return path22.join(repoRoot, ".windsurfrules");
+        return path26.join(repoRoot, ".windsurfrules");
       default:
-        return path22.join(repoRoot, ".claude", "CLAUDE.md");
+        return path26.join(repoRoot, ".claude", "CLAUDE.md");
     }
   }
   /**
@@ -64189,10 +67235,10 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
       return "windsurf";
     }
     const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    if (existsSync9(path22.join(homeDir, ".claude-code"))) {
+    if (existsSync9(path26.join(homeDir, ".claude-code"))) {
       return "claude-code";
     }
-    if (existsSync9(path22.join(homeDir, "Library", "Application Support", "Claude"))) {
+    if (existsSync9(path26.join(homeDir, "Library", "Application Support", "Claude"))) {
       return "claude-desktop";
     }
     return "unknown";
@@ -64257,8 +67303,8 @@ var semver = __toESM(require_semver2(), 1);
 
 // packages/tiny-brain-mcp/src/services/agent-installation-service.ts
 init_src();
-import * as fs21 from "fs/promises";
-import * as path23 from "path";
+import * as fs25 from "fs/promises";
+import * as path27 from "path";
 import * as crypto5 from "crypto";
 var AgentInstallationService = class {
   constructor(context) {
@@ -64321,15 +67367,15 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async installAgent(agentInfo) {
     try {
       const repoRoot = getRepoRoot();
-      const agentsDir = path23.join(repoRoot, ".claude", "agents");
-      await fs21.mkdir(agentsDir, { recursive: true });
+      const agentsDir = path27.join(repoRoot, ".claude", "agents");
+      await fs25.mkdir(agentsDir, { recursive: true });
       let content = agentInfo.content;
       if (!content) {
         const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
         content = downloaded.content;
       }
-      const filePath = path23.join(agentsDir, `${agentInfo.name}.md`);
-      await fs21.writeFile(filePath, content, "utf-8");
+      const filePath = path27.join(agentsDir, `${agentInfo.name}.md`);
+      await fs25.writeFile(filePath, content, "utf-8");
       this.context.logger.info(`Successfully installed agent: ${agentInfo.name}`);
       return { success: true };
     } catch (error2) {
@@ -64354,13 +67400,13 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async updateAgent(agentInfo) {
     try {
       const repoRoot = getRepoRoot();
-      const filePath = path23.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
-      const existingContent = await fs21.readFile(filePath, "utf-8");
+      const filePath = path27.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
+      const existingContent = await fs25.readFile(filePath, "utf-8");
       const hasCustomizations = this.detectCustomizations(existingContent);
       let backupCreated = false;
       if (hasCustomizations) {
         const backupPath = `${filePath}.backup.${Date.now()}`;
-        await fs21.writeFile(backupPath, existingContent, "utf-8");
+        await fs25.writeFile(backupPath, existingContent, "utf-8");
         backupCreated = true;
         this.context.logger.info(`Created backup of customized agent: ${backupPath}`);
       }
@@ -64370,7 +67416,7 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
         newContent = downloaded.content;
       }
       const updatedContent = this.updateAgentMetadata(newContent, agentInfo.version);
-      await fs21.writeFile(filePath, updatedContent, "utf-8");
+      await fs25.writeFile(filePath, updatedContent, "utf-8");
       this.context.logger.info(`Successfully updated agent: ${agentInfo.name} to v${agentInfo.version}`);
       return {
         updated: true,
@@ -64388,9 +67434,9 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async removeAgent(agentName) {
     try {
       const repoRoot = getRepoRoot();
-      const filePath = path23.join(repoRoot, ".claude", "agents", `${agentName}.md`);
-      await fs21.access(filePath);
-      await fs21.unlink(filePath);
+      const filePath = path27.join(repoRoot, ".claude", "agents", `${agentName}.md`);
+      await fs25.access(filePath);
+      await fs25.unlink(filePath);
       this.context.logger.info(`Successfully removed agent: ${agentName}`);
     } catch (error2) {
       if (error2.code === "ENOENT") {
@@ -64410,8 +67456,8 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       failed: []
     };
     const repoRoot = getRepoRoot();
-    const agentsDir = path23.join(repoRoot, ".claude", "agents");
-    await fs21.mkdir(agentsDir, { recursive: true });
+    const agentsDir = path27.join(repoRoot, ".claude", "agents");
+    await fs25.mkdir(agentsDir, { recursive: true });
     for (const agent of agentsToInstall) {
       try {
         const result = await this.installAgent(agent);
@@ -64461,14 +67507,14 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async getInstalledAgents() {
     try {
       const repoRoot = getRepoRoot();
-      const agentsDir = path23.join(repoRoot, ".claude", "agents");
-      const files = await fs21.readdir(agentsDir);
+      const agentsDir = path27.join(repoRoot, ".claude", "agents");
+      const files = await fs25.readdir(agentsDir);
       const agentFiles = files.filter((file) => file.endsWith(".md"));
       const installedAgents = [];
       for (const file of agentFiles) {
         try {
-          const filePath = path23.join(agentsDir, file);
-          const content = await fs21.readFile(filePath, "utf-8");
+          const filePath = path27.join(agentsDir, file);
+          const content = await fs25.readFile(filePath, "utf-8");
           const agentName = file.replace(".md", "");
           const metadata = this.extractAgentMetadata(content);
           installedAgents.push({
@@ -64589,20 +67635,20 @@ var AgentService = class {
    * Install formatted agents to the filesystem
    */
   async installAgents(formattedAgents, formatter) {
-    const fs22 = await import("fs/promises");
-    const path25 = await import("path");
+    const fs27 = await import("fs/promises");
+    const path30 = await import("path");
     const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path25.join(repoRoot, activeFormatter.getAgentInstallPath());
+    const agentsPath = path30.join(repoRoot, activeFormatter.getAgentInstallPath());
     this.context.logger.debug("[AgentService] Installing agents:", {
       repoRoot,
       agentsPath,
       agentCount: formattedAgents.length
     });
-    await fs22.mkdir(agentsPath, { recursive: true });
+    await fs27.mkdir(agentsPath, { recursive: true });
     for (const agent of formattedAgents) {
-      const agentPath = path25.join(agentsPath, agent.filename);
-      await fs22.writeFile(agentPath, agent.content, "utf-8");
+      const agentPath = path30.join(agentsPath, agent.filename);
+      await fs27.writeFile(agentPath, agent.content, "utf-8");
       this.context.logger.info(`Agent '${agent.filename}' installed to ${agentPath}`);
     }
     this.context.logger.info(`Installed ${formattedAgents.length} agents to ${agentsPath}`);
@@ -64611,28 +67657,28 @@ var AgentService = class {
    * Install agents with version checking and overwrite strategy
    */
   async installAgentsWithVersionCheck(agents, options = {}) {
-    const fs22 = await import("fs/promises");
-    const path25 = await import("path");
+    const fs27 = await import("fs/promises");
+    const path30 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const formattedAgents = this.formatAgents(agents, formatter);
     const repoRoot = getRepoRoot();
-    const agentsPath = path25.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path30.join(repoRoot, formatter.getAgentInstallPath());
     const result = {
       installed: [],
       skipped: [],
       updated: [],
       errors: []
     };
-    await fs22.mkdir(agentsPath, { recursive: true });
+    await fs27.mkdir(agentsPath, { recursive: true });
     const installedAgents = await this.getInstalledAgents();
     const installedMap = new Map(installedAgents.map((a) => [a.name, a]));
     for (const agent of formattedAgents) {
-      const agentPath = path25.join(agentsPath, agent.filename);
+      const agentPath = path30.join(agentsPath, agent.filename);
       const agentName = agent.filename.replace(".md", "");
       try {
-        const fileExists = await fs22.access(agentPath).then(() => true).catch(() => false);
+        const fileExists = await fs27.access(agentPath).then(() => true).catch(() => false);
         if (!fileExists) {
-          await fs22.writeFile(agentPath, agent.content, "utf-8");
+          await fs27.writeFile(agentPath, agent.content, "utf-8");
           result.installed.push(agentName);
           this.context.logger.info(`Installed new agent: ${agentName}`);
         } else {
@@ -64643,9 +67689,9 @@ var AgentService = class {
           } else if (strategy === "always") {
             if (options.backupExisting) {
               const backupPath = `${agentPath}.backup.${Date.now()}`;
-              await fs22.copyFile(agentPath, backupPath);
+              await fs27.copyFile(agentPath, backupPath);
             }
-            await fs22.writeFile(agentPath, agent.content, "utf-8");
+            await fs27.writeFile(agentPath, agent.content, "utf-8");
             result.updated.push(agentName);
             this.context.logger.info(`Updated agent (forced): ${agentName}`);
           } else {
@@ -64655,9 +67701,9 @@ var AgentService = class {
             if (semver.gt(newVersion, installedVersion)) {
               if (options.backupExisting) {
                 const backupPath = `${agentPath}.backup.${Date.now()}`;
-                await fs22.copyFile(agentPath, backupPath);
+                await fs27.copyFile(agentPath, backupPath);
               }
-              await fs22.writeFile(agentPath, agent.content, "utf-8");
+              await fs27.writeFile(agentPath, agent.content, "utf-8");
               result.updated.push(agentName);
               this.context.logger.info(`Updated agent: ${agentName} (${installedVersion} -> ${newVersion})`);
             } else {
@@ -64682,21 +67728,21 @@ var AgentService = class {
     if (!this.installationService && "platformInfo" in this.context) {
       this.installationService = new AgentInstallationService(this.context);
     }
-    const fs22 = await import("fs/promises");
-    const path25 = await import("path");
+    const fs27 = await import("fs/promises");
+    const path30 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path25.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path30.join(repoRoot, formatter.getAgentInstallPath());
     for (const agentName of agentNames) {
       try {
-        const agentFile = path25.join(agentsPath, `${agentName}.md`);
+        const agentFile = path30.join(agentsPath, `${agentName}.md`);
         try {
-          await fs22.access(agentFile);
+          await fs27.access(agentFile);
         } catch {
           result.errors.push(`Agent ${agentName} not found`);
           continue;
         }
-        await fs22.unlink(agentFile);
+        await fs27.unlink(agentFile);
         result.removed.push(agentName);
         this.context.logger.info(`Removed agent: ${agentName}`);
       } catch (error2) {
@@ -64717,17 +67763,17 @@ var AgentService = class {
     if (this.installationService) {
       return await this.installationService.getInstalledAgents();
     }
-    const fs22 = await import("fs/promises");
-    const path25 = await import("path");
+    const fs27 = await import("fs/promises");
+    const path30 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path25.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path30.join(repoRoot, formatter.getAgentInstallPath());
     try {
-      const files = await fs22.readdir(agentsPath);
+      const files = await fs27.readdir(agentsPath);
       const agentFiles = files.filter((f) => f.endsWith(".md"));
       const agents = [];
       for (const file of agentFiles) {
-        const content = await fs22.readFile(path25.join(agentsPath, file), "utf-8");
+        const content = await fs27.readFile(path30.join(agentsPath, file), "utf-8");
         const name = file.replace(".md", "");
         const version2 = this.extractVersion(content);
         agents.push({ name, version: version2, lastUpdated: (/* @__PURE__ */ new Date()).toISOString() });
@@ -64770,8 +67816,6 @@ var AgentService = class {
 };
 
 // packages/tiny-brain-mcp/src/tools/persona/as.tool.ts
-import { existsSync as existsSync10 } from "fs";
-import { join as join24 } from "path";
 var AsArgsSchema = external_exports.object({
   personaName: external_exports.string().optional(),
   confirmCreate: external_exports.boolean().optional()
@@ -64899,11 +67943,14 @@ var AsTool = class _AsTool {
     const formatter = agentService.getDefaultFormatter();
     const contextFilePath = formatter.getRepoContextFilePath();
     const response = await _AsTool.buildResponse(context, parsedPersona, contextFilePath);
-    const hasAgents = await _AsTool.checkHasAgents(context, contextFilePath);
+    const [hasAgents, featureFlags] = await Promise.all([
+      _AsTool.checkHasAgents(context, contextFilePath),
+      _AsTool.resolveFeatureFlags(context)
+    ]);
     return {
       content: [{
         type: "text",
-        text: _AsTool.formatResponse(response, contextFilePath, hasAgents)
+        text: _AsTool.formatResponse(response, contextFilePath, hasAgents, featureFlags, context.libraryAuth)
       }],
       isError: false
     };
@@ -64948,11 +67995,14 @@ var AsTool = class _AsTool {
       const contextFilePath = formatter?.getRepoContextFilePath();
       const updatedContext = await _AsTool.activatePersona(personaName, profile, context);
       const response = await _AsTool.buildResponse(updatedContext, parsedPersona, contextFilePath);
-      const hasAgents = await _AsTool.checkHasAgents(updatedContext, contextFilePath);
+      const [hasAgents, featureFlags] = await Promise.all([
+        _AsTool.checkHasAgents(updatedContext, contextFilePath),
+        _AsTool.resolveFeatureFlags(updatedContext)
+      ]);
       return {
         content: [{
           type: "text",
-          text: _AsTool.formatResponse(response, contextFilePath, hasAgents)
+          text: _AsTool.formatResponse(response, contextFilePath, hasAgents, featureFlags, updatedContext.libraryAuth)
         }],
         isError: false
       };
@@ -65016,11 +68066,14 @@ var AsTool = class _AsTool {
       const formatter = agentService.getDefaultFormatter();
       const contextFilePath = formatter?.getRepoContextFilePath();
       const response = await _AsTool.buildResponse(updatedContext, parsedPersona, contextFilePath);
-      const hasAgents = await _AsTool.checkHasAgents(updatedContext, contextFilePath);
+      const [hasAgents, featureFlags] = await Promise.all([
+        _AsTool.checkHasAgents(updatedContext, contextFilePath),
+        _AsTool.resolveFeatureFlags(updatedContext)
+      ]);
       return {
         content: [{
           type: "text",
-          text: _AsTool.formatResponse(response, contextFilePath, hasAgents) + needsInitMessage
+          text: _AsTool.formatResponse(response, contextFilePath, hasAgents, featureFlags, updatedContext.libraryAuth) + needsInitMessage
         }],
         isError: false
       };
@@ -65055,6 +68108,23 @@ var AsTool = class _AsTool {
       return installedAgents.length > 0;
     } catch {
       return false;
+    }
+  }
+  /**
+   * Resolve feature flags from ConfigService
+   */
+  static async resolveFeatureFlags(context) {
+    try {
+      const configService = new ConfigService(context);
+      const [sddEnabled, tddEnabled, adrEnabled, agenticCodingEnabled] = await Promise.all([
+        configService.isSDDEnabled(),
+        configService.isTDDEnabled(),
+        configService.isADREnabled(),
+        configService.isAgenticCodingEnabled()
+      ]);
+      return { sddEnabled, tddEnabled, adrEnabled, agenticCodingEnabled };
+    } catch {
+      return { sddEnabled: false, tddEnabled: false, adrEnabled: false, agenticCodingEnabled: false };
     }
   }
   /**
@@ -65106,7 +68176,7 @@ var AsTool = class _AsTool {
   /**
    * Format the persona response as human-readable markdown with enforced workflow
    */
-  static formatResponse(response, contextFilePath, hasAgents) {
+  static formatResponse(response, contextFilePath, hasAgents, featureFlags, libraryAuth) {
     let formatted = `# THIS IS YOUR CONTEXT FOR THIS SESSION - YOU MUST USE IT
 
 `;
@@ -65221,23 +68291,32 @@ ${value}
 `;
       formatted += `\`\`\`
 `;
+      formatted += `    \u{1F9E0} tiny brain
+
+`;
       formatted += `    \u2705 Received context for persona
 `;
       formatted += `    \u2705 Re-read ${contextFilePath}
 `;
-      try {
-        const repoRoot = getRepoRoot();
-        const hasPRD = existsSync10(join24(repoRoot, "docs", "prd"));
-        const hasADR = existsSync10(join24(repoRoot, "docs", "adr"));
-        if (hasPRD) {
-          formatted += `      \u2705 Enabled Spec Driven Design workflow with Test Driven Development
+      if (featureFlags?.sddEnabled) {
+        formatted += `    \u2705 Enabled Spec Driven Design workflow with Test Driven Development
 `;
-        }
-        if (hasADR) {
-          formatted += `      \u2705 Enabled Architecture Decision Records
+      }
+      if (featureFlags?.adrEnabled) {
+        formatted += `    \u2705 Enabled Architecture Decision Records
 `;
-        }
-      } catch {
+      }
+      if (featureFlags?.agenticCodingEnabled) {
+        formatted += `    \u2705 Enabled agentic coding
+`;
+      }
+      if (libraryAuth?.token) {
+        formatted += `    \u{1F511} Connected to Tiny Brain Remote
+`;
+      }
+      if (libraryAuth?.hasLlmApiKey) {
+        formatted += `    \u{1F511} LLM API key configured
+`;
       }
       if (hasAgents) {
         formatted += `    \u2705 Completed pre-flight checklist
@@ -65245,17 +68324,13 @@ ${value}
         formatted += `    \u2705 Ready for agent-first workflow
 `;
       }
-      formatted += `    
-
-`;
-      formatted += `    I've switched to your **${response.PERSONA.name}** persona.
-`;
-      formatted += `    
-`;
-      formatted += `    \u{1F9E0} Dashboard available at: [http://localhost:8765](http://localhost:8765)
-`;
       formatted += `\`\`\`
 
+`;
+      formatted += `I've switched to your **${response.PERSONA.name}** persona.
+
+`;
+      formatted += `\u{1F9E0} Dashboard available at: [http://localhost:8765](http://localhost:8765)
 `;
     } else {
       formatted += `I've switched to your **${response.PERSONA.name}** persona.
@@ -65292,11 +68367,14 @@ ${value}
       const updatedContext = await _AsTool.activatePersona(newName, profile, context);
       context.logger.info(`Renamed persona '${oldName}' to '${newName}'`);
       const response = await _AsTool.buildResponse(updatedContext, parsedPersona, contextFilePath);
-      const hasAgents = await _AsTool.checkHasAgents(updatedContext, contextFilePath);
+      const [hasAgents, featureFlags] = await Promise.all([
+        _AsTool.checkHasAgents(updatedContext, contextFilePath),
+        _AsTool.resolveFeatureFlags(updatedContext)
+      ]);
       return {
         content: [{
           type: "text",
-          text: _AsTool.formatResponse(response, contextFilePath, hasAgents)
+          text: _AsTool.formatResponse(response, contextFilePath, hasAgents, featureFlags, updatedContext.libraryAuth)
         }],
         isError: false
       };
@@ -65555,7 +68633,7 @@ init_zod();
 
 // packages/tiny-brain-mcp/src/services/UpdateService.ts
 import { readFileSync as readFileSync2 } from "fs";
-import { join as join25, dirname as dirname9 } from "path";
+import { join as join24, dirname as dirname9 } from "path";
 import { fileURLToPath as fileURLToPath6 } from "url";
 var UpdateService = class _UpdateService {
   static GITHUB_RELEASES_URL = "https://raw.githubusercontent.com/magic-ingredients/tiny-brain-releases/main/latest/version.json";
@@ -65571,19 +68649,19 @@ var UpdateService = class _UpdateService {
     try {
       const __filename = fileURLToPath6(import.meta.url);
       const __dirname2 = dirname9(__filename);
-      const packageJsonPath = join25(__dirname2, "../../package.json");
+      const packageJsonPath = join24(__dirname2, "../../package.json");
       try {
         const packageJson = JSON.parse(readFileSync2(packageJsonPath, "utf-8"));
         this.currentVersion = packageJson.version;
         return packageJson.version;
       } catch {
-        const manifestPath = join25(__dirname2, "../manifest.json");
+        const manifestPath = join24(__dirname2, "../manifest.json");
         try {
           const manifest = JSON.parse(readFileSync2(manifestPath, "utf-8"));
           this.currentVersion = manifest.version;
           return manifest.version;
         } catch {
-          const extensionsManifestPath = join25(__dirname2, "../../manifest.json");
+          const extensionsManifestPath = join24(__dirname2, "../../manifest.json");
           const manifest = JSON.parse(readFileSync2(extensionsManifestPath, "utf-8"));
           this.currentVersion = manifest.version;
           return manifest.version;
@@ -66207,18 +69285,18 @@ init_zod();
 // packages/tiny-brain-mcp/src/services/analyse-service.ts
 init_src();
 import { fileURLToPath as fileURLToPath8 } from "url";
-import { dirname as dirname11, join as join27 } from "path";
-import { existsSync as existsSync11 } from "fs";
+import { dirname as dirname11, join as join26 } from "path";
+import { existsSync as existsSync10 } from "fs";
 import { mkdir as mkdir5, copyFile, readFile as readFile14, readdir as readdir11, chmod as chmod2, stat as stat2, writeFile as writeFile5 } from "fs/promises";
 
 // packages/tiny-brain-mcp/src/utils/package-version.ts
 import { readFileSync as readFileSync3 } from "fs";
-import { join as join26, dirname as dirname10 } from "path";
+import { join as join25, dirname as dirname10 } from "path";
 import { fileURLToPath as fileURLToPath7 } from "url";
 function getPackageVersion() {
   const __filename = fileURLToPath7(import.meta.url);
   const __dirname2 = dirname10(__filename);
-  const packagePath = join26(__dirname2, "..", "..", "package.json");
+  const packagePath = join25(__dirname2, "..", "..", "package.json");
   try {
     const packageJson = JSON.parse(readFileSync3(packagePath, "utf-8"));
     return packageJson.version;
@@ -66388,8 +69466,8 @@ var AnalyseService = class {
    */
   async countPrdsInRepo(repoPath) {
     try {
-      const prdDir = join27(repoPath, "docs", "prd");
-      if (!existsSync11(prdDir)) {
+      const prdDir = join26(repoPath, "docs", "prd");
+      if (!existsSync10(prdDir)) {
         return 0;
       }
       const entries = await readdir11(prdDir, { withFileTypes: true });
@@ -66410,8 +69488,8 @@ var AnalyseService = class {
         return false;
       }
       const repoRoot = process.cwd();
-      const prdDir = join27(repoRoot, "docs", "prd");
-      if (existsSync11(prdDir)) {
+      const prdDir = join26(repoRoot, "docs", "prd");
+      if (existsSync10(prdDir)) {
         return false;
       }
       await mkdir5(prdDir, { recursive: true });
@@ -66434,8 +69512,8 @@ var AnalyseService = class {
         return false;
       }
       const repoRoot = process.cwd();
-      const adrDir = join27(repoRoot, "docs", "adr");
-      if (existsSync11(adrDir)) {
+      const adrDir = join26(repoRoot, "docs", "adr");
+      if (existsSync10(adrDir)) {
         return false;
       }
       await mkdir5(adrDir, { recursive: true });
@@ -66458,8 +69536,8 @@ var AnalyseService = class {
         return false;
       }
       const repoRoot = process.cwd();
-      const qualityDir = join27(repoRoot, "docs", "quality");
-      if (existsSync11(qualityDir)) {
+      const qualityDir = join26(repoRoot, "docs", "quality");
+      if (existsSync10(qualityDir)) {
         return false;
       }
       await mkdir5(qualityDir, { recursive: true });
@@ -66482,8 +69560,8 @@ var AnalyseService = class {
         return false;
       }
       const repoRoot = process.cwd();
-      const fixesDir = join27(repoRoot, ".tiny-brain", "fixes");
-      if (existsSync11(fixesDir)) {
+      const fixesDir = join26(repoRoot, ".tiny-brain", "fixes");
+      if (existsSync10(fixesDir)) {
         return false;
       }
       await mkdir5(fixesDir, { recursive: true });
@@ -66502,15 +69580,15 @@ var AnalyseService = class {
   async initializeGitHooks() {
     try {
       const repoRoot = process.cwd();
-      const gitHooksDir = join27(repoRoot, ".git", "hooks");
-      if (!existsSync11(join27(repoRoot, ".git"))) {
+      const gitHooksDir = join26(repoRoot, ".git", "hooks");
+      if (!existsSync10(join26(repoRoot, ".git"))) {
         this.context.logger.debug("Not a git repository, skipping git hooks initialization");
         return false;
       }
       const __filename = fileURLToPath8(import.meta.url);
       const __dirname2 = dirname11(__filename);
-      const srcHooksDir = join27(__dirname2, "..", "..", "templates", "hooks");
-      if (!existsSync11(srcHooksDir)) {
+      const srcHooksDir = join26(__dirname2, "..", "..", "templates", "hooks");
+      if (!existsSync10(srcHooksDir)) {
         this.context.logger.debug(`Hook templates not found at ${srcHooksDir}, skipping`);
         return false;
       }
@@ -66518,12 +69596,12 @@ var AnalyseService = class {
       const hooks = ["commit-msg", "post-commit", "pre-commit"];
       let anyInstalled = false;
       for (const hookName of hooks) {
-        const srcHook = join27(srcHooksDir, hookName);
-        const destHook = join27(gitHooksDir, hookName);
-        if (!existsSync11(srcHook)) {
+        const srcHook = join26(srcHooksDir, hookName);
+        const destHook = join26(gitHooksDir, hookName);
+        if (!existsSync10(srcHook)) {
           continue;
         }
-        if (existsSync11(destHook)) {
+        if (existsSync10(destHook)) {
           try {
             const existingContent = await readFile14(destHook, "utf-8");
             if (!existingContent.includes("Installed by: tiny-brain")) {
@@ -66572,11 +69650,11 @@ var AnalyseService = class {
     ];
     try {
       const repoRoot = process.cwd();
-      const settingsDir = join27(repoRoot, ".claude");
-      const settingsPath = join27(settingsDir, "settings.json");
+      const settingsDir = join26(repoRoot, ".claude");
+      const settingsPath = join26(settingsDir, "settings.json");
       await mkdir5(settingsDir, { recursive: true });
       let settings = {};
-      if (existsSync11(settingsPath)) {
+      if (existsSync10(settingsPath)) {
         try {
           const content = await readFile14(settingsPath, "utf-8");
           settings = JSON.parse(content);
@@ -66878,9 +69956,22 @@ var AnalyseTool = class _AnalyseTool {
 
 // packages/tiny-brain-mcp/src/tools/quality/quality.tool.ts
 init_zod();
+import { promises as fs26 } from "fs";
+import path28 from "path";
 init_src();
 var QualityArgsSchema = external_exports.object({
-  operation: external_exports.enum(["save", "history", "details"]),
+  operation: external_exports.enum([
+    "save",
+    "history",
+    "details",
+    "compare",
+    "plan",
+    "plan-details",
+    "detect-analyzers",
+    "run-analyzers",
+    "merge-results",
+    "assemble-run"
+  ]),
   // For 'save' operation
   score: external_exports.number().min(0).max(100).optional(),
   grade: external_exports.enum(["A", "B", "C", "D", "F"]).optional(),
@@ -66894,7 +69985,18 @@ var QualityArgsSchema = external_exports.object({
   // For 'history' operation
   limit: external_exports.number().min(1).optional(),
   // For 'details' operation
-  runId: external_exports.string().optional()
+  runId: external_exports.string().optional(),
+  // For 'compare' operation
+  baseRunId: external_exports.string().optional(),
+  targetRunId: external_exports.string().optional(),
+  // For 'plan' operation
+  sourceRunId: external_exports.string().optional(),
+  targetGrade: external_exports.string().optional(),
+  // For 'plan-details' operation
+  planId: external_exports.string().optional(),
+  // For 'merge-results' operation
+  analyzerIssues: external_exports.array(QualityIssueSchema).optional(),
+  llmIssues: external_exports.array(QualityIssueSchema).optional()
 });
 var QualityTool = class _QualityTool {
   static getToolDefinition() {
@@ -66908,18 +70010,37 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
   \u2022 save: Persist a quality run to docs/quality/runs/
   \u2022 history: List previous quality runs with summary data
   \u2022 details: Get full details for a specific run by ID
+  \u2022 compare: Compare two runs to see new, resolved, and persistent issues
+  \u2022 plan: Generate a Quality Improvement Plan from a saved run
+  \u2022 plan-details: Retrieve a saved Quality Improvement Plan by ID
+  \u2022 detect-analyzers: Scan repo for configured static analyzers
+  \u2022 run-analyzers: Execute detected analyzers and return normalized issues
+  \u2022 merge-results: Merge analyzer + LLM issues with deduplication
+  \u2022 assemble-run: Read all intermediate files, merge, score, and save final report
 
 \u{1F4A1} WORKFLOW:
   1. Quality-coordinator agent performs analysis
   2. Agent calls quality save with score, grade, issues, recommendations
   3. Results stored as markdown in docs/quality/runs/YYYY-MM-DD-quality.md
-  4. Use history/details to retrieve past runs`,
+  4. Use history/details to retrieve past runs
+  5. Use plan to generate an improvement roadmap from a run`,
       inputSchema: {
         type: "object",
         properties: {
           operation: {
             type: "string",
-            enum: ["save", "history", "details"],
+            enum: [
+              "save",
+              "history",
+              "details",
+              "compare",
+              "plan",
+              "plan-details",
+              "detect-analyzers",
+              "run-analyzers",
+              "merge-results",
+              "assemble-run"
+            ],
             description: "The quality operation to perform"
           },
           // For 'save' operation
@@ -66943,7 +70064,43 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
                 file: { type: "string" },
                 line: { type: "number" },
                 message: { type: "string" },
-                suggestion: { type: "string" }
+                suggestion: { type: "string" },
+                effort: {
+                  type: "string",
+                  enum: ["trivial", "small", "medium", "large", "epic"],
+                  description: "Estimated effort to remediate"
+                },
+                impact: {
+                  type: "string",
+                  enum: ["critical", "high", "medium", "low"],
+                  description: "Impact level if this issue is not addressed"
+                },
+                theme: {
+                  type: "string",
+                  description: 'Thematic grouping tag (e.g., "type-safety", "auth-hardening")'
+                },
+                evidence: {
+                  type: "string",
+                  description: "Code snippet or evidence showing the problem"
+                },
+                relatedIssues: {
+                  type: "array",
+                  items: { type: "number" },
+                  description: "Indices of related issues in the same run"
+                },
+                references: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "External references such as CWE or OWASP identifiers"
+                },
+                scoreImpact: {
+                  type: "number",
+                  description: "Points that would be gained if this issue were fixed"
+                },
+                effortHours: {
+                  type: "number",
+                  description: "Estimated hours to remediate"
+                }
               },
               required: ["category", "severity", "file", "message"]
             }
@@ -66966,6 +70123,58 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
           runId: {
             type: "string",
             description: "Run ID to get details for (required for details)"
+          },
+          // For 'compare' operation
+          baseRunId: {
+            type: "string",
+            description: "Base run ID for comparison (required for compare)"
+          },
+          targetRunId: {
+            type: "string",
+            description: "Target run ID for comparison (required for compare)"
+          },
+          // For 'plan' operation
+          sourceRunId: {
+            type: "string",
+            description: "Source run ID to generate improvement plan from (required for plan)"
+          },
+          targetGrade: {
+            type: "string",
+            description: "Target grade to aim for in the improvement plan (optional for plan)"
+          },
+          // For 'plan-details' operation
+          planId: {
+            type: "string",
+            description: "Plan ID to retrieve details for (required for plan-details)"
+          },
+          // For 'merge-results' operation
+          analyzerIssues: {
+            type: "array",
+            description: "Array of analyzer issues (required for merge-results)",
+            items: {
+              type: "object",
+              properties: {
+                category: { type: "string" },
+                severity: { type: "string" },
+                file: { type: "string" },
+                message: { type: "string" }
+              },
+              required: ["category", "severity", "file", "message"]
+            }
+          },
+          llmIssues: {
+            type: "array",
+            description: "Array of LLM investigation issues (required for merge-results)",
+            items: {
+              type: "object",
+              properties: {
+                category: { type: "string" },
+                severity: { type: "string" },
+                file: { type: "string" },
+                message: { type: "string" }
+              },
+              required: ["category", "severity", "file", "message"]
+            }
           }
         },
         required: ["operation"]
@@ -66988,6 +70197,20 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
           return await _QualityTool.handleHistory(validatedArgs, service);
         case "details":
           return await _QualityTool.handleDetails(validatedArgs, service);
+        case "compare":
+          return await _QualityTool.handleCompare(validatedArgs, service);
+        case "plan":
+          return await _QualityTool.handlePlan(validatedArgs, service);
+        case "plan-details":
+          return await _QualityTool.handlePlanDetails(validatedArgs, context.repositoryRoot);
+        case "detect-analyzers":
+          return await _QualityTool.handleDetectAnalyzers(context.repositoryRoot);
+        case "run-analyzers":
+          return await _QualityTool.handleRunAnalyzers(context.repositoryRoot);
+        case "merge-results":
+          return _QualityTool.handleMergeResults(validatedArgs);
+        case "assemble-run":
+          return await _QualityTool.handleAssembleRun(validatedArgs, context.repositoryRoot);
         default:
           return createErrorResult(`Unknown operation: ${validatedArgs.operation}`);
       }
@@ -67101,6 +70324,254 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
         lines.push(`- Project Type: ${run2.context.projectType}`);
       }
     }
+    return createSuccessResult(lines.join("\n"));
+  }
+  static async handleCompare(args, service) {
+    if (!args.baseRunId) {
+      return createErrorResult("baseRunId is required for compare operation");
+    }
+    if (!args.targetRunId) {
+      return createErrorResult("targetRunId is required for compare operation");
+    }
+    const comparison = await service.compareRuns(args.baseRunId, args.targetRunId);
+    if (!comparison) {
+      return createErrorResult(
+        `One or both runs not found: ${args.baseRunId}, ${args.targetRunId}`
+      );
+    }
+    const deltaSign = comparison.scoreDelta >= 0 ? "+" : "";
+    const lines = [
+      `\u{1F4CA} Run Comparison: ${comparison.baseRunId} \u2192 ${comparison.targetRunId}`,
+      "",
+      "## Summary",
+      `**Score Delta:** ${deltaSign}${comparison.scoreDelta}`,
+      `**Grade Change:** ${comparison.gradeChange.from} \u2192 ${comparison.gradeChange.to}`,
+      `**New Issues:** ${comparison.newIssues.length}`,
+      `**Resolved Issues:** ${comparison.resolvedIssues.length}`,
+      `**Persistent Issues:** ${comparison.persistentIssues.length}`,
+      ""
+    ];
+    const categoryEntries = Object.entries(comparison.categoryChanges);
+    if (categoryEntries.length > 0) {
+      lines.push("## Category Changes");
+      lines.push("");
+      lines.push("| Category | Count Delta | Deduction Delta |");
+      lines.push("|----------|-------------|-----------------|");
+      for (const [category, changes] of categoryEntries) {
+        const countSign = changes.countDelta >= 0 ? "+" : "";
+        const deductionSign = changes.deductionDelta >= 0 ? "+" : "";
+        lines.push(
+          `| ${category} | ${countSign}${changes.countDelta} | ${deductionSign}${changes.deductionDelta.toFixed(1)} |`
+        );
+      }
+      lines.push("");
+    }
+    if (comparison.newIssues.length > 0) {
+      lines.push("## New Issues");
+      for (const issue2 of comparison.newIssues) {
+        lines.push(`- **[${issue2.severity}]** ${issue2.message} (${issue2.file})`);
+      }
+      lines.push("");
+    }
+    if (comparison.resolvedIssues.length > 0) {
+      lines.push("## Resolved Issues");
+      for (const issue2 of comparison.resolvedIssues) {
+        lines.push(`- **[${issue2.severity}]** ${issue2.message} (${issue2.file})`);
+      }
+      lines.push("");
+    }
+    return createSuccessResult(lines.join("\n"));
+  }
+  static async handlePlan(args, service) {
+    if (!args.sourceRunId) {
+      return createErrorResult("sourceRunId is required for plan operation");
+    }
+    const run2 = await service.getRunDetails(args.sourceRunId);
+    if (!run2) {
+      return createErrorResult(`Quality run not found: ${args.sourceRunId}`);
+    }
+    const plan = QualityService.generateImprovementPlan(run2, args.targetGrade);
+    const result = await service.saveImprovementPlan(plan);
+    const totalInitiatives = plan.phases.reduce(
+      (sum, phase) => sum + phase.initiatives.length,
+      0
+    );
+    const response = [
+      "\u2705 Quality Improvement Plan generated successfully!",
+      "",
+      `\u{1F4CB} Plan ID: ${result.planId}`,
+      `\u{1F4C1} File: ${result.filePath}`,
+      `\u{1F4CA} Current Score: ${plan.currentScore}/100 (Grade ${plan.currentGrade})`,
+      `\u{1F3AF} Phases: ${plan.phases.length}`,
+      `\u{1F4E6} Initiatives: ${totalInitiatives}`,
+      `\u23F1\uFE0F Total Effort: ${plan.totalEffortHours} hours`,
+      "",
+      "## Executive Summary",
+      "",
+      plan.executiveSummary,
+      "",
+      'Use "quality plan-details planId=<id>" to see full plan details.'
+    ].join("\n");
+    return createSuccessResult(response);
+  }
+  static async handlePlanDetails(args, repositoryRoot) {
+    if (!args.planId) {
+      return createErrorResult("planId is required for plan-details operation");
+    }
+    try {
+      const plansDir = path28.join(repositoryRoot, "docs", "quality", "plans");
+      const filePath = path28.join(plansDir, `${args.planId}.md`);
+      const content = await fs26.readFile(filePath, "utf-8");
+      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+      if (!jsonMatch) {
+        return createErrorResult(`Could not parse plan data from: ${args.planId}`);
+      }
+      const planData = JSON.parse(jsonMatch[1]);
+      const lines = [
+        `\u{1F4CB} Quality Improvement Plan: ${planData.planId}`,
+        "",
+        "## Summary",
+        `**Date:** ${planData.date}`,
+        `**Source Run:** ${planData.sourceRunId}`,
+        `**Current Score:** ${planData.currentScore}/100 (Grade ${planData.currentGrade})`,
+        `**Total Effort:** ${planData.totalEffortHours} hours`,
+        "",
+        "## Executive Summary",
+        "",
+        planData.executiveSummary,
+        ""
+      ];
+      if (planData.phases && planData.phases.length > 0) {
+        lines.push("## Phases");
+        lines.push("");
+        for (const phase of planData.phases) {
+          lines.push(
+            `### Phase ${phase.phase}: ${phase.name}`
+          );
+          lines.push(`**Projected Score:** ${phase.projectedScore}/100 (Grade ${phase.projectedGrade})`);
+          lines.push(`**Effort:** ${phase.totalEffortHours} hours`);
+          lines.push(`**Initiatives:** ${phase.initiatives.length}`);
+          lines.push("");
+        }
+      }
+      if (planData.roiAnalysis) {
+        lines.push("## ROI Analysis");
+        lines.push(`**Estimated Cost:** ${planData.roiAnalysis.currency} ${planData.roiAnalysis.estimatedCostToFix}`);
+        lines.push("");
+      }
+      return createSuccessResult(lines.join("\n"));
+    } catch {
+      return createErrorResult(`Improvement plan not found: ${args.planId}`);
+    }
+  }
+  static async handleDetectAnalyzers(repositoryRoot) {
+    const service = new AnalyzerDetectionService(repositoryRoot);
+    const analyzers = await service.detectAnalyzers();
+    if (analyzers.length === 0) {
+      return createSuccessResult(
+        "No static analyzers detected in this repository.\n\nSupported analyzers: ESLint, TypeScript, npm audit, RuboCop, ruff."
+      );
+    }
+    const lines = [
+      `\u{1F50D} Detected ${analyzers.length} analyzer(s):`,
+      ""
+    ];
+    for (const analyzer of analyzers) {
+      lines.push(`- **${analyzer.name}** (${analyzer.analyzerId})`);
+      lines.push(`  Configs: ${analyzer.configPaths.join(", ")}`);
+      lines.push(`  Categories: ${analyzer.categories.join(", ")}`);
+    }
+    lines.push("");
+    lines.push(JSON.stringify(analyzers, null, 2));
+    return createSuccessResult(lines.join("\n"));
+  }
+  static async handleRunAnalyzers(repositoryRoot) {
+    const runId = generateRunId();
+    const runDir = path28.join(repositoryRoot, "docs", "quality", "runs", runIdToPath(runId));
+    const outputPath = path28.join(runDir, "analysis.json");
+    const outputDir = path28.join(runDir, "analysers");
+    const detectionService = new AnalyzerDetectionService(repositoryRoot);
+    const analyzers = await detectionService.detectAnalyzers();
+    const emptyResults = {
+      issues: [],
+      executions: [],
+      totalDurationMs: 0,
+      summary: { total: 0, succeeded: 0, failed: 0, timedOut: 0, skipped: 0 }
+    };
+    if (analyzers.length === 0) {
+      await fs26.mkdir(runDir, { recursive: true });
+      await fs26.writeFile(outputPath, JSON.stringify(emptyResults, null, 2), "utf-8");
+      return createSuccessResult(
+        `\u{1F527} No analyzers detected. Empty results written to file.
+  Run ID: ${runId}
+  Output: ${outputPath}`
+      );
+    }
+    const executorService = new AnalyzerExecutorService(repositoryRoot);
+    const results = await executorService.executeAnalyzers(analyzers, outputDir);
+    await fs26.mkdir(runDir, { recursive: true });
+    await fs26.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
+    const lines = [
+      `\u{1F527} Executed ${results.summary.total} analyzer(s):`,
+      `  Succeeded: ${results.summary.succeeded}`,
+      `  Failed: ${results.summary.failed}`,
+      `  Total issues: ${results.issues.length}`,
+      `  Duration: ${results.totalDurationMs}ms`,
+      `  Run ID: ${runId}`,
+      `  Output: ${outputPath}`,
+      `  Raw files: ${outputDir}/`
+    ];
+    return createSuccessResult(lines.join("\n"));
+  }
+  static async handleAssembleRun(args, repositoryRoot) {
+    if (!args.runId) {
+      return createErrorResult("runId is required for assemble-run operation (YYYY-MM-DD date prefix)");
+    }
+    const assemblyService = new AssemblyService(repositoryRoot);
+    const result = await assemblyService.assembleRun(args.runId, args.baseRunId);
+    const lines = [
+      "\u2705 Quality run assembled successfully!",
+      "",
+      `\u{1F4CA} Run ID: ${result.runId}`,
+      `\u{1F4C8} Score: ${result.score}/100 (Grade: ${result.grade})`,
+      `\u{1F50D} Issues: ${result.issueCount}`,
+      `\u{1F4C1} File: ${result.filePath}`
+    ];
+    if (result.incremental) {
+      lines.push("");
+      lines.push("### Incremental Analysis");
+      lines.push(`  Base run: ${result.baseRunId}`);
+      lines.push(`  Files analyzed: ${result.filesAnalyzed}`);
+      lines.push(`  Files carried forward: ${result.filesCarriedForward}`);
+    }
+    lines.push("");
+    lines.push("### Source Breakdown");
+    lines.push(`  Analyzer: ${result.sourceBreakdown.analyzer}`);
+    lines.push(`  Specialist: ${result.sourceBreakdown.llm}`);
+    lines.push(`  Total: ${result.sourceBreakdown.total}`);
+    const categoryEntries = Object.entries(result.categoryBreakdown);
+    if (categoryEntries.length > 0) {
+      lines.push("");
+      lines.push("### Category Breakdown");
+      for (const [category, count] of categoryEntries) {
+        lines.push(`  ${category}: ${count}`);
+      }
+    }
+    return createSuccessResult(lines.join("\n"));
+  }
+  static handleMergeResults(args) {
+    const analyzerIssues = args.analyzerIssues ?? [];
+    const llmIssues = args.llmIssues ?? [];
+    const result = mergeResults(analyzerIssues, llmIssues);
+    const lines = [
+      `\u{1F500} Merged results:`,
+      `  Analyzer issues: ${result.sourceBreakdown.analyzer}`,
+      `  LLM issues: ${result.sourceBreakdown.llm}`,
+      `  Total (deduplicated): ${result.sourceBreakdown.total}`,
+      `  Duplicates removed: ${result.duplicatesRemoved}`,
+      "",
+      JSON.stringify(result, null, 2)
+    ];
     return createSuccessResult(lines.join("\n"));
   }
 };
@@ -69257,7 +72728,7 @@ var MCPServer = class {
     }
     const logFileName = isDev ? "dev-debug.log" : "debug.log";
     this.logger = new FileLogger({
-      logFilePath: path24.join(resolvedDataDir, logFileName),
+      logFilePath: path29.join(resolvedDataDir, logFileName),
       logLevel,
       enabled: true
     });
@@ -69414,9 +72885,9 @@ var MCPServer = class {
   async initializeRepository() {
     try {
       const cwd = process.cwd();
-      const gitDir = path24.join(cwd, ".git");
-      const { existsSync: existsSync14 } = await import("fs");
-      if (!existsSync14(gitDir)) {
+      const gitDir = path29.join(cwd, ".git");
+      const { existsSync: existsSync13 } = await import("fs");
+      if (!existsSync13(gitDir)) {
         this.logger.debug("Not in a git repository, skipping repo registration");
         return;
       }
@@ -69534,8 +73005,8 @@ var MCPServer = class {
       this.logger.debug("CLAUDE_PLUGIN_ROOT not set, skipping bundled personas");
       return;
     }
-    const bundledPersonasDir = path24.join(pluginRoot, "personas");
-    if (!existsSync12(bundledPersonasDir)) {
+    const bundledPersonasDir = path29.join(pluginRoot, "personas");
+    if (!existsSync11(bundledPersonasDir)) {
       this.logger.debug("No bundled personas directory found");
       return;
     }
@@ -69544,10 +73015,10 @@ var MCPServer = class {
       const bundledPersonas = readdirSync3(bundledPersonasDir);
       for (const personaName of bundledPersonas) {
         if (personaName.startsWith(".")) continue;
-        const bundledPath = path24.join(bundledPersonasDir, personaName);
+        const bundledPath = path29.join(bundledPersonasDir, personaName);
         const localStorage = this.storage;
-        const localPath = path24.join(localStorage.personasDir, personaName);
-        if (existsSync12(bundledPath) && !existsSync12(localPath)) {
+        const localPath = path29.join(localStorage.personasDir, personaName);
+        if (existsSync11(bundledPath) && !existsSync11(localPath)) {
           this.logger.info(`Copying bundled persona '${personaName}' to local storage`);
           try {
             cpSync(bundledPath, localPath, { recursive: true });
@@ -69555,7 +73026,7 @@ var MCPServer = class {
           } catch (copyError) {
             this.logger.warn(`Failed to copy bundled persona '${personaName}'`, copyError);
           }
-        } else if (existsSync12(localPath)) {
+        } else if (existsSync11(localPath)) {
           this.logger.debug(`Bundled persona '${personaName}' already exists locally, skipping`);
         }
       }
@@ -69816,7 +73287,7 @@ var MCPServer = class {
     try {
       let pid = process.pid;
       for (let i = 0; i < 15; i++) {
-        const info = execSync3(`ps -p ${pid} -o ppid=,tty=`, { encoding: "utf-8" }).trim();
+        const info = execSync4(`ps -p ${pid} -o ppid=,tty=`, { encoding: "utf-8" }).trim();
         const [ppid, tty] = info.split(/\s+/);
         if (tty && tty !== "??" && tty !== "-") {
           return "/dev/" + tty;
@@ -69840,7 +73311,7 @@ var MCPServer = class {
     }
     try {
       const basePath = process.cwd();
-      const sessionsPath = path24.join(basePath, ".tiny-brain", "sessions.json");
+      const sessionsPath = path29.join(basePath, ".tiny-brain", "sessions.json");
       let sessions = {};
       try {
         const content = readFileSync4(sessionsPath, "utf-8");
@@ -69855,7 +73326,7 @@ var MCPServer = class {
         activePersona: personaId,
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       };
-      mkdirSync2(path24.dirname(sessionsPath), { recursive: true });
+      mkdirSync2(path29.dirname(sessionsPath), { recursive: true });
       writeFileSync(sessionsPath, JSON.stringify(sessions, null, 2), "utf-8");
       this.logger.debug(`Updated persona session: ${personaId} for TTY ${tty}`);
     } catch (err) {
@@ -70090,10 +73561,10 @@ function startupLog(message, data) {
   try {
     let dataDir = process.env.DATADIR || process.env.TINY_BRAIN_DATA_DIR || "~/.tiny-brain";
     if (dataDir.startsWith("~")) {
-      dataDir = join29(homedir5(), dataDir.slice(1));
+      dataDir = join28(homedir5(), dataDir.slice(1));
     }
-    const logPath = join29(dataDir, "debug.log");
-    if (!existsSync13(dataDir)) {
+    const logPath = join28(dataDir, "debug.log");
+    if (!existsSync12(dataDir)) {
       mkdirSync3(dataDir, { recursive: true });
     }
     appendFileSync(logPath, JSON.stringify(logEntry) + "\n");
@@ -70107,8 +73578,8 @@ async function main() {
   startupLog("main() function called");
   const __filename = fileURLToPath9(import.meta.url);
   const __dirname2 = dirname13(__filename);
-  const envPath = join29(__dirname2, "../.env.local");
-  if (existsSync13(envPath)) {
+  const envPath = join28(__dirname2, "../.env.local");
+  if (existsSync12(envPath)) {
     try {
       const { config: config2 } = await Promise.resolve().then(() => __toESM(require_main(), 1));
       const result = config2({ path: envPath, debug: false });
@@ -70123,7 +73594,7 @@ async function main() {
   }
   try {
     startupLog("Fetching package.json version...");
-    const packageJson = JSON.parse(readFileSync5(join29(__dirname2, "../package.json"), "utf-8"));
+    const packageJson = JSON.parse(readFileSync5(join28(__dirname2, "../package.json"), "utf-8"));
     const VERSION3 = packageJson.version;
     startupLog("Starting server", {
       pid: process.pid,
