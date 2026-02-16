@@ -57,7 +57,7 @@ Launch BOTH agents simultaneously in a single message with two Task tool calls:
 
 1. analyzer-agent:
    "Detect and run all available CLI analyzers for this repository.
-   The run-analyzers operation auto-generates a timestamped run folder and returns a runId.
+   The run-analysers operation auto-generates a timestamped run folder and returns a runId.
    Return the normalized issues array, analyzer execution summaries, and the runId."
 
 2. investigation-agent:

@@ -5,7 +5,7 @@ following this schema to the run directory.
 
 ## File Location
 
-Agents read the file list from `{runDir}/files.txt` and write their findings to `{runDir}/{agent-name}-output.json`.
+Agents read the file list from `{runDir}/files.txt` and write their findings to `{runDir}/agents/{agent-name}-output.json`.
 
 The run directory is `docs/quality/runs/YYYY-MM-DD/HH-mm/`.
 
@@ -15,7 +15,7 @@ The run directory is `docs/quality/runs/YYYY-MM-DD/HH-mm/`.
 | performance-quality-reviewer | `performance-quality-reviewer-output.json` |
 | testing-quality-reviewer | `testing-quality-reviewer-output.json` |
 | code-quality-reviewer | `code-quality-reviewer-output.json` |
-| MCP run-analyzers | `analysis.json` |
+| MCP run-analysers | `analysis.json` |
 
 ## files.txt Format
 
@@ -91,7 +91,7 @@ Agents should read the appropriate section based on their domain:
 
 ### Agent-Specific Metadata
 
-**Analyzer (MCP run-analyzers):**
+**Analyzer (MCP run-analysers):**
 ```json
 {
   "metadata": {

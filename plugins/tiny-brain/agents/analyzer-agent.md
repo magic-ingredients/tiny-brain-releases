@@ -18,7 +18,7 @@ Call the MCP quality tool to discover which analyzers are available:
 
 ```
 mcp__plugin_tiny-brain_mcp__quality({
-  operation: "detect-analyzers"
+  operation: "detect-analysers"
 })
 ```
 
@@ -30,7 +30,7 @@ Execute all detected analyzers. The tool auto-generates a timestamped run direct
 
 ```
 mcp__plugin_tiny-brain_mcp__quality({
-  operation: "run-analyzers"
+  operation: "run-analysers"
 })
 ```
 
@@ -102,6 +102,6 @@ Return the results as a JSON object matching the agent_findings schema:
 ## Important Notes
 
 - All issues returned have `source: 'analyzer'` and a stable `ruleId` from the analyzer.
-- Do NOT modify or filter the issues. Return them as-is from the run-analyzers operation.
+- Do NOT modify or filter the issues. Return them as-is from the run-analysers operation.
 - Do NOT attempt to run analyzer CLI commands directly via Bash. Always use the MCP quality tool operations.
 - Keep responses concise. The skill needs structured JSON, not prose.

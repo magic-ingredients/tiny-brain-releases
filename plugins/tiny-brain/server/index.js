@@ -449,8 +449,8 @@ var init_parseUtil = __esm({
     init_errors();
     init_en();
     makeIssue = (params) => {
-      const { data, path: path30, errorMaps, issueData } = params;
-      const fullPath = [...path30, ...issueData.path || []];
+      const { data, path: path31, errorMaps, issueData } = params;
+      const fullPath = [...path31, ...issueData.path || []];
       const fullIssue = {
         ...issueData,
         path: fullPath
@@ -758,11 +758,11 @@ var init_types = __esm({
     init_parseUtil();
     init_util();
     ParseInputLazyPath = class {
-      constructor(parent, value, path30, key) {
+      constructor(parent, value, path31, key) {
         this._cachedPath = [];
         this.parent = parent;
         this.data = value;
-        this._path = path30;
+        this._path = path31;
         this._key = key;
       }
       get path() {
@@ -7328,8 +7328,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path30) {
-      let input = path30;
+    function removeDotSegments(path31) {
+      let input = path31;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -7528,8 +7528,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path30, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path30 && path30 !== "/" ? path30 : void 0;
+        const [path31, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path31 && path31 !== "/" ? path31 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -16568,12 +16568,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs27, exportName) {
+    function addFormats(ajv, list, fs28, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs27[f]);
+        ajv.addFormat(f, fs28[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -16678,7 +16678,7 @@ var init_zod = __esm({
 });
 
 // packages/tiny-brain-core/src/types/quality.ts
-var QualityCategory, CATEGORY_WEIGHTS, QualityGrade, GRADE_THRESHOLDS, IssueSeverity, EffortLevel, ImpactLevel, SEVERITY_MULTIPLIERS, CategoryScoreSchema, DEFAULT_EFFORT_HOURS, SEVERITY_DEFAULT_HOURS, QualityIssueSchema, StructuredRecommendationSchema, TechnicalDebtSummarySchema, RunComparisonSchema, QualityRunSummarySchema, SourceBreakdownSchema, AnalyzerRunSummarySchema, InvestigationCoverageSchema, QualityRunResultSchema, SaveQualityRunInputSchema, ImprovementInitiativeSchema, ImprovementPhaseSchema, QualityImprovementPlanSchema, AnalyzerOutputFormat, AnalyzerDefinitionSchema, DetectedAnalyzerSchema, AnalyzerExecutionStatus, AnalyzerExecutionResultSchema, AnalyzerResultsSchema, CheckDefinitionSchema, InvestigationChecklistSchema, InvestigationFindingSchema, FileInvestigationResultSchema, InvestigationFileStatus, FileInvestigationSchema, CategoryInvestigationSchema, InvestigationSummarySchema, PROGRESS_SCHEMA_VERSION, FileTaskProgressSchema, CategoryProgressSummarySchema, CategoryProgressSchema, InvestigationProgressSummarySchema, IssueFingerprintSchema, FingerprintMatchSchema, MatchResultSchema, AssemblyResultSchema;
+var QualityCategory, CATEGORY_WEIGHTS, CATEGORY_MAX_DEDUCTION, QualityGrade, GRADE_THRESHOLDS, IssueSeverity, EffortLevel, ImpactLevel, SEVERITY_MULTIPLIERS, CategoryScoreSchema, DEFAULT_EFFORT_HOURS, SEVERITY_DEFAULT_HOURS, QualityIssueSchema, StructuredRecommendationSchema, TechnicalDebtSummarySchema, RunComparisonSchema, QualityRunSummarySchema, SourceBreakdownSchema, AnalyzerRunSummarySchema, InvestigationCoverageSchema, QualityRunResultSchema, SaveQualityRunInputSchema, ImprovementInitiativeSchema, ImprovementPhaseSchema, QualityImprovementPlanSchema, AnalyzerOutputFormat, AnalyzerDefinitionSchema, DetectedAnalyzerSchema, AnalyzerExecutionStatus, AnalyzerExecutionResultSchema, AnalyzerResultsSchema, CheckDefinitionSchema, InvestigationChecklistSchema, InvestigationFindingSchema, FileInvestigationResultSchema, InvestigationFileStatus, FileInvestigationSchema, CategoryInvestigationSchema, InvestigationSummarySchema, PROGRESS_SCHEMA_VERSION, FileTaskProgressSchema, CategoryProgressSummarySchema, CategoryProgressSchema, InvestigationProgressSummarySchema, IssueFingerprintSchema, FingerprintMatchSchema, MatchResultSchema, AssemblyResultSchema;
 var init_quality = __esm({
   "packages/tiny-brain-core/src/types/quality.ts"() {
     "use strict";
@@ -16702,6 +16702,16 @@ var init_quality = __esm({
       [QualityCategory.Architecture]: 5,
       [QualityCategory.Documentation]: 3,
       [QualityCategory.Operations]: 3
+    };
+    CATEGORY_MAX_DEDUCTION = {
+      [QualityCategory.Security]: 25,
+      [QualityCategory.Reliability]: 15,
+      [QualityCategory.Performance]: 15,
+      [QualityCategory.Maintainability]: 15,
+      [QualityCategory.Testing]: 10,
+      [QualityCategory.Architecture]: 10,
+      [QualityCategory.Documentation]: 5,
+      [QualityCategory.Operations]: 5
     };
     QualityGrade = {
       A: "A",
@@ -17048,7 +17058,9 @@ var init_quality = __esm({
         currency: external_exports.string(),
         /** Hourly rate used for cost calculation */
         hourlyRate: external_exports.number()
-      }).optional()
+      }).optional(),
+      /** Fix IDs generated from this plan via implement-plan (optional) */
+      fixIds: external_exports.array(external_exports.string()).optional()
     });
     AnalyzerOutputFormat = {
       Json: "json",
@@ -17313,7 +17325,11 @@ var init_quality = __esm({
       /** Number of files re-analyzed in this run */
       filesAnalyzed: external_exports.number().optional(),
       /** Number of files carried forward from base run */
-      filesCarriedForward: external_exports.number().optional()
+      filesCarriedForward: external_exports.number().optional(),
+      /** Plan ID of the auto-generated Quality Improvement Plan */
+      planId: external_exports.string().optional(),
+      /** File path of the auto-generated Quality Improvement Plan */
+      planFilePath: external_exports.string().optional()
     });
   }
 });
@@ -24208,12 +24224,12 @@ var init_esm4 = __esm({
       /**
        * Get the Path object referenced by the string path, resolved from this Path
        */
-      resolve(path30) {
-        if (!path30) {
+      resolve(path31) {
+        if (!path31) {
           return this;
         }
-        const rootPath = this.getRootString(path30);
-        const dir = path30.substring(rootPath.length);
+        const rootPath = this.getRootString(path31);
+        const dir = path31.substring(rootPath.length);
         const dirParts = dir.split(this.splitSep);
         const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
         return result;
@@ -24965,8 +24981,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      getRootString(path30) {
-        return win32.parse(path30).root;
+      getRootString(path31) {
+        return win32.parse(path31).root;
       }
       /**
        * @internal
@@ -25012,8 +25028,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      getRootString(path30) {
-        return path30.startsWith("/") ? "/" : "";
+      getRootString(path31) {
+        return path31.startsWith("/") ? "/" : "";
       }
       /**
        * @internal
@@ -25062,8 +25078,8 @@ var init_esm4 = __esm({
        *
        * @internal
        */
-      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs27 = defaultFS } = {}) {
-        this.#fs = fsFromOption(fs27);
+      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs28 = defaultFS } = {}) {
+        this.#fs = fsFromOption(fs28);
         if (cwd instanceof URL || cwd.startsWith("file://")) {
           cwd = fileURLToPath(cwd);
         }
@@ -25102,11 +25118,11 @@ var init_esm4 = __esm({
       /**
        * Get the depth of a provided path, string, or the cwd
        */
-      depth(path30 = this.cwd) {
-        if (typeof path30 === "string") {
-          path30 = this.cwd.resolve(path30);
+      depth(path31 = this.cwd) {
+        if (typeof path31 === "string") {
+          path31 = this.cwd.resolve(path31);
         }
-        return path30.depth();
+        return path31.depth();
       }
       /**
        * Return the cache of child entries.  Exposed so subclasses can create
@@ -25593,9 +25609,9 @@ var init_esm4 = __esm({
         process3();
         return results;
       }
-      chdir(path30 = this.cwd) {
+      chdir(path31 = this.cwd) {
         const oldCwd = this.cwd;
-        this.cwd = typeof path30 === "string" ? this.cwd.resolve(path30) : path30;
+        this.cwd = typeof path31 === "string" ? this.cwd.resolve(path31) : path31;
         this.cwd[setAsCwd](oldCwd);
       }
     };
@@ -25621,8 +25637,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      newRoot(fs27) {
-        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs27 });
+      newRoot(fs28) {
+        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs28 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -25650,8 +25666,8 @@ var init_esm4 = __esm({
       /**
        * @internal
        */
-      newRoot(fs27) {
-        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs27 });
+      newRoot(fs28) {
+        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs28 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -25970,8 +25986,8 @@ var init_processor = __esm({
       }
       // match, absolute, ifdir
       entries() {
-        return [...this.store.entries()].map(([path30, n]) => [
-          path30,
+        return [...this.store.entries()].map(([path31, n]) => [
+          path31,
           !!(n & 2),
           !!(n & 1)
         ]);
@@ -26184,9 +26200,9 @@ var init_walker = __esm({
       signal;
       maxDepth;
       includeChildMatches;
-      constructor(patterns, path30, opts) {
+      constructor(patterns, path31, opts) {
         this.patterns = patterns;
-        this.path = path30;
+        this.path = path31;
         this.opts = opts;
         this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
         this.includeChildMatches = opts.includeChildMatches !== false;
@@ -26205,11 +26221,11 @@ var init_walker = __esm({
           });
         }
       }
-      #ignored(path30) {
-        return this.seen.has(path30) || !!this.#ignore?.ignored?.(path30);
+      #ignored(path31) {
+        return this.seen.has(path31) || !!this.#ignore?.ignored?.(path31);
       }
-      #childrenIgnored(path30) {
-        return !!this.#ignore?.childrenIgnored?.(path30);
+      #childrenIgnored(path31) {
+        return !!this.#ignore?.childrenIgnored?.(path31);
       }
       // backpressure mechanism
       pause() {
@@ -26424,8 +26440,8 @@ var init_walker = __esm({
     };
     GlobWalker = class extends GlobUtil {
       matches = /* @__PURE__ */ new Set();
-      constructor(patterns, path30, opts) {
-        super(patterns, path30, opts);
+      constructor(patterns, path31, opts) {
+        super(patterns, path31, opts);
       }
       matchEmit(e) {
         this.matches.add(e);
@@ -26462,8 +26478,8 @@ var init_walker = __esm({
     };
     GlobStream = class extends GlobUtil {
       results;
-      constructor(patterns, path30, opts) {
-        super(patterns, path30, opts);
+      constructor(patterns, path31, opts) {
+        super(patterns, path31, opts);
         this.results = new Minipass({
           signal: this.signal,
           objectMode: true
@@ -31022,7 +31038,7 @@ var init_planning_service = __esm({
        * Preserves existing commit SHAs and task status
        */
       async syncPlanFromMarkdown(prdPath) {
-        const { frontmatter } = await this.readPRDMarkdown(prdPath);
+        const { frontmatter, content: prdContent } = await this.readPRDMarkdown(prdPath);
         const featureMarkdowns = await this.readFeatureMarkdowns(prdPath);
         const existingPlan = await this.loadExistingProgressJson(prdPath);
         const features = featureMarkdowns.map((fm, index) => {
@@ -31089,7 +31105,7 @@ var init_planning_service = __esm({
           id: frontmatter.id,
           title: frontmatter.title,
           type: "active",
-          status: completedTasks === totalTasks && totalTasks > 0 ? "complete" : completedTasks > 0 ? "in_progress" : "not_started",
+          status: frontmatter.status === "archived" ? "archived" : completedTasks === totalTasks && totalTasks > 0 ? "complete" : completedTasks > 0 ? "in_progress" : "not_started",
           created: existingPlan?.created || (/* @__PURE__ */ new Date()).toISOString(),
           lastUpdated: (/* @__PURE__ */ new Date()).toISOString(),
           prdId: frontmatter.id,
@@ -31128,6 +31144,18 @@ var init_planning_service = __esm({
         await fs.mkdir(progressDir, { recursive: true });
         const progressPath = path2.join(progressDir, `${frontmatter.id}.json`);
         await fs.writeFile(progressPath, JSON.stringify(plan, null, 2));
+        if (plan.status !== frontmatter.status) {
+          const frontmatterMatch = prdContent.match(/^(---\n)([\s\S]*?)(\n---)/);
+          if (frontmatterMatch) {
+            const updatedFrontmatter = frontmatterMatch[2].replace(
+              /^status:\s*.+$/m,
+              `status: ${plan.status}`
+            );
+            const updatedContent = frontmatterMatch[1] + updatedFrontmatter + frontmatterMatch[3] + prdContent.slice(frontmatterMatch[0].length);
+            const prdMdPath = path2.join(prdPath, "prd.md");
+            await fs.writeFile(prdMdPath, updatedContent, "utf-8");
+          }
+        }
         if (currentFeature) {
           const syncEvent = {
             eventType: "prd:feature:updated",
@@ -35039,8 +35067,8 @@ var init_repo_config_service = __esm({
       /**
        * Generate a unique repo ID from path
        */
-      generateRepoId(path30) {
-        const hash = createHash("sha256").update(path30).digest("hex");
+      generateRepoId(path31) {
+        const hash = createHash("sha256").update(path31).digest("hex");
         return `repo-${hash.substring(0, 12)}`;
       }
       /**
@@ -35129,6 +35157,7 @@ var init_user_preferences = __esm({
         enableTDD: true,
         enableADR: true,
         enableQuality: true,
+        manageAgentsMd: true,
         directories: {
           docs: "docs",
           adr: "docs/adr",
@@ -35172,6 +35201,10 @@ var init_user_preferences_schema = __esm({
        */
       enableQuality: external_exports.boolean().default(true),
       /**
+       * Manage AGENTS.md file during analyse
+       */
+      manageAgentsMd: external_exports.boolean().default(true),
+      /**
        * Directory configuration
        */
       directories: external_exports.object({
@@ -35203,6 +35236,7 @@ var init_user_preferences_schema = __esm({
       enableTDD: true,
       enableADR: true,
       enableQuality: true,
+      manageAgentsMd: true,
       directories: {
         docs: "docs",
         adr: "docs/adr",
@@ -35223,6 +35257,7 @@ var init_user_preferences_schema = __esm({
       enableTDD: external_exports.boolean().optional(),
       enableADR: external_exports.boolean().optional(),
       enableQuality: external_exports.boolean().optional(),
+      manageAgentsMd: external_exports.boolean().optional(),
       directories: external_exports.object({
         docs: external_exports.string().min(1).optional(),
         adr: external_exports.string().min(1).optional(),
@@ -35257,7 +35292,7 @@ var init_config_service = __esm({
     PREFERENCES_CONFIG_PATH = "config/preferences";
     REPO_CONFIG_PATH = ".tiny-brain/config.json";
     PREFERENCE_KEYS = {
-      boolean: ["autoCommitProgress", "enableAgenticCoding", "enableSDD", "enableTDD", "enableADR", "enableQuality"],
+      boolean: ["autoCommitProgress", "enableAgenticCoding", "enableSDD", "enableTDD", "enableADR", "enableQuality", "manageAgentsMd"],
       path: ["docsDirectory", "adrDirectory", "prdDirectory"],
       array: ["testPatterns"]
     };
@@ -35365,6 +35400,13 @@ var init_config_service = __esm({
         return repo.enableQuality;
       }
       /**
+       * Check if AGENTS.md management is enabled
+       */
+      async isManageAgentsMdEnabled() {
+        const repo = await this.getPreference("repo");
+        return repo.manageAgentsMd;
+      }
+      /**
        * Get the configured documentation directory path
        */
       async getDocsDirectory() {
@@ -35440,6 +35482,9 @@ var init_config_service = __esm({
             break;
           case "enableQuality":
             value = repo.enableQuality;
+            break;
+          case "manageAgentsMd":
+            value = repo.manageAgentsMd;
             break;
           case "docsDirectory":
             value = repo.directories.docs;
@@ -37088,13 +37133,19 @@ var init_quality_service = __esm({
         if (issues.length === 0) {
           return 100;
         }
-        let score = 100;
+        const categoryDeductions = /* @__PURE__ */ new Map();
         for (const issue2 of issues) {
           const weight = CATEGORY_WEIGHTS[issue2.category];
           const multiplier = SEVERITY_MULTIPLIERS[issue2.severity];
-          score -= weight * multiplier;
+          const current = categoryDeductions.get(issue2.category) ?? 0;
+          categoryDeductions.set(issue2.category, current + weight * multiplier);
         }
-        return Math.max(0, Math.min(100, score));
+        let totalDeduction = 0;
+        for (const [category, rawDeduction] of categoryDeductions) {
+          const cap = CATEGORY_MAX_DEDUCTION[category];
+          totalDeduction += Math.min(rawDeduction, cap);
+        }
+        return Math.max(0, Math.min(100, 100 - totalDeduction));
       }
       /**
        * Map quality score to letter grade
@@ -37703,6 +37754,26 @@ var init_quality_service = __esm({
         return initiatives;
       }
       /**
+       * Normalize initiative score gains so they sum to at most the recoverable points.
+       *
+       * When raw gains exceed `100 - currentScore`, each initiative's gain is scaled
+       * proportionally so the total equals the maximum recoverable score.
+       *
+       * @param initiatives - Array of improvement initiatives
+       * @param currentScore - Current quality score
+       * @returns Initiatives with normalized expectedScoreGain values
+       */
+      static normalizeScoreGains(initiatives, currentScore) {
+        const maxRecoverable = 100 - currentScore;
+        const totalRawGain = initiatives.reduce((s, i) => s + i.expectedScoreGain, 0);
+        if (totalRawGain <= maxRecoverable || totalRawGain === 0) return initiatives;
+        const scale = maxRecoverable / totalRawGain;
+        return initiatives.map((i) => ({
+          ...i,
+          expectedScoreGain: Math.round(i.expectedScoreGain * scale * 10) / 10
+        }));
+      }
+      /**
        * Assign initiatives to phases based on ROI (expectedScoreGain / effortHours).
        *
        * Phase 1 "Quick Wins": top third by ROI (excluding large/epic efforts)
@@ -37797,7 +37868,8 @@ var init_quality_service = __esm({
        * @returns Complete Quality Improvement Plan
        */
       static generateImprovementPlan(run2, targetGrade) {
-        const initiatives = _QualityService.groupIntoInitiatives(run2.issues);
+        const rawInitiatives = _QualityService.groupIntoInitiatives(run2.issues);
+        const initiatives = _QualityService.normalizeScoreGains(rawInitiatives, run2.score);
         const phases = _QualityService.assignToPhases(initiatives, run2.score);
         const totalEffortHours = phases.reduce(
           (sum, phase) => sum + phase.totalEffortHours,
@@ -37813,7 +37885,7 @@ var init_quality_service = __esm({
         const executiveSummary = `This codebase currently scores ${run2.score}/100 (Grade ${run2.grade}). This plan outlines ${totalInitiatives} initiatives across ${phases.length} phases to reach Grade ${finalGrade}, requiring an estimated ${totalEffortHours} developer-hours.`;
         const hourlyRate = 150;
         const plan = {
-          planId: `${date3}-quality-plan`,
+          planId: `${run2.runId}-plan`,
           date: date3,
           sourceRunId: run2.runId,
           currentScore: run2.score,
@@ -37905,6 +37977,32 @@ var init_quality_service = __esm({
         return lines.join("\n");
       }
       /**
+       * Load a Quality Improvement Plan from docs/quality/plans/ directory.
+       *
+       * @param planId - The plan identifier (used as filename without extension)
+       * @returns The parsed QualityImprovementPlan, or null if not found/invalid
+       */
+      async loadImprovementPlan(planId) {
+        const filePath = path5.join(this.plansDir, `${planId}.md`);
+        let content;
+        try {
+          content = await fs4.readFile(filePath, "utf-8");
+        } catch {
+          return null;
+        }
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+        if (!jsonMatch) {
+          return null;
+        }
+        try {
+          const parsed = JSON.parse(jsonMatch[1]);
+          const result = QualityImprovementPlanSchema.safeParse(parsed);
+          return result.success ? result.data : null;
+        } catch {
+          return null;
+        }
+      }
+      /**
        * Save a Quality Improvement Plan to docs/quality/plans/ directory.
        *
        * @param plan - The Quality Improvement Plan to save
@@ -37919,6 +38017,131 @@ var init_quality_service = __esm({
           planId: plan.planId,
           filePath
         };
+      }
+      /**
+       * Map an initiative's expected score gain to a fix severity level.
+       *
+       * @param initiative - The improvement initiative to classify
+       * @returns Severity string: 'critical', 'high', 'medium', or 'low'
+       */
+      static mapInitiativeSeverity(initiative) {
+        const gain = initiative.expectedScoreGain;
+        if (gain >= 10) return "critical";
+        if (gain >= 5) return "high";
+        if (gain >= 2) return "medium";
+        return "low";
+      }
+      /**
+       * Normalize an issue message for pattern deduplication.
+       * Replaces quoted identifiers and type names with placeholders.
+       */
+      static normalizeMessage(message) {
+        return message.replace(/'[^']+'/g, "<ID>").replace(/type "[^"]+"/g, "type <TYPE>");
+      }
+      /**
+       * Generate fix markdown for a single initiative with pattern-based deduplication.
+       *
+       * Issues are grouped by normalized message pattern so that hundreds of
+       * near-identical issues (e.g. "Property X does not exist on type Y")
+       * become a single task with a count and representative file list.
+       *
+       * @param initiative - The improvement initiative
+       * @param planId - The source plan ID (used for fix ID and backlink)
+       * @param issues - The full issues array from the quality run
+       * @returns Complete fix markdown string
+       */
+      static generateFixMarkdown(initiative, planId, issues) {
+        const dateMatch = planId.match(/^(\d{4}-\d{2}-\d{2})/);
+        const planDate = dateMatch ? dateMatch[1] : planId;
+        const fixId = `qip-${planDate}-${initiative.id}`;
+        const severity = _QualityService.mapInitiativeSeverity(initiative);
+        const initiativeIssues = initiative.issueIndices.map((idx) => issues[idx]).filter(Boolean);
+        const patterns = /* @__PURE__ */ new Map();
+        for (const issue2 of initiativeIssues) {
+          const normalized = _QualityService.normalizeMessage(issue2.message);
+          const existing = patterns.get(normalized);
+          if (existing) {
+            existing.files.push(issue2.file);
+            existing.effortHours += issue2.effortHours ?? 0;
+          } else {
+            patterns.set(normalized, {
+              message: issue2.message,
+              files: [issue2.file],
+              effortHours: issue2.effortHours ?? 0,
+              suggestion: issue2.suggestion
+            });
+          }
+        }
+        const lines = [
+          "---",
+          `id: ${fixId}`,
+          `title: ${initiative.title}`,
+          "status: documented",
+          `severity: ${severity}`,
+          `reported: ${(/* @__PURE__ */ new Date()).toISOString()}`,
+          `qip: ${planId}`,
+          "---",
+          "",
+          `# Fix: ${initiative.title}`,
+          "",
+          "## Problem",
+          "",
+          initiative.description,
+          "",
+          `**Source:** Quality Improvement Plan \`${planId}\``,
+          "",
+          "## Tasks",
+          ""
+        ];
+        let taskNum = 1;
+        for (const [, pattern] of patterns) {
+          const count = pattern.files.length;
+          lines.push(`### ${taskNum}. Fix: ${pattern.message}`);
+          lines.push("status: pending");
+          if (count > 1) {
+            lines.push(`- **Instances:** ${count}`);
+            const maxFiles = 5;
+            const shownFiles = pattern.files.slice(0, maxFiles).map((f) => `\`${f}\``).join(", ");
+            const remaining = count - maxFiles;
+            const suffix = remaining > 0 ? ` (+${remaining} more)` : "";
+            lines.push(`- **Files:** ${shownFiles}${suffix}`);
+          } else {
+            lines.push(`- **File:** \`${pattern.files[0]}\``);
+          }
+          if (pattern.suggestion) {
+            lines.push(`- **Suggestion:** ${pattern.suggestion}`);
+          }
+          if (pattern.effortHours > 0) {
+            lines.push(`- **Effort:** ${pattern.effortHours}h`);
+          }
+          lines.push("");
+          taskNum++;
+        }
+        return lines.join("\n");
+      }
+      /**
+       * Generate fix documents for all initiatives in a plan.
+       *
+       * @param plan - The quality improvement plan
+       * @param issues - The full issues array from the source quality run
+       * @returns Array of created fix IDs
+       */
+      async generateFixesFromPlan(plan, issues) {
+        const fixesDir = path5.join(this.repoPath, ".tiny-brain", "fixes");
+        await fs4.mkdir(fixesDir, { recursive: true });
+        const fixIds = [];
+        for (const phase of plan.phases) {
+          for (const initiative of phase.initiatives) {
+            const markdown = _QualityService.generateFixMarkdown(initiative, plan.planId, issues);
+            const dateMatch = plan.planId.match(/^(\d{4}-\d{2}-\d{2})/);
+            const planDate = dateMatch ? dateMatch[1] : plan.planId;
+            const fixId = `qip-${planDate}-${initiative.id}`;
+            const filePath = path5.join(fixesDir, `${fixId}.md`);
+            await fs4.writeFile(filePath, markdown, "utf-8");
+            fixIds.push(fixId);
+          }
+        }
+        return fixIds;
       }
     };
   }
@@ -37960,6 +38183,22 @@ var init_analyzer_registry = __esm({
         name: "Yarn Audit",
         detectPatterns: ["**/yarn.lock"],
         commandTemplate: "yarn audit --json --cwd {dir}",
+        outputFormat: "json",
+        categories: ["Security"]
+      },
+      {
+        id: "pnpm-audit",
+        name: "pnpm Audit",
+        detectPatterns: ["**/pnpm-lock.yaml"],
+        commandTemplate: "pnpm audit --json --dir {dir}",
+        outputFormat: "json",
+        categories: ["Security"]
+      },
+      {
+        id: "bun-audit",
+        name: "Bun Audit",
+        detectPatterns: ["**/bun.lock"],
+        commandTemplate: "bun audit --json --cwd {dir}",
         outputFormat: "json",
         categories: ["Security"]
       },
@@ -38325,6 +38564,8 @@ var init_parsers = __esm({
       eslint: parseEslintOutput,
       typescript: parseTypescriptOutput,
       "npm-audit": parseNpmAuditOutput,
+      "pnpm-audit": parseNpmAuditOutput,
+      "bun-audit": parseNpmAuditOutput,
       rubocop: parseRubocopOutput,
       ruff: parseRuffOutput
     };
@@ -38863,11 +39104,11 @@ var init_investigation_checklists = __esm({
             severity: "minor"
           },
           {
-            id: "TEST-flaky-patterns",
-            name: "flaky-patterns",
-            description: "Look for patterns that cause test flakiness (timing dependencies, shared state, network calls)",
-            patterns: ["setTimeout", "Date.now", "Math.random", "fetch", "global"],
-            severity: "minor"
+            id: "TEST-flaky-timing",
+            name: "flaky-timing",
+            description: "Look for hardcoded timing delays in tests (setTimeout with literal ms, Promise-based waits) instead of deterministic approaches",
+            patterns: ["setTimeout", "Date.now", "Math.random", "new Promise", "sleep"],
+            severity: "major"
           },
           {
             id: "TEST-poor-assertions",
@@ -38882,6 +39123,62 @@ var init_investigation_checklists = __esm({
             description: "Look for tests tightly coupled to implementation details rather than behavior",
             patterns: ["mock", "spy", "private", "internal", "implementation"],
             severity: "minor"
+          },
+          {
+            id: "TEST-flaky-port-contention",
+            name: "flaky-port-contention",
+            description: "Look for hardcoded port numbers in tests that cause contention under parallel execution",
+            patterns: ["listen(", "port", "3000", "8080", "9000", "getPort"],
+            severity: "major"
+          },
+          {
+            id: "TEST-flaky-dynamic-imports",
+            name: "flaky-dynamic-imports",
+            description: "Look for vi.resetModules() with await import() in beforeEach causing slow teardown under parallel load",
+            patterns: ["resetModules", "await import(", "dynamic import", "beforeEach"],
+            severity: "major"
+          },
+          {
+            id: "TEST-flaky-fake-timers",
+            name: "flaky-fake-timers",
+            description: "Look for vi.useFakeTimers() without proper restoration or mixed with real async operations",
+            patterns: ["useFakeTimers", "useRealTimers", "advanceTimersByTime", "runAllTimers", "fakeTimers"],
+            severity: "major"
+          },
+          {
+            id: "TEST-flaky-global-mocks",
+            name: "flaky-global-mocks",
+            description: "Look for global object replacement (e.g. global.EventSource = ...) without cleanup in afterEach",
+            patterns: ["global.", "window.", "globalThis.", "Object.defineProperty", "beforeAll"],
+            severity: "major"
+          },
+          {
+            id: "TEST-flaky-real-io",
+            name: "flaky-real-io",
+            description: "Look for tests performing real filesystem or network I/O instead of mocking",
+            patterns: ["writeFileSync", "mkdirSync", "mkdtemp", "tmpdir", "createServer"],
+            severity: "minor"
+          },
+          {
+            id: "TEST-flaky-process-spawn",
+            name: "flaky-process-spawn",
+            description: "Look for tests spawning real processes (exec/spawn) that may hang or race",
+            patterns: ["spawn(", "exec(", "execSync(", "fork(", "child_process"],
+            severity: "minor"
+          },
+          {
+            id: "TEST-flaky-shared-state",
+            name: "flaky-shared-state",
+            description: "Look for mutable let variables shared across tests without beforeEach reset",
+            patterns: ["let ", "describe", "beforeEach", "it(", "test("],
+            severity: "major"
+          },
+          {
+            id: "TEST-missing-mock-cleanup",
+            name: "missing-mock-cleanup",
+            description: "Look for missing vi.clearAllMocks() or vi.restoreAllMocks() in beforeEach/afterEach",
+            patterns: ["vi.mock(", "vi.fn(", "clearAllMocks", "restoreAllMocks", "resetAllMocks"],
+            severity: "major"
           }
         ]
       },
@@ -39400,6 +39697,20 @@ var init_assembly_service = __esm({
           categoryScores,
           technicalDebt
         });
+        const runResult = {
+          runId: saveResult.runId,
+          date: (/* @__PURE__ */ new Date()).toISOString(),
+          score,
+          grade,
+          issues,
+          recommendations: [],
+          issuesByCategory,
+          sourceBreakdown: mergeResult.sourceBreakdown,
+          categoryScores,
+          technicalDebt
+        };
+        const plan = QualityService.generateImprovementPlan(runResult);
+        const planResult = await service.saveImprovementPlan(plan);
         const categoryBreakdown = {};
         for (const [category, count] of Object.entries(issuesByCategory)) {
           if (count > 0) {
@@ -39417,7 +39728,9 @@ var init_assembly_service = __esm({
           incremental,
           baseRunId: resolvedBaseRunId,
           filesAnalyzed,
-          filesCarriedForward
+          filesCarriedForward,
+          planId: planResult.planId,
+          planFilePath: planResult.filePath
         };
       }
       /**
@@ -39488,22 +39801,16 @@ var init_assembly_service = __esm({
         return this.readFindingsFile(filePath);
       }
       /**
-       * Read specialist (LLM) issues from all JSON files in nested run directory.
-       * Skips `analysis.json`, `quality.json`, and non-JSON files.
+       * Read specialist (LLM) issues from all JSON files in the `agents/` subdirectory
+       * of a nested run directory.
        */
       async readNestedSpecialistIssues(runId) {
         const allIssues = [];
-        const dir = this.nestedRunDir(runId);
+        const dir = path9.join(this.nestedRunDir(runId), "agents");
         try {
           const files = await fs8.readdir(dir);
           for (const file of files) {
             if (!file.endsWith(".json")) {
-              continue;
-            }
-            if (file === "analysis.json") {
-              continue;
-            }
-            if (file === "quality.json") {
               continue;
             }
             const filePath = path9.join(dir, file);
@@ -39777,6 +40084,14 @@ var init_tech_context_service = __esm({
           stack,
           analysis: analysisData
         };
+        if (analysis.packageManager) file.packageManager = analysis.packageManager;
+        if (analysis.scripts) file.scripts = analysis.scripts;
+        if (analysis.linting) file.linting = analysis.linting;
+        if (analysis.monorepo) file.monorepo = analysis.monorepo;
+        if (analysis.projectName) file.projectName = analysis.projectName;
+        if (analysis.sourceDirectories && analysis.sourceDirectories.length > 0) {
+          file.sourceDirectories = analysis.sourceDirectories;
+        }
         const filePath = path10.join(this.tinyBrainDir, "analysis.json");
         await fs9.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
       }
@@ -39986,11 +40301,11 @@ ${techFile.content}`;
        * @returns true if tbsVersion is newer than localVersion
        */
       shouldUpdateTech(localVersion, tbsVersion) {
-        const parseVersion = (v) => {
+        const parseVersion2 = (v) => {
           return v.split(".").map((s) => parseInt(s, 10) || 0);
         };
-        const local = parseVersion(localVersion);
-        const tbs = parseVersion(tbsVersion);
+        const local = parseVersion2(localVersion);
+        const tbs = parseVersion2(tbsVersion);
         const maxLen = Math.max(local.length, tbs.length);
         while (local.length < maxLen) local.push(0);
         while (tbs.length < maxLen) tbs.push(0);
@@ -40327,30 +40642,6 @@ var init_javascript_detector = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/analyser/utils.ts
-import * as path12 from "path";
-import * as fs11 from "fs/promises";
-async function findProjectRoot(startPath) {
-  let currentPath = path12.resolve(startPath);
-  while (currentPath !== "/") {
-    try {
-      const gitPath = path12.join(currentPath, ".git");
-      const stats = await fs11.stat(gitPath);
-      if (stats.isDirectory()) {
-        return currentPath;
-      }
-    } catch {
-    }
-    currentPath = path12.dirname(currentPath);
-  }
-  return startPath;
-}
-var init_utils = __esm({
-  "packages/tiny-brain-core/src/analyser/utils.ts"() {
-    "use strict";
-  }
-});
-
 // packages/tiny-brain-core/src/analyser/analyzers/script-analyzer.ts
 var ScriptAnalyzer;
 var init_script_analyzer = __esm({
@@ -40514,6 +40805,30 @@ var init_script_analyzer = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/analyser/utils.ts
+import * as path12 from "path";
+import * as fs11 from "fs/promises";
+async function findProjectRoot(startPath) {
+  let currentPath = path12.resolve(startPath);
+  while (currentPath !== "/") {
+    try {
+      const gitPath = path12.join(currentPath, ".git");
+      const stats = await fs11.stat(gitPath);
+      if (stats.isDirectory()) {
+        return currentPath;
+      }
+    } catch {
+    }
+    currentPath = path12.dirname(currentPath);
+  }
+  return startPath;
+}
+var init_utils = __esm({
+  "packages/tiny-brain-core/src/analyser/utils.ts"() {
+    "use strict";
+  }
+});
+
 // packages/tiny-brain-core/src/analyser/index.ts
 import * as fs12 from "fs/promises";
 import * as path13 from "path";
@@ -40526,6 +40841,11 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   const testFiles = [];
   const testPatterns = /* @__PURE__ */ new Set();
   const languageFileCounts = {};
+  let packageManager;
+  let linting;
+  let stateManagement;
+  let styling;
+  let database;
   await walkDirectory(rootPath, async (dirPath, files) => {
     const stack = await detectTechInDirectory(dirPath);
     if (stack) {
@@ -40559,6 +40879,30 @@ async function analyseRepository(rootPath = process.cwd(), options) {
       stack.testing.libraries.forEach((lib) => testingTools.add(lib));
     }
     if (stack.bundling) buildTools.add(stack.bundling);
+    if (stack.packageManager && !packageManager) {
+      packageManager = stack.packageManager;
+    }
+    if (stack.linting && !linting) {
+      linting = {
+        tool: stack.linting.tool ?? null,
+        plugins: stack.linting.plugins ?? []
+      };
+    }
+    if (stack.stateManagement !== void 0 && stateManagement === void 0) {
+      stateManagement = stack.stateManagement;
+    }
+    if (stack.styling && !styling) {
+      styling = {
+        approach: stack.styling.approach ?? null,
+        preprocessor: stack.styling.preprocessor ?? null
+      };
+    }
+    if (stack.database && !database) {
+      database = {
+        orm: stack.database.orm ?? null,
+        driver: stack.database.driver ?? null
+      };
+    }
   }
   function detectFileType(fileName) {
     const ext2 = path13.extname(fileName).toLowerCase();
@@ -40657,8 +41001,9 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   const documentationLocations = [];
   let documentationPattern;
   const rootFiles = await fs12.readdir(rootPath).catch(() => []);
-  const hasRootReadme = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "readme.md");
-  const hasDocsFolder = rootFiles.some((f) => (typeof f === "string" ? f : f.name).toLowerCase() === "docs");
+  const rootFileNames = rootFiles.map((f) => typeof f === "string" ? f : f.name);
+  const hasRootReadme = rootFileNames.some((f) => f.toLowerCase() === "readme.md");
+  const hasDocsFolder = rootFileNames.some((f) => f.toLowerCase() === "docs");
   if (hasRootReadme) {
     documentationLocations.push("README.md");
   }
@@ -40671,6 +41016,127 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     documentationPattern = "docs-folder";
   } else if (hasRootReadme) {
     documentationPattern = "single-readme";
+  }
+  let projectName;
+  let projectDescription;
+  let scripts;
+  let monorepo;
+  let runtimeVersion;
+  const rootPkgPath = path13.join(rootPath, "package.json");
+  const rootPkgContent = await fs12.readFile(rootPkgPath, "utf8").catch(() => "");
+  if (rootPkgContent) {
+    try {
+      const rootPkg = JSON.parse(rootPkgContent);
+      if (rootPkg.name) projectName = rootPkg.name;
+      if (rootPkg.description) projectDescription = rootPkg.description;
+      if (rootPkg.scripts && Object.keys(rootPkg.scripts).length > 0) {
+        const analyzer = new ScriptAnalyzer();
+        const scriptResult = analyzer.analyze(rootPkg.scripts);
+        const hasContent = scriptResult.test || scriptResult.build || scriptResult.lint || scriptResult.dev || scriptResult.e2e;
+        if (hasContent) {
+          scripts = scriptResult;
+        }
+      }
+      const workspaceGlobs = Array.isArray(rootPkg.workspaces) ? rootPkg.workspaces : rootPkg.workspaces && typeof rootPkg.workspaces === "object" && "packages" in rootPkg.workspaces ? rootPkg.workspaces.packages : void 0;
+      if (workspaceGlobs && workspaceGlobs.length > 0) {
+        let monorepoTool = "npm-workspaces";
+        if (rootFileNames.includes("turbo.json")) {
+          monorepoTool = "turbo";
+        } else if (rootFileNames.includes("lerna.json")) {
+          monorepoTool = "lerna";
+        } else if (rootFileNames.includes("nx.json")) {
+          monorepoTool = "nx";
+        } else if (rootFileNames.includes("pnpm-workspace.yaml")) {
+          monorepoTool = "pnpm-workspaces";
+        }
+        const resolvedPackages = [];
+        for (const glob2 of workspaceGlobs) {
+          const baseDir = glob2.replace(/\/?\*$/, "");
+          const basePath = path13.join(rootPath, baseDir);
+          const entries = await fs12.readdir(basePath, { withFileTypes: true }).catch(() => []);
+          for (const entry of entries) {
+            if (entry.isDirectory()) {
+              resolvedPackages.push(entry.name);
+            }
+          }
+        }
+        monorepo = {
+          tool: monorepoTool,
+          packages: resolvedPackages,
+          workspaceGlobs
+        };
+      }
+      if (rootPkg.engines?.node) {
+        runtimeVersion = { source: "engines", version: rootPkg.engines.node };
+      }
+      if (rootPkg.volta?.node) {
+        runtimeVersion = { source: "volta", version: rootPkg.volta.node };
+      }
+    } catch {
+    }
+  }
+  const nvmrcPath = path13.join(rootPath, ".nvmrc");
+  const nvmrcContent = await fs12.readFile(nvmrcPath, "utf8").catch(() => "");
+  if (nvmrcContent.trim()) {
+    runtimeVersion = { source: ".nvmrc", version: nvmrcContent.trim() };
+  } else {
+    const nodeVersionPath = path13.join(rootPath, ".node-version");
+    const nodeVersionContent = await fs12.readFile(nodeVersionPath, "utf8").catch(() => "");
+    if (nodeVersionContent.trim()) {
+      runtimeVersion = { source: ".node-version", version: nodeVersionContent.trim() };
+    }
+  }
+  const SOURCE_DIR_CANDIDATES = ["src", "lib", "app", "packages", "server", "client"];
+  const rootEntries = await fs12.readdir(rootPath, { withFileTypes: true }).catch(() => []);
+  const sourceDirectories = [];
+  for (const entry of rootEntries) {
+    if (entry.isDirectory() && SOURCE_DIR_CANDIDATES.includes(entry.name)) {
+      sourceDirectories.push(entry.name);
+    }
+  }
+  const ENV_TEMPLATE_PATTERNS = [".env.example", ".env.sample", ".env.template", ".env.local.example"];
+  const envFiles = [];
+  for (const fileName of rootFileNames) {
+    if (ENV_TEMPLATE_PATTERNS.includes(fileName)) {
+      envFiles.push(fileName);
+    }
+  }
+  let ci;
+  if (rootFileNames.includes(".github") || rootEntries.some((e) => e.isDirectory() && e.name === ".github")) {
+    const githubPath = path13.join(rootPath, ".github", "workflows");
+    const workflowEntries = await fs12.readdir(githubPath).catch(() => []);
+    if (workflowEntries.length > 0) {
+      ci = { platform: "github-actions", configPath: ".github/workflows/" };
+    }
+  }
+  if (!ci && rootFileNames.includes(".gitlab-ci.yml")) {
+    ci = { platform: "gitlab-ci", configPath: ".gitlab-ci.yml" };
+  }
+  if (!ci && rootFileNames.includes("Jenkinsfile")) {
+    ci = { platform: "jenkins", configPath: "Jenkinsfile" };
+  }
+  if (!ci && (rootFileNames.includes(".circleci") || rootEntries.some((e) => e.isDirectory() && e.name === ".circleci"))) {
+    ci = { platform: "circleci", configPath: ".circleci/" };
+  }
+  if (!ci && rootFileNames.includes("bitbucket-pipelines.yml")) {
+    ci = { platform: "bitbucket", configPath: "bitbucket-pipelines.yml" };
+  }
+  let typescriptConfig;
+  const hasTsconfig = rootFileNames.includes("tsconfig.json");
+  if (hasTsconfig) {
+    const tsconfigPath = path13.join(rootPath, "tsconfig.json");
+    const tsconfigContent = await fs12.readFile(tsconfigPath, "utf8").catch(() => "");
+    if (tsconfigContent) {
+      try {
+        const stripped = tsconfigContent.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+        const tsconfig = JSON.parse(stripped);
+        typescriptConfig = {
+          strict: tsconfig.compilerOptions?.strict === true,
+          target: tsconfig.compilerOptions?.target
+        };
+      } catch {
+      }
+    }
   }
   return {
     // Core detected technologies
@@ -40687,7 +41153,22 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     primaryLanguage,
     // Documentation detection
     documentationPattern,
-    documentationLocations: documentationLocations.length > 0 ? documentationLocations : void 0
+    documentationLocations: documentationLocations.length > 0 ? documentationLocations : void 0,
+    // Rich metadata
+    packageManager: packageManager || void 0,
+    linting,
+    stateManagement,
+    styling,
+    database,
+    scripts,
+    monorepo,
+    projectName,
+    projectDescription,
+    sourceDirectories: sourceDirectories.length > 0 ? sourceDirectories : void 0,
+    runtimeVersion,
+    envFiles: envFiles.length > 0 ? envFiles : void 0,
+    ci,
+    typescriptConfig
   };
 }
 async function walkDirectory(dir, callback, options, currentDepth = 0) {
@@ -40767,6 +41248,7 @@ var init_analyser = __esm({
   "packages/tiny-brain-core/src/analyser/index.ts"() {
     "use strict";
     init_javascript_detector();
+    init_script_analyzer();
     init_utils();
     init_base_detector();
     init_javascript_detector();
@@ -40985,8 +41467,8 @@ var init_library_client = __esm({
       /**
        * Get agent by path (new agent system)
        */
-      async getAgentByPath(token, path30) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path30}`, {
+      async getAgentByPath(token, path31) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path31}`, {
           method: "GET",
           headers: {
             "Accept": "application/json",
@@ -41002,8 +41484,8 @@ var init_library_client = __esm({
       /**
        * Store agent at specified path (new agent system)
        */
-      async storeAgent(token, path30, agent) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path30}`, {
+      async storeAgent(token, path31, agent) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path31}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -41018,8 +41500,8 @@ var init_library_client = __esm({
       /**
        * Archive agent at specified path (new agent system)
        */
-      async archiveAgent(token, path30) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path30}`, {
+      async archiveAgent(token, path31) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path31}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -41541,6 +42023,385 @@ var init_config_health_service = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/services/analysis/agents-md-service.ts
+import { promises as fs14 } from "fs";
+import { createHash as createHash3 } from "crypto";
+import path15 from "path";
+var MARKER_START, MARKER_END, AgentsMdService;
+var init_agents_md_service = __esm({
+  "packages/tiny-brain-core/src/services/analysis/agents-md-service.ts"() {
+    "use strict";
+    init_script_analyzer();
+    MARKER_START = "<!-- agents:tiny-brain:start -->";
+    MARKER_END = "<!-- agents:tiny-brain:end -->";
+    AgentsMdService = class {
+      repoPath;
+      constructor(repoPath) {
+        this.repoPath = repoPath;
+      }
+      async generateContent(options) {
+        const { analysis, readmeExcerpt, existingContent, packageDescriptions } = options;
+        const sections = [];
+        const sectionsGenerated = [];
+        sections.push(this.generateProjectOverview(analysis, readmeExcerpt));
+        sectionsGenerated.push("Project Overview");
+        if (analysis.languages.length > 0) {
+          sections.push(this.generateTechStack(analysis));
+          sectionsGenerated.push("Tech Stack");
+        }
+        if (analysis.monorepo || analysis.sourceDirectories && analysis.sourceDirectories.length > 0) {
+          sections.push(this.generateProjectStructure(analysis));
+          sectionsGenerated.push("Project Structure");
+        }
+        if (analysis.scripts && (analysis.scripts.build || analysis.scripts.dev)) {
+          sections.push(this.generateDevelopment(analysis));
+          sectionsGenerated.push("Development");
+        }
+        if (analysis.testingTools.length > 0 || analysis.scripts?.test) {
+          sections.push(this.generateTesting(analysis));
+          sectionsGenerated.push("Testing");
+        }
+        if (analysis.linting || analysis.scripts?.lint) {
+          sections.push(this.generateLintingCodeStyle(analysis));
+          sectionsGenerated.push("Linting & Code Style");
+        }
+        if (packageDescriptions && packageDescriptions.length > 0) {
+          sections.push(this.generatePackagesSection(packageDescriptions));
+          sectionsGenerated.push("Packages");
+        }
+        const generatedContent = sections.join("\n\n");
+        const contentHash = createHash3("sha256").update(generatedContent).digest("hex").substring(0, 16);
+        const hashComment = `<!-- content-hash:${contentHash} -->`;
+        const wrappedContent = `${MARKER_START}
+${hashComment}
+${generatedContent}
+${MARKER_END}`;
+        if (existingContent) {
+          const startIdx = existingContent.indexOf(MARKER_START);
+          const endIdx = existingContent.indexOf(MARKER_END);
+          if (startIdx !== -1 && endIdx !== -1) {
+            const existingHash = existingContent.match(/<!-- content-hash:([a-f0-9]+) -->/)?.[1];
+            const contentChanged = existingHash !== contentHash;
+            const before = existingContent.substring(0, startIdx);
+            const after = existingContent.substring(endIdx + MARKER_END.length);
+            return {
+              content: contentChanged ? before + wrappedContent + after : existingContent,
+              isUpdate: true,
+              contentChanged,
+              sectionsGenerated
+            };
+          }
+          return {
+            content: existingContent + "\n\n" + wrappedContent,
+            isUpdate: false,
+            contentChanged: true,
+            sectionsGenerated
+          };
+        }
+        return {
+          content: wrappedContent,
+          isUpdate: false,
+          contentChanged: true,
+          sectionsGenerated
+        };
+      }
+      async extractReadmeExcerpt() {
+        const readmePath = path15.join(this.repoPath, "README.md");
+        let content;
+        try {
+          content = await fs14.readFile(readmePath, "utf8");
+        } catch {
+          return void 0;
+        }
+        const lines = content.split("\n");
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          if (trimmed.startsWith("#")) continue;
+          if (trimmed.startsWith("[") && trimmed.includes("](")) continue;
+          if (trimmed.startsWith("[![")) continue;
+          return trimmed;
+        }
+        return void 0;
+      }
+      generateProjectOverview(analysis, readmeExcerpt) {
+        const lines = [];
+        const title = analysis.projectName || "Project";
+        lines.push(`# ${title}`);
+        if (analysis.projectDescription) {
+          lines.push("");
+          lines.push(analysis.projectDescription);
+        }
+        if (readmeExcerpt && readmeExcerpt !== analysis.projectDescription) {
+          lines.push("");
+          lines.push(readmeExcerpt);
+        }
+        const langList = analysis.languages.join(", ");
+        lines.push("");
+        lines.push(`**Languages:** ${langList}`);
+        if (analysis.frameworks.length > 0) {
+          lines.push(`**Frameworks:** ${analysis.frameworks.join(", ")}`);
+        }
+        return lines.join("\n");
+      }
+      generateTechStack(analysis) {
+        const lines = [];
+        lines.push("## Tech Stack");
+        lines.push("");
+        lines.push(`- **Languages:** ${analysis.languages.join(", ")}`);
+        if (analysis.frameworks.length > 0) {
+          lines.push(`- **Frameworks:** ${analysis.frameworks.join(", ")}`);
+        }
+        if (analysis.buildTools.length > 0) {
+          lines.push(`- **Build Tools:** ${analysis.buildTools.join(", ")}`);
+        }
+        if (analysis.packageManager) {
+          lines.push(`- **Package Manager:** ${analysis.packageManager}`);
+        }
+        if (analysis.testingTools.length > 0) {
+          lines.push(`- **Testing:** ${analysis.testingTools.join(", ")}`);
+        }
+        if (analysis.stateManagement) {
+          lines.push(`- **State Management:** ${analysis.stateManagement}`);
+        }
+        if (analysis.styling?.approach) {
+          const stylingParts = [analysis.styling.approach];
+          if (analysis.styling.preprocessor) {
+            stylingParts.push(analysis.styling.preprocessor);
+          }
+          lines.push(`- **Styling:** ${stylingParts.join(", ")}`);
+        }
+        if (analysis.database?.orm || analysis.database?.driver) {
+          const dbParts = [];
+          if (analysis.database.orm) dbParts.push(analysis.database.orm);
+          if (analysis.database.driver) dbParts.push(analysis.database.driver);
+          lines.push(`- **Database:** ${dbParts.join(", ")}`);
+        }
+        if (analysis.typescriptConfig) {
+          const tsInfo = analysis.typescriptConfig.strict ? "strict mode" : "non-strict";
+          const target = analysis.typescriptConfig.target ? `, target ${analysis.typescriptConfig.target}` : "";
+          lines.push(`- **TypeScript:** ${tsInfo}${target}`);
+        }
+        if (analysis.runtimeVersion) {
+          lines.push(`- **Node:** ${analysis.runtimeVersion.version}`);
+        }
+        return lines.join("\n");
+      }
+      generateProjectStructure(analysis) {
+        const lines = [];
+        lines.push("## Project Structure");
+        lines.push("");
+        if (analysis.monorepo) {
+          lines.push(`This is a monorepo managed with ${analysis.monorepo.tool || "workspaces"}.`);
+          lines.push("");
+          lines.push("**Packages:**");
+          for (const pkg of analysis.monorepo.packages) {
+            lines.push(`- \`${pkg}\``);
+          }
+        }
+        if (analysis.sourceDirectories && analysis.sourceDirectories.length > 0) {
+          if (analysis.monorepo) {
+            lines.push("");
+          }
+          lines.push("**Source directories:** " + analysis.sourceDirectories.map((d) => `\`${d}/\``).join(", "));
+        }
+        return lines.join("\n");
+      }
+      generateDevelopment(analysis) {
+        const lines = [];
+        lines.push("## Development");
+        lines.push("");
+        if (analysis.scripts?.dev?.command) {
+          lines.push("**Start dev server:**");
+          lines.push("```bash");
+          lines.push(analysis.scripts.dev.command);
+          lines.push("```");
+        }
+        if (analysis.scripts?.build?.command) {
+          if (analysis.scripts.dev) lines.push("");
+          lines.push("**Build:**");
+          lines.push("```bash");
+          lines.push(analysis.scripts.build.command);
+          lines.push("```");
+        }
+        return lines.join("\n");
+      }
+      generateTesting(analysis) {
+        const lines = [];
+        lines.push("## Testing");
+        lines.push("");
+        const framework = analysis.scripts?.test?.framework || analysis.testingTools[0] || "unknown";
+        lines.push(`**Framework:** ${framework}`);
+        lines.push("");
+        const pm = analysis.packageManager || "npm";
+        const runPrefix = pm === "npm" ? "npm run" : pm;
+        if (analysis.scripts?.test?.command) {
+          lines.push("**Run tests:**");
+          lines.push("```bash");
+          lines.push(`${runPrefix} test`);
+          lines.push("```");
+        }
+        if (analysis.scripts?.test?.coverage) {
+          lines.push("");
+          lines.push("**Coverage:**");
+          lines.push("```bash");
+          lines.push(analysis.scripts.test.coverage);
+          lines.push("```");
+        }
+        if (analysis.testPatterns.length > 0) {
+          lines.push("");
+          lines.push(`**Test file patterns:** ${analysis.testPatterns.map((p) => `\`${p}\``).join(", ")}`);
+        }
+        if (analysis.scripts?.test?.command) {
+          lines.push("");
+          lines.push("**Run a single test file:**");
+          lines.push("```bash");
+          lines.push(`${analysis.scripts.test.command} path/to/file.test.ts`);
+          lines.push("```");
+        }
+        return lines.join("\n");
+      }
+      generatePackagesSection(packageDescriptions) {
+        const lines = [];
+        lines.push("## Packages");
+        lines.push("");
+        for (const pkg of packageDescriptions) {
+          const name = pkg.name || path15.basename(pkg.path);
+          const desc = pkg.description ? ` - ${pkg.description}` : "";
+          lines.push(`- **\`${name}\`** (\`${pkg.path}\`)${desc}`);
+        }
+        return lines.join("\n");
+      }
+      /**
+       * Generate focused AGENTS.md content for a single monorepo package.
+       * Reads package.json from the package directory, runs ScriptAnalyzer,
+       * and generates a concise package-specific AGENTS.md.
+       */
+      async generatePackageContent(packagePath, rootAnalysis, existingContent) {
+        const scriptAnalyzer = new ScriptAnalyzer();
+        let pkgName = path15.basename(packagePath);
+        let pkgDescription;
+        let scripts = {};
+        try {
+          const pkgJsonPath = path15.join(packagePath, "package.json");
+          const raw2 = await fs14.readFile(pkgJsonPath, "utf-8");
+          const pkgJson = JSON.parse(raw2);
+          pkgName = pkgJson.name || pkgName;
+          pkgDescription = pkgJson.description;
+          scripts = scriptAnalyzer.analyze(pkgJson.scripts);
+        } catch {
+        }
+        const sections = [];
+        const sectionsGenerated = [];
+        const pm = rootAnalysis.packageManager || "npm";
+        const overviewLines = [`# ${pkgName}`];
+        if (pkgDescription) {
+          overviewLines.push("");
+          overviewLines.push(pkgDescription);
+        }
+        sections.push(overviewLines.join("\n"));
+        sectionsGenerated.push("Overview");
+        if (scripts.test) {
+          const testLines = ["## Testing", ""];
+          if (scripts.test.framework) {
+            testLines.push(`**Framework:** ${scripts.test.framework}`);
+            testLines.push("");
+          }
+          if (scripts.test.command) {
+            testLines.push("**Run tests:**");
+            testLines.push("```bash");
+            testLines.push(scripts.test.command);
+            testLines.push("```");
+          }
+          sections.push(testLines.join("\n"));
+          sectionsGenerated.push("Testing");
+        }
+        if (scripts.build?.command) {
+          const buildLines = ["## Build", ""];
+          buildLines.push("```bash");
+          buildLines.push(scripts.build.command);
+          buildLines.push("```");
+          sections.push(buildLines.join("\n"));
+          sectionsGenerated.push("Build");
+        }
+        if (scripts.dev?.command) {
+          const devLines = ["## Development", ""];
+          devLines.push("```bash");
+          devLines.push(scripts.dev.command);
+          devLines.push("```");
+          sections.push(devLines.join("\n"));
+          sectionsGenerated.push("Development");
+        }
+        if (scripts.lint?.command) {
+          const lintLines = ["## Linting", ""];
+          const runPrefix = pm === "npm" ? "npm run" : pm;
+          lintLines.push("```bash");
+          lintLines.push(`${runPrefix} lint`);
+          lintLines.push("```");
+          sections.push(lintLines.join("\n"));
+          sectionsGenerated.push("Linting");
+        }
+        const generatedContent = sections.join("\n\n");
+        const contentHash = createHash3("sha256").update(generatedContent).digest("hex").substring(0, 16);
+        const hashComment = `<!-- content-hash:${contentHash} -->`;
+        const wrappedContent = `${MARKER_START}
+${hashComment}
+${generatedContent}
+${MARKER_END}`;
+        if (existingContent) {
+          const startIdx = existingContent.indexOf(MARKER_START);
+          const endIdx = existingContent.indexOf(MARKER_END);
+          if (startIdx !== -1 && endIdx !== -1) {
+            const existingHash = existingContent.match(/<!-- content-hash:([a-f0-9]+) -->/)?.[1];
+            const contentChanged = existingHash !== contentHash;
+            const before = existingContent.substring(0, startIdx);
+            const after = existingContent.substring(endIdx + MARKER_END.length);
+            return {
+              content: contentChanged ? before + wrappedContent + after : existingContent,
+              isUpdate: true,
+              contentChanged,
+              sectionsGenerated
+            };
+          }
+          return {
+            content: existingContent + "\n\n" + wrappedContent,
+            isUpdate: false,
+            contentChanged: true,
+            sectionsGenerated
+          };
+        }
+        return {
+          content: wrappedContent,
+          isUpdate: false,
+          contentChanged: true,
+          sectionsGenerated
+        };
+      }
+      generateLintingCodeStyle(analysis) {
+        const lines = [];
+        lines.push("## Linting & Code Style");
+        lines.push("");
+        const tool = analysis.linting?.tool || analysis.scripts?.lint?.tool || "unknown";
+        lines.push(`**Linter:** ${tool}`);
+        if (analysis.scripts?.lint?.command) {
+          const pm = analysis.packageManager || "npm";
+          const runPrefix = pm === "npm" ? "npm run" : pm;
+          lines.push("");
+          lines.push("**Run lint:**");
+          lines.push("```bash");
+          lines.push(`${runPrefix} lint`);
+          lines.push("```");
+        }
+        if (analysis.linting?.plugins && analysis.linting.plugins.length > 0) {
+          lines.push("");
+          lines.push(`**Plugins:** ${analysis.linting.plugins.join(", ")}`);
+        }
+        return lines.join("\n");
+      }
+    };
+  }
+});
+
 // packages/tiny-brain-core/src/services/analysis/index.ts
 var init_analysis = __esm({
   "packages/tiny-brain-core/src/services/analysis/index.ts"() {
@@ -41548,6 +42409,7 @@ var init_analysis = __esm({
     init_tech_context_service();
     init_analysis_service();
     init_config_health_service();
+    init_agents_md_service();
   }
 });
 
@@ -41580,8 +42442,8 @@ var init_repo_config = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
-import * as fs14 from "fs/promises";
-import * as path15 from "path";
+import * as fs15 from "fs/promises";
+import * as path16 from "path";
 var SkillLoader;
 var init_skill_loader = __esm({
   "packages/tiny-brain-core/src/services/api/skill-loader.ts"() {
@@ -41598,9 +42460,9 @@ var init_skill_loader = __esm({
         if (cached2) {
           return cached2;
         }
-        const skillPath = path15.join(this.skillsPath, skillName);
-        const skillFile = path15.join(skillPath, "SKILL.md");
-        const content = await fs14.readFile(skillFile, "utf-8");
+        const skillPath = path16.join(this.skillsPath, skillName);
+        const skillFile = path16.join(skillPath, "SKILL.md");
+        const content = await fs15.readFile(skillFile, "utf-8");
         const { metadata, body } = this.parseFrontmatter(content);
         const templates = await this.loadTemplates(skillPath);
         const skill = {
@@ -41640,14 +42502,14 @@ var init_skill_loader = __esm({
         return { metadata, body };
       }
       async loadTemplates(skillPath) {
-        const templatesPath = path15.join(skillPath, "templates");
+        const templatesPath = path16.join(skillPath, "templates");
         const templates = {};
         try {
-          const entries = await fs14.readdir(templatesPath, { withFileTypes: true });
+          const entries = await fs15.readdir(templatesPath, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isFile() && entry.name.endsWith(".md")) {
-              const templatePath = path15.join(templatesPath, entry.name);
-              const content = await fs14.readFile(templatePath, "utf-8");
+              const templatePath = path16.join(templatesPath, entry.name);
+              const content = await fs15.readFile(templatePath, "utf-8");
               templates[entry.name] = content;
             }
           }
@@ -43091,17 +43953,17 @@ var init_headers = __esm({
 function encodeURIPath(str2) {
   return str2.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path16;
+var EMPTY, createPathTagFunction, path17;
 var init_path = __esm({
   "node_modules/@anthropic-ai/sdk/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path30(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path31(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path31 = statics.reduce((previousValue, currentValue, index) => {
+      const path32 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -43118,7 +43980,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path31.split(/[?#]/, 1)[0];
+      const pathOnly = path32.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match3;
       while ((match3 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -43139,12 +44001,12 @@ var init_path = __esm({
         }, "");
         throw new AnthropicError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e) => e.error).join("\n")}
-${path31}
+${path32}
 ${underline}`);
       }
-      return path31;
+      return path32;
     };
-    path16 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path17 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
@@ -43192,7 +44054,7 @@ var init_files = __esm({
        */
       delete(fileID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path16`/v1/files/${fileID}`, {
+        return this._client.delete(path17`/v1/files/${fileID}`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
@@ -43215,7 +44077,7 @@ var init_files = __esm({
        */
       download(fileID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path16`/v1/files/${fileID}/content`, {
+        return this._client.get(path17`/v1/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([
             {
@@ -43238,7 +44100,7 @@ var init_files = __esm({
        */
       retrieveMetadata(fileID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path16`/v1/files/${fileID}`, {
+        return this._client.get(path17`/v1/files/${fileID}`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "files-api-2025-04-14"].toString() },
@@ -43295,7 +44157,7 @@ var init_models = __esm({
        */
       retrieve(modelID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path16`/v1/models/${modelID}?beta=true`, {
+        return this._client.get(path17`/v1/models/${modelID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
@@ -44716,7 +45578,7 @@ var init_batches = __esm({
        */
       retrieve(messageBatchID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path16`/v1/messages/batches/${messageBatchID}?beta=true`, {
+        return this._client.get(path17`/v1/messages/batches/${messageBatchID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
@@ -44769,7 +45631,7 @@ var init_batches = __esm({
        */
       delete(messageBatchID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path16`/v1/messages/batches/${messageBatchID}?beta=true`, {
+        return this._client.delete(path17`/v1/messages/batches/${messageBatchID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
@@ -44801,7 +45663,7 @@ var init_batches = __esm({
        */
       cancel(messageBatchID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path16`/v1/messages/batches/${messageBatchID}/cancel?beta=true`, {
+        return this._client.post(path17`/v1/messages/batches/${messageBatchID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "message-batches-2024-09-24"].toString() },
@@ -44995,7 +45857,7 @@ var init_versions = __esm({
        */
       create(skillID, params = {}, options) {
         const { betas, ...body } = params ?? {};
-        return this._client.post(path16`/v1/skills/${skillID}/versions?beta=true`, multipartFormRequestOptions({
+        return this._client.post(path17`/v1/skills/${skillID}/versions?beta=true`, multipartFormRequestOptions({
           body,
           ...options,
           headers: buildHeaders([
@@ -45017,7 +45879,7 @@ var init_versions = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id, betas } = params;
-        return this._client.get(path16`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
+        return this._client.get(path17`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -45040,7 +45902,7 @@ var init_versions = __esm({
        */
       list(skillID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path16`/v1/skills/${skillID}/versions?beta=true`, PageCursor, {
+        return this._client.getAPIList(path17`/v1/skills/${skillID}/versions?beta=true`, PageCursor, {
           query,
           ...options,
           headers: buildHeaders([
@@ -45062,7 +45924,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id, betas } = params;
-        return this._client.delete(path16`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
+        return this._client.delete(path17`/v1/skills/${skill_id}/versions/${version2}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -45119,7 +45981,7 @@ var init_skills = __esm({
        */
       retrieve(skillID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path16`/v1/skills/${skillID}?beta=true`, {
+        return this._client.get(path17`/v1/skills/${skillID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -45159,7 +46021,7 @@ var init_skills = __esm({
        */
       delete(skillID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path16`/v1/skills/${skillID}?beta=true`, {
+        return this._client.delete(path17`/v1/skills/${skillID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { "anthropic-beta": [...betas ?? [], "skills-2025-10-02"].toString() },
@@ -45853,7 +46715,7 @@ var init_batches2 = __esm({
        * ```
        */
       retrieve(messageBatchID, options) {
-        return this._client.get(path16`/v1/messages/batches/${messageBatchID}`, options);
+        return this._client.get(path17`/v1/messages/batches/${messageBatchID}`, options);
       }
       /**
        * List all Message Batches within a Workspace. Most recently created batches are
@@ -45889,7 +46751,7 @@ var init_batches2 = __esm({
        * ```
        */
       delete(messageBatchID, options) {
-        return this._client.delete(path16`/v1/messages/batches/${messageBatchID}`, options);
+        return this._client.delete(path17`/v1/messages/batches/${messageBatchID}`, options);
       }
       /**
        * Batches may be canceled any time before processing ends. Once cancellation is
@@ -45913,7 +46775,7 @@ var init_batches2 = __esm({
        * ```
        */
       cancel(messageBatchID, options) {
-        return this._client.post(path16`/v1/messages/batches/${messageBatchID}/cancel`, options);
+        return this._client.post(path17`/v1/messages/batches/${messageBatchID}/cancel`, options);
       }
       /**
        * Streams the results of a Message Batch as a `.jsonl` file.
@@ -46040,7 +46902,7 @@ var init_models2 = __esm({
        */
       retrieve(modelID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.get(path16`/v1/models/${modelID}`, {
+        return this._client.get(path17`/v1/models/${modelID}`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "anthropic-beta": betas?.toString() } : void 0 },
@@ -46244,9 +47106,9 @@ var init_client = __esm({
       makeStatusError(status, error2, message, headers) {
         return APIError.generate(status, error2, message, headers);
       }
-      buildURL(path30, query, defaultBaseURL) {
+      buildURL(path31, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _BaseAnthropic_instances, "m", _BaseAnthropic_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path30) ? new URL(path30) : new URL(baseURL + (baseURL.endsWith("/") && path30.startsWith("/") ? path30.slice(1) : path30));
+        const url = isAbsoluteURL(path31) ? new URL(path31) : new URL(baseURL + (baseURL.endsWith("/") && path31.startsWith("/") ? path31.slice(1) : path31));
         const defaultQuery = this.defaultQuery();
         if (!isEmptyObj(defaultQuery)) {
           query = { ...defaultQuery, ...query };
@@ -46277,24 +47139,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path30, opts) {
-        return this.methodRequest("get", path30, opts);
+      get(path31, opts) {
+        return this.methodRequest("get", path31, opts);
       }
-      post(path30, opts) {
-        return this.methodRequest("post", path30, opts);
+      post(path31, opts) {
+        return this.methodRequest("post", path31, opts);
       }
-      patch(path30, opts) {
-        return this.methodRequest("patch", path30, opts);
+      patch(path31, opts) {
+        return this.methodRequest("patch", path31, opts);
       }
-      put(path30, opts) {
-        return this.methodRequest("put", path30, opts);
+      put(path31, opts) {
+        return this.methodRequest("put", path31, opts);
       }
-      delete(path30, opts) {
-        return this.methodRequest("delete", path30, opts);
+      delete(path31, opts) {
+        return this.methodRequest("delete", path31, opts);
       }
-      methodRequest(method, path30, opts) {
+      methodRequest(method, path31, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path30, ...opts2 };
+          return { method, path: path31, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -46398,8 +47260,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path30, Page2, opts) {
-        return this.requestAPIList(Page2, { method: "get", path: path30, ...opts });
+      getAPIList(path31, Page2, opts) {
+        return this.requestAPIList(Page2, { method: "get", path: path31, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -46486,8 +47348,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path30, query, defaultBaseURL } = options;
-        const url = this.buildURL(path30, query, defaultBaseURL);
+        const { method, path: path31, query, defaultBaseURL } = options;
+        const url = this.buildURL(path31, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -46795,8 +47657,8 @@ var init_claude_client = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/tool-executor.ts
-import * as fs15 from "fs/promises";
-import * as path17 from "path";
+import * as fs16 from "fs/promises";
+import * as path18 from "path";
 import { exec as exec4 } from "child_process";
 var ToolExecutor;
 var init_tool_executor = __esm({
@@ -46836,7 +47698,7 @@ var init_tool_executor = __esm({
         }
       }
       validatePath(inputPath) {
-        const resolvedPath = path17.resolve(this.repositoryRoot, inputPath);
+        const resolvedPath = path18.resolve(this.repositoryRoot, inputPath);
         if (!resolvedPath.startsWith(this.repositoryRoot)) {
           return {
             valid: false,
@@ -46852,7 +47714,7 @@ var init_tool_executor = __esm({
           return { success: false, error: validation.error };
         }
         try {
-          const content = await fs15.readFile(validation.resolvedPath, "utf-8");
+          const content = await fs16.readFile(validation.resolvedPath, "utf-8");
           return { success: true, result: content };
         } catch (error2) {
           return {
@@ -46867,9 +47729,9 @@ var init_tool_executor = __esm({
           return { success: false, error: validation.error };
         }
         try {
-          const dir = path17.dirname(validation.resolvedPath);
-          await fs15.mkdir(dir, { recursive: true });
-          await fs15.writeFile(validation.resolvedPath, input.content, "utf-8");
+          const dir = path18.dirname(validation.resolvedPath);
+          await fs16.mkdir(dir, { recursive: true });
+          await fs16.writeFile(validation.resolvedPath, input.content, "utf-8");
           return { success: true, result: "File written successfully" };
         } catch (error2) {
           return {
@@ -46897,7 +47759,7 @@ var init_tool_executor = __esm({
         }
       }
       async listDirectoryRecursive(dirPath, recursive, prefix = "") {
-        const entries = await fs15.readdir(dirPath, { withFileTypes: true });
+        const entries = await fs16.readdir(dirPath, { withFileTypes: true });
         const result = [];
         for (const entry of entries) {
           const entryPath = prefix ? `${prefix}/${entry.name}` : entry.name;
@@ -46905,7 +47767,7 @@ var init_tool_executor = __esm({
           result.push({ name: entryPath, type: type2 });
           if (recursive && entry.isDirectory()) {
             const subEntries = await this.listDirectoryRecursive(
-              path17.join(dirPath, entry.name),
+              path18.join(dirPath, entry.name),
               recursive,
               entryPath
             );
@@ -46968,6 +47830,276 @@ Stderr: ${stderr}` : stdout;
           success: true,
           result: `Plan sync requested for plan: ${input.planId}. This should be handled by the PlanService.`
         };
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/api/claude-cli-detection.ts
+import { spawn } from "child_process";
+import { resolve as pathResolve } from "path";
+function clearCliStatusCache() {
+  cachedStatus = null;
+  cacheTimestamp = 0;
+}
+function getEnhancedPath() {
+  const existing = process.env.PATH ?? "";
+  const extra = [
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    pathResolve(process.env.HOME ?? "", ".local/bin"),
+    pathResolve(process.env.HOME ?? "", ".npm-global/bin")
+  ];
+  return [...extra, existing].join(":");
+}
+function runCommand(cmd, args, timeoutMs, logger) {
+  return new Promise((resolve3, reject) => {
+    const child = spawn(cmd, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, PATH: getEnhancedPath() }
+    });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGTERM");
+    }, timeoutMs);
+    child.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+    child.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      logger?.warn(`CLI command failed: ${cmd} ${args.join(" ")}`, {
+        code: err.code,
+        message: err.message
+      });
+      reject(err);
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (timedOut) {
+        logger?.warn(`CLI command timed out: ${cmd} ${args.join(" ")}`, {
+          timeoutMs,
+          stderr: stderr.trim()
+        });
+        reject(new Error(`Command timed out after ${timeoutMs}ms`));
+      } else if (code !== 0) {
+        logger?.warn(`CLI command exited with code ${code}: ${cmd} ${args.join(" ")}`, {
+          code,
+          stderr: stderr.trim()
+        });
+        reject(new Error(`Command exited with code ${code}`));
+      } else {
+        resolve3(stdout);
+      }
+    });
+  });
+}
+function parseVersion(output) {
+  const trimmed = output.trim();
+  const match3 = trimmed.match(/(\d+\.\d+\.\d+)/);
+  return match3 ? match3[1] : trimmed;
+}
+async function detectClaudeCliStatus(logger) {
+  const now = Date.now();
+  if (cachedStatus && now - cacheTimestamp < CACHE_TTL_MS) {
+    logger?.debug("CLI status cache hit", cachedStatus);
+    return cachedStatus;
+  }
+  let installed = false;
+  let version2 = null;
+  let authenticated = false;
+  const enhancedPath = getEnhancedPath();
+  logger?.debug("Starting CLI detection", { enhancedPath });
+  try {
+    const versionOutput = await runCommand("claude", ["--version"], VERSION_TIMEOUT_MS, logger);
+    installed = true;
+    version2 = parseVersion(versionOutput);
+    logger?.info("CLI version check passed", { version: version2 });
+  } catch {
+    logger?.warn("CLI version check failed - claude not found or not executable");
+    cachedStatus = { installed: false, version: null, authenticated: false };
+    cacheTimestamp = now;
+    return cachedStatus;
+  }
+  try {
+    await runCommand(
+      "claude",
+      ["-p", "ok", "--output-format", "json", "--max-turns", "1", "--no-session-persistence", "--tools", "", "--disable-slash-commands"],
+      AUTH_TIMEOUT_MS,
+      logger
+    );
+    authenticated = true;
+    logger?.info("CLI auth check passed");
+  } catch {
+    logger?.warn("CLI auth check failed - installed but not authenticated");
+    authenticated = false;
+  }
+  cachedStatus = { installed, version: version2, authenticated };
+  cacheTimestamp = now;
+  logger?.info("CLI detection complete", cachedStatus);
+  return cachedStatus;
+}
+var CACHE_TTL_MS, VERSION_TIMEOUT_MS, AUTH_TIMEOUT_MS, cachedStatus, cacheTimestamp;
+var init_claude_cli_detection = __esm({
+  "packages/tiny-brain-core/src/services/api/claude-cli-detection.ts"() {
+    "use strict";
+    CACHE_TTL_MS = 5 * 60 * 1e3;
+    VERSION_TIMEOUT_MS = 5e3;
+    AUTH_TIMEOUT_MS = 15e3;
+    cachedStatus = null;
+    cacheTimestamp = 0;
+  }
+});
+
+// packages/tiny-brain-core/src/services/api/claude-cli-client.ts
+import { spawn as spawn2 } from "child_process";
+import { createInterface } from "readline";
+import { resolve as pathResolve2 } from "path";
+function getEnhancedPath2() {
+  const existing = process.env.PATH ?? "";
+  const extra = [
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    pathResolve2(process.env.HOME ?? "", ".local/bin"),
+    pathResolve2(process.env.HOME ?? "", ".npm-global/bin")
+  ];
+  return [...extra, existing].join(":");
+}
+var DEFAULT_MODEL, DEFAULT_TIMEOUT_MS2, KILL_GRACE_MS, ClaudeCliClient;
+var init_claude_cli_client = __esm({
+  "packages/tiny-brain-core/src/services/api/claude-cli-client.ts"() {
+    "use strict";
+    DEFAULT_MODEL = "claude-sonnet-4-20250514";
+    DEFAULT_TIMEOUT_MS2 = 6e5;
+    KILL_GRACE_MS = 5e3;
+    ClaudeCliClient = class {
+      config;
+      process = null;
+      killTimer = null;
+      constructor(config2) {
+        this.config = config2;
+      }
+      async invokeSkill(request, callbacks) {
+        const model = this.config.model ?? DEFAULT_MODEL;
+        const timeoutMs = this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS2;
+        const args = [
+          "-p",
+          request.prompt,
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--model",
+          model,
+          "--cwd",
+          this.config.cwd
+        ];
+        return new Promise((resolve3) => {
+          let resolved = false;
+          const finish = () => {
+            if (!resolved) {
+              resolved = true;
+              this.cleanup();
+              resolve3();
+            }
+          };
+          const proc2 = spawn2("claude", args, {
+            cwd: this.config.cwd,
+            stdio: ["ignore", "pipe", "pipe"],
+            timeout: timeoutMs,
+            env: { ...process.env, PATH: getEnhancedPath2() }
+          });
+          this.process = proc2;
+          proc2.on("error", (err) => {
+            if (err.code === "ENOENT") {
+              callbacks.onError(new Error("Claude CLI not found. Install it with: npm install -g @anthropic-ai/claude-code"));
+            } else {
+              callbacks.onError(err);
+            }
+            finish();
+          });
+          if (!proc2.stdout) {
+            callbacks.onError(new Error("Failed to create CLI subprocess stdout"));
+            finish();
+            return;
+          }
+          const rl = createInterface({ input: proc2.stdout });
+          rl.on("line", (line) => {
+            let event;
+            try {
+              event = JSON.parse(line);
+            } catch {
+              return;
+            }
+            this.handleEvent(event, callbacks);
+          });
+          rl.on("close", () => {
+            finish();
+          });
+        });
+      }
+      cancel() {
+        if (!this.process) return;
+        this.process.kill("SIGTERM");
+        this.killTimer = setTimeout(() => {
+          if (this.process) {
+            this.process.kill("SIGKILL");
+          }
+        }, KILL_GRACE_MS);
+      }
+      handleEvent(event, callbacks) {
+        switch (event.type) {
+          case "assistant":
+            this.handleAssistantEvent(event, callbacks);
+            break;
+          case "user":
+            this.handleUserEvent(event, callbacks);
+            break;
+          case "result":
+            this.handleResultEvent(event, callbacks);
+            break;
+        }
+      }
+      handleAssistantEvent(event, callbacks) {
+        const content = event.message?.content;
+        if (!content) return;
+        for (const block of content) {
+          if (block.type === "text" && block.text) {
+            callbacks.onText(block.text);
+          } else if (block.type === "tool_use" && block.name) {
+            callbacks.onToolUse(block.name, block.input);
+          }
+        }
+      }
+      handleUserEvent(event, callbacks) {
+        const content = event.message?.content;
+        if (!content) return;
+        for (const block of content) {
+          if (block.type === "tool_result" && block.tool_use_id) {
+            callbacks.onToolResult(block.tool_use_id, {
+              success: true,
+              result: block.content ?? ""
+            });
+          }
+        }
+      }
+      handleResultEvent(event, callbacks) {
+        if (event.subtype === "success") {
+          callbacks.onComplete();
+        } else {
+          callbacks.onError(new Error(event.error ?? `CLI error: ${event.subtype}`));
+        }
+      }
+      cleanup() {
+        if (this.killTimer) {
+          clearTimeout(this.killTimer);
+          this.killTimer = null;
+        }
+        this.process = null;
       }
     };
   }
@@ -47998,6 +49130,7 @@ var init_constants2 = __esm({
 var src_exports = {};
 __export(src_exports, {
   ADRService: () => ADRService,
+  AgentsMdService: () => AgentsMdService,
   AnalysisService: () => AnalysisService,
   AnalyzerDefinitionSchema: () => AnalyzerDefinitionSchema,
   AnalyzerDetectionService: () => AnalyzerDetectionService,
@@ -48011,6 +49144,7 @@ __export(src_exports, {
   AssemblyService: () => AssemblyService,
   BaseDetector: () => BaseDetector,
   BaseService: () => BaseService,
+  CATEGORY_MAX_DEDUCTION: () => CATEGORY_MAX_DEDUCTION,
   CATEGORY_WEIGHTS: () => CATEGORY_WEIGHTS,
   CategoryInvestigationSchema: () => CategoryInvestigationSchema,
   CategoryProgressSchema: () => CategoryProgressSchema,
@@ -48018,6 +49152,7 @@ __export(src_exports, {
   CategoryScoreSchema: () => CategoryScoreSchema,
   ChatAnalysisService: () => ChatAnalysisService,
   CheckDefinitionSchema: () => CheckDefinitionSchema,
+  ClaudeCliClient: () => ClaudeCliClient,
   ClaudeClient: () => ClaudeClient,
   ConfigHealthService: () => ConfigHealthService,
   ConfigService: () => ConfigService,
@@ -48105,6 +49240,7 @@ __export(src_exports, {
   classifyIntent: () => classifyIntent,
   classifyMemory: () => classifyMemory,
   cleanString: () => cleanString,
+  clearCliStatusCache: () => clearCliStatusCache,
   compact: () => compact,
   compareAnalysis: () => compareAnalysis,
   createDefaultProfile: () => createDefaultProfile,
@@ -48117,6 +49253,7 @@ __export(src_exports, {
   deepClone: () => deepClone,
   deepMerge: () => deepMerge,
   detectADRPatterns: () => detectADRPatterns,
+  detectClaudeCliStatus: () => detectClaudeCliStatus,
   detectRepositoryRoot: () => detectRepositoryRoot,
   detectRepositoryRootSync: () => detectRepositoryRootSync,
   detectTechStackChanges: () => detectTechStackChanges,
@@ -48255,6 +49392,8 @@ var init_src = __esm({
     init_skill_loader();
     init_claude_client();
     init_tool_executor();
+    init_claude_cli_detection();
+    init_claude_cli_client();
     init_registry();
     init_persona3();
     init_persona2();
@@ -50508,8 +51647,8 @@ var require_package = __commonJS({
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs27 = __require("fs");
-    var path30 = __require("path");
+    var fs28 = __require("fs");
+    var path31 = __require("path");
     var os4 = __require("os");
     var crypto6 = __require("crypto");
     var packageJson = require_package();
@@ -50647,7 +51786,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs27.existsSync(filepath)) {
+            if (fs28.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -50655,15 +51794,15 @@ var require_main = __commonJS({
           possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
         }
       } else {
-        possibleVaultPath = path30.resolve(process.cwd(), ".env.vault");
+        possibleVaultPath = path31.resolve(process.cwd(), ".env.vault");
       }
-      if (fs27.existsSync(possibleVaultPath)) {
+      if (fs28.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path30.join(os4.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path31.join(os4.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -50680,7 +51819,7 @@ var require_main = __commonJS({
       return { parsed };
     }
     function configDotenv(options) {
-      const dotenvPath = path30.resolve(process.cwd(), ".env");
+      const dotenvPath = path31.resolve(process.cwd(), ".env");
       let encoding = "utf8";
       let processEnv = process.env;
       if (options && options.processEnv != null) {
@@ -50708,13 +51847,13 @@ var require_main = __commonJS({
       }
       let lastError;
       const parsedAll = {};
-      for (const path31 of optionPaths) {
+      for (const path32 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs27.readFileSync(path31, { encoding }));
+          const parsed = DotenvModule.parse(fs28.readFileSync(path32, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
-            _debug(`Failed to load ${path31} ${e.message}`);
+            _debug(`Failed to load ${path32} ${e.message}`);
           }
           lastError = e;
         }
@@ -50727,7 +51866,7 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative2 = path30.relative(process.cwd(), filePath);
+            const relative2 = path31.relative(process.cwd(), filePath);
             shortPaths.push(relative2);
           } catch (e) {
             if (debug) {
@@ -51030,10 +52169,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path30) {
-  if (!path30)
+function getElementAtPath(obj, path31) {
+  if (!path31)
     return obj;
-  return path30.reduce((acc, key) => acc?.[key], obj);
+  return path31.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -51353,11 +52492,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path30, issues) {
+function prefixIssues(path31, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path30);
+    iss.path.unshift(path31);
     return iss;
   });
 }
@@ -56168,7 +57307,7 @@ import { dirname as dirname13, join as join28 } from "path";
 import { homedir as homedir5 } from "os";
 
 // packages/tiny-brain-mcp/src/core/mcp-server.ts
-import * as path29 from "path";
+import * as path30 from "path";
 import { existsSync as existsSync11, cpSync, readdirSync as readdirSync3, readFileSync as readFileSync4, writeFileSync, mkdirSync as mkdirSync2 } from "fs";
 import { execSync as execSync4 } from "child_process";
 
@@ -57933,8 +59072,8 @@ var AuthTokenService = class extends BaseService {
 };
 
 // packages/tiny-brain-mcp/src/services/credential-storage.service.ts
-import * as fs16 from "fs/promises";
-import * as path18 from "path";
+import * as fs17 from "fs/promises";
+import * as path19 from "path";
 import * as os from "os";
 import * as crypto3 from "crypto";
 var CredentialStorageService = class {
@@ -57944,7 +59083,7 @@ var CredentialStorageService = class {
   keyLength = 32;
   constructor() {
     const homeDir = os.homedir();
-    this.credentialsPath = path18.join(homeDir, ".tiny-brain", "config", "credentials.json");
+    this.credentialsPath = path19.join(homeDir, ".tiny-brain", "config", "credentials.json");
   }
   async setCredential(key, value) {
     const validKeys = ["clientId", "clientSecret", "llmProvider", "llmApiKey"];
@@ -58035,7 +59174,7 @@ var CredentialStorageService = class {
   }
   async clearCredentials() {
     try {
-      await fs16.unlink(this.credentialsPath);
+      await fs17.unlink(this.credentialsPath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -58098,7 +59237,7 @@ var CredentialStorageService = class {
   }
   async loadStoredCredentials() {
     try {
-      const data = await fs16.readFile(this.credentialsPath, "utf8");
+      const data = await fs17.readFile(this.credentialsPath, "utf8");
       return JSON.parse(data);
     } catch (error2) {
       if (error2.code === "ENOENT") {
@@ -58108,14 +59247,14 @@ var CredentialStorageService = class {
     }
   }
   async saveStoredCredentials(credentials) {
-    const dir = path18.dirname(this.credentialsPath);
-    await fs16.mkdir(dir, { recursive: true });
-    await fs16.writeFile(
+    const dir = path19.dirname(this.credentialsPath);
+    await fs17.mkdir(dir, { recursive: true });
+    await fs17.writeFile(
       this.credentialsPath,
       JSON.stringify(credentials, null, 2),
       "utf8"
     );
-    await fs16.chmod(this.credentialsPath, 384);
+    await fs17.chmod(this.credentialsPath, 384);
   }
 };
 
@@ -58376,7 +59515,7 @@ var SystemPersonaService = class extends BaseService {
 };
 
 // packages/tiny-brain-mcp/src/storage/local-filesystem-adapter.ts
-import { promises as fs17 } from "fs";
+import { promises as fs18 } from "fs";
 import { dirname as dirname4, join as join13 } from "path";
 
 // packages/tiny-brain-mcp/src/storage/storage-path-builder.ts
@@ -58398,8 +59537,8 @@ var LocalStoragePathBuilder = class {
   buildUserBasePath(_userId) {
     return this.basePath;
   }
-  extractPersonaId(path30) {
-    const parts = path30.split(/[/\\]/);
+  extractPersonaId(path31) {
+    const parts = path31.split(/[/\\]/);
     const personasIndex = parts.findIndex((part) => part === "personas");
     return personasIndex !== -1 && personasIndex + 1 < parts.length ? parts[personasIndex + 1] : null;
   }
@@ -58431,12 +59570,12 @@ var LocalFilesystemStorageAdapter = class {
     if (this.autoCreate) {
       await this.ensureDirectoryExists(directory);
     }
-    await fs17.writeFile(filePath, content, "utf8");
+    await fs18.writeFile(filePath, content, "utf8");
   }
   async getPersonaFile(personaId, fileName, _userId) {
     const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
     try {
-      return await fs17.readFile(filePath, "utf8");
+      return await fs18.readFile(filePath, "utf8");
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return null;
@@ -58447,7 +59586,7 @@ var LocalFilesystemStorageAdapter = class {
   async deletePersonaFile(personaId, fileName, _userId) {
     const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
     try {
-      await fs17.unlink(filePath);
+      await fs18.unlink(filePath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -58458,7 +59597,7 @@ var LocalFilesystemStorageAdapter = class {
     const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
     try {
       const getAllFiles = async (dir, basePath = "") => {
-        const entries = await fs17.readdir(dir, { withFileTypes: true });
+        const entries = await fs18.readdir(dir, { withFileTypes: true });
         const files = [];
         for (const entry of entries) {
           const fullPath = join13(dir, entry.name);
@@ -58484,12 +59623,12 @@ var LocalFilesystemStorageAdapter = class {
   async listPersonas(_userId) {
     const personasDir = join13(this.pathBuilder.buildUserBasePath(), "personas");
     try {
-      const directories = await fs17.readdir(personasDir);
+      const directories = await fs18.readdir(personasDir);
       const dirStats = await Promise.all(
         directories.map(async (dir) => {
           const dirPath = join13(personasDir, dir);
-          const stat3 = await fs17.stat(dirPath);
-          return { name: dir, isDirectory: stat3.isDirectory() };
+          const stat4 = await fs18.stat(dirPath);
+          return { name: dir, isDirectory: stat4.isDirectory() };
         })
       );
       return dirStats.filter(({ isDirectory }) => isDirectory).map(({ name }) => name);
@@ -58503,7 +59642,7 @@ var LocalFilesystemStorageAdapter = class {
   async deletePersona(personaId, _userId) {
     const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
     try {
-      await fs17.rm(personaDir, { recursive: true, force: true });
+      await fs18.rm(personaDir, { recursive: true, force: true });
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -58525,12 +59664,12 @@ var LocalFilesystemStorageAdapter = class {
     if (this.autoCreate) {
       await this.ensureDirectoryExists(directory);
     }
-    await fs17.writeFile(filePath, content, "utf8");
+    await fs18.writeFile(filePath, content, "utf8");
   }
   async getUserData(key, _userId) {
     const filePath = this.pathBuilder.buildUserDataPath(key);
     try {
-      return await fs17.readFile(filePath, "utf8");
+      return await fs18.readFile(filePath, "utf8");
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return null;
@@ -58541,7 +59680,7 @@ var LocalFilesystemStorageAdapter = class {
   async deleteUserData(key, _userId) {
     const filePath = this.pathBuilder.buildUserDataPath(key);
     try {
-      await fs17.unlink(filePath);
+      await fs18.unlink(filePath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -58554,7 +59693,7 @@ var LocalFilesystemStorageAdapter = class {
       if (this.autoCreate) {
         await this.ensureDirectoryExists(basePath);
       }
-      await fs17.access(basePath, fs17.constants.R_OK | fs17.constants.W_OK);
+      await fs18.access(basePath, fs18.constants.R_OK | fs18.constants.W_OK);
       return true;
     } catch {
       return false;
@@ -58564,33 +59703,33 @@ var LocalFilesystemStorageAdapter = class {
     const oldPath = dirname4(this.pathBuilder.buildPersonaPath(oldPersonaId, ""));
     const newPath = dirname4(this.pathBuilder.buildPersonaPath(newPersonaId, ""));
     try {
-      await fs17.access(oldPath);
+      await fs18.access(oldPath);
     } catch {
       throw new Error(`Persona '${oldPersonaId}' does not exist`);
     }
     try {
-      await fs17.access(newPath);
+      await fs18.access(newPath);
       throw new Error(`Persona '${newPersonaId}' already exists`);
     } catch {
     }
-    await fs17.rename(oldPath, newPath);
+    await fs18.rename(oldPath, newPath);
     const profilePath = join13(newPath, "profile.md");
     try {
-      const profileContent = await fs17.readFile(profilePath, "utf-8");
+      const profileContent = await fs18.readFile(profilePath, "utf-8");
       const lines = profileContent.split("\n");
       if (lines[0].startsWith("#")) {
         lines[0] = `# ${newPersonaId}`;
-        await fs17.writeFile(profilePath, lines.join("\n"), "utf-8");
+        await fs18.writeFile(profilePath, lines.join("\n"), "utf-8");
       }
     } catch {
     }
     const metadataPath = join13(newPath, "metadata.json");
     try {
-      const metadataContent = await fs17.readFile(metadataPath, "utf-8");
+      const metadataContent = await fs18.readFile(metadataPath, "utf-8");
       const metadata = JSON.parse(metadataContent);
       metadata.name = newPersonaId;
       metadata.lastRenamed = (/* @__PURE__ */ new Date()).toISOString();
-      await fs17.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
+      await fs18.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
     } catch {
     }
   }
@@ -58606,7 +59745,7 @@ var LocalFilesystemStorageAdapter = class {
    */
   async ensureDirectoryExists(dirPath) {
     try {
-      await fs17.mkdir(dirPath, { recursive: true });
+      await fs18.mkdir(dirPath, { recursive: true });
     } catch (error2) {
       if (error2.code !== "EEXIST") {
         throw error2;
@@ -58622,8 +59761,8 @@ var LocalFilesystemStorageAdapter = class {
 };
 
 // packages/tiny-brain-mcp/src/core/file-logger.ts
-import * as fs18 from "fs";
-import * as path19 from "path";
+import * as fs19 from "fs";
+import * as path20 from "path";
 var LOG_LEVELS = {
   debug: 0,
   info: 1,
@@ -58640,7 +59779,7 @@ var FileLogger = class {
   currentFileSize = 0;
   constructor(config2 = {}) {
     const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    const defaultLogPath = path19.join(homeDir, ".tiny-brain", "debug.log");
+    const defaultLogPath = path20.join(homeDir, ".tiny-brain", "debug.log");
     this.config = {
       logFilePath: config2.logFilePath || defaultLogPath,
       maxFileSize: config2.maxFileSize || 10 * 1024 * 1024,
@@ -58663,19 +59802,19 @@ var FileLogger = class {
   }
   initialize() {
     try {
-      const logDir = path19.dirname(this.config.logFilePath);
-      if (!fs18.existsSync(logDir)) {
-        fs18.mkdirSync(logDir, { recursive: true });
+      const logDir = path20.dirname(this.config.logFilePath);
+      if (!fs19.existsSync(logDir)) {
+        fs19.mkdirSync(logDir, { recursive: true });
       }
-      if (fs18.existsSync(this.config.logFilePath)) {
-        const stats = fs18.statSync(this.config.logFilePath);
+      if (fs19.existsSync(this.config.logFilePath)) {
+        const stats = fs19.statSync(this.config.logFilePath);
         this.currentFileSize = stats.size;
         if (this.currentFileSize >= this.config.maxFileSize) {
           this.rotateLogFile();
           this.currentFileSize = 0;
         }
       }
-      this.fileStream = fs18.createWriteStream(this.config.logFilePath, {
+      this.fileStream = fs19.createWriteStream(this.config.logFilePath, {
         flags: this.config.appendMode ? "a" : "w"
       });
       this.writeLog("info", "FileLogger initialized", {
@@ -58690,11 +59829,11 @@ var FileLogger = class {
       for (let i = this.config.maxRotatedFiles - 1; i >= 0; i--) {
         const oldPath = i === 0 ? this.config.logFilePath : `${this.config.logFilePath}.${i}`;
         const newPath = `${this.config.logFilePath}.${i + 1}`;
-        if (fs18.existsSync(oldPath)) {
+        if (fs19.existsSync(oldPath)) {
           if (i === this.config.maxRotatedFiles - 1) {
-            fs18.unlinkSync(oldPath);
+            fs19.unlinkSync(oldPath);
           } else {
-            fs18.renameSync(oldPath, newPath);
+            fs19.renameSync(oldPath, newPath);
           }
         }
       }
@@ -58724,7 +59863,7 @@ var FileLogger = class {
         this.fileStream?.end();
         this.rotateLogFile();
         this.currentFileSize = 0;
-        this.fileStream = fs18.createWriteStream(this.config.logFilePath, {
+        this.fileStream = fs19.createWriteStream(this.config.logFilePath, {
           flags: "a"
         });
       }
@@ -59929,26 +61068,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path30) => {
-  const paths = path30.split("/");
+var splitPath = (path31) => {
+  const paths = path31.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path30 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path30);
+  const { groups, path: path31 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path31);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path30) => {
+var extractGroupsFromPath = (path31) => {
   const groups = [];
-  path30 = path30.replace(/\{[^}]+\}/g, (match3, index) => {
+  path31 = path31.replace(/\{[^}]+\}/g, (match3, index) => {
     const mark = `@${index}`;
     groups.push([mark, match3]);
     return mark;
   });
-  return { groups, path: path30 };
+  return { groups, path: path31 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -60003,8 +61142,8 @@ var getPath = (request) => {
     const charCode = url.charCodeAt(i);
     if (charCode === 37) {
       const queryIndex = url.indexOf("?", i);
-      const path30 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
-      return tryDecodeURI(path30.includes("%25") ? path30.replace(/%25/g, "%2525") : path30);
+      const path31 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
+      return tryDecodeURI(path31.includes("%25") ? path31.replace(/%25/g, "%2525") : path31);
     } else if (charCode === 63) {
       break;
     }
@@ -60021,11 +61160,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path30) => {
-  if (path30.charCodeAt(path30.length - 1) !== 63 || !path30.includes(":")) {
+var checkOptionalParameter = (path31) => {
+  if (path31.charCodeAt(path31.length - 1) !== 63 || !path31.includes(":")) {
     return null;
   }
-  const segments = path30.split("/");
+  const segments = path31.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -60166,9 +61305,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path30 = "/", matchResult = [[]]) {
+  constructor(request, path31 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path30;
+    this.path = path31;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -60904,8 +62043,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path30, ...handlers) => {
-      for (const p of [path30].flat()) {
+    this.on = (method, path31, ...handlers) => {
+      for (const p of [path31].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -60962,8 +62101,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path30, app) {
-    const subApp = this.basePath(path30);
+  route(path31, app) {
+    const subApp = this.basePath(path31);
     app.routes.map((r) => {
       let handler;
       if (app.errorHandler === errorHandler) {
@@ -60989,9 +62128,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path30) {
+  basePath(path31) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path30);
+    subApp._basePath = mergePath(this._basePath, path31);
     return subApp;
   }
   /**
@@ -61065,7 +62204,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path30, applicationHandler, options) {
+  mount(path31, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -61092,7 +62231,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path30);
+      const mergedPath = mergePath(this._basePath, path31);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -61107,14 +62246,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path30, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path31, "*"), handler);
     return this;
   }
-  #addRoute(method, path30, handler) {
+  #addRoute(method, path31, handler) {
     method = method.toUpperCase();
-    path30 = mergePath(this._basePath, path30);
-    const r = { basePath: this._basePath, path: path30, method, handler };
-    this.router.add(method, path30, [handler, r]);
+    path31 = mergePath(this._basePath, path31);
+    const r = { basePath: this._basePath, path: path31, method, handler };
+    this.router.add(method, path31, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -61127,10 +62266,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path30 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path30);
+    const path31 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path31);
     const c = new Context(request, {
-      path: path30,
+      path: path31,
       matchResult,
       env,
       executionCtx,
@@ -61230,7 +62369,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match2(method, path30) {
+function match2(method, path31) {
   const matchers = this.buildAllMatchers();
   const match22 = (method2, path210) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -61246,7 +62385,7 @@ function match2(method, path30) {
     return [matcher[1][index], match3];
   };
   this.match = match22;
-  return match22(method, path30);
+  return match22(method, path31);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -61361,12 +62500,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path30, index, pathErrorCheckOnly) {
+  insert(path31, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path30 = path30.replace(/\{[^}]+\}/g, (m) => {
+      path31 = path31.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -61377,7 +62516,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path30.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path31.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -61416,9 +62555,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path30) {
-  return wildcardRegExpCache[path30] ??= new RegExp(
-    path30 === "*" ? "" : `^${path30.replace(
+function buildWildcardRegExp(path31) {
+  return wildcardRegExpCache[path31] ??= new RegExp(
+    path31 === "*" ? "" : `^${path31.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -61440,17 +62579,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path30, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path31, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path30] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path31] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path30, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path31, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path30) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path31) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -61484,12 +62623,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path30) {
+function findMiddleware(middleware, path31) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path30)) {
+    if (buildWildcardRegExp(k).test(path31)) {
       return [...middleware[k]];
     }
   }
@@ -61503,7 +62642,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path30, handler) {
+  add(method, path31, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -61518,18 +62657,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path30 === "/*") {
-      path30 = "*";
+    if (path31 === "/*") {
+      path31 = "*";
     }
-    const paramCount = (path30.match(/\/:/g) || []).length;
-    if (/\*$/.test(path30)) {
-      const re = buildWildcardRegExp(path30);
+    const paramCount = (path31.match(/\/:/g) || []).length;
+    if (/\*$/.test(path31)) {
+      const re = buildWildcardRegExp(path31);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path30] ||= findMiddleware(middleware[m], path30) || findMiddleware(middleware[METHOD_NAME_ALL], path30) || [];
+          middleware[m][path31] ||= findMiddleware(middleware[m], path31) || findMiddleware(middleware[METHOD_NAME_ALL], path31) || [];
         });
       } else {
-        middleware[method][path30] ||= findMiddleware(middleware[method], path30) || findMiddleware(middleware[METHOD_NAME_ALL], path30) || [];
+        middleware[method][path31] ||= findMiddleware(middleware[method], path31) || findMiddleware(middleware[METHOD_NAME_ALL], path31) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -61547,7 +62686,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path30) || [path30];
+    const paths = checkOptionalParameter(path31) || [path31];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path210 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -61574,13 +62713,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path30) => [path30, r[method][path30]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path31) => [path31, r[method][path31]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path30) => [path30, r[METHOD_NAME_ALL][path30]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path31) => [path31, r[METHOD_NAME_ALL][path31]])
         );
       }
     });
@@ -61600,13 +62739,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path30, handler) {
+  add(method, path31, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path30, handler]);
+    this.#routes.push([method, path31, handler]);
   }
-  match(method, path30) {
+  match(method, path31) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -61621,7 +62760,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path30);
+        res = router.match(method, path31);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -61665,10 +62804,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path30, handler) {
+  insert(method, path31, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path30);
+    const parts = splitRoutingPath(path31);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -61719,12 +62858,12 @@ var Node2 = class _Node2 {
     }
     return handlerSets;
   }
-  search(method, path30) {
+  search(method, path31) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path30);
+    const parts = splitPath(path31);
     const curNodesQueue = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const part = parts[i];
@@ -61812,18 +62951,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path30, handler) {
-    const results = checkOptionalParameter(path30);
+  add(method, path31, handler) {
+    const results = checkOptionalParameter(path31);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path30, handler);
+    this.#node.insert(method, path31, handler);
   }
-  match(method, path30) {
-    return this.#node.search(method, path30);
+  match(method, path31) {
+    return this.#node.search(method, path31);
   }
 };
 
@@ -62029,10 +63168,10 @@ var createStreamBody = (stream3) => {
   });
   return body;
 };
-var getStats = (path30) => {
+var getStats = (path31) => {
   let stats;
   try {
-    stats = statSync2(path30);
+    stats = statSync2(path31);
   } catch {
   }
   return stats;
@@ -62061,21 +63200,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path30 = join15(
+    let path31 = join15(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path30);
+    let stats = getStats(path31);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path30 = join15(path30, indexFile);
-      stats = getStats(path30);
+      path31 = join15(path31, indexFile);
+      stats = getStats(path31);
     }
     if (!stats) {
-      await options.onNotFound?.(path30, c);
+      await options.onNotFound?.(path31, c);
       return next();
     }
-    const mimeType = getMimeType(path30);
+    const mimeType = getMimeType(path31);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -62085,12 +63224,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path30 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path31 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path30 = path30 + ENCODINGS[encoding];
+          path31 = path31 + ENCODINGS[encoding];
           break;
         }
       }
@@ -62104,7 +63243,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path30)), 200);
+      result = c.body(createStreamBody(createReadStream(path31)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -62115,20 +63254,20 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream3 = createReadStream(path30, { start, end });
+      const stream3 = createReadStream(path31, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
       result = c.body(createStreamBody(stream3), 206);
     }
-    await options.onFound?.(path30, c);
+    await options.onFound?.(path31, c);
     return result;
   };
 };
 
 // packages/tiny-brain-dashboard/server/app.ts
-import path20 from "node:path";
+import path21 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
-import fs19 from "node:fs";
+import fs20 from "node:fs";
 
 // packages/tiny-brain-dashboard/server/services/bridge.service.ts
 init_src();
@@ -62462,13 +63601,13 @@ function createConfigRoutes(bridge) {
       return c.json({
         clientId: null,
         clientSecret: null,
-        hasLlmApiKey: false
+        hasClaudeCli: false
       });
     }
     return c.json({
       clientId: libraryAuth.clientId || null,
       clientSecret: libraryAuth.hasStoredSecret ? "[STORED]" : null,
-      hasLlmApiKey: libraryAuth.hasLlmApiKey
+      hasClaudeCli: libraryAuth.hasClaudeCli
     });
   });
   app.post("/credentials", async (c) => {
@@ -62638,19 +63777,19 @@ function createSettingsRoutes(bridge) {
 
 // packages/tiny-brain-dashboard/server/routes/repos.routes.ts
 init_src();
-import { readdir as readdir9, readFile as readFile11 } from "fs/promises";
+import { readdir as readdir9, readFile as readFile11, stat as stat2 } from "fs/promises";
 import { join as join16 } from "path";
-import { createHash as createHash3 } from "crypto";
-function toRepoAnalysisFile(result) {
-  const analysis = result.analysis;
+import { createHash as createHash4 } from "crypto";
+function toRepoAnalysisFile(input) {
+  const analysis = input.analysis;
   const hashInput = JSON.stringify({
     languages: analysis.languages,
     frameworks: analysis.frameworks,
     testingTools: analysis.testingTools,
     buildTools: analysis.buildTools
   });
-  const analysisHash = createHash3("md5").update(hashInput).digest("hex").slice(0, 8);
-  return {
+  const analysisHash = createHash4("md5").update(hashInput).digest("hex").slice(0, 8);
+  const result = {
     version: "1.0",
     detectedAt: (/* @__PURE__ */ new Date()).toISOString(),
     analysisHash,
@@ -62670,6 +63809,15 @@ function toRepoAnalysisFile(result) {
       documentationLocations: analysis.documentationLocations
     }
   };
+  if (analysis.packageManager) result.packageManager = analysis.packageManager;
+  if (analysis.scripts) result.scripts = analysis.scripts;
+  if (analysis.linting) result.linting = analysis.linting;
+  if (analysis.monorepo) result.monorepo = analysis.monorepo;
+  if (analysis.projectName) result.projectName = analysis.projectName;
+  if (analysis.sourceDirectories && analysis.sourceDirectories.length > 0) {
+    result.sourceDirectories = analysis.sourceDirectories;
+  }
+  return result;
 }
 function parseTasksFromMarkdown(content) {
   const tasks = [];
@@ -62931,7 +64079,15 @@ function createRepoRoutes(bridge, sse) {
       try {
         const content = await readFile11(analysisPath, "utf-8");
         const analysis = JSON.parse(content);
-        return c.json({ exists: true, analysis });
+        const agentsMdPath = join16(repo.path, "AGENTS.md");
+        let agentsMdStatus;
+        try {
+          const agentsStat = await stat2(agentsMdPath);
+          agentsMdStatus = { exists: true, lastModified: agentsStat.mtime.toISOString() };
+        } catch {
+          agentsMdStatus = { exists: false };
+        }
+        return c.json({ exists: true, analysis, agentsMdStatus });
       } catch (err) {
         if (err.code === "ENOENT") {
           return c.json({ exists: false, analysis: null });
@@ -63078,6 +64234,11 @@ function createRepoRoutes(bridge, sse) {
           issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10),
           rawContent: content
         };
+        const planPath = join16(repo.path, "docs", "quality", "plans", `${runId}-plan.md`);
+        try {
+          run2.planContent = await readFile11(planPath, "utf-8");
+        } catch {
+        }
         return c.json({ run: run2 });
       } catch (err) {
         if (err.code === "ENOENT") {
@@ -63538,63 +64699,28 @@ function createSkillsRoutes(bridge) {
     if (!prompt) {
       return c.json({ error: "Missing required field: prompt" }, 400);
     }
-    const getLlmApiKey = bridge.context.libraryAuth?.getLlmApiKey;
-    if (!getLlmApiKey) {
-      return c.json({ error: "API key getter not configured" }, 401);
-    }
-    const apiKey = await getLlmApiKey();
-    if (!apiKey) {
-      return c.json({ error: "No API key configured. Please set LLM_API_KEY or configure via CLI." }, 401);
-    }
     if (!AVAILABLE_SKILLS.includes(skillName)) {
       return c.json({ error: `Skill '${skillName}' not found` }, 404);
     }
-    const skillsPath = getSkillsPath();
-    const loader2 = new SkillLoader(skillsPath);
-    let skill;
-    try {
-      skill = await loader2.loadSkill(skillName);
-    } catch (error2) {
-      bridge.context.logger.error(`Failed to load skill ${skillName}:`, error2);
-      return c.json({ error: `Failed to load skill '${skillName}'` }, 500);
-    }
     const session = sessionManager.createSession();
     const repositoryRoot = bridge.context.repositoryRoot || process.cwd();
+    const cliClient = new ClaudeCliClient({ cwd: repositoryRoot });
     return streamSSE(c, async (stream3) => {
       bridge.context.logger.info("[skills.routes] SSE stream started");
       try {
-        const toolExecutor = new ToolExecutor({ repositoryRoot });
-        bridge.context.logger.info("[skills.routes] ToolExecutor created");
-        bridge.context.logger.info("[skills.routes] Creating ClaudeClient", { apiKeyLength: apiKey?.length });
-        const client = new ClaudeClient({ apiKey });
-        bridge.context.logger.info("[skills.routes] ClaudeClient created");
-        let userMessage = prompt;
-        if (userContext) {
-          userMessage = `Context:
-${JSON.stringify(userContext, null, 2)}
-
-Request:
-${prompt}`;
-        }
-        let systemPrompt = skill.systemPrompt;
-        if (Object.keys(skill.templates).length > 0) {
-          systemPrompt += "\n\n## Available Templates\n\n";
-          for (const [name, content] of Object.entries(skill.templates)) {
-            systemPrompt += `### ${name}
-\`\`\`
-${content}
-\`\`\`
+        let cliPrompt = `/${skillName}
 
 `;
-          }
+        if (userContext) {
+          cliPrompt += `Context:
+${JSON.stringify(userContext, null, 2)}
+
+`;
         }
-        bridge.context.logger.info("[skills.routes] Calling client.invokeSkill");
-        await client.invokeSkill(
-          {
-            systemPrompt,
-            userMessage,
-            toolExecutor
-          },
+        cliPrompt += prompt;
+        bridge.context.logger.info("[skills.routes] Invoking skill via Claude CLI");
+        await cliClient.invokeSkill(
+          { prompt: cliPrompt },
           {
             onText: async (text) => {
               await stream3.writeSSE({
@@ -63662,7 +64788,7 @@ ${content}
 }
 
 // packages/tiny-brain-dashboard/server/app.ts
-var __dirname = path20.dirname(fileURLToPath3(import.meta.url));
+var __dirname = path21.dirname(fileURLToPath3(import.meta.url));
 function createApp(context, sse) {
   const app = new Hono2();
   const bridge = new ServiceBridge(context);
@@ -63724,12 +64850,12 @@ data: ${JSON.stringify(initialData)}
   app.get("/health", (c) => {
     return c.json({ status: "ok" });
   });
-  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path20.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path20.resolve(__dirname, "../dist");
-  const distExists = fs19.existsSync(distPath);
+  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path21.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path21.resolve(__dirname, "../dist");
+  const distExists = fs20.existsSync(distPath);
   if (distExists) {
     app.use("/assets/*", serveStatic({
       root: distPath,
-      rewriteRequestPath: (path30) => path30.replace("/assets", "/assets")
+      rewriteRequestPath: (path31) => path31.replace("/assets", "/assets")
     }));
     app.use("/favicon.png", serveStatic({
       root: distPath,
@@ -63740,9 +64866,9 @@ data: ${JSON.stringify(initialData)}
       if (reqPath.startsWith("/api") || reqPath.startsWith("/events") || reqPath === "/health") {
         return c.notFound();
       }
-      const indexPath = path20.join(distPath, "index.html");
-      if (fs19.existsSync(indexPath)) {
-        const indexHtml = fs19.readFileSync(indexPath, "utf-8");
+      const indexPath = path21.join(distPath, "index.html");
+      if (fs20.existsSync(indexPath)) {
+        const indexHtml = fs20.readFileSync(indexPath, "utf-8");
         return c.html(indexHtml);
       }
       return c.html(`<!DOCTYPE html>
@@ -63817,13 +64943,13 @@ data: ${JSON.stringify(data)}
 
 // packages/tiny-brain-dashboard/server/services/file-watcher.service.ts
 init_src();
-import * as path22 from "path";
-import * as fs21 from "fs";
+import * as path23 from "path";
+import * as fs22 from "fs";
 import * as os2 from "os";
 
 // packages/tiny-brain-dashboard/server/services/generic-file-watcher.ts
-import * as fs20 from "fs";
-import * as path21 from "path";
+import * as fs21 from "fs";
+import * as path22 from "path";
 import { EventEmitter as EventEmitter2 } from "events";
 var FileWatcherService = class extends EventEmitter2 {
   watchInterval = null;
@@ -63853,10 +64979,10 @@ var FileWatcherService = class extends EventEmitter2 {
       ...this.options,
       ...options
     };
-    if (!fs20.existsSync(watchPath)) {
+    if (!fs21.existsSync(watchPath)) {
       throw new Error(`Watch path does not exist: ${watchPath}`);
     }
-    const stats = fs20.statSync(watchPath);
+    const stats = fs21.statSync(watchPath);
     if (!stats.isDirectory()) {
       throw new Error(`Watch path is not a directory: ${watchPath}`);
     }
@@ -63887,9 +65013,9 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = [];
     const scanDir = (currentPath) => {
       try {
-        const entries = fs20.readdirSync(currentPath, { withFileTypes: true });
+        const entries = fs21.readdirSync(currentPath, { withFileTypes: true });
         for (const entry of entries) {
-          const fullPath = path21.join(currentPath, entry.name);
+          const fullPath = path22.join(currentPath, entry.name);
           if (entry.name.startsWith(".")) {
             continue;
           }
@@ -63916,7 +65042,7 @@ var FileWatcherService = class extends EventEmitter2 {
     const files = this.getAllFiles(this.watchPath);
     for (const filePath of files) {
       try {
-        const stats = fs20.statSync(filePath);
+        const stats = fs21.statSync(filePath);
         this.fileTimestamps.set(filePath, stats.mtimeMs);
       } catch (error2) {
         this.logger.error(`Error getting stats for ${filePath}:`, error2);
@@ -63938,7 +65064,7 @@ var FileWatcherService = class extends EventEmitter2 {
         const change = {
           type: "deleted",
           filePath,
-          relativePath: path21.relative(this.watchPath, filePath)
+          relativePath: path22.relative(this.watchPath, filePath)
         };
         this.emit("change", change);
         this.logger.debug(`File deleted: ${filePath}`);
@@ -63946,14 +65072,14 @@ var FileWatcherService = class extends EventEmitter2 {
     }
     for (const filePath of currentFiles) {
       try {
-        const stats = fs20.statSync(filePath);
+        const stats = fs21.statSync(filePath);
         const previousMtime = this.fileTimestamps.get(filePath);
         if (!previousMtime) {
           this.fileTimestamps.set(filePath, stats.mtimeMs);
           const change = {
             type: "added",
             filePath,
-            relativePath: path21.relative(this.watchPath, filePath),
+            relativePath: path22.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -63963,7 +65089,7 @@ var FileWatcherService = class extends EventEmitter2 {
           const change = {
             type: "modified",
             filePath,
-            relativePath: path21.relative(this.watchPath, filePath),
+            relativePath: path22.relative(this.watchPath, filePath),
             mtime: stats.mtime
           };
           this.emit("change", change);
@@ -64049,9 +65175,9 @@ var FileWatcher = class {
     if (!this.plansCache.has(repoId)) {
       this.plansCache.set(repoId, /* @__PURE__ */ new Map());
     }
-    const tinyBrainPath = path22.join(repoPath, ".tiny-brain");
-    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs21.existsSync(tinyBrainPath)}`);
-    if (fs21.existsSync(tinyBrainPath)) {
+    const tinyBrainPath = path23.join(repoPath, ".tiny-brain");
+    this.context.logger.info(`[FileWatcher] Checking .tiny-brain path: ${tinyBrainPath} exists: ${fs22.existsSync(tinyBrainPath)}`);
+    if (fs22.existsSync(tinyBrainPath)) {
       try {
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -64072,7 +65198,7 @@ var FileWatcher = class {
       }
     } else {
       try {
-        await fs21.promises.mkdir(tinyBrainPath, { recursive: true });
+        await fs22.promises.mkdir(tinyBrainPath, { recursive: true });
         this.context.logger.info(`[FileWatcher] Created .tiny-brain directory for repo ${repoId}`);
         watchers.prdWatcher = new FileWatcherService(this.context.logger);
         watchers.prdWatcher.on("change", (change) => {
@@ -64091,9 +65217,9 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to create .tiny-brain and start PRD watcher for ${repoId}:`, error2);
       }
     }
-    const fixesPath = path22.join(repoPath, ".tiny-brain/fixes");
-    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs21.existsSync(fixesPath)}`);
-    if (fs21.existsSync(fixesPath)) {
+    const fixesPath = path23.join(repoPath, ".tiny-brain/fixes");
+    this.context.logger.info(`[FileWatcher] Checking fixes path: ${fixesPath} exists: ${fs22.existsSync(fixesPath)}`);
+    if (fs22.existsSync(fixesPath)) {
       try {
         watchers.fixesWatcher = new FileWatcherService(this.context.logger);
         watchers.fixesWatcher.on("change", (change) => {
@@ -64110,10 +65236,10 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start fixes watcher for ${repoId}:`, error2);
       }
     }
-    const qualityPath = path22.join(repoPath, "docs/quality/runs");
-    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs21.existsSync(qualityPath)}`);
-    if (!fs21.existsSync(qualityPath)) {
-      await fs21.promises.mkdir(qualityPath, { recursive: true });
+    const qualityPath = path23.join(repoPath, "docs/quality/runs");
+    this.context.logger.info(`[FileWatcher] Checking quality path: ${qualityPath} exists: ${fs22.existsSync(qualityPath)}`);
+    if (!fs22.existsSync(qualityPath)) {
+      await fs22.promises.mkdir(qualityPath, { recursive: true });
       this.context.logger.info(`[FileWatcher] Created quality runs directory for repo ${repoId}`);
     }
     try {
@@ -64134,9 +65260,9 @@ var FileWatcher = class {
     } catch (error2) {
       this.context.logger.error(`[FileWatcher] Failed to start quality watcher for ${repoId}:`, error2);
     }
-    const prdDocsPath = path22.join(repoPath, "docs/prd");
-    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs21.existsSync(prdDocsPath)}`);
-    if (fs21.existsSync(prdDocsPath)) {
+    const prdDocsPath = path23.join(repoPath, "docs/prd");
+    this.context.logger.info(`[FileWatcher] Checking PRD docs path: ${prdDocsPath} exists: ${fs22.existsSync(prdDocsPath)}`);
+    if (fs22.existsSync(prdDocsPath)) {
       try {
         watchers.prdDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.prdDocsWatcher.on("change", (change) => {
@@ -64154,8 +65280,8 @@ var FileWatcher = class {
         this.context.logger.error(`[FileWatcher] Failed to start PRD docs watcher for ${repoId}:`, error2);
       }
     }
-    const fixDocsPath = path22.join(repoPath, ".tiny-brain/fixes");
-    if (fs21.existsSync(fixDocsPath)) {
+    const fixDocsPath = path23.join(repoPath, ".tiny-brain/fixes");
+    if (fs22.existsSync(fixDocsPath)) {
       try {
         watchers.fixDocsWatcher = new FileWatcherService(this.context.logger);
         watchers.fixDocsWatcher.on("change", (change) => {
@@ -64181,8 +65307,8 @@ var FileWatcher = class {
    * Start watching ~/.tiny-brain/repos/repos.json for new repo registrations
    */
   async startReposConfigWatcher() {
-    const reposDir = path22.join(os2.homedir(), ".tiny-brain", "repos");
-    if (!fs21.existsSync(reposDir)) {
+    const reposDir = path23.join(os2.homedir(), ".tiny-brain", "repos");
+    if (!fs22.existsSync(reposDir)) {
       this.context.logger.info(`[FileWatcher] Repos config directory does not exist: ${reposDir}`);
       return;
     }
@@ -64264,7 +65390,7 @@ var FileWatcher = class {
         this.context.logger.info(`[FileWatcher] No SSE clients connected - skipping file processing`);
         return;
       }
-      const fileName = path22.basename(change.relativePath);
+      const fileName = path23.basename(change.relativePath);
       this.context.logger.debug(`[FileWatcher] File name:`, fileName);
       if (!fileName.endsWith(".json")) {
         this.context.logger.debug(`[FileWatcher] Not a valid progress file - skipping`);
@@ -64299,7 +65425,7 @@ var FileWatcher = class {
       let newPlan;
       try {
         this.context.logger.debug(`[FileWatcher] Reading file: ${change.filePath}`);
-        const content = await fs21.promises.readFile(change.filePath, "utf-8");
+        const content = await fs22.promises.readFile(change.filePath, "utf-8");
         newPlan = JSON.parse(content);
       } catch (error2) {
         this.context.logger.error(`Error reading progress file ${change.filePath}:`, error2);
@@ -64508,7 +65634,7 @@ var FileWatcher = class {
       }
       let newFixes;
       try {
-        const content = await fs21.promises.readFile(change.filePath, "utf-8");
+        const content = await fs22.promises.readFile(change.filePath, "utf-8");
         newFixes = JSON.parse(content);
       } catch (error2) {
         this.context.logger.error(`Error reading fixes progress file ${change.filePath}:`, error2);
@@ -64618,7 +65744,7 @@ var FileWatcher = class {
         return;
       }
       const nestedMatch = change.relativePath.match(/^(\d{4}-\d{2}-\d{2})\/(\d{2}-\d{2})\/quality\.md$/);
-      const runId = nestedMatch ? `${nestedMatch[1]}T${nestedMatch[2]}` : path22.basename(change.relativePath).replace(/\.md$/, "");
+      const runId = nestedMatch ? `${nestedMatch[1]}T${nestedMatch[2]}` : path23.basename(change.relativePath).replace(/\.md$/, "");
       let repoCache = this.qualityCache.get(repoId);
       if (!repoCache) {
         repoCache = /* @__PURE__ */ new Map();
@@ -64636,7 +65762,7 @@ var FileWatcher = class {
       }
       let runData = { runId };
       try {
-        const content = await fs21.promises.readFile(change.filePath, "utf-8");
+        const content = await fs22.promises.readFile(change.filePath, "utf-8");
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (frontmatterMatch) {
           const frontmatter = frontmatterMatch[1];
@@ -64749,7 +65875,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs21.promises.readFile(change.filePath, "utf-8");
+        content = await fs22.promises.readFile(change.filePath, "utf-8");
       } catch (error2) {
         this.context.logger.error(`Error reading PRD doc file ${change.filePath}:`, error2);
         return;
@@ -64808,7 +65934,7 @@ var FileWatcher = class {
         return;
       }
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-      const fixId = path22.basename(change.relativePath, ".md");
+      const fixId = path23.basename(change.relativePath, ".md");
       if (change.type === "deleted") {
         await this.sse.broadcast("fix-doc-change", {
           eventType: "fix:doc:deleted",
@@ -64820,7 +65946,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs21.promises.readFile(change.filePath, "utf-8");
+        content = await fs22.promises.readFile(change.filePath, "utf-8");
       } catch (error2) {
         this.context.logger.error(`Error reading fix doc file ${change.filePath}:`, error2);
         return;
@@ -64972,8 +66098,8 @@ var DashboardLauncher = class {
 };
 
 // packages/tiny-brain-mcp/src/tools/plan/plan.tool.ts
-import { promises as fs22 } from "fs";
-import path23 from "path";
+import { promises as fs23 } from "fs";
+import path24 from "path";
 import { exec as exec6 } from "child_process";
 import { promisify as promisify5 } from "util";
 var execAsync5 = promisify5(exec6);
@@ -65064,16 +66190,16 @@ async function findUniqueSlug(baseSlug) {
   let slug = baseSlug;
   let counter = 2;
   try {
-    const checkPath = path23.join(repoRoot, "docs/prd", slug);
-    await fs22.access(checkPath);
+    const checkPath = path24.join(repoRoot, "docs/prd", slug);
+    await fs23.access(checkPath);
   } catch {
     return slug;
   }
   while (counter < 100) {
     slug = `${baseSlug}-${counter}`;
     try {
-      const checkPath = path23.join(repoRoot, "docs/prd", slug);
-      await fs22.access(checkPath);
+      const checkPath = path24.join(repoRoot, "docs/prd", slug);
+      await fs23.access(checkPath);
       counter++;
     } catch {
       return slug;
@@ -65083,8 +66209,8 @@ async function findUniqueSlug(baseSlug) {
 }
 async function countPrdsInRepo(repoRoot) {
   try {
-    const prdDir = path23.join(repoRoot, "docs", "prd");
-    const entries = await fs22.readdir(prdDir, { withFileTypes: true });
+    const prdDir = path24.join(repoRoot, "docs", "prd");
+    const entries = await fs23.readdir(prdDir, { withFileTypes: true });
     return entries.filter((entry) => entry.isDirectory()).length;
   } catch {
     return 0;
@@ -65096,7 +66222,7 @@ async function registerRepository(context) {
       return;
     }
     const repoConfigService = new RepoConfigService(context);
-    const repoName = path23.basename(context.repositoryRoot);
+    const repoName = path24.basename(context.repositoryRoot);
     const prdCount = await countPrdsInRepo(context.repositoryRoot);
     await repoConfigService.registerRepo({
       name: repoName,
@@ -65656,9 +66782,9 @@ var PlanTool = class _PlanTool {
       const report = await planningService.formatPlan(plan, true);
       if (args.saveToFile) {
         const filename = `plan-report-${plan.id}-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.md`;
-        const path30 = `reports/${filename}`;
-        await context.storage?.storeUserData(path30, report, context.userId);
-        const response2 = [`Report saved to: ${path30}`, "", report].join("\n");
+        const path31 = `reports/${filename}`;
+        await context.storage?.storeUserData(path31, report, context.userId);
+        const response2 = [`Report saved to: ${path31}`, "", report].join("\n");
         return createSuccessResult(response2);
       }
       const response = report;
@@ -65864,10 +66990,10 @@ Use "plan operation=stop-dashboard" to stop it.`
         return createErrorResult("ADR pattern detected but suggestion generation failed");
       }
       const adrContent = await adrService.generateADRContent(foundSuggestion.suggestion);
-      const tempDir = path23.join(context.repositoryRoot, ".tiny-brain", "temp");
-      await fs22.mkdir(tempDir, { recursive: true });
-      const tempFilePath = path23.join(tempDir, "adr-suggestion.md");
-      await fs22.writeFile(tempFilePath, adrContent, "utf-8");
+      const tempDir = path24.join(context.repositoryRoot, ".tiny-brain", "temp");
+      await fs23.mkdir(tempDir, { recursive: true });
+      const tempFilePath = path24.join(tempDir, "adr-suggestion.md");
+      await fs23.writeFile(tempFilePath, adrContent, "utf-8");
       const response = [
         "\u{1F3AF} ADR Suggestion Detected!",
         "",
@@ -65902,10 +67028,10 @@ Use "plan operation=stop-dashboard" to stop it.`
           "Not in a git repository. ADR creation requires git repository."
         );
       }
-      const tempFilePath = path23.join(context.repositoryRoot, ".tiny-brain", "temp", "adr-suggestion.md");
+      const tempFilePath = path24.join(context.repositoryRoot, ".tiny-brain", "temp", "adr-suggestion.md");
       let adrContent;
       try {
-        adrContent = await fs22.readFile(tempFilePath, "utf-8");
+        adrContent = await fs23.readFile(tempFilePath, "utf-8");
       } catch {
         return createErrorResult(
           'No ADR suggestion found. Run "plan adr" first to analyze commits and generate a suggestion.'
@@ -65925,17 +67051,17 @@ Use "plan operation=stop-dashboard" to stop it.`
       const adrNumber = await adrService.getNextADRNumber();
       const paddedNumber = adrNumber.toString().padStart(4, "0");
       const finalContent = adrContent.replace(/\{adr_number\}/g, paddedNumber);
-      const adrDir = path23.join(context.repositoryRoot, "docs/adr");
-      await fs22.mkdir(adrDir, { recursive: true });
+      const adrDir = path24.join(context.repositoryRoot, "docs/adr");
+      await fs23.mkdir(adrDir, { recursive: true });
       const filename = `${paddedNumber}-${suggestedFileName}`;
-      const filePath = path23.join(adrDir, filename);
-      await fs22.writeFile(filePath, finalContent, "utf-8");
+      const filePath = path24.join(adrDir, filename);
+      await fs23.writeFile(filePath, finalContent, "utf-8");
       try {
-        await fs22.unlink(tempFilePath);
+        await fs23.unlink(tempFilePath);
       } catch (error2) {
         context.logger?.warn?.(`Failed to clean up temp file: ${error2}`);
       }
-      const relativePath = path23.relative(context.repositoryRoot, filePath);
+      const relativePath = path24.relative(context.repositoryRoot, filePath);
       const response = [
         "\u2705 ADR Created Successfully!",
         "",
@@ -65968,7 +67094,7 @@ Use "plan operation=stop-dashboard" to stop it.`
       const planningService = new PlanningService(context);
       let prdPath;
       if (args.planId) {
-        prdPath = path23.join(context.repositoryRoot, "docs", "prd", args.planId);
+        prdPath = path24.join(context.repositoryRoot, "docs", "prd", args.planId);
       } else {
         const activePlan = await planningService.getActivePlan();
         if (!activePlan?.prdDirPath) {
@@ -65976,11 +67102,11 @@ Use "plan operation=stop-dashboard" to stop it.`
             "No active plan found. Specify a planId to sync a specific PRD: plan sync --planId my-prd"
           );
         }
-        prdPath = path23.join(context.repositoryRoot, activePlan.prdDirPath);
+        prdPath = path24.join(context.repositoryRoot, activePlan.prdDirPath);
       }
-      const prdMdPath = path23.join(prdPath, "prd.md");
+      const prdMdPath = path24.join(prdPath, "prd.md");
       try {
-        await fs22.access(prdMdPath);
+        await fs23.access(prdMdPath);
       } catch {
         return createErrorResult(
           `PRD not found at ${prdPath}. Ensure prd.md exists in the specified directory.`
@@ -66282,9 +67408,9 @@ var PersonaService2 = class extends PersonaService {
 };
 
 // packages/tiny-brain-mcp/src/services/repo-service.ts
-import * as fs23 from "fs/promises";
+import * as fs24 from "fs/promises";
 import { existsSync as existsSync8, readFileSync } from "fs";
-import * as path24 from "path";
+import * as path25 from "path";
 import { fileURLToPath as fileURLToPath5 } from "url";
 
 // packages/tiny-brain-mcp/src/utils/repo-utils.ts
@@ -66356,8 +67482,8 @@ var RepoService = class _RepoService {
   async readRepoBlockFromContextFile(contextFilePath = "CLAUDE.md") {
     try {
       const repoRoot = getRepoRoot();
-      const fullPath = path24.join(repoRoot, contextFilePath);
-      const content = await fs23.readFile(fullPath, "utf-8");
+      const fullPath = path25.join(repoRoot, contextFilePath);
+      const content = await fs24.readFile(fullPath, "utf-8");
       const startMarker = _RepoService.REPO_BLOCK_START;
       const endMarker = _RepoService.REPO_BLOCK_END;
       const startIndex = content.indexOf(startMarker);
@@ -66411,7 +67537,7 @@ var RepoService = class _RepoService {
     }
     try {
       const repoRoot = getRepoRoot();
-      const analysisPath = path24.join(repoRoot, ".tiny-brain", "analysis.json");
+      const analysisPath = path25.join(repoRoot, ".tiny-brain", "analysis.json");
       return existsSync8(analysisPath);
     } catch {
       return false;
@@ -66423,7 +67549,7 @@ var RepoService = class _RepoService {
   getAnalysisVersion() {
     try {
       const currentFilePath = fileURLToPath5(import.meta.url);
-      const packageJsonPath = path24.join(path24.dirname(currentFilePath), "../../package.json");
+      const packageJsonPath = path25.join(path25.dirname(currentFilePath), "../../package.json");
       const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
       return packageJson.version || "0.0.0";
     } catch (error2) {
@@ -66471,10 +67597,10 @@ version: ${version2}
 ${workflowContent}${_RepoService.REPO_BLOCK_END}
 `;
     const repoRoot = getRepoRoot();
-    const fullPath = path24.join(repoRoot, contextPath);
+    const fullPath = path25.join(repoRoot, contextPath);
     let existingContent = "";
     try {
-      existingContent = await fs23.readFile(fullPath, "utf-8");
+      existingContent = await fs24.readFile(fullPath, "utf-8");
     } catch {
     }
     const startMarker = _RepoService.REPO_BLOCK_START;
@@ -66496,8 +67622,8 @@ ${workflowContent}${_RepoService.REPO_BLOCK_END}
     } else {
       existingContent = existingContent.trimEnd() + "\n\n" + repoBlock;
     }
-    await fs23.mkdir(path24.dirname(fullPath), { recursive: true });
-    await fs23.writeFile(fullPath, existingContent, "utf-8");
+    await fs24.mkdir(path25.dirname(fullPath), { recursive: true });
+    await fs24.writeFile(fullPath, existingContent, "utf-8");
     this.context.logger.info(`Updated workflow sections in ${contextPath}`);
   }
   /**
@@ -66507,7 +67633,8 @@ ${workflowContent}${_RepoService.REPO_BLOCK_END}
   formatRepoContextSection(enableAgenticCoding) {
     let content = `## Repository Context
 
-Before starting work, read \`.tiny-brain/analysis.json\` for the detected tech stack, test patterns, and documentation locations.
+Before starting work, read \`AGENTS.md\` for comprehensive project context (tech stack, commands, structure).
+Also read \`.tiny-brain/analysis.json\` for detailed detection data and test patterns.
 
 `;
     if (enableAgenticCoding) {
@@ -66570,6 +67697,7 @@ Description of changes...
 | \`fix:\` | Bug fixes | Yes |
 | \`refactor:\` | Code improvement | Yes |
 | \`chore:\` | Maintenance (untracked) | No |
+| \`untracked:\` | Work not related to any PRD or Fix | No |
 
 **WARNING:** The commit-msg hook will reject commits missing required headers.
 
@@ -66996,7 +68124,7 @@ ${exampleSections.join("\n\n")}`;
 
 // packages/tiny-brain-mcp/src/storage/platform-path-builder.ts
 import * as os3 from "os";
-import * as path25 from "path";
+import * as path26 from "path";
 var PlatformPathBuilder = class {
   /**
    * Get Claude Code MCP configuration file path
@@ -67006,7 +68134,7 @@ var PlatformPathBuilder = class {
       case "project":
         return ".mcp.json";
       case "user":
-        return path25.join(os3.homedir(), ".config", "claude", "mcp.json");
+        return path26.join(os3.homedir(), ".config", "claude", "mcp.json");
       case "local":
       default:
         return ".mcp.json";
@@ -67019,7 +68147,7 @@ var PlatformPathBuilder = class {
     const platform2 = os3.platform();
     switch (platform2) {
       case "darwin":
-        return path25.join(
+        return path26.join(
           os3.homedir(),
           "Library",
           "Application Support",
@@ -67027,18 +68155,18 @@ var PlatformPathBuilder = class {
           "claude_desktop_config.json"
         );
       case "win32": {
-        const appData = process.env.APPDATA || path25.join(os3.homedir(), "AppData", "Roaming");
-        return path25.join(appData, "Claude", "claude_desktop_config.json");
+        const appData = process.env.APPDATA || path26.join(os3.homedir(), "AppData", "Roaming");
+        return path26.join(appData, "Claude", "claude_desktop_config.json");
       }
       default:
-        return path25.join(os3.homedir(), ".config", "Claude", "claude_desktop_config.json");
+        return path26.join(os3.homedir(), ".config", "Claude", "claude_desktop_config.json");
     }
   }
   /**
    * Get Cursor IDE configuration file path
    */
   getCursorConfig() {
-    return path25.join(os3.homedir(), ".cursor", "mcp", "config.json");
+    return path26.join(os3.homedir(), ".cursor", "mcp", "config.json");
   }
   /**
    * Get ChatGPT Desktop configuration file path
@@ -67047,13 +68175,13 @@ var PlatformPathBuilder = class {
     const platform2 = os3.platform();
     switch (platform2) {
       case "darwin":
-        return path25.join(os3.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
+        return path26.join(os3.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
       case "win32": {
-        const appData = process.env.APPDATA || path25.join(os3.homedir(), "AppData", "Roaming");
-        return path25.join(appData, "ChatGPT", "config.json");
+        const appData = process.env.APPDATA || path26.join(os3.homedir(), "AppData", "Roaming");
+        return path26.join(appData, "ChatGPT", "config.json");
       }
       default:
-        return path25.join(os3.homedir(), ".config", "ChatGPT", "config.json");
+        return path26.join(os3.homedir(), ".config", "ChatGPT", "config.json");
     }
   }
   /**
@@ -67086,13 +68214,13 @@ var PlatformPathBuilder = class {
    * Get backup directory for platform configs
    */
   getBackupDirectory() {
-    return path25.join(os3.homedir(), ".tiny-brain", "backups");
+    return path26.join(os3.homedir(), ".tiny-brain", "backups");
   }
 };
 
 // packages/tiny-brain-mcp/src/storage/platform-config-adapter.ts
-import { promises as fs24, existsSync as existsSync9 } from "fs";
-import * as path26 from "path";
+import { promises as fs25, existsSync as existsSync9 } from "fs";
+import * as path27 from "path";
 var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystemStorageAdapter {
   platformPathBuilder;
   constructor(config2) {
@@ -67105,7 +68233,7 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
   async readPlatformConfig(platform2, scope) {
     try {
       const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-      const content = await fs24.readFile(configPath, "utf-8");
+      const content = await fs25.readFile(configPath, "utf-8");
       return JSON.parse(content);
     } catch (error2) {
       const err = error2;
@@ -67120,9 +68248,9 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
    */
   async writePlatformConfig(platform2, config2, scope) {
     const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-    const directory = path26.dirname(configPath);
-    await fs24.mkdir(directory, { recursive: true });
-    await fs24.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
+    const directory = path27.dirname(configPath);
+    await fs25.mkdir(directory, { recursive: true });
+    await fs25.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
   }
   /**
    * Backup platform configuration
@@ -67136,9 +68264,9 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/:/g, "-").replace(/\./g, "-");
       const backupDir = this.platformPathBuilder.getBackupDirectory();
       const backupFile = `${platform2}-${timestamp2}.backup`;
-      const backupPath = path26.join(backupDir, backupFile);
-      await fs24.mkdir(backupDir, { recursive: true });
-      await fs24.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
+      const backupPath = path27.join(backupDir, backupFile);
+      await fs25.mkdir(backupDir, { recursive: true });
+      await fs25.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
       return timestamp2;
     } catch (error2) {
       const err = error2;
@@ -67154,8 +68282,8 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
   async restorePlatformConfig(platform2, backupId, scope) {
     const backupDir = this.platformPathBuilder.getBackupDirectory();
     const backupFile = `${platform2}-${backupId}.backup`;
-    const backupPath = path26.join(backupDir, backupFile);
-    const backupContent = await fs24.readFile(backupPath, "utf-8");
+    const backupPath = path27.join(backupDir, backupFile);
+    const backupContent = await fs25.readFile(backupPath, "utf-8");
     const config2 = JSON.parse(backupContent);
     await this.writePlatformConfig(platform2, config2, scope);
   }
@@ -67207,15 +68335,15 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
     const repoRoot = getRepoRoot();
     switch (platform2) {
       case "claude-code":
-        return path26.join(repoRoot, "CLAUDE.md");
+        return path27.join(repoRoot, "CLAUDE.md");
       case "cursor":
-        return path26.join(repoRoot, ".cursorrules");
+        return path27.join(repoRoot, ".cursorrules");
       case "vscode":
-        return path26.join(repoRoot, ".vscode", "context.md");
+        return path27.join(repoRoot, ".vscode", "context.md");
       case "windsurf":
-        return path26.join(repoRoot, ".windsurfrules");
+        return path27.join(repoRoot, ".windsurfrules");
       default:
-        return path26.join(repoRoot, ".claude", "CLAUDE.md");
+        return path27.join(repoRoot, ".claude", "CLAUDE.md");
     }
   }
   /**
@@ -67235,10 +68363,10 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
       return "windsurf";
     }
     const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    if (existsSync9(path26.join(homeDir, ".claude-code"))) {
+    if (existsSync9(path27.join(homeDir, ".claude-code"))) {
       return "claude-code";
     }
-    if (existsSync9(path26.join(homeDir, "Library", "Application Support", "Claude"))) {
+    if (existsSync9(path27.join(homeDir, "Library", "Application Support", "Claude"))) {
       return "claude-desktop";
     }
     return "unknown";
@@ -67303,8 +68431,8 @@ var semver = __toESM(require_semver2(), 1);
 
 // packages/tiny-brain-mcp/src/services/agent-installation-service.ts
 init_src();
-import * as fs25 from "fs/promises";
-import * as path27 from "path";
+import * as fs26 from "fs/promises";
+import * as path28 from "path";
 import * as crypto5 from "crypto";
 var AgentInstallationService = class {
   constructor(context) {
@@ -67367,15 +68495,15 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async installAgent(agentInfo) {
     try {
       const repoRoot = getRepoRoot();
-      const agentsDir = path27.join(repoRoot, ".claude", "agents");
-      await fs25.mkdir(agentsDir, { recursive: true });
+      const agentsDir = path28.join(repoRoot, ".claude", "agents");
+      await fs26.mkdir(agentsDir, { recursive: true });
       let content = agentInfo.content;
       if (!content) {
         const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
         content = downloaded.content;
       }
-      const filePath = path27.join(agentsDir, `${agentInfo.name}.md`);
-      await fs25.writeFile(filePath, content, "utf-8");
+      const filePath = path28.join(agentsDir, `${agentInfo.name}.md`);
+      await fs26.writeFile(filePath, content, "utf-8");
       this.context.logger.info(`Successfully installed agent: ${agentInfo.name}`);
       return { success: true };
     } catch (error2) {
@@ -67400,13 +68528,13 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async updateAgent(agentInfo) {
     try {
       const repoRoot = getRepoRoot();
-      const filePath = path27.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
-      const existingContent = await fs25.readFile(filePath, "utf-8");
+      const filePath = path28.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
+      const existingContent = await fs26.readFile(filePath, "utf-8");
       const hasCustomizations = this.detectCustomizations(existingContent);
       let backupCreated = false;
       if (hasCustomizations) {
         const backupPath = `${filePath}.backup.${Date.now()}`;
-        await fs25.writeFile(backupPath, existingContent, "utf-8");
+        await fs26.writeFile(backupPath, existingContent, "utf-8");
         backupCreated = true;
         this.context.logger.info(`Created backup of customized agent: ${backupPath}`);
       }
@@ -67416,7 +68544,7 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
         newContent = downloaded.content;
       }
       const updatedContent = this.updateAgentMetadata(newContent, agentInfo.version);
-      await fs25.writeFile(filePath, updatedContent, "utf-8");
+      await fs26.writeFile(filePath, updatedContent, "utf-8");
       this.context.logger.info(`Successfully updated agent: ${agentInfo.name} to v${agentInfo.version}`);
       return {
         updated: true,
@@ -67434,9 +68562,9 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async removeAgent(agentName) {
     try {
       const repoRoot = getRepoRoot();
-      const filePath = path27.join(repoRoot, ".claude", "agents", `${agentName}.md`);
-      await fs25.access(filePath);
-      await fs25.unlink(filePath);
+      const filePath = path28.join(repoRoot, ".claude", "agents", `${agentName}.md`);
+      await fs26.access(filePath);
+      await fs26.unlink(filePath);
       this.context.logger.info(`Successfully removed agent: ${agentName}`);
     } catch (error2) {
       if (error2.code === "ENOENT") {
@@ -67456,8 +68584,8 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       failed: []
     };
     const repoRoot = getRepoRoot();
-    const agentsDir = path27.join(repoRoot, ".claude", "agents");
-    await fs25.mkdir(agentsDir, { recursive: true });
+    const agentsDir = path28.join(repoRoot, ".claude", "agents");
+    await fs26.mkdir(agentsDir, { recursive: true });
     for (const agent of agentsToInstall) {
       try {
         const result = await this.installAgent(agent);
@@ -67507,14 +68635,14 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async getInstalledAgents() {
     try {
       const repoRoot = getRepoRoot();
-      const agentsDir = path27.join(repoRoot, ".claude", "agents");
-      const files = await fs25.readdir(agentsDir);
+      const agentsDir = path28.join(repoRoot, ".claude", "agents");
+      const files = await fs26.readdir(agentsDir);
       const agentFiles = files.filter((file) => file.endsWith(".md"));
       const installedAgents = [];
       for (const file of agentFiles) {
         try {
-          const filePath = path27.join(agentsDir, file);
-          const content = await fs25.readFile(filePath, "utf-8");
+          const filePath = path28.join(agentsDir, file);
+          const content = await fs26.readFile(filePath, "utf-8");
           const agentName = file.replace(".md", "");
           const metadata = this.extractAgentMetadata(content);
           installedAgents.push({
@@ -67635,20 +68763,20 @@ var AgentService = class {
    * Install formatted agents to the filesystem
    */
   async installAgents(formattedAgents, formatter) {
-    const fs27 = await import("fs/promises");
-    const path30 = await import("path");
+    const fs28 = await import("fs/promises");
+    const path31 = await import("path");
     const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path30.join(repoRoot, activeFormatter.getAgentInstallPath());
+    const agentsPath = path31.join(repoRoot, activeFormatter.getAgentInstallPath());
     this.context.logger.debug("[AgentService] Installing agents:", {
       repoRoot,
       agentsPath,
       agentCount: formattedAgents.length
     });
-    await fs27.mkdir(agentsPath, { recursive: true });
+    await fs28.mkdir(agentsPath, { recursive: true });
     for (const agent of formattedAgents) {
-      const agentPath = path30.join(agentsPath, agent.filename);
-      await fs27.writeFile(agentPath, agent.content, "utf-8");
+      const agentPath = path31.join(agentsPath, agent.filename);
+      await fs28.writeFile(agentPath, agent.content, "utf-8");
       this.context.logger.info(`Agent '${agent.filename}' installed to ${agentPath}`);
     }
     this.context.logger.info(`Installed ${formattedAgents.length} agents to ${agentsPath}`);
@@ -67657,28 +68785,28 @@ var AgentService = class {
    * Install agents with version checking and overwrite strategy
    */
   async installAgentsWithVersionCheck(agents, options = {}) {
-    const fs27 = await import("fs/promises");
-    const path30 = await import("path");
+    const fs28 = await import("fs/promises");
+    const path31 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const formattedAgents = this.formatAgents(agents, formatter);
     const repoRoot = getRepoRoot();
-    const agentsPath = path30.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path31.join(repoRoot, formatter.getAgentInstallPath());
     const result = {
       installed: [],
       skipped: [],
       updated: [],
       errors: []
     };
-    await fs27.mkdir(agentsPath, { recursive: true });
+    await fs28.mkdir(agentsPath, { recursive: true });
     const installedAgents = await this.getInstalledAgents();
     const installedMap = new Map(installedAgents.map((a) => [a.name, a]));
     for (const agent of formattedAgents) {
-      const agentPath = path30.join(agentsPath, agent.filename);
+      const agentPath = path31.join(agentsPath, agent.filename);
       const agentName = agent.filename.replace(".md", "");
       try {
-        const fileExists = await fs27.access(agentPath).then(() => true).catch(() => false);
+        const fileExists = await fs28.access(agentPath).then(() => true).catch(() => false);
         if (!fileExists) {
-          await fs27.writeFile(agentPath, agent.content, "utf-8");
+          await fs28.writeFile(agentPath, agent.content, "utf-8");
           result.installed.push(agentName);
           this.context.logger.info(`Installed new agent: ${agentName}`);
         } else {
@@ -67689,9 +68817,9 @@ var AgentService = class {
           } else if (strategy === "always") {
             if (options.backupExisting) {
               const backupPath = `${agentPath}.backup.${Date.now()}`;
-              await fs27.copyFile(agentPath, backupPath);
+              await fs28.copyFile(agentPath, backupPath);
             }
-            await fs27.writeFile(agentPath, agent.content, "utf-8");
+            await fs28.writeFile(agentPath, agent.content, "utf-8");
             result.updated.push(agentName);
             this.context.logger.info(`Updated agent (forced): ${agentName}`);
           } else {
@@ -67701,9 +68829,9 @@ var AgentService = class {
             if (semver.gt(newVersion, installedVersion)) {
               if (options.backupExisting) {
                 const backupPath = `${agentPath}.backup.${Date.now()}`;
-                await fs27.copyFile(agentPath, backupPath);
+                await fs28.copyFile(agentPath, backupPath);
               }
-              await fs27.writeFile(agentPath, agent.content, "utf-8");
+              await fs28.writeFile(agentPath, agent.content, "utf-8");
               result.updated.push(agentName);
               this.context.logger.info(`Updated agent: ${agentName} (${installedVersion} -> ${newVersion})`);
             } else {
@@ -67728,21 +68856,21 @@ var AgentService = class {
     if (!this.installationService && "platformInfo" in this.context) {
       this.installationService = new AgentInstallationService(this.context);
     }
-    const fs27 = await import("fs/promises");
-    const path30 = await import("path");
+    const fs28 = await import("fs/promises");
+    const path31 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path30.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path31.join(repoRoot, formatter.getAgentInstallPath());
     for (const agentName of agentNames) {
       try {
-        const agentFile = path30.join(agentsPath, `${agentName}.md`);
+        const agentFile = path31.join(agentsPath, `${agentName}.md`);
         try {
-          await fs27.access(agentFile);
+          await fs28.access(agentFile);
         } catch {
           result.errors.push(`Agent ${agentName} not found`);
           continue;
         }
-        await fs27.unlink(agentFile);
+        await fs28.unlink(agentFile);
         result.removed.push(agentName);
         this.context.logger.info(`Removed agent: ${agentName}`);
       } catch (error2) {
@@ -67763,17 +68891,17 @@ var AgentService = class {
     if (this.installationService) {
       return await this.installationService.getInstalledAgents();
     }
-    const fs27 = await import("fs/promises");
-    const path30 = await import("path");
+    const fs28 = await import("fs/promises");
+    const path31 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path30.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path31.join(repoRoot, formatter.getAgentInstallPath());
     try {
-      const files = await fs27.readdir(agentsPath);
+      const files = await fs28.readdir(agentsPath);
       const agentFiles = files.filter((f) => f.endsWith(".md"));
       const agents = [];
       for (const file of agentFiles) {
-        const content = await fs27.readFile(path30.join(agentsPath, file), "utf-8");
+        const content = await fs28.readFile(path31.join(agentsPath, file), "utf-8");
         const name = file.replace(".md", "");
         const version2 = this.extractVersion(content);
         agents.push({ name, version: version2, lastUpdated: (/* @__PURE__ */ new Date()).toISOString() });
@@ -68314,8 +69442,8 @@ ${value}
         formatted += `    \u{1F511} Connected to Tiny Brain Remote
 `;
       }
-      if (libraryAuth?.hasLlmApiKey) {
-        formatted += `    \u{1F511} LLM API key configured
+      if (libraryAuth?.hasClaudeCli) {
+        formatted += `    \u{1F916} Claude CLI authenticated
 `;
       }
       if (hasAgents) {
@@ -69287,7 +70415,7 @@ init_src();
 import { fileURLToPath as fileURLToPath8 } from "url";
 import { dirname as dirname11, join as join26 } from "path";
 import { existsSync as existsSync10 } from "fs";
-import { mkdir as mkdir5, copyFile, readFile as readFile14, readdir as readdir11, chmod as chmod2, stat as stat2, writeFile as writeFile5 } from "fs/promises";
+import { mkdir as mkdir5, copyFile, readFile as readFile14, readdir as readdir11, chmod as chmod2, stat as stat3, writeFile as writeFile5 } from "fs/promises";
 
 // packages/tiny-brain-mcp/src/utils/package-version.ts
 import { readFileSync as readFileSync3 } from "fs";
@@ -69343,7 +70471,14 @@ var AnalyseService = class {
       isPolyglot: currentAnalysis.isPolyglot,
       primaryLanguage: currentAnalysis.primaryLanguage,
       documentationPattern: currentAnalysis.documentationPattern,
-      documentationLocations: currentAnalysis.documentationLocations
+      documentationLocations: currentAnalysis.documentationLocations,
+      // Rich metadata
+      packageManager: currentAnalysis.packageManager,
+      scripts: currentAnalysis.scripts,
+      linting: currentAnalysis.linting,
+      monorepo: currentAnalysis.monorepo,
+      projectName: currentAnalysis.projectName,
+      sourceDirectories: currentAnalysis.sourceDirectories
     };
     const stackChanged = await this.techContextService.hasStackChanged(analysisInput);
     const existingAnalysis = await this.techContextService.readAnalysis();
@@ -69358,6 +70493,11 @@ var AnalyseService = class {
     const enableAgentic = await this.configService.isAgenticCodingEnabled();
     if (!dryRun) {
       await this.techContextService.syncAgents(enableAgentic);
+    }
+    let agentsMdStatus;
+    const manageAgentsMd = await this.configService.isManageAgentsMdEnabled();
+    if (!dryRun && manageAgentsMd) {
+      agentsMdStatus = await this.generateAgentsMd(currentAnalysis);
     }
     if (!dryRun) {
       await this.repoService.writeWorkflowSections({ contextPath });
@@ -69382,7 +70522,8 @@ var AnalyseService = class {
         contextBlockVersion,
         contextBlockUpdated,
         skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
-        writtenTechContexts
+        writtenTechContexts,
+        agentsMdStatus
       };
     }
     if (!stackChanged) {
@@ -69401,7 +70542,8 @@ var AnalyseService = class {
         contextBlockVersion,
         contextBlockUpdated,
         skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
-        writtenTechContexts
+        writtenTechContexts,
+        agentsMdStatus
       };
     }
     const previousStack = existingAnalysis?.stack;
@@ -69438,8 +70580,97 @@ var AnalyseService = class {
         techStackRemoved: techStackDiff.removed
       },
       skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
-      writtenTechContexts
+      writtenTechContexts,
+      agentsMdStatus
     };
+  }
+  /**
+   * Generate AGENTS.md file in the repository root
+   * For monorepos, also generates per-package AGENTS.md files
+   * Uses AgentsMdService from tiny-brain-core
+   */
+  async generateAgentsMd(analysis) {
+    const repoRoot = process.cwd();
+    const agentsMdService = new AgentsMdService(repoRoot);
+    const agentsMdPath = join26(repoRoot, "AGENTS.md");
+    let existingContent;
+    try {
+      existingContent = await readFile14(agentsMdPath, "utf-8");
+    } catch {
+    }
+    const readmeExcerpt = await agentsMdService.extractReadmeExcerpt();
+    let packageDescriptions;
+    if (analysis.monorepo?.packages && analysis.monorepo.packages.length > 0) {
+      packageDescriptions = await this.collectPackageDescriptions(repoRoot, analysis.monorepo.packages);
+    }
+    const result = await agentsMdService.generateContent({
+      analysis,
+      readmeExcerpt,
+      repoPath: repoRoot,
+      existingContent,
+      packageDescriptions
+    });
+    if (!existingContent) {
+      await writeFile5(agentsMdPath, result.content, "utf-8");
+      this.context.logger.info("Created AGENTS.md");
+    } else if (!result.contentChanged) {
+      this.context.logger.info("AGENTS.md is up to date");
+    } else {
+      await writeFile5(agentsMdPath, result.content, "utf-8");
+      this.context.logger.info("Updated AGENTS.md");
+    }
+    if (analysis.monorepo?.packages && analysis.monorepo.packages.length > 0) {
+      await this.generatePerPackageAgentsMd(repoRoot, analysis, agentsMdService);
+    }
+    if (!existingContent) return "created";
+    if (!result.contentChanged) return "up-to-date";
+    return "updated";
+  }
+  /**
+   * Read package.json from each workspace directory to collect names and descriptions
+   */
+  async collectPackageDescriptions(repoRoot, packages) {
+    const descriptions = [];
+    for (const pkgPath of packages) {
+      const fullPath = join26(repoRoot, pkgPath);
+      const pkgJsonPath = join26(fullPath, "package.json");
+      try {
+        const raw2 = await readFile14(pkgJsonPath, "utf-8");
+        const pkgJson = JSON.parse(raw2);
+        descriptions.push({
+          name: pkgJson.name,
+          path: pkgPath,
+          description: pkgJson.description
+        });
+      } catch {
+        descriptions.push({ path: pkgPath });
+      }
+    }
+    return descriptions;
+  }
+  /**
+   * Generate AGENTS.md for each workspace package in a monorepo
+   */
+  async generatePerPackageAgentsMd(repoRoot, analysis, agentsMdService) {
+    const packages = analysis.monorepo?.packages ?? [];
+    for (const pkgPath of packages) {
+      const fullPkgPath = join26(repoRoot, pkgPath);
+      const pkgAgentsMdPath = join26(fullPkgPath, "AGENTS.md");
+      let existingPkgContent;
+      try {
+        existingPkgContent = await readFile14(pkgAgentsMdPath, "utf-8");
+      } catch {
+      }
+      const pkgResult = await agentsMdService.generatePackageContent(
+        fullPkgPath,
+        analysis,
+        existingPkgContent
+      );
+      if (!existingPkgContent || pkgResult.contentChanged) {
+        await writeFile5(pkgAgentsMdPath, pkgResult.content, "utf-8");
+        this.context.logger.debug(`Wrote AGENTS.md for ${pkgPath}`);
+      }
+    }
   }
   /**
    * Register repository in dashboard for visibility
@@ -69608,8 +70839,8 @@ var AnalyseService = class {
               this.context.logger.debug(`Skipping ${hookName} - custom hook already exists`);
               continue;
             }
-            const srcStat = await stat2(srcHook);
-            const destStat = await stat2(destHook);
+            const srcStat = await stat3(srcHook);
+            const destStat = await stat3(destHook);
             if (srcStat.mtime <= destStat.mtime) {
               continue;
             }
@@ -69753,6 +70984,9 @@ var AnalyseService = class {
       lines.push(`  Frameworks: ${result.analysis.frameworks.join(", ")}`);
       lines.push(`  Build Tools: ${result.analysis.buildTools.join(", ")}`);
       lines.push(`  Testing Tools: ${result.analysis.testingTools.join(", ")}`);
+      if (result.analysis.packageManager) {
+        lines.push(`  Package Manager: ${result.analysis.packageManager}`);
+      }
       if (result.analysis.documentationPattern) {
         lines.push(`
 \u{1F4DA} Documentation: ${result.analysis.documentationPattern}`);
@@ -69814,7 +71048,52 @@ var AnalyseService = class {
         lines.push("  None");
       }
     }
+    this.appendRichMetadataOutput(lines, result.analysis);
+    if (result.agentsMdStatus) {
+      const statusLabel = result.agentsMdStatus === "created" ? "Created" : result.agentsMdStatus === "updated" ? "Updated" : "Up to date";
+      lines.push(`
+AGENTS.md: ${statusLabel}`);
+    }
     return lines.join("\n");
+  }
+  /**
+   * Append rich metadata sections to output lines
+   */
+  appendRichMetadataOutput(lines, analysis) {
+    if (analysis.packageManager) {
+      lines.push(`
+  Package Manager: ${analysis.packageManager}`);
+    }
+    const scripts = analysis.scripts;
+    if (scripts && (scripts.test?.command || scripts.build?.command || scripts.dev?.command || scripts.lint?.command || scripts.e2e?.command)) {
+      lines.push("\n\u{1F4CB} Commands:");
+      if (scripts.test?.command) lines.push(`  Test: ${scripts.test.command}`);
+      if (scripts.build?.command) lines.push(`  Build: ${scripts.build.command}`);
+      if (scripts.dev?.command) lines.push(`  Dev: ${scripts.dev.command}`);
+      if (scripts.lint?.command) lines.push(`  Lint: ${scripts.lint.command}`);
+      if (scripts.e2e?.command) lines.push(`  E2E: ${scripts.e2e.command}`);
+    }
+    if (analysis.linting) {
+      lines.push("\n\u{1F50D} Linting:");
+      if (analysis.linting.tool) {
+        lines.push(`  Tool: ${analysis.linting.tool}`);
+      }
+      if (analysis.linting.plugins && analysis.linting.plugins.length > 0) {
+        lines.push(`  Plugins: ${analysis.linting.plugins.join(", ")}`);
+      }
+    }
+    if (analysis.monorepo) {
+      lines.push("\n\u{1F4E6} Monorepo:");
+      if (analysis.monorepo.tool) {
+        lines.push(`  Tool: ${analysis.monorepo.tool}`);
+      }
+      if (analysis.monorepo.packages && analysis.monorepo.packages.length > 0) {
+        lines.push("  Packages:");
+        for (const pkg of analysis.monorepo.packages) {
+          lines.push(`    - ${pkg}`);
+        }
+      }
+    }
   }
   /**
    * Compare two tech stacks and return differences
@@ -69956,8 +71235,8 @@ var AnalyseTool = class _AnalyseTool {
 
 // packages/tiny-brain-mcp/src/tools/quality/quality.tool.ts
 init_zod();
-import { promises as fs26 } from "fs";
-import path28 from "path";
+import { promises as fs27 } from "fs";
+import path29 from "path";
 init_src();
 var QualityArgsSchema = external_exports.object({
   operation: external_exports.enum([
@@ -69967,10 +71246,11 @@ var QualityArgsSchema = external_exports.object({
     "compare",
     "plan",
     "plan-details",
-    "detect-analyzers",
-    "run-analyzers",
+    "detect-analysers",
+    "run-analysers",
     "merge-results",
-    "assemble-run"
+    "assemble-run",
+    "implement-plan"
   ]),
   // For 'save' operation
   score: external_exports.number().min(0).max(100).optional(),
@@ -70013,10 +71293,11 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
   \u2022 compare: Compare two runs to see new, resolved, and persistent issues
   \u2022 plan: Generate a Quality Improvement Plan from a saved run
   \u2022 plan-details: Retrieve a saved Quality Improvement Plan by ID
-  \u2022 detect-analyzers: Scan repo for configured static analyzers
-  \u2022 run-analyzers: Execute detected analyzers and return normalized issues
+  \u2022 detect-analysers: Scan repo for configured static analyzers
+  \u2022 run-analysers: Execute detected analyzers and return normalized issues
   \u2022 merge-results: Merge analyzer + LLM issues with deduplication
   \u2022 assemble-run: Read all intermediate files, merge, score, and save final report
+  \u2022 implement-plan: Generate fix documents from a saved Quality Improvement Plan
 
 \u{1F4A1} WORKFLOW:
   1. Quality-coordinator agent performs analysis
@@ -70036,10 +71317,11 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
               "compare",
               "plan",
               "plan-details",
-              "detect-analyzers",
-              "run-analyzers",
+              "detect-analysers",
+              "run-analysers",
               "merge-results",
-              "assemble-run"
+              "assemble-run",
+              "implement-plan"
             ],
             description: "The quality operation to perform"
           },
@@ -70122,7 +71404,7 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
           // For 'details' operation
           runId: {
             type: "string",
-            description: "Run ID to get details for (required for details)"
+            description: "Run ID (required for details, assemble-run; optional for run-analysers to reuse Phase 1 directory)"
           },
           // For 'compare' operation
           baseRunId: {
@@ -70203,14 +71485,16 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
           return await _QualityTool.handlePlan(validatedArgs, service);
         case "plan-details":
           return await _QualityTool.handlePlanDetails(validatedArgs, context.repositoryRoot);
-        case "detect-analyzers":
+        case "detect-analysers":
           return await _QualityTool.handleDetectAnalyzers(context.repositoryRoot);
-        case "run-analyzers":
-          return await _QualityTool.handleRunAnalyzers(context.repositoryRoot);
+        case "run-analysers":
+          return await _QualityTool.handleRunAnalyzers(validatedArgs, context.repositoryRoot);
         case "merge-results":
           return _QualityTool.handleMergeResults(validatedArgs);
         case "assemble-run":
           return await _QualityTool.handleAssembleRun(validatedArgs, context.repositoryRoot);
+        case "implement-plan":
+          return await _QualityTool.handleImplementPlan(validatedArgs, service);
         default:
           return createErrorResult(`Unknown operation: ${validatedArgs.operation}`);
       }
@@ -70419,9 +71703,9 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
       return createErrorResult("planId is required for plan-details operation");
     }
     try {
-      const plansDir = path28.join(repositoryRoot, "docs", "quality", "plans");
-      const filePath = path28.join(plansDir, `${args.planId}.md`);
-      const content = await fs26.readFile(filePath, "utf-8");
+      const plansDir = path29.join(repositoryRoot, "docs", "quality", "plans");
+      const filePath = path29.join(plansDir, `${args.planId}.md`);
+      const content = await fs27.readFile(filePath, "utf-8");
       const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
       if (!jsonMatch) {
         return createErrorResult(`Could not parse plan data from: ${args.planId}`);
@@ -70485,11 +71769,11 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
     lines.push(JSON.stringify(analyzers, null, 2));
     return createSuccessResult(lines.join("\n"));
   }
-  static async handleRunAnalyzers(repositoryRoot) {
-    const runId = generateRunId();
-    const runDir = path28.join(repositoryRoot, "docs", "quality", "runs", runIdToPath(runId));
-    const outputPath = path28.join(runDir, "analysis.json");
-    const outputDir = path28.join(runDir, "analysers");
+  static async handleRunAnalyzers(args, repositoryRoot) {
+    const runId = args.runId ?? generateRunId();
+    const runDir = path29.join(repositoryRoot, "docs", "quality", "runs", runIdToPath(runId));
+    const outputPath = path29.join(runDir, "analysis.json");
+    const outputDir = path29.join(runDir, "analysers");
     const detectionService = new AnalyzerDetectionService(repositoryRoot);
     const analyzers = await detectionService.detectAnalyzers();
     const emptyResults = {
@@ -70499,8 +71783,8 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
       summary: { total: 0, succeeded: 0, failed: 0, timedOut: 0, skipped: 0 }
     };
     if (analyzers.length === 0) {
-      await fs26.mkdir(runDir, { recursive: true });
-      await fs26.writeFile(outputPath, JSON.stringify(emptyResults, null, 2), "utf-8");
+      await fs27.mkdir(runDir, { recursive: true });
+      await fs27.writeFile(outputPath, JSON.stringify(emptyResults, null, 2), "utf-8");
       return createSuccessResult(
         `\u{1F527} No analyzers detected. Empty results written to file.
   Run ID: ${runId}
@@ -70509,8 +71793,8 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
     }
     const executorService = new AnalyzerExecutorService(repositoryRoot);
     const results = await executorService.executeAnalyzers(analyzers, outputDir);
-    await fs26.mkdir(runDir, { recursive: true });
-    await fs26.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
+    await fs27.mkdir(runDir, { recursive: true });
+    await fs27.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
     const lines = [
       `\u{1F527} Executed ${results.summary.total} analyzer(s):`,
       `  Succeeded: ${results.summary.succeeded}`,
@@ -70537,6 +71821,10 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
       `\u{1F50D} Issues: ${result.issueCount}`,
       `\u{1F4C1} File: ${result.filePath}`
     ];
+    if (result.planId) {
+      lines.push(`\u{1F4CB} Plan: ${result.planId}`);
+      lines.push(`\u{1F4C1} Plan File: ${result.planFilePath}`);
+    }
     if (result.incremental) {
       lines.push("");
       lines.push("### Incremental Analysis");
@@ -70557,6 +71845,43 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
         lines.push(`  ${category}: ${count}`);
       }
     }
+    return createSuccessResult(lines.join("\n"));
+  }
+  static async handleImplementPlan(args, service) {
+    if (!args.planId) {
+      return createErrorResult("planId is required for implement-plan operation");
+    }
+    const plan = await service.loadImprovementPlan(args.planId);
+    if (!plan) {
+      return createErrorResult(`Improvement plan not found: ${args.planId}`);
+    }
+    const run2 = await service.getRunDetails(plan.sourceRunId);
+    if (!run2) {
+      return createErrorResult(`Source quality run not found: ${plan.sourceRunId}`);
+    }
+    const fixIds = await service.generateFixesFromPlan(plan, run2.issues);
+    if (fixIds.length === 0) {
+      return createSuccessResult("No initiatives found in plan. No fix documents created.");
+    }
+    const lines = [
+      `Created ${fixIds.length} fix document(s) from Quality Improvement Plan ${args.planId}`,
+      "",
+      "## Fixes Created",
+      "",
+      "| Fix ID | File |",
+      "|--------|------|"
+    ];
+    for (const fixId of fixIds) {
+      lines.push(`| ${fixId} | .tiny-brain/fixes/${fixId}.md |`);
+    }
+    lines.push("");
+    lines.push("## Next Steps");
+    lines.push("");
+    for (const fixId of fixIds) {
+      lines.push(`1. Run \`npx tiny-brain sync-file .tiny-brain/fixes/${fixId}.md\``);
+    }
+    lines.push("2. Start working on fixes using the /fix workflow");
+    lines.push("3. Track progress in the dashboard");
     return createSuccessResult(lines.join("\n"));
   }
   static handleMergeResults(args) {
@@ -72728,7 +74053,7 @@ var MCPServer = class {
     }
     const logFileName = isDev ? "dev-debug.log" : "debug.log";
     this.logger = new FileLogger({
-      logFilePath: path29.join(resolvedDataDir, logFileName),
+      logFilePath: path30.join(resolvedDataDir, logFileName),
       logLevel,
       enabled: true
     });
@@ -72885,7 +74210,7 @@ var MCPServer = class {
   async initializeRepository() {
     try {
       const cwd = process.cwd();
-      const gitDir = path29.join(cwd, ".git");
+      const gitDir = path30.join(cwd, ".git");
       const { existsSync: existsSync13 } = await import("fs");
       if (!existsSync13(gitDir)) {
         this.logger.debug("Not in a git repository, skipping repo registration");
@@ -72914,8 +74239,8 @@ var MCPServer = class {
       configKeys: Object.keys(this.config)
     });
     const credentialService = new CredentialStorageService();
-    const hasLlmApiKey = await credentialService.hasLlmApiKey();
-    const getLlmApiKey = () => credentialService.getLlmApiKey();
+    const cliStatus = await detectClaudeCliStatus(this.logger);
+    const hasClaudeCli = cliStatus.authenticated;
     if (!this.config.account?.clientId || !this.config.account?.clientSecret) {
       this.logger.info("No remote credentials configured in MCP config, checking tiny-brain CLI config...");
       try {
@@ -72931,9 +74256,8 @@ var MCPServer = class {
           this.baseContext.libraryAuth = {
             clientId: void 0,
             hasStoredSecret: false,
-            hasLlmApiKey,
-            token: void 0,
-            getLlmApiKey
+            hasClaudeCli,
+            token: void 0
           };
           return;
         }
@@ -72943,9 +74267,8 @@ var MCPServer = class {
         this.baseContext.libraryAuth = {
           clientId: void 0,
           hasStoredSecret: false,
-          hasLlmApiKey,
-          token: void 0,
-          getLlmApiKey
+          hasClaudeCli,
+          token: void 0
         };
         return;
       }
@@ -72966,9 +74289,8 @@ var MCPServer = class {
         this.baseContext.libraryAuth = {
           clientId: this.config.account?.clientId,
           hasStoredSecret: true,
-          hasLlmApiKey,
-          token: token.token,
-          getLlmApiKey
+          hasClaudeCli,
+          token: token.token
         };
       } else {
         this.logger.info("Continuing in local-only mode - authentication returned null");
@@ -72976,9 +74298,8 @@ var MCPServer = class {
         this.baseContext.libraryAuth = {
           clientId: this.config.account?.clientId,
           hasStoredSecret: !!this.config.account?.clientSecret,
-          hasLlmApiKey,
-          token: void 0,
-          getLlmApiKey
+          hasClaudeCli,
+          token: void 0
         };
       }
     } catch (error2) {
@@ -72986,9 +74307,8 @@ var MCPServer = class {
       this.baseContext.libraryAuth = {
         clientId: this.config.account?.clientId,
         hasStoredSecret: !!this.config.account?.clientSecret,
-        hasLlmApiKey,
-        token: void 0,
-        getLlmApiKey
+        hasClaudeCli,
+        token: void 0
       };
     }
   }
@@ -73005,7 +74325,7 @@ var MCPServer = class {
       this.logger.debug("CLAUDE_PLUGIN_ROOT not set, skipping bundled personas");
       return;
     }
-    const bundledPersonasDir = path29.join(pluginRoot, "personas");
+    const bundledPersonasDir = path30.join(pluginRoot, "personas");
     if (!existsSync11(bundledPersonasDir)) {
       this.logger.debug("No bundled personas directory found");
       return;
@@ -73015,9 +74335,9 @@ var MCPServer = class {
       const bundledPersonas = readdirSync3(bundledPersonasDir);
       for (const personaName of bundledPersonas) {
         if (personaName.startsWith(".")) continue;
-        const bundledPath = path29.join(bundledPersonasDir, personaName);
+        const bundledPath = path30.join(bundledPersonasDir, personaName);
         const localStorage = this.storage;
-        const localPath = path29.join(localStorage.personasDir, personaName);
+        const localPath = path30.join(localStorage.personasDir, personaName);
         if (existsSync11(bundledPath) && !existsSync11(localPath)) {
           this.logger.info(`Copying bundled persona '${personaName}' to local storage`);
           try {
@@ -73311,7 +74631,7 @@ var MCPServer = class {
     }
     try {
       const basePath = process.cwd();
-      const sessionsPath = path29.join(basePath, ".tiny-brain", "sessions.json");
+      const sessionsPath = path30.join(basePath, ".tiny-brain", "sessions.json");
       let sessions = {};
       try {
         const content = readFileSync4(sessionsPath, "utf-8");
@@ -73326,7 +74646,7 @@ var MCPServer = class {
         activePersona: personaId,
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       };
-      mkdirSync2(path29.dirname(sessionsPath), { recursive: true });
+      mkdirSync2(path30.dirname(sessionsPath), { recursive: true });
       writeFileSync(sessionsPath, JSON.stringify(sessions, null, 2), "utf-8");
       this.logger.debug(`Updated persona session: ${personaId} for TTY ${tty}`);
     } catch (err) {

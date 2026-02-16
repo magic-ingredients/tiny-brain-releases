@@ -9,7 +9,7 @@ The quality skill uses a **thin orchestrator** in the main conversation that del
 ```
 Main Conversation (thin orchestrator, ~10-15K tokens)
   |
-  |-- Layer 1: MCP run-analyzers -> writes analysis.json (zero context cost)
+  |-- Layer 1: MCP run-analysers -> writes analysis.json (zero context cost)
   |-- Layer 2: 4 specialist Task agents (background) -> write domain.json files
   |-- Layer 3: MCP assemble-run -> reads all files, merges, scores, saves report
 ```
@@ -42,12 +42,14 @@ Files within a run directory:
 | File | Source | Content |
 |------|--------|---------|
 | `files.txt` | Phase 1 (Discovery) | File list for agents (source + test files) |
-| `analysers/` | MCP run-analyzers | Raw per-analyzer output files (e.g., `eslint-0.json`, `typescript-0.txt`) |
-| `analysis.json` | MCP run-analyzers | Merged/normalized analyzer issues |
-| `security.json` | security-reviewer agent | Security findings |
-| `performance-reliability.json` | performance-engineer agent | Performance & Reliability findings |
-| `testing.json` | tdd-validator agent | Testing findings |
-| `review.json` | reviewer agent | Maintainability, Architecture, Documentation, Operations findings |
+| `metadata.json` | Phase 1 (Discovery) | Run metadata (commitSha, baseRunId, file counts) |
+| `analysers/` | MCP run-analysers | Raw per-analyzer output files (e.g., `eslint-0.json`, `typescript-0.txt`) |
+| `analysis.json` | MCP run-analysers | Merged/normalized analyzer issues |
+| `agents/` | Specialist agents | Agent findings subdirectory |
+| `agents/security-quality-reviewer-output.json` | security-quality-reviewer agent | Security findings |
+| `agents/performance-quality-reviewer-output.json` | performance-quality-reviewer agent | Performance & Reliability findings |
+| `agents/testing-quality-reviewer-output.json` | testing-quality-reviewer agent | Testing findings |
+| `agents/code-quality-reviewer-output.json` | code-quality-reviewer agent | Code Review findings |
 | `quality.md` | MCP assemble-run | Final merged report |
 
 Legacy runs (pre-v3) use flat `docs/quality/runs/YYYY-MM-DD-*.json` naming.
@@ -60,7 +62,7 @@ Legacy runs (pre-v3) use flat `docs/quality/runs/YYYY-MM-DD-*.json` naming.
 
 **Actions**:
 1. Read `templates/agent_findings.md` for the output schema
-2. Call `mcp quality detect-analyzers` to find configured CLI analyzers
+2. Call `mcp quality detect-analysers` to find configured CLI analyzers
 3. Glob for eligible source files (excluding `node_modules`, `dist`, etc.)
 4. Separate test files from source files
 5. Read `.tiny-brain/analysis.json` for detected tech stack
@@ -82,7 +84,7 @@ Analyzing repository...
 **Executed by**: Skill (main conversation)
 
 **Operations launched**:
-1. **MCP run-analyzers** with `outputPath={runDir}/analysis.json` (writes to file, returns summary only)
+1. **MCP run-analysers** with `runId={runId}` (writes to file, returns summary only)
 2. **4 specialist Task agents** with `run_in_background: true` - each reads `files.txt` from the run directory
 
 Task prompts are minimal (~10 lines each). Specialist agents have their domain checklists built into their agent definitions - no need to embed checklists in the prompt.
@@ -103,7 +105,7 @@ Launching specialist investigations...
 **Executed by**: Skill (main conversation)
 
 **Actions**:
-1. When MCP run-analyzers returns, report analyzer summary
+1. When MCP run-analysers returns, report analyzer summary
 2. Use **TaskOutput** with each agent's task_id to check completion - agents' final messages include summary counts, so no need to Read full JSON files
 3. When ALL complete, announce assembly
 
@@ -168,7 +170,7 @@ All investigations complete. Assembling report...
 Progress is reported to the user at BOTH layers:
 
 ### Analyzer Stage
-Each analyzer completion is reported with its issue count. Since `run-analyzers` uses `outputPath`, only the summary text flows through conversation context.
+Each analyzer completion is reported with its issue count. Since `run-analysers` writes directly to disk, only the summary text flows through conversation context.
 
 ### Specialist Agent Stage
 Each specialist agent completion is checked via **TaskOutput**. The agent's final message includes summary counts. No JSON files are read into the main context.
@@ -186,7 +188,7 @@ Each specialist agent completion is checked via **TaskOutput**. The agent's fina
 - Note failed domains in recommendations
 
 **Analyzer Failure**:
-- MCP run-analyzers handles individual analyzer failures internally
+- MCP run-analysers handles individual analyzer failures internally
 - Summary still returned for successful analyzers
 
 **No Issues Found**:

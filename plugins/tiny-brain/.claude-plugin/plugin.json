@@ -1,6 +1,6 @@
 {
   "name": "tiny-brain",
-  "version": "0.19.1",
+  "version": "0.20.0",
   "description": "AI-powered development workflows with TDD enforcement, planning, and quality tracking",
   "author": {
     "name": "Magic Ingredients",
@@ -22,12 +22,13 @@
   "agents": [
     "./agents/developer.md",
     "./agents/planner.md",
-    "./agents/reviewer.md",
     "./agents/architect.md",
-    "./agents/tdd-validator.md",
-    "./agents/security-reviewer.md",
-    "./agents/performance-engineer.md",
-    "./agents/quality-coordinator.md"
+    "./agents/quality-coordinator.md",
+    "./agents/code-quality-reviewer.md",
+    "./agents/testing-quality-reviewer.md",
+    "./agents/security-quality-reviewer.md",
+    "./agents/performance-quality-reviewer.md",
+    "./agents/analyzer-agent.md"
   ],
   "mcpServers": "./.mcp.json"
 }

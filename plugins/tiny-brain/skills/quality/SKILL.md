@@ -14,7 +14,7 @@ Three-layer specialist model keeps the main conversation under ~10-15K tokens:
 ```
 Main Conversation (thin orchestrator)
   |
-  |-- Layer 1: MCP run-analyzers -> writes analysis.json (zero context cost)
+  |-- Layer 1: MCP run-analysers -> writes analysis.json (zero context cost)
   |-- Layer 2: 4 specialist Task agents (background) -> write domain.json files
   |-- Layer 3: MCP assemble-run -> reads all files, merges, scores, saves report
 ```
@@ -46,7 +46,7 @@ Run a quality analysis when the user wants to:
 Run discovery directly in the main conversation:
 
 1. Read `templates/agent_findings.md` to understand the output schema agents must follow
-2. Call `mcp quality detect-analyzers` to find available CLI analyzers
+2. Call `mcp quality detect-analysers` to find available CLI analyzers
 3. Use Bash `find` to list eligible source files (the Glob tool cannot exclude directories):
    ```bash
    find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rb" -o -name "*.go" -o -name "*.rs" -o -name "*.java" \) \
@@ -106,9 +106,9 @@ Incremental analysis (base: {baseRunId})
 
 Launch ALL operations in a **single message** - MCP + 4 Task agents:
 
-**Layer 1: MCP run-analyzers** (writes to file, returns summary only):
+**Layer 1: MCP run-analysers** (writes to file, returns summary only):
 ```
-mcp quality run-analyzers outputPath={runDir}/analysis.json
+mcp quality run-analysers runId={runId}
 ```
 
 **Layer 2: 4 specialist Task agents** (all `run_in_background: true`):
@@ -124,7 +124,7 @@ Task tool:
     Analyze repository for security quality issues.
     Repository path: {repo_path}
     Read file list from: {runDir}/files.txt (source files only, above ---TESTS--- line)
-    Write findings JSON to: {runDir}/security-quality-reviewer-output.json
+    Write findings JSON to: {runDir}/agents/security-quality-reviewer-output.json
     Follow the agent_findings schema from templates/agent_findings.md.
     Set source: "llm" and ruleId: "SEC-*" check IDs on all issues.
 ```
@@ -138,7 +138,7 @@ Task tool:
     Analyze repository for performance and reliability quality issues.
     Repository path: {repo_path}
     Read file list from: {runDir}/files.txt (source files only, above ---TESTS--- line)
-    Write findings JSON to: {runDir}/performance-quality-reviewer-output.json
+    Write findings JSON to: {runDir}/agents/performance-quality-reviewer-output.json
     Follow the agent_findings schema from templates/agent_findings.md.
     Set source: "llm" and ruleId: "PERF-*" or "REL-*" check IDs on all issues.
 ```
@@ -152,7 +152,7 @@ Task tool:
     Analyze repository for testing quality issues.
     Repository path: {repo_path}
     Read file list from: {runDir}/files.txt (ALL files - both source and test files)
-    Write findings JSON to: {runDir}/testing-quality-reviewer-output.json
+    Write findings JSON to: {runDir}/agents/testing-quality-reviewer-output.json
     Follow the agent_findings schema from templates/agent_findings.md.
     Set source: "llm" and ruleId: "TEST-*" check IDs on all issues.
 ```
@@ -166,7 +166,7 @@ Task tool:
     Analyze repository for maintainability, architecture, documentation, and operations quality issues.
     Repository path: {repo_path}
     Read file list from: {runDir}/files.txt (source files only, above ---TESTS--- line)
-    Write findings JSON to: {runDir}/code-quality-reviewer-output.json
+    Write findings JSON to: {runDir}/agents/code-quality-reviewer-output.json
     Follow the agent_findings schema from templates/agent_findings.md.
     Set source: "llm" and ruleId: "MAINT-*", "ARCH-*", "DOC-*", or "OPS-*" check IDs on all issues.
 ```
@@ -184,7 +184,7 @@ Launching specialist investigations...
 
 Use **TaskOutput** to check background agent completion (NOT Read on JSON files):
 
-1. When the MCP run-analyzers returns: report analyzer summary
+1. When the MCP run-analysers returns: report analyzer summary
 2. For each specialist agent: use `TaskOutput` with the agent's task_id to check completion. The agent's final message includes summary counts - no need to read full JSON files.
 
 **Report to user progressively:**
@@ -270,6 +270,7 @@ After presenting results, offer:
 - View history: `quality history`
 - Generate improvement plan: `/quality plan`
 - Compare with previous run: `/quality compare baseRunId=<old> targetRunId=<new>`
+- Implement improvement plan: `/quality implement`
 
 ## Commands
 
@@ -302,6 +303,30 @@ Shows full details for a specific run.
 /quality plan
 ```
 Generates a Quality Improvement Plan (QIP) from the latest quality run.
+
+After presenting the plan summary, ask the user: "Would you like to implement this plan? This will create fix documents for each initiative."
+
+If the user confirms, invoke:
+```
+mcp__plugin_tiny-brain_mcp__quality({ operation: "implement-plan", planId: "<planId>" })
+```
+After implementation, list the created fix documents and suggest starting with Phase 1 fixes.
+
+### Implement Quality Improvement Plan
+```
+/quality implement
+/quality implement planId=2026-02-09T14-30-plan
+```
+Creates fix documents from a saved Quality Improvement Plan. Each initiative in the plan becomes a fix document in `.tiny-brain/fixes/` with pattern-deduplicated tasks.
+
+If no `planId` is provided, use the most recent plan from `mcp quality history`.
+
+MCP equivalent:
+```
+mcp__plugin_tiny-brain_mcp__quality({ operation: "implement-plan", planId: "2026-02-09T14-30-plan" })
+```
+
+After creating fixes, run `npx tiny-brain sync-file .tiny-brain/fixes/<fixId>.md` for each to update progress tracking.
 
 ### Compare Quality Runs
 ```
@@ -345,11 +370,12 @@ Run directory: `docs/quality/runs/YYYY-MM-DD/HH-mm/`
 
 Intermediate files (in run directory):
 - `analysers/` - Raw per-analyzer output files (e.g., `eslint-0.json`, `typescript-0.txt`)
-- `analysis.json` - Merged/normalized analyzer issues (from MCP run-analyzers)
-- `security-quality-reviewer-output.json` - Security specialist findings
-- `performance-quality-reviewer-output.json` - Performance & Reliability findings
-- `testing-quality-reviewer-output.json` - Testing specialist findings
-- `code-quality-reviewer-output.json` - Code Review specialist findings
+- `analysis.json` - Merged/normalized analyzer issues (from MCP run-analysers)
+- `agents/` - Specialist agent findings:
+  - `security-quality-reviewer-output.json` - Security specialist findings
+  - `performance-quality-reviewer-output.json` - Performance & Reliability findings
+  - `testing-quality-reviewer-output.json` - Testing specialist findings
+  - `code-quality-reviewer-output.json` - Code Review specialist findings
 - `files.txt` - File list used by agents
 - `metadata.json` - Run metadata (commitSha, baseRunId, file counts) for incremental runs
 
@@ -370,11 +396,11 @@ Claude:
    - Create directory: docs/quality/runs/2026-02-10/14-30/
    - Write files.txt to run directory
 3. Launch ALL in a single message (1 MCP + 4 Task agents):
-   - MCP: run-analyzers outputPath=docs/quality/runs/2026-02-10/14-30/analysis.json
-   - Task: security-reviewer (read files.txt, write security.json)
-   - Task: performance-engineer (read files.txt, write performance-reliability.json)
-   - Task: tdd-validator (read files.txt, write testing.json)
-   - Task: reviewer (read files.txt, write review.json)
+   - MCP: run-analysers runId=2026-02-10T14-30
+   - Task: security-reviewer (read files.txt, write agents/security.json)
+   - Task: performance-engineer (read files.txt, write agents/performance-reliability.json)
+   - Task: tdd-validator (read files.txt, write agents/testing.json)
+   - Task: reviewer (read files.txt, write agents/review.json)
 4. Report progress via TaskOutput as each completes:
    - "ESLint: 12 issues, TypeScript: 0 errors, npm audit: 2 vulnerabilities"
    - "Testing Review: complete (3 issues)"
@@ -385,5 +411,12 @@ Claude:
 6. MCP: assemble-run runId=2026-02-10T14-30
    - "14 analyzer + 18 specialist -> 28 unique (4 duplicates removed)"
 7. Present full summary to user
-8. Offer follow-up actions
+8. Offer follow-up actions (including implement plan)
+
+User: "/quality implement"
+Claude:
+1. MCP: quality implement-plan planId=2026-02-10T14-30-plan
+2. "Created 5 fix documents from plan"
+3. Run sync-file for each fix to update progress tracking
+4. Suggest starting with Phase 1 fixes
 ```
