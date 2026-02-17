@@ -35775,7 +35775,7 @@ var init_config_service = __esm({
         if (!this.context.repositoryRoot) {
           throw new Error("Cannot save repo config: not in a repository");
         }
-        const { writeFile: writeFile6, mkdir: mkdir6 } = await import("fs/promises");
+        const { writeFile: writeFile7, mkdir: mkdir6 } = await import("fs/promises");
         const configPath = join2(this.context.repositoryRoot, REPO_CONFIG_PATH);
         const configDir = join2(this.context.repositoryRoot, ".tiny-brain");
         const existing = await this.loadRepoConfig();
@@ -35796,7 +35796,7 @@ var init_config_service = __esm({
           version: CONFIG_VERSION2,
           preferences: merged
         };
-        await writeFile6(configPath, JSON.stringify(config2, null, 2), "utf-8");
+        await writeFile7(configPath, JSON.stringify(config2, null, 2), "utf-8");
       }
       /**
        * Create default config
@@ -41590,443 +41590,10 @@ var init_library_client = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/services/analysis/analysis-service.ts
-import { readFile as readFile7 } from "fs/promises";
-import { join as join8 } from "path";
-var AnalysisService;
-var init_analysis_service = __esm({
-  "packages/tiny-brain-core/src/services/analysis/analysis-service.ts"() {
-    "use strict";
-    init_analyser();
-    init_library_client();
-    init_tech_context_service();
-    AnalysisService = class {
-      constructor(repoPath, options = {}) {
-        this.repoPath = repoPath;
-        this.techContextService = new TechContextService(repoPath);
-        this.libraryClient = new LibraryClient();
-        this.logger = options.logger || {
-          info: () => {
-          },
-          debug: () => {
-          },
-          warn: () => {
-          }
-        };
-        this.onProgress = options.onProgress;
-        this.authToken = options.authToken;
-      }
-      techContextService;
-      libraryClient;
-      logger;
-      onProgress;
-      authToken;
-      /**
-       * Read enableAgenticCoding preference from repo config
-       */
-      async isAgenticCodingEnabled() {
-        try {
-          const configPath = join8(this.repoPath, ".tiny-brain", "config.json");
-          const content = await readFile7(configPath, "utf-8");
-          const config2 = JSON.parse(content);
-          return config2.repo?.enableAgenticCoding ?? false;
-        } catch {
-          return false;
-        }
-      }
-      /**
-       * Emit a progress event
-       */
-      emitProgress(type2, message, data) {
-        if (this.onProgress) {
-          this.onProgress({
-            type: type2,
-            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-            message,
-            data
-          });
-        }
-      }
-      /**
-       * Perform repository analysis
-       *
-       * This is the re-run appropriate analysis:
-       * 1. Detect tech stack
-       * 2. Write to .tiny-brain/analysis.json
-       * 3. Fetch tech contexts from TBR (if authenticated)
-       * 4. Sync agents based on enableAgenticCoding config
-       */
-      async performAnalysis() {
-        try {
-          this.emitProgress("analysis:started", "Starting repository analysis");
-          this.emitProgress("analysis:tech-detection", "Detecting tech stack");
-          const analysis = await analyseRepository(this.repoPath);
-          this.logger?.info(`Repository analysis complete: ${analysis.languages.join(", ")}`);
-          const analysisInput = {
-            languages: analysis.languages,
-            frameworks: analysis.frameworks,
-            testingTools: analysis.testingTools,
-            buildTools: analysis.buildTools,
-            hasTests: analysis.hasTests,
-            testFileCount: analysis.testFileCount,
-            testPatterns: analysis.testPatterns,
-            isPolyglot: analysis.isPolyglot,
-            primaryLanguage: analysis.primaryLanguage,
-            documentationPattern: analysis.documentationPattern,
-            documentationLocations: analysis.documentationLocations
-          };
-          const existingAnalysis = await this.techContextService.readAnalysis();
-          const isFirstAnalysis = existingAnalysis === null;
-          const stackChanged = await this.techContextService.hasStackChanged(analysisInput);
-          this.emitProgress("analysis:writing-file", "Writing analysis.json");
-          await this.techContextService.writeAnalysis(analysisInput);
-          let writtenTechContexts = [];
-          if (this.authToken) {
-            this.emitProgress("analysis:fetching-contexts", "Fetching tech contexts from TBR");
-            writtenTechContexts = await this.fetchAndWriteTechContexts(analysis);
-          } else {
-            this.logger?.debug("No auth token available for TBR API call");
-          }
-          this.emitProgress("analysis:syncing-agents", "Syncing tech agents");
-          const enableAgentic = await this.isAgenticCodingEnabled();
-          await this.techContextService.syncAgents(enableAgentic);
-          let changes;
-          if (!isFirstAnalysis && stackChanged && existingAnalysis) {
-            const previousStack = existingAnalysis.stack;
-            changes = {
-              techStackAdded: [
-                ...analysis.languages.filter((l) => !previousStack.languages.includes(l)),
-                ...analysis.frameworks.filter((f) => !previousStack.frameworks.includes(f)),
-                ...analysis.buildTools.filter((b) => !previousStack.build.includes(b)),
-                ...analysis.testingTools.filter((t) => !previousStack.testing.includes(t))
-              ],
-              techStackRemoved: [
-                ...previousStack.languages.filter((l) => !analysis.languages.includes(l)),
-                ...previousStack.frameworks.filter((f) => !analysis.frameworks.includes(f)),
-                ...previousStack.build.filter((b) => !analysis.buildTools.includes(b)),
-                ...previousStack.testing.filter((t) => !analysis.testingTools.includes(t))
-              ]
-            };
-          }
-          const result = {
-            analysis,
-            isFirstAnalysis,
-            enableAgenticCoding: enableAgentic,
-            changes,
-            writtenTechContexts
-          };
-          this.emitProgress("analysis:complete", "Analysis complete", {
-            isFirstAnalysis,
-            enableAgenticCoding: enableAgentic,
-            techContextsWritten: writtenTechContexts.length,
-            hasChanges: !!changes
-          });
-          return result;
-        } catch (error2) {
-          const message = error2 instanceof Error ? error2.message : "Unknown error";
-          this.emitProgress("analysis:failed", `Analysis failed: ${message}`, { error: message });
-          throw error2;
-        }
-      }
-      /**
-       * Fetch tech contexts from TBR and write them to .tiny-brain/tech/
-       */
-      async fetchAndWriteTechContexts(analysis) {
-        try {
-          if (!this.authToken) {
-            return [];
-          }
-          const response = await this.libraryClient.getTechContexts(analysis, this.authToken);
-          if (!response?.techContexts || response.techContexts.length === 0) {
-            this.logger?.debug("No tech contexts returned from TBR");
-            return [];
-          }
-          const writtenContexts = [];
-          for (const techContext of response.techContexts) {
-            const name = techContext.frontmatter.name;
-            await this.techContextService.writeTechFileRaw(name, techContext.raw);
-            writtenContexts.push(name);
-            this.logger?.debug(`Wrote tech context: ${name}`);
-          }
-          this.logger?.info(`Wrote ${writtenContexts.length} tech context(s) to .tiny-brain/tech/`);
-          return writtenContexts;
-        } catch (error2) {
-          this.logger?.warn(`Failed to fetch tech contexts from TBR: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
-          return [];
-        }
-      }
-    };
-  }
-});
-
-// packages/tiny-brain-core/src/services/analysis/config-health-service.ts
-import { promises as fs13 } from "fs";
-import path14 from "path";
-var HOOK_SIGNATURE, REQUIRED_PERMISSIONS, CONTEXT_START_MARKER, CONTEXT_END_MARKER, ConfigHealthService;
-var init_config_health_service = __esm({
-  "packages/tiny-brain-core/src/services/analysis/config-health-service.ts"() {
-    "use strict";
-    HOOK_SIGNATURE = "Installed by: tiny-brain";
-    REQUIRED_PERMISSIONS = [
-      "Write(.tiny-brain/**)",
-      "Read(.tiny-brain/**)"
-    ];
-    CONTEXT_START_MARKER = "## tiny-brain - start";
-    CONTEXT_END_MARKER = "## tiny-brain - end";
-    ConfigHealthService = class {
-      repoPath;
-      gitDir;
-      hooksDir;
-      claudeMdPath;
-      settingsPath;
-      constructor(repoPath) {
-        this.repoPath = repoPath;
-        this.gitDir = path14.join(repoPath, ".git");
-        this.hooksDir = path14.join(this.gitDir, "hooks");
-        this.claudeMdPath = path14.join(repoPath, "CLAUDE.md");
-        this.settingsPath = path14.join(repoPath, ".claude", "settings.json");
-      }
-      /**
-       * Check status of a single git hook
-       */
-      async checkHook(hookName) {
-        const hookPath = path14.join(this.hooksDir, hookName);
-        try {
-          const stats = await fs13.stat(hookPath);
-          const isExecutable = (stats.mode & 64) !== 0;
-          const content = await fs13.readFile(hookPath, "utf-8");
-          const isSigned = content.includes(HOOK_SIGNATURE);
-          return {
-            name: hookName,
-            installed: true,
-            signed: isSigned,
-            executable: isExecutable
-          };
-        } catch (error2) {
-          if (error2.code === "ENOENT") {
-            return {
-              name: hookName,
-              installed: false,
-              signed: false,
-              executable: false
-            };
-          }
-          return {
-            name: hookName,
-            installed: false,
-            signed: false,
-            executable: false,
-            error: error2 instanceof Error ? error2.message : "Unknown error"
-          };
-        }
-      }
-      /**
-       * Check all git hooks
-       */
-      async checkGitHooks() {
-        const [preCommit, commitMsg, postCommit] = await Promise.all([
-          this.checkHook("pre-commit"),
-          this.checkHook("commit-msg"),
-          this.checkHook("post-commit")
-        ]);
-        return { preCommit, commitMsg, postCommit };
-      }
-      /**
-       * Check CLAUDE.md context block
-       */
-      async checkContextBlock() {
-        try {
-          const content = await fs13.readFile(this.claudeMdPath, "utf-8");
-          const hasStartMarker = content.includes(CONTEXT_START_MARKER);
-          const hasEndMarker = content.includes(CONTEXT_END_MARKER);
-          const present = hasStartMarker && hasEndMarker;
-          if (!present) {
-            return {
-              present: false,
-              upToDate: false,
-              missingSections: hasStartMarker ? ["end marker"] : hasEndMarker ? ["start marker"] : ["context block"]
-            };
-          }
-          const versionMatch = content.match(/Version:\s*(\d+\.\d+\.\d+)/);
-          const version2 = versionMatch ? versionMatch[1] : void 0;
-          const missingSections = [];
-          if (!content.includes("## Commit Message Format")) {
-            missingSections.push("Commit Message Format");
-          }
-          if (!content.includes("## TDD Workflow")) {
-            missingSections.push("TDD Workflow");
-          }
-          if (!content.includes("## Operational Tracking Directory")) {
-            missingSections.push("Operational Tracking Directory");
-          }
-          return {
-            present: true,
-            version: version2,
-            upToDate: missingSections.length === 0,
-            missingSections
-          };
-        } catch (error2) {
-          if (error2.code === "ENOENT") {
-            return {
-              present: false,
-              upToDate: false,
-              missingSections: ["CLAUDE.md file"],
-              error: "CLAUDE.md not found"
-            };
-          }
-          return {
-            present: false,
-            upToDate: false,
-            missingSections: [],
-            error: error2 instanceof Error ? error2.message : "Unknown error"
-          };
-        }
-      }
-      /**
-       * Check skill permissions in .claude/settings.json
-       */
-      async checkSkillPermissions() {
-        try {
-          const content = await fs13.readFile(this.settingsPath, "utf-8");
-          const settings = JSON.parse(content);
-          const allowedPermissions = settings.permissions?.allow || [];
-          const missing = REQUIRED_PERMISSIONS.filter(
-            (perm) => !allowedPermissions.some((allowed) => {
-              if (allowed === perm) return true;
-              if (allowed.includes("*")) {
-                try {
-                  const escaped = allowed.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
-                  const pattern = escaped.replace(/\\\*/g, ".*");
-                  return new RegExp(`^${pattern}$`).test(perm);
-                } catch {
-                  return false;
-                }
-              }
-              return false;
-            })
-          );
-          return {
-            present: allowedPermissions.length > 0,
-            missing
-          };
-        } catch (error2) {
-          if (error2.code === "ENOENT") {
-            return {
-              present: false,
-              missing: REQUIRED_PERMISSIONS,
-              error: ".claude/settings.json not found"
-            };
-          }
-          return {
-            present: false,
-            missing: REQUIRED_PERMISSIONS,
-            error: error2 instanceof Error ? error2.message : "Unknown error"
-          };
-        }
-      }
-      /**
-       * Check required directories based on config flags
-       */
-      async checkDirectories(flags) {
-        const missing = [];
-        const tinyBrainExists = await this.directoryExists(".tiny-brain");
-        if (!tinyBrainExists) {
-          missing.push(".tiny-brain/");
-        }
-        if (flags?.enableSDD !== false) {
-          const prdExists = await this.directoryExists("docs/prd");
-          if (!prdExists) {
-            missing.push("docs/prd/");
-          }
-          const fixesExists = await this.directoryExists(".tiny-brain/fixes");
-          if (!fixesExists) {
-            missing.push(".tiny-brain/fixes/");
-          }
-        }
-        if (flags?.enableADR !== false) {
-          const adrExists = await this.directoryExists("docs/adr");
-          if (!adrExists) {
-            missing.push("docs/adr/");
-          }
-        }
-        const qualityExists = await this.directoryExists("docs/quality");
-        if (!qualityExists) {
-          missing.push("docs/quality/");
-        }
-        return { missing };
-      }
-      /**
-       * Helper to check if a directory exists
-       */
-      async directoryExists(relativePath) {
-        try {
-          const stats = await fs13.stat(path14.join(this.repoPath, relativePath));
-          return stats.isDirectory();
-        } catch {
-          return false;
-        }
-      }
-      /**
-       * Get configuration flags from repo config
-       */
-      async getConfigFlags() {
-        try {
-          const configPath = path14.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs13.readFile(configPath, "utf-8");
-          const config2 = JSON.parse(content);
-          return {
-            enableSDD: config2.repo?.enableSDD ?? true,
-            enableADR: config2.repo?.enableADR ?? true,
-            enableTDD: config2.repo?.enableTDD ?? true
-          };
-        } catch {
-          return {
-            enableSDD: true,
-            enableADR: true,
-            enableTDD: true
-          };
-        }
-      }
-      /**
-       * Get complete configuration health status
-       */
-      async getConfigHealth() {
-        const flags = await this.getConfigFlags();
-        const [hooks, contextBlock, permissions, directories] = await Promise.all([
-          this.checkGitHooks(),
-          this.checkContextBlock(),
-          this.checkSkillPermissions(),
-          this.checkDirectories(flags)
-        ]);
-        let status = "healthy";
-        const hooksList = [hooks.preCommit, hooks.commitMsg, hooks.postCommit];
-        const hasHookErrors = hooksList.some((h) => !h.installed || !h.signed);
-        const hasHookWarnings = hooksList.some((h) => h.installed && !h.executable);
-        const hasContextErrors = !contextBlock.present;
-        const hasContextWarnings = contextBlock.present && !contextBlock.upToDate;
-        const hasPermissionErrors = !permissions.present || permissions.missing.length > 0;
-        const hasDirectoryWarnings = directories.missing.length > 0;
-        if (hasHookErrors || hasContextErrors || hasPermissionErrors) {
-          status = "error";
-        } else if (hasHookWarnings || hasContextWarnings || hasDirectoryWarnings) {
-          status = "warning";
-        }
-        return {
-          status,
-          hooks,
-          contextBlock,
-          permissions,
-          directories
-        };
-      }
-    };
-  }
-});
-
 // packages/tiny-brain-core/src/services/analysis/agents-md-service.ts
-import { promises as fs14 } from "fs";
+import { promises as fs13 } from "fs";
 import { createHash as createHash3 } from "crypto";
-import path15 from "path";
+import path14 from "path";
 var MARKER_START, MARKER_END, AgentsMdService;
 var init_agents_md_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/agents-md-service.ts"() {
@@ -42106,10 +41673,10 @@ ${MARKER_END}`;
         };
       }
       async extractReadmeExcerpt() {
-        const readmePath = path15.join(this.repoPath, "README.md");
+        const readmePath = path14.join(this.repoPath, "README.md");
         let content;
         try {
-          content = await fs14.readFile(readmePath, "utf8");
+          content = await fs13.readFile(readmePath, "utf8");
         } catch {
           return void 0;
         }
@@ -42266,7 +41833,7 @@ ${MARKER_END}`;
         lines.push("## Packages");
         lines.push("");
         for (const pkg of packageDescriptions) {
-          const name = pkg.name || path15.basename(pkg.path);
+          const name = pkg.name || path14.basename(pkg.path);
           const desc = pkg.description ? ` - ${pkg.description}` : "";
           lines.push(`- **\`${name}\`** (\`${pkg.path}\`)${desc}`);
         }
@@ -42279,12 +41846,12 @@ ${MARKER_END}`;
        */
       async generatePackageContent(packagePath, rootAnalysis, existingContent) {
         const scriptAnalyzer = new ScriptAnalyzer();
-        let pkgName = path15.basename(packagePath);
+        let pkgName = path14.basename(packagePath);
         let pkgDescription;
         let scripts = {};
         try {
-          const pkgJsonPath = path15.join(packagePath, "package.json");
-          const raw2 = await fs14.readFile(pkgJsonPath, "utf-8");
+          const pkgJsonPath = path14.join(packagePath, "package.json");
+          const raw2 = await fs13.readFile(pkgJsonPath, "utf-8");
           const pkgJson = JSON.parse(raw2);
           pkgName = pkgJson.name || pkgName;
           pkgDescription = pkgJson.description;
@@ -42397,6 +41964,491 @@ ${MARKER_END}`;
           lines.push(`**Plugins:** ${analysis.linting.plugins.join(", ")}`);
         }
         return lines.join("\n");
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/analysis/analysis-service.ts
+import { readFile as readFile7, writeFile } from "fs/promises";
+import { join as join8 } from "path";
+var AnalysisService;
+var init_analysis_service = __esm({
+  "packages/tiny-brain-core/src/services/analysis/analysis-service.ts"() {
+    "use strict";
+    init_analyser();
+    init_library_client();
+    init_tech_context_service();
+    init_agents_md_service();
+    AnalysisService = class {
+      constructor(repoPath, options = {}) {
+        this.repoPath = repoPath;
+        this.techContextService = new TechContextService(repoPath);
+        this.libraryClient = new LibraryClient();
+        this.logger = options.logger || {
+          info: () => {
+          },
+          debug: () => {
+          },
+          warn: () => {
+          }
+        };
+        this.onProgress = options.onProgress;
+        this.authToken = options.authToken;
+      }
+      techContextService;
+      libraryClient;
+      logger;
+      onProgress;
+      authToken;
+      /**
+       * Read enableAgenticCoding preference from repo config
+       */
+      async isAgenticCodingEnabled() {
+        try {
+          const configPath = join8(this.repoPath, ".tiny-brain", "config.json");
+          const content = await readFile7(configPath, "utf-8");
+          const config2 = JSON.parse(content);
+          return config2.preferences?.repo?.enableAgenticCoding ?? false;
+        } catch {
+          return false;
+        }
+      }
+      /**
+       * Read manageAgentsMd preference from repo config (defaults to true)
+       */
+      async isManageAgentsMdEnabled() {
+        try {
+          const configPath = join8(this.repoPath, ".tiny-brain", "config.json");
+          const content = await readFile7(configPath, "utf-8");
+          const config2 = JSON.parse(content);
+          return config2.preferences?.repo?.manageAgentsMd ?? true;
+        } catch {
+          return true;
+        }
+      }
+      /**
+       * Emit a progress event
+       */
+      emitProgress(type2, message, data) {
+        if (this.onProgress) {
+          this.onProgress({
+            type: type2,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            message,
+            data
+          });
+        }
+      }
+      /**
+       * Perform repository analysis
+       *
+       * This is the re-run appropriate analysis:
+       * 1. Detect tech stack
+       * 2. Write to .tiny-brain/analysis.json
+       * 3. Fetch tech contexts from TBR (if authenticated)
+       * 4. Sync agents based on enableAgenticCoding config
+       */
+      async performAnalysis() {
+        try {
+          this.emitProgress("analysis:started", "Starting repository analysis");
+          this.emitProgress("analysis:tech-detection", "Detecting tech stack");
+          const analysis = await analyseRepository(this.repoPath);
+          this.logger?.info(`Repository analysis complete: ${analysis.languages.join(", ")}`);
+          const analysisInput = {
+            languages: analysis.languages,
+            frameworks: analysis.frameworks,
+            testingTools: analysis.testingTools,
+            buildTools: analysis.buildTools,
+            hasTests: analysis.hasTests,
+            testFileCount: analysis.testFileCount,
+            testPatterns: analysis.testPatterns,
+            isPolyglot: analysis.isPolyglot,
+            primaryLanguage: analysis.primaryLanguage,
+            documentationPattern: analysis.documentationPattern,
+            documentationLocations: analysis.documentationLocations
+          };
+          const existingAnalysis = await this.techContextService.readAnalysis();
+          const isFirstAnalysis = existingAnalysis === null;
+          const stackChanged = await this.techContextService.hasStackChanged(analysisInput);
+          this.emitProgress("analysis:writing-file", "Writing analysis.json");
+          await this.techContextService.writeAnalysis(analysisInput);
+          let writtenTechContexts = [];
+          if (this.authToken) {
+            this.emitProgress("analysis:fetching-contexts", "Fetching tech contexts from TBR");
+            writtenTechContexts = await this.fetchAndWriteTechContexts(analysis);
+          } else {
+            this.logger?.debug("No auth token available for TBR API call");
+          }
+          this.emitProgress("analysis:syncing-agents", "Syncing tech agents");
+          const enableAgentic = await this.isAgenticCodingEnabled();
+          await this.techContextService.syncAgents(enableAgentic);
+          let agentsMdStatus;
+          const manageAgentsMd = await this.isManageAgentsMdEnabled();
+          if (manageAgentsMd) {
+            this.emitProgress("analysis:generating-agents-md", "Generating AGENTS.md");
+            agentsMdStatus = await this.generateAgentsMd(analysis);
+          }
+          let changes;
+          if (!isFirstAnalysis && stackChanged && existingAnalysis) {
+            const previousStack = existingAnalysis.stack;
+            changes = {
+              techStackAdded: [
+                ...analysis.languages.filter((l) => !previousStack.languages.includes(l)),
+                ...analysis.frameworks.filter((f) => !previousStack.frameworks.includes(f)),
+                ...analysis.buildTools.filter((b) => !previousStack.build.includes(b)),
+                ...analysis.testingTools.filter((t) => !previousStack.testing.includes(t))
+              ],
+              techStackRemoved: [
+                ...previousStack.languages.filter((l) => !analysis.languages.includes(l)),
+                ...previousStack.frameworks.filter((f) => !analysis.frameworks.includes(f)),
+                ...previousStack.build.filter((b) => !analysis.buildTools.includes(b)),
+                ...previousStack.testing.filter((t) => !analysis.testingTools.includes(t))
+              ]
+            };
+          }
+          const result = {
+            analysis,
+            isFirstAnalysis,
+            enableAgenticCoding: enableAgentic,
+            changes,
+            writtenTechContexts,
+            agentsMdStatus
+          };
+          this.emitProgress("analysis:complete", "Analysis complete", {
+            isFirstAnalysis,
+            enableAgenticCoding: enableAgentic,
+            techContextsWritten: writtenTechContexts.length,
+            hasChanges: !!changes
+          });
+          return result;
+        } catch (error2) {
+          const message = error2 instanceof Error ? error2.message : "Unknown error";
+          this.emitProgress("analysis:failed", `Analysis failed: ${message}`, { error: message });
+          throw error2;
+        }
+      }
+      /**
+       * Fetch tech contexts from TBR and write them to .tiny-brain/tech/
+       */
+      async fetchAndWriteTechContexts(analysis) {
+        try {
+          if (!this.authToken) {
+            return [];
+          }
+          const response = await this.libraryClient.getTechContexts(analysis, this.authToken);
+          if (!response?.techContexts || response.techContexts.length === 0) {
+            this.logger?.debug("No tech contexts returned from TBR");
+            return [];
+          }
+          const writtenContexts = [];
+          for (const techContext of response.techContexts) {
+            const name = techContext.frontmatter.name;
+            await this.techContextService.writeTechFileRaw(name, techContext.raw);
+            writtenContexts.push(name);
+            this.logger?.debug(`Wrote tech context: ${name}`);
+          }
+          this.logger?.info(`Wrote ${writtenContexts.length} tech context(s) to .tiny-brain/tech/`);
+          return writtenContexts;
+        } catch (error2) {
+          this.logger?.warn(`Failed to fetch tech contexts from TBR: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
+          return [];
+        }
+      }
+      /**
+       * Generate AGENTS.md file in the repository root
+       */
+      async generateAgentsMd(analysis) {
+        const agentsMdService = new AgentsMdService(this.repoPath);
+        const agentsMdPath = join8(this.repoPath, "AGENTS.md");
+        let existingContent;
+        try {
+          existingContent = await readFile7(agentsMdPath, "utf-8");
+        } catch {
+        }
+        const readmeExcerpt = await agentsMdService.extractReadmeExcerpt();
+        const result = await agentsMdService.generateContent({
+          analysis,
+          readmeExcerpt,
+          repoPath: this.repoPath,
+          existingContent
+        });
+        if (!existingContent) {
+          await writeFile(agentsMdPath, result.content, "utf-8");
+          this.logger?.info("Created AGENTS.md");
+          return "created";
+        }
+        if (!result.contentChanged) {
+          this.logger?.info("AGENTS.md is up to date");
+          return "up-to-date";
+        }
+        await writeFile(agentsMdPath, result.content, "utf-8");
+        this.logger?.info("Updated AGENTS.md");
+        return "updated";
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/analysis/config-health-service.ts
+import { promises as fs14 } from "fs";
+import path15 from "path";
+var HOOK_SIGNATURE, REQUIRED_PERMISSIONS, CONTEXT_START_MARKER, CONTEXT_END_MARKER, ConfigHealthService;
+var init_config_health_service = __esm({
+  "packages/tiny-brain-core/src/services/analysis/config-health-service.ts"() {
+    "use strict";
+    HOOK_SIGNATURE = "Installed by: tiny-brain";
+    REQUIRED_PERMISSIONS = [
+      "Write(.tiny-brain/**)",
+      "Read(.tiny-brain/**)"
+    ];
+    CONTEXT_START_MARKER = "## tiny-brain - start";
+    CONTEXT_END_MARKER = "## tiny-brain - end";
+    ConfigHealthService = class {
+      repoPath;
+      gitDir;
+      hooksDir;
+      claudeMdPath;
+      settingsPath;
+      constructor(repoPath) {
+        this.repoPath = repoPath;
+        this.gitDir = path15.join(repoPath, ".git");
+        this.hooksDir = path15.join(this.gitDir, "hooks");
+        this.claudeMdPath = path15.join(repoPath, "CLAUDE.md");
+        this.settingsPath = path15.join(repoPath, ".claude", "settings.json");
+      }
+      /**
+       * Check status of a single git hook
+       */
+      async checkHook(hookName) {
+        const hookPath = path15.join(this.hooksDir, hookName);
+        try {
+          const stats = await fs14.stat(hookPath);
+          const isExecutable = (stats.mode & 64) !== 0;
+          const content = await fs14.readFile(hookPath, "utf-8");
+          const isSigned = content.includes(HOOK_SIGNATURE);
+          return {
+            name: hookName,
+            installed: true,
+            signed: isSigned,
+            executable: isExecutable
+          };
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return {
+              name: hookName,
+              installed: false,
+              signed: false,
+              executable: false
+            };
+          }
+          return {
+            name: hookName,
+            installed: false,
+            signed: false,
+            executable: false,
+            error: error2 instanceof Error ? error2.message : "Unknown error"
+          };
+        }
+      }
+      /**
+       * Check all git hooks
+       */
+      async checkGitHooks() {
+        const [preCommit, commitMsg, postCommit] = await Promise.all([
+          this.checkHook("pre-commit"),
+          this.checkHook("commit-msg"),
+          this.checkHook("post-commit")
+        ]);
+        return { preCommit, commitMsg, postCommit };
+      }
+      /**
+       * Check CLAUDE.md context block
+       */
+      async checkContextBlock() {
+        try {
+          const content = await fs14.readFile(this.claudeMdPath, "utf-8");
+          const hasStartMarker = content.includes(CONTEXT_START_MARKER);
+          const hasEndMarker = content.includes(CONTEXT_END_MARKER);
+          const present = hasStartMarker && hasEndMarker;
+          if (!present) {
+            return {
+              present: false,
+              upToDate: false,
+              missingSections: hasStartMarker ? ["end marker"] : hasEndMarker ? ["start marker"] : ["context block"]
+            };
+          }
+          const versionMatch = content.match(/Version:\s*(\d+\.\d+\.\d+)/);
+          const version2 = versionMatch ? versionMatch[1] : void 0;
+          const missingSections = [];
+          if (!content.includes("## Commit Message Format")) {
+            missingSections.push("Commit Message Format");
+          }
+          if (!content.includes("## TDD Workflow")) {
+            missingSections.push("TDD Workflow");
+          }
+          if (!content.includes("## Operational Tracking Directory")) {
+            missingSections.push("Operational Tracking Directory");
+          }
+          return {
+            present: true,
+            version: version2,
+            upToDate: missingSections.length === 0,
+            missingSections
+          };
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return {
+              present: false,
+              upToDate: false,
+              missingSections: ["CLAUDE.md file"],
+              error: "CLAUDE.md not found"
+            };
+          }
+          return {
+            present: false,
+            upToDate: false,
+            missingSections: [],
+            error: error2 instanceof Error ? error2.message : "Unknown error"
+          };
+        }
+      }
+      /**
+       * Check skill permissions in .claude/settings.json
+       */
+      async checkSkillPermissions() {
+        try {
+          const content = await fs14.readFile(this.settingsPath, "utf-8");
+          const settings = JSON.parse(content);
+          const allowedPermissions = settings.permissions?.allow || [];
+          const missing = REQUIRED_PERMISSIONS.filter(
+            (perm) => !allowedPermissions.some((allowed) => {
+              if (allowed === perm) return true;
+              if (allowed.includes("*")) {
+                try {
+                  const escaped = allowed.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+                  const pattern = escaped.replace(/\\\*/g, ".*");
+                  return new RegExp(`^${pattern}$`).test(perm);
+                } catch {
+                  return false;
+                }
+              }
+              return false;
+            })
+          );
+          return {
+            present: allowedPermissions.length > 0,
+            missing
+          };
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return {
+              present: false,
+              missing: REQUIRED_PERMISSIONS,
+              error: ".claude/settings.json not found"
+            };
+          }
+          return {
+            present: false,
+            missing: REQUIRED_PERMISSIONS,
+            error: error2 instanceof Error ? error2.message : "Unknown error"
+          };
+        }
+      }
+      /**
+       * Check required directories based on config flags
+       */
+      async checkDirectories(flags) {
+        const missing = [];
+        const tinyBrainExists = await this.directoryExists(".tiny-brain");
+        if (!tinyBrainExists) {
+          missing.push(".tiny-brain/");
+        }
+        if (flags?.enableSDD !== false) {
+          const prdExists = await this.directoryExists("docs/prd");
+          if (!prdExists) {
+            missing.push("docs/prd/");
+          }
+          const fixesExists = await this.directoryExists(".tiny-brain/fixes");
+          if (!fixesExists) {
+            missing.push(".tiny-brain/fixes/");
+          }
+        }
+        if (flags?.enableADR !== false) {
+          const adrExists = await this.directoryExists("docs/adr");
+          if (!adrExists) {
+            missing.push("docs/adr/");
+          }
+        }
+        const qualityExists = await this.directoryExists("docs/quality");
+        if (!qualityExists) {
+          missing.push("docs/quality/");
+        }
+        return { missing };
+      }
+      /**
+       * Helper to check if a directory exists
+       */
+      async directoryExists(relativePath) {
+        try {
+          const stats = await fs14.stat(path15.join(this.repoPath, relativePath));
+          return stats.isDirectory();
+        } catch {
+          return false;
+        }
+      }
+      /**
+       * Get configuration flags from repo config
+       */
+      async getConfigFlags() {
+        try {
+          const configPath = path15.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs14.readFile(configPath, "utf-8");
+          const config2 = JSON.parse(content);
+          return {
+            enableSDD: config2.repo?.enableSDD ?? true,
+            enableADR: config2.repo?.enableADR ?? true,
+            enableTDD: config2.repo?.enableTDD ?? true
+          };
+        } catch {
+          return {
+            enableSDD: true,
+            enableADR: true,
+            enableTDD: true
+          };
+        }
+      }
+      /**
+       * Get complete configuration health status
+       */
+      async getConfigHealth() {
+        const flags = await this.getConfigFlags();
+        const [hooks, contextBlock, permissions, directories] = await Promise.all([
+          this.checkGitHooks(),
+          this.checkContextBlock(),
+          this.checkSkillPermissions(),
+          this.checkDirectories(flags)
+        ]);
+        let status = "healthy";
+        const hooksList = [hooks.preCommit, hooks.commitMsg, hooks.postCommit];
+        const hasHookErrors = hooksList.some((h) => !h.installed || !h.signed);
+        const hasHookWarnings = hooksList.some((h) => h.installed && !h.executable);
+        const hasContextErrors = !contextBlock.present;
+        const hasContextWarnings = contextBlock.present && !contextBlock.upToDate;
+        const hasPermissionErrors = !permissions.present || permissions.missing.length > 0;
+        const hasDirectoryWarnings = directories.missing.length > 0;
+        if (hasHookErrors || hasContextErrors || hasPermissionErrors) {
+          status = "error";
+        } else if (hasHookWarnings || hasContextWarnings || hasDirectoryWarnings) {
+          status = "warning";
+        }
+        return {
+          status,
+          hooks,
+          contextBlock,
+          permissions,
+          directories
+        };
       }
     };
   }
@@ -47970,6 +48022,10 @@ function getEnhancedPath2() {
   ];
   return [...extra, existing].join(":");
 }
+function buildSubprocessEnv() {
+  const { CLAUDECODE: _, ...rest } = process.env;
+  return { ...rest, PATH: getEnhancedPath2() };
+}
 var DEFAULT_MODEL, DEFAULT_TIMEOUT_MS2, KILL_GRACE_MS, ClaudeCliClient;
 var init_claude_cli_client = __esm({
   "packages/tiny-brain-core/src/services/api/claude-cli-client.ts"() {
@@ -47994,37 +48050,65 @@ var init_claude_cli_client = __esm({
           "stream-json",
           "--verbose",
           "--model",
-          model,
-          "--cwd",
-          this.config.cwd
+          model
         ];
         return new Promise((resolve3) => {
           let resolved = false;
-          const finish = () => {
+          let terminalCallbackInvoked = false;
+          const pendingCallbacks = [];
+          const stderrChunks = [];
+          const finish = async () => {
             if (!resolved) {
               resolved = true;
+              if (!terminalCallbackInvoked) {
+                const stderr = stderrChunks.join("").trim();
+                const message = stderr ? `Claude CLI error: ${stderr}` : "Claude CLI exited without producing any output";
+                trackCallback(wrappedCallbacks.onError(new Error(message)));
+              }
+              await Promise.all(pendingCallbacks);
               this.cleanup();
               resolve3();
+            }
+          };
+          const trackCallback = (result) => {
+            if (result && typeof result.then === "function") {
+              pendingCallbacks.push(result);
+            }
+          };
+          const wrappedCallbacks = {
+            ...callbacks,
+            onComplete: (...args2) => {
+              terminalCallbackInvoked = true;
+              return callbacks.onComplete(...args2);
+            },
+            onError: (...args2) => {
+              terminalCallbackInvoked = true;
+              return callbacks.onError(...args2);
             }
           };
           const proc2 = spawn2("claude", args, {
             cwd: this.config.cwd,
             stdio: ["ignore", "pipe", "pipe"],
             timeout: timeoutMs,
-            env: { ...process.env, PATH: getEnhancedPath2() }
+            env: buildSubprocessEnv()
           });
           this.process = proc2;
+          if (proc2.stderr) {
+            proc2.stderr.on("data", (chunk2) => {
+              stderrChunks.push(chunk2.toString());
+            });
+          }
           proc2.on("error", (err) => {
             if (err.code === "ENOENT") {
-              callbacks.onError(new Error("Claude CLI not found. Install it with: npm install -g @anthropic-ai/claude-code"));
+              trackCallback(wrappedCallbacks.onError(new Error("Claude CLI not found. Install it with: npm install -g @anthropic-ai/claude-code")));
             } else {
-              callbacks.onError(err);
+              trackCallback(wrappedCallbacks.onError(err));
             }
-            finish();
+            void finish();
           });
           if (!proc2.stdout) {
-            callbacks.onError(new Error("Failed to create CLI subprocess stdout"));
-            finish();
+            trackCallback(wrappedCallbacks.onError(new Error("Failed to create CLI subprocess stdout")));
+            void finish();
             return;
           }
           const rl = createInterface({ input: proc2.stdout });
@@ -48035,10 +48119,10 @@ var init_claude_cli_client = __esm({
             } catch {
               return;
             }
-            this.handleEvent(event, callbacks);
+            trackCallback(this.handleEvent(event, wrappedCallbacks));
           });
           rl.on("close", () => {
-            finish();
+            void finish();
           });
         });
       }
@@ -48054,44 +48138,53 @@ var init_claude_cli_client = __esm({
       handleEvent(event, callbacks) {
         switch (event.type) {
           case "assistant":
-            this.handleAssistantEvent(event, callbacks);
-            break;
+            return this.handleAssistantEvent(event, callbacks);
           case "user":
-            this.handleUserEvent(event, callbacks);
-            break;
+            return this.handleUserEvent(event, callbacks);
           case "result":
-            this.handleResultEvent(event, callbacks);
-            break;
+            return this.handleResultEvent(event, callbacks);
         }
       }
       handleAssistantEvent(event, callbacks) {
         const content = event.message?.content;
         if (!content) return;
+        const results = [];
         for (const block of content) {
           if (block.type === "text" && block.text) {
-            callbacks.onText(block.text);
+            results.push(callbacks.onText(block.text));
           } else if (block.type === "tool_use" && block.name) {
-            callbacks.onToolUse(block.name, block.input);
+            results.push(callbacks.onToolUse(block.name, block.input));
           }
+        }
+        const promises2 = results.filter((r) => r != null && typeof r.then === "function");
+        if (promises2.length > 0) {
+          return Promise.all(promises2).then(() => {
+          });
         }
       }
       handleUserEvent(event, callbacks) {
         const content = event.message?.content;
         if (!content) return;
+        const results = [];
         for (const block of content) {
           if (block.type === "tool_result" && block.tool_use_id) {
-            callbacks.onToolResult(block.tool_use_id, {
+            results.push(callbacks.onToolResult(block.tool_use_id, {
               success: true,
               result: block.content ?? ""
-            });
+            }));
           }
+        }
+        const promises2 = results.filter((r) => r != null && typeof r.then === "function");
+        if (promises2.length > 0) {
+          return Promise.all(promises2).then(() => {
+          });
         }
       }
       handleResultEvent(event, callbacks) {
         if (event.subtype === "success") {
-          callbacks.onComplete();
+          return callbacks.onComplete();
         } else {
-          callbacks.onError(new Error(event.error ?? `CLI error: ${event.subtype}`));
+          return callbacks.onError(new Error(event.error ?? `CLI error: ${event.subtype}`));
         }
       }
       cleanup() {
@@ -66092,6 +66185,10 @@ var DashboardLauncher = class {
       this.server = null;
     }
   }
+  async restart(context, options = {}) {
+    await this.stop();
+    return this.start(context, options);
+  }
   isRunning() {
     return this.server !== null;
   }
@@ -70415,7 +70512,7 @@ init_src();
 import { fileURLToPath as fileURLToPath8 } from "url";
 import { dirname as dirname11, join as join26 } from "path";
 import { existsSync as existsSync10 } from "fs";
-import { mkdir as mkdir5, copyFile, readFile as readFile14, readdir as readdir11, chmod as chmod2, stat as stat3, writeFile as writeFile5 } from "fs/promises";
+import { mkdir as mkdir5, copyFile, readFile as readFile14, readdir as readdir11, chmod as chmod2, stat as stat3, writeFile as writeFile6 } from "fs/promises";
 
 // packages/tiny-brain-mcp/src/utils/package-version.ts
 import { readFileSync as readFileSync3 } from "fs";
@@ -70611,12 +70708,12 @@ var AnalyseService = class {
       packageDescriptions
     });
     if (!existingContent) {
-      await writeFile5(agentsMdPath, result.content, "utf-8");
+      await writeFile6(agentsMdPath, result.content, "utf-8");
       this.context.logger.info("Created AGENTS.md");
     } else if (!result.contentChanged) {
       this.context.logger.info("AGENTS.md is up to date");
     } else {
-      await writeFile5(agentsMdPath, result.content, "utf-8");
+      await writeFile6(agentsMdPath, result.content, "utf-8");
       this.context.logger.info("Updated AGENTS.md");
     }
     if (analysis.monorepo?.packages && analysis.monorepo.packages.length > 0) {
@@ -70667,7 +70764,7 @@ var AnalyseService = class {
         existingPkgContent
       );
       if (!existingPkgContent || pkgResult.contentChanged) {
-        await writeFile5(pkgAgentsMdPath, pkgResult.content, "utf-8");
+        await writeFile6(pkgAgentsMdPath, pkgResult.content, "utf-8");
         this.context.logger.debug(`Wrote AGENTS.md for ${pkgPath}`);
       }
     }
@@ -70910,7 +71007,7 @@ var AnalyseService = class {
         }
       }
       if (addedPermissions.length > 0) {
-        await writeFile5(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+        await writeFile6(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
         this.context.logger.info(`Added ${addedPermissions.length} skill permissions to .claude/settings.json`);
       }
       return addedPermissions;
@@ -72175,6 +72272,36 @@ var ConfigTool = class _ConfigTool {
   }
 };
 
+// packages/tiny-brain-mcp/src/tools/dashboard/dashboard.tool.ts
+var DashboardTool = class {
+  static getToolDefinition() {
+    return {
+      name: "dev_restart_dashboard",
+      description: "Restart the dashboard server. Developer maintenance tool \u2014 only needed to force a reload of the dashboard (e.g. after rebuilding packages).",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        required: []
+      }
+    };
+  }
+  static async execute(_args, context) {
+    const localContext = context;
+    const launcher = localContext.dashboardLauncher;
+    if (!launcher) {
+      return createErrorResult("Dashboard launcher is not available. The dashboard may not have been started.");
+    }
+    try {
+      const result = await launcher.restart(context, {});
+      return createSuccessResult(`Dashboard restarted successfully at ${result.url}`);
+    } catch (error2) {
+      return createErrorResult(
+        `Failed to restart dashboard: ${error2 instanceof Error ? error2.message : "Unknown error"}`
+      );
+    }
+  }
+};
+
 // packages/tiny-brain-mcp/src/tools/tool-registry.ts
 var ToolRegistry = class {
   /**
@@ -72196,7 +72323,9 @@ var ToolRegistry = class {
       // Quality tool
       QualityTool.getToolDefinition(),
       // Config tool - manages preferences with reactive agent sync
-      ConfigTool.getToolDefinition()
+      ConfigTool.getToolDefinition(),
+      // Dashboard tool - restart dashboard server (dev maintenance)
+      DashboardTool.getToolDefinition()
       // Response tools (disabled for later release)
       // AnalyseRequestTool.getToolDefinition(),
       // ValidateResponseTool.getToolDefinition(),
@@ -72222,7 +72351,8 @@ var ToolRegistry = class {
       strategy: StrategyTool,
       update: UpdateTool,
       quality: QualityTool,
-      config: ConfigTool
+      config: ConfigTool,
+      dev_restart_dashboard: DashboardTool
     };
     return toolMap[name];
   }
@@ -74471,6 +74601,7 @@ var MCPServer = class {
       activePersona,
       authToken: this.authToken,
       config: this.config,
+      dashboardLauncher: this.dashboardLauncher ?? void 0,
       updateActivePersona: (persona) => {
         const newPersonaId = persona?.id;
         this.activePersona = newPersonaId;

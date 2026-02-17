@@ -22546,8 +22546,380 @@ var LibraryClient = class {
   }
 };
 
+// packages/tiny-brain-core/src/services/analysis/agents-md-service.ts
+import { promises as fs13 } from "fs";
+import { createHash as createHash3 } from "crypto";
+import path14 from "path";
+var MARKER_START = "<!-- agents:tiny-brain:start -->";
+var MARKER_END = "<!-- agents:tiny-brain:end -->";
+var AgentsMdService = class {
+  repoPath;
+  constructor(repoPath) {
+    this.repoPath = repoPath;
+  }
+  async generateContent(options) {
+    const { analysis, readmeExcerpt, existingContent, packageDescriptions } = options;
+    const sections = [];
+    const sectionsGenerated = [];
+    sections.push(this.generateProjectOverview(analysis, readmeExcerpt));
+    sectionsGenerated.push("Project Overview");
+    if (analysis.languages.length > 0) {
+      sections.push(this.generateTechStack(analysis));
+      sectionsGenerated.push("Tech Stack");
+    }
+    if (analysis.monorepo || analysis.sourceDirectories && analysis.sourceDirectories.length > 0) {
+      sections.push(this.generateProjectStructure(analysis));
+      sectionsGenerated.push("Project Structure");
+    }
+    if (analysis.scripts && (analysis.scripts.build || analysis.scripts.dev)) {
+      sections.push(this.generateDevelopment(analysis));
+      sectionsGenerated.push("Development");
+    }
+    if (analysis.testingTools.length > 0 || analysis.scripts?.test) {
+      sections.push(this.generateTesting(analysis));
+      sectionsGenerated.push("Testing");
+    }
+    if (analysis.linting || analysis.scripts?.lint) {
+      sections.push(this.generateLintingCodeStyle(analysis));
+      sectionsGenerated.push("Linting & Code Style");
+    }
+    if (packageDescriptions && packageDescriptions.length > 0) {
+      sections.push(this.generatePackagesSection(packageDescriptions));
+      sectionsGenerated.push("Packages");
+    }
+    const generatedContent = sections.join("\n\n");
+    const contentHash = createHash3("sha256").update(generatedContent).digest("hex").substring(0, 16);
+    const hashComment = `<!-- content-hash:${contentHash} -->`;
+    const wrappedContent = `${MARKER_START}
+${hashComment}
+${generatedContent}
+${MARKER_END}`;
+    if (existingContent) {
+      const startIdx = existingContent.indexOf(MARKER_START);
+      const endIdx = existingContent.indexOf(MARKER_END);
+      if (startIdx !== -1 && endIdx !== -1) {
+        const existingHash = existingContent.match(/<!-- content-hash:([a-f0-9]+) -->/)?.[1];
+        const contentChanged = existingHash !== contentHash;
+        const before = existingContent.substring(0, startIdx);
+        const after = existingContent.substring(endIdx + MARKER_END.length);
+        return {
+          content: contentChanged ? before + wrappedContent + after : existingContent,
+          isUpdate: true,
+          contentChanged,
+          sectionsGenerated
+        };
+      }
+      return {
+        content: existingContent + "\n\n" + wrappedContent,
+        isUpdate: false,
+        contentChanged: true,
+        sectionsGenerated
+      };
+    }
+    return {
+      content: wrappedContent,
+      isUpdate: false,
+      contentChanged: true,
+      sectionsGenerated
+    };
+  }
+  async extractReadmeExcerpt() {
+    const readmePath = path14.join(this.repoPath, "README.md");
+    let content;
+    try {
+      content = await fs13.readFile(readmePath, "utf8");
+    } catch {
+      return void 0;
+    }
+    const lines = content.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (trimmed.startsWith("#")) continue;
+      if (trimmed.startsWith("[") && trimmed.includes("](")) continue;
+      if (trimmed.startsWith("[![")) continue;
+      return trimmed;
+    }
+    return void 0;
+  }
+  generateProjectOverview(analysis, readmeExcerpt) {
+    const lines = [];
+    const title = analysis.projectName || "Project";
+    lines.push(`# ${title}`);
+    if (analysis.projectDescription) {
+      lines.push("");
+      lines.push(analysis.projectDescription);
+    }
+    if (readmeExcerpt && readmeExcerpt !== analysis.projectDescription) {
+      lines.push("");
+      lines.push(readmeExcerpt);
+    }
+    const langList = analysis.languages.join(", ");
+    lines.push("");
+    lines.push(`**Languages:** ${langList}`);
+    if (analysis.frameworks.length > 0) {
+      lines.push(`**Frameworks:** ${analysis.frameworks.join(", ")}`);
+    }
+    return lines.join("\n");
+  }
+  generateTechStack(analysis) {
+    const lines = [];
+    lines.push("## Tech Stack");
+    lines.push("");
+    lines.push(`- **Languages:** ${analysis.languages.join(", ")}`);
+    if (analysis.frameworks.length > 0) {
+      lines.push(`- **Frameworks:** ${analysis.frameworks.join(", ")}`);
+    }
+    if (analysis.buildTools.length > 0) {
+      lines.push(`- **Build Tools:** ${analysis.buildTools.join(", ")}`);
+    }
+    if (analysis.packageManager) {
+      lines.push(`- **Package Manager:** ${analysis.packageManager}`);
+    }
+    if (analysis.testingTools.length > 0) {
+      lines.push(`- **Testing:** ${analysis.testingTools.join(", ")}`);
+    }
+    if (analysis.stateManagement) {
+      lines.push(`- **State Management:** ${analysis.stateManagement}`);
+    }
+    if (analysis.styling?.approach) {
+      const stylingParts = [analysis.styling.approach];
+      if (analysis.styling.preprocessor) {
+        stylingParts.push(analysis.styling.preprocessor);
+      }
+      lines.push(`- **Styling:** ${stylingParts.join(", ")}`);
+    }
+    if (analysis.database?.orm || analysis.database?.driver) {
+      const dbParts = [];
+      if (analysis.database.orm) dbParts.push(analysis.database.orm);
+      if (analysis.database.driver) dbParts.push(analysis.database.driver);
+      lines.push(`- **Database:** ${dbParts.join(", ")}`);
+    }
+    if (analysis.typescriptConfig) {
+      const tsInfo = analysis.typescriptConfig.strict ? "strict mode" : "non-strict";
+      const target = analysis.typescriptConfig.target ? `, target ${analysis.typescriptConfig.target}` : "";
+      lines.push(`- **TypeScript:** ${tsInfo}${target}`);
+    }
+    if (analysis.runtimeVersion) {
+      lines.push(`- **Node:** ${analysis.runtimeVersion.version}`);
+    }
+    return lines.join("\n");
+  }
+  generateProjectStructure(analysis) {
+    const lines = [];
+    lines.push("## Project Structure");
+    lines.push("");
+    if (analysis.monorepo) {
+      lines.push(`This is a monorepo managed with ${analysis.monorepo.tool || "workspaces"}.`);
+      lines.push("");
+      lines.push("**Packages:**");
+      for (const pkg of analysis.monorepo.packages) {
+        lines.push(`- \`${pkg}\``);
+      }
+    }
+    if (analysis.sourceDirectories && analysis.sourceDirectories.length > 0) {
+      if (analysis.monorepo) {
+        lines.push("");
+      }
+      lines.push("**Source directories:** " + analysis.sourceDirectories.map((d) => `\`${d}/\``).join(", "));
+    }
+    return lines.join("\n");
+  }
+  generateDevelopment(analysis) {
+    const lines = [];
+    lines.push("## Development");
+    lines.push("");
+    if (analysis.scripts?.dev?.command) {
+      lines.push("**Start dev server:**");
+      lines.push("```bash");
+      lines.push(analysis.scripts.dev.command);
+      lines.push("```");
+    }
+    if (analysis.scripts?.build?.command) {
+      if (analysis.scripts.dev) lines.push("");
+      lines.push("**Build:**");
+      lines.push("```bash");
+      lines.push(analysis.scripts.build.command);
+      lines.push("```");
+    }
+    return lines.join("\n");
+  }
+  generateTesting(analysis) {
+    const lines = [];
+    lines.push("## Testing");
+    lines.push("");
+    const framework = analysis.scripts?.test?.framework || analysis.testingTools[0] || "unknown";
+    lines.push(`**Framework:** ${framework}`);
+    lines.push("");
+    const pm = analysis.packageManager || "npm";
+    const runPrefix = pm === "npm" ? "npm run" : pm;
+    if (analysis.scripts?.test?.command) {
+      lines.push("**Run tests:**");
+      lines.push("```bash");
+      lines.push(`${runPrefix} test`);
+      lines.push("```");
+    }
+    if (analysis.scripts?.test?.coverage) {
+      lines.push("");
+      lines.push("**Coverage:**");
+      lines.push("```bash");
+      lines.push(analysis.scripts.test.coverage);
+      lines.push("```");
+    }
+    if (analysis.testPatterns.length > 0) {
+      lines.push("");
+      lines.push(`**Test file patterns:** ${analysis.testPatterns.map((p) => `\`${p}\``).join(", ")}`);
+    }
+    if (analysis.scripts?.test?.command) {
+      lines.push("");
+      lines.push("**Run a single test file:**");
+      lines.push("```bash");
+      lines.push(`${analysis.scripts.test.command} path/to/file.test.ts`);
+      lines.push("```");
+    }
+    return lines.join("\n");
+  }
+  generatePackagesSection(packageDescriptions) {
+    const lines = [];
+    lines.push("## Packages");
+    lines.push("");
+    for (const pkg of packageDescriptions) {
+      const name = pkg.name || path14.basename(pkg.path);
+      const desc = pkg.description ? ` - ${pkg.description}` : "";
+      lines.push(`- **\`${name}\`** (\`${pkg.path}\`)${desc}`);
+    }
+    return lines.join("\n");
+  }
+  /**
+   * Generate focused AGENTS.md content for a single monorepo package.
+   * Reads package.json from the package directory, runs ScriptAnalyzer,
+   * and generates a concise package-specific AGENTS.md.
+   */
+  async generatePackageContent(packagePath, rootAnalysis, existingContent) {
+    const scriptAnalyzer = new ScriptAnalyzer();
+    let pkgName = path14.basename(packagePath);
+    let pkgDescription;
+    let scripts = {};
+    try {
+      const pkgJsonPath = path14.join(packagePath, "package.json");
+      const raw2 = await fs13.readFile(pkgJsonPath, "utf-8");
+      const pkgJson = JSON.parse(raw2);
+      pkgName = pkgJson.name || pkgName;
+      pkgDescription = pkgJson.description;
+      scripts = scriptAnalyzer.analyze(pkgJson.scripts);
+    } catch {
+    }
+    const sections = [];
+    const sectionsGenerated = [];
+    const pm = rootAnalysis.packageManager || "npm";
+    const overviewLines = [`# ${pkgName}`];
+    if (pkgDescription) {
+      overviewLines.push("");
+      overviewLines.push(pkgDescription);
+    }
+    sections.push(overviewLines.join("\n"));
+    sectionsGenerated.push("Overview");
+    if (scripts.test) {
+      const testLines = ["## Testing", ""];
+      if (scripts.test.framework) {
+        testLines.push(`**Framework:** ${scripts.test.framework}`);
+        testLines.push("");
+      }
+      if (scripts.test.command) {
+        testLines.push("**Run tests:**");
+        testLines.push("```bash");
+        testLines.push(scripts.test.command);
+        testLines.push("```");
+      }
+      sections.push(testLines.join("\n"));
+      sectionsGenerated.push("Testing");
+    }
+    if (scripts.build?.command) {
+      const buildLines = ["## Build", ""];
+      buildLines.push("```bash");
+      buildLines.push(scripts.build.command);
+      buildLines.push("```");
+      sections.push(buildLines.join("\n"));
+      sectionsGenerated.push("Build");
+    }
+    if (scripts.dev?.command) {
+      const devLines = ["## Development", ""];
+      devLines.push("```bash");
+      devLines.push(scripts.dev.command);
+      devLines.push("```");
+      sections.push(devLines.join("\n"));
+      sectionsGenerated.push("Development");
+    }
+    if (scripts.lint?.command) {
+      const lintLines = ["## Linting", ""];
+      const runPrefix = pm === "npm" ? "npm run" : pm;
+      lintLines.push("```bash");
+      lintLines.push(`${runPrefix} lint`);
+      lintLines.push("```");
+      sections.push(lintLines.join("\n"));
+      sectionsGenerated.push("Linting");
+    }
+    const generatedContent = sections.join("\n\n");
+    const contentHash = createHash3("sha256").update(generatedContent).digest("hex").substring(0, 16);
+    const hashComment = `<!-- content-hash:${contentHash} -->`;
+    const wrappedContent = `${MARKER_START}
+${hashComment}
+${generatedContent}
+${MARKER_END}`;
+    if (existingContent) {
+      const startIdx = existingContent.indexOf(MARKER_START);
+      const endIdx = existingContent.indexOf(MARKER_END);
+      if (startIdx !== -1 && endIdx !== -1) {
+        const existingHash = existingContent.match(/<!-- content-hash:([a-f0-9]+) -->/)?.[1];
+        const contentChanged = existingHash !== contentHash;
+        const before = existingContent.substring(0, startIdx);
+        const after = existingContent.substring(endIdx + MARKER_END.length);
+        return {
+          content: contentChanged ? before + wrappedContent + after : existingContent,
+          isUpdate: true,
+          contentChanged,
+          sectionsGenerated
+        };
+      }
+      return {
+        content: existingContent + "\n\n" + wrappedContent,
+        isUpdate: false,
+        contentChanged: true,
+        sectionsGenerated
+      };
+    }
+    return {
+      content: wrappedContent,
+      isUpdate: false,
+      contentChanged: true,
+      sectionsGenerated
+    };
+  }
+  generateLintingCodeStyle(analysis) {
+    const lines = [];
+    lines.push("## Linting & Code Style");
+    lines.push("");
+    const tool = analysis.linting?.tool || analysis.scripts?.lint?.tool || "unknown";
+    lines.push(`**Linter:** ${tool}`);
+    if (analysis.scripts?.lint?.command) {
+      const pm = analysis.packageManager || "npm";
+      const runPrefix = pm === "npm" ? "npm run" : pm;
+      lines.push("");
+      lines.push("**Run lint:**");
+      lines.push("```bash");
+      lines.push(`${runPrefix} lint`);
+      lines.push("```");
+    }
+    if (analysis.linting?.plugins && analysis.linting.plugins.length > 0) {
+      lines.push("");
+      lines.push(`**Plugins:** ${analysis.linting.plugins.join(", ")}`);
+    }
+    return lines.join("\n");
+  }
+};
+
 // packages/tiny-brain-core/src/services/analysis/analysis-service.ts
-import { readFile as readFile7 } from "fs/promises";
+import { readFile as readFile7, writeFile } from "fs/promises";
 import { join as join9 } from "path";
 var AnalysisService = class {
   constructor(repoPath, options = {}) {
@@ -22578,9 +22950,22 @@ var AnalysisService = class {
       const configPath = join9(this.repoPath, ".tiny-brain", "config.json");
       const content = await readFile7(configPath, "utf-8");
       const config = JSON.parse(content);
-      return config.repo?.enableAgenticCoding ?? false;
+      return config.preferences?.repo?.enableAgenticCoding ?? false;
     } catch {
       return false;
+    }
+  }
+  /**
+   * Read manageAgentsMd preference from repo config (defaults to true)
+   */
+  async isManageAgentsMdEnabled() {
+    try {
+      const configPath = join9(this.repoPath, ".tiny-brain", "config.json");
+      const content = await readFile7(configPath, "utf-8");
+      const config = JSON.parse(content);
+      return config.preferences?.repo?.manageAgentsMd ?? true;
+    } catch {
+      return true;
     }
   }
   /**
@@ -22639,6 +23024,12 @@ var AnalysisService = class {
       this.emitProgress("analysis:syncing-agents", "Syncing tech agents");
       const enableAgentic = await this.isAgenticCodingEnabled();
       await this.techContextService.syncAgents(enableAgentic);
+      let agentsMdStatus;
+      const manageAgentsMd = await this.isManageAgentsMdEnabled();
+      if (manageAgentsMd) {
+        this.emitProgress("analysis:generating-agents-md", "Generating AGENTS.md");
+        agentsMdStatus = await this.generateAgentsMd(analysis);
+      }
       let changes;
       if (!isFirstAnalysis && stackChanged && existingAnalysis) {
         const previousStack = existingAnalysis.stack;
@@ -22662,7 +23053,8 @@ var AnalysisService = class {
         isFirstAnalysis,
         enableAgenticCoding: enableAgentic,
         changes,
-        writtenTechContexts
+        writtenTechContexts,
+        agentsMdStatus
       };
       this.emitProgress("analysis:complete", "Analysis complete", {
         isFirstAnalysis,
@@ -22704,11 +23096,42 @@ var AnalysisService = class {
       return [];
     }
   }
+  /**
+   * Generate AGENTS.md file in the repository root
+   */
+  async generateAgentsMd(analysis) {
+    const agentsMdService = new AgentsMdService(this.repoPath);
+    const agentsMdPath = join9(this.repoPath, "AGENTS.md");
+    let existingContent;
+    try {
+      existingContent = await readFile7(agentsMdPath, "utf-8");
+    } catch {
+    }
+    const readmeExcerpt = await agentsMdService.extractReadmeExcerpt();
+    const result = await agentsMdService.generateContent({
+      analysis,
+      readmeExcerpt,
+      repoPath: this.repoPath,
+      existingContent
+    });
+    if (!existingContent) {
+      await writeFile(agentsMdPath, result.content, "utf-8");
+      this.logger?.info("Created AGENTS.md");
+      return "created";
+    }
+    if (!result.contentChanged) {
+      this.logger?.info("AGENTS.md is up to date");
+      return "up-to-date";
+    }
+    await writeFile(agentsMdPath, result.content, "utf-8");
+    this.logger?.info("Updated AGENTS.md");
+    return "updated";
+  }
 };
 
 // packages/tiny-brain-core/src/services/analysis/config-health-service.ts
-import { promises as fs13 } from "fs";
-import path14 from "path";
+import { promises as fs14 } from "fs";
+import path15 from "path";
 var HOOK_SIGNATURE = "Installed by: tiny-brain";
 var REQUIRED_PERMISSIONS = [
   "Write(.tiny-brain/**)",
@@ -22724,20 +23147,20 @@ var ConfigHealthService = class {
   settingsPath;
   constructor(repoPath) {
     this.repoPath = repoPath;
-    this.gitDir = path14.join(repoPath, ".git");
-    this.hooksDir = path14.join(this.gitDir, "hooks");
-    this.claudeMdPath = path14.join(repoPath, "CLAUDE.md");
-    this.settingsPath = path14.join(repoPath, ".claude", "settings.json");
+    this.gitDir = path15.join(repoPath, ".git");
+    this.hooksDir = path15.join(this.gitDir, "hooks");
+    this.claudeMdPath = path15.join(repoPath, "CLAUDE.md");
+    this.settingsPath = path15.join(repoPath, ".claude", "settings.json");
   }
   /**
    * Check status of a single git hook
    */
   async checkHook(hookName) {
-    const hookPath = path14.join(this.hooksDir, hookName);
+    const hookPath = path15.join(this.hooksDir, hookName);
     try {
-      const stats = await fs13.stat(hookPath);
+      const stats = await fs14.stat(hookPath);
       const isExecutable = (stats.mode & 64) !== 0;
-      const content = await fs13.readFile(hookPath, "utf-8");
+      const content = await fs14.readFile(hookPath, "utf-8");
       const isSigned = content.includes(HOOK_SIGNATURE);
       return {
         name: hookName,
@@ -22779,7 +23202,7 @@ var ConfigHealthService = class {
    */
   async checkContextBlock() {
     try {
-      const content = await fs13.readFile(this.claudeMdPath, "utf-8");
+      const content = await fs14.readFile(this.claudeMdPath, "utf-8");
       const hasStartMarker = content.includes(CONTEXT_START_MARKER);
       const hasEndMarker = content.includes(CONTEXT_END_MARKER);
       const present = hasStartMarker && hasEndMarker;
@@ -22830,7 +23253,7 @@ var ConfigHealthService = class {
    */
   async checkSkillPermissions() {
     try {
-      const content = await fs13.readFile(this.settingsPath, "utf-8");
+      const content = await fs14.readFile(this.settingsPath, "utf-8");
       const settings = JSON.parse(content);
       const allowedPermissions = settings.permissions?.allow || [];
       const missing = REQUIRED_PERMISSIONS.filter(
@@ -22903,7 +23326,7 @@ var ConfigHealthService = class {
    */
   async directoryExists(relativePath) {
     try {
-      const stats = await fs13.stat(path14.join(this.repoPath, relativePath));
+      const stats = await fs14.stat(path15.join(this.repoPath, relativePath));
       return stats.isDirectory();
     } catch {
       return false;
@@ -22914,8 +23337,8 @@ var ConfigHealthService = class {
    */
   async getConfigFlags() {
     try {
-      const configPath = path14.join(this.repoPath, ".tiny-brain", "config.json");
-      const content = await fs13.readFile(configPath, "utf-8");
+      const configPath = path15.join(this.repoPath, ".tiny-brain", "config.json");
+      const content = await fs14.readFile(configPath, "utf-8");
       const config = JSON.parse(content);
       return {
         enableSDD: config.repo?.enableSDD ?? true,
@@ -22963,11 +23386,6 @@ var ConfigHealthService = class {
     };
   }
 };
-
-// packages/tiny-brain-core/src/services/analysis/agents-md-service.ts
-import { promises as fs14 } from "fs";
-import { createHash as createHash3 } from "crypto";
-import path15 from "path";
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
 import * as fs15 from "fs/promises";
@@ -27682,6 +28100,10 @@ function getEnhancedPath() {
   ];
   return [...extra, existing].join(":");
 }
+function buildSubprocessEnv() {
+  const { CLAUDECODE: _, ...rest } = process.env;
+  return { ...rest, PATH: getEnhancedPath() };
+}
 var DEFAULT_MODEL = "claude-sonnet-4-20250514";
 var DEFAULT_TIMEOUT_MS = 6e5;
 var KILL_GRACE_MS = 5e3;
@@ -27702,37 +28124,65 @@ var ClaudeCliClient = class {
       "stream-json",
       "--verbose",
       "--model",
-      model,
-      "--cwd",
-      this.config.cwd
+      model
     ];
     return new Promise((resolve3) => {
       let resolved = false;
-      const finish = () => {
+      let terminalCallbackInvoked = false;
+      const pendingCallbacks = [];
+      const stderrChunks = [];
+      const finish = async () => {
         if (!resolved) {
           resolved = true;
+          if (!terminalCallbackInvoked) {
+            const stderr = stderrChunks.join("").trim();
+            const message = stderr ? `Claude CLI error: ${stderr}` : "Claude CLI exited without producing any output";
+            trackCallback(wrappedCallbacks.onError(new Error(message)));
+          }
+          await Promise.all(pendingCallbacks);
           this.cleanup();
           resolve3();
+        }
+      };
+      const trackCallback = (result) => {
+        if (result && typeof result.then === "function") {
+          pendingCallbacks.push(result);
+        }
+      };
+      const wrappedCallbacks = {
+        ...callbacks,
+        onComplete: (...args2) => {
+          terminalCallbackInvoked = true;
+          return callbacks.onComplete(...args2);
+        },
+        onError: (...args2) => {
+          terminalCallbackInvoked = true;
+          return callbacks.onError(...args2);
         }
       };
       const proc2 = spawn2("claude", args, {
         cwd: this.config.cwd,
         stdio: ["ignore", "pipe", "pipe"],
         timeout: timeoutMs,
-        env: { ...process.env, PATH: getEnhancedPath() }
+        env: buildSubprocessEnv()
       });
       this.process = proc2;
+      if (proc2.stderr) {
+        proc2.stderr.on("data", (chunk2) => {
+          stderrChunks.push(chunk2.toString());
+        });
+      }
       proc2.on("error", (err) => {
         if (err.code === "ENOENT") {
-          callbacks.onError(new Error("Claude CLI not found. Install it with: npm install -g @anthropic-ai/claude-code"));
+          trackCallback(wrappedCallbacks.onError(new Error("Claude CLI not found. Install it with: npm install -g @anthropic-ai/claude-code")));
         } else {
-          callbacks.onError(err);
+          trackCallback(wrappedCallbacks.onError(err));
         }
-        finish();
+        void finish();
       });
       if (!proc2.stdout) {
-        callbacks.onError(new Error("Failed to create CLI subprocess stdout"));
-        finish();
+        trackCallback(wrappedCallbacks.onError(new Error("Failed to create CLI subprocess stdout")));
+        void finish();
         return;
       }
       const rl = createInterface({ input: proc2.stdout });
@@ -27743,10 +28193,10 @@ var ClaudeCliClient = class {
         } catch {
           return;
         }
-        this.handleEvent(event, callbacks);
+        trackCallback(this.handleEvent(event, wrappedCallbacks));
       });
       rl.on("close", () => {
-        finish();
+        void finish();
       });
     });
   }
@@ -27762,44 +28212,53 @@ var ClaudeCliClient = class {
   handleEvent(event, callbacks) {
     switch (event.type) {
       case "assistant":
-        this.handleAssistantEvent(event, callbacks);
-        break;
+        return this.handleAssistantEvent(event, callbacks);
       case "user":
-        this.handleUserEvent(event, callbacks);
-        break;
+        return this.handleUserEvent(event, callbacks);
       case "result":
-        this.handleResultEvent(event, callbacks);
-        break;
+        return this.handleResultEvent(event, callbacks);
     }
   }
   handleAssistantEvent(event, callbacks) {
     const content = event.message?.content;
     if (!content) return;
+    const results = [];
     for (const block of content) {
       if (block.type === "text" && block.text) {
-        callbacks.onText(block.text);
+        results.push(callbacks.onText(block.text));
       } else if (block.type === "tool_use" && block.name) {
-        callbacks.onToolUse(block.name, block.input);
+        results.push(callbacks.onToolUse(block.name, block.input));
       }
+    }
+    const promises2 = results.filter((r) => r != null && typeof r.then === "function");
+    if (promises2.length > 0) {
+      return Promise.all(promises2).then(() => {
+      });
     }
   }
   handleUserEvent(event, callbacks) {
     const content = event.message?.content;
     if (!content) return;
+    const results = [];
     for (const block of content) {
       if (block.type === "tool_result" && block.tool_use_id) {
-        callbacks.onToolResult(block.tool_use_id, {
+        results.push(callbacks.onToolResult(block.tool_use_id, {
           success: true,
           result: block.content ?? ""
-        });
+        }));
       }
+    }
+    const promises2 = results.filter((r) => r != null && typeof r.then === "function");
+    if (promises2.length > 0) {
+      return Promise.all(promises2).then(() => {
+      });
     }
   }
   handleResultEvent(event, callbacks) {
     if (event.subtype === "success") {
-      callbacks.onComplete();
+      return callbacks.onComplete();
     } else {
-      callbacks.onError(new Error(event.error ?? `CLI error: ${event.subtype}`));
+      return callbacks.onError(new Error(event.error ?? `CLI error: ${event.subtype}`));
     }
   }
   cleanup() {
