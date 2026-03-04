@@ -5,7 +5,7 @@ version: 1.0.0
 status: not_started
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-author: Your Name or Claude Code
+author: (auto-populated from git config on sync)
 ---
 
 # [PRD Title]

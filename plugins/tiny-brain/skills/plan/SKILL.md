@@ -2,7 +2,7 @@
 name: plan
 version: 1.0.0
 description: Create a new PRD (Product Requirements Document). Use when user wants to plan a new feature, product, or initiative.
-allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*)
+allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # PRD Creation Skill
@@ -122,7 +122,16 @@ Progress syncing happens **automatically** when you:
 
 **No manual action required** - just write your markdown files and the sync happens automatically.
 
-### Step 6: Confirm Creation
+### Step 6: Commit PRD Files
+
+After creating and syncing, commit the PRD files so they're tracked in git:
+
+```bash
+git add docs/prd/{prd-id}/ .tiny-brain/progress/{prd-id}.json
+git commit -m "chore: add PRD {prd-id}"
+```
+
+### Step 7: Confirm Creation
 
 Tell the user:
 > "I've created PRD '{title}' with {N} features at `docs/prd/{prd-id}/`"

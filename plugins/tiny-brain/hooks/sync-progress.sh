@@ -24,7 +24,7 @@ fi
 if [[ "$FILE_PATH" =~ \.tiny-brain/fixes/.*\.md$ ]]; then
   echo ""
   echo "🧠 Syncing fix progress: $(basename "$FILE_PATH")"
-  npx tiny-brain sync-file "$FILE_PATH" || true
+  npx tiny-brain sync-progress "$FILE_PATH" || true
   exit 0
 fi
 
@@ -32,7 +32,7 @@ fi
 if [[ "$FILE_PATH" =~ docs/prd/.*\.md$ ]]; then
   echo ""
   echo "🧠 Syncing PRD progress: $(basename "$FILE_PATH")"
-  npx tiny-brain sync-file "$FILE_PATH" || true
+  npx tiny-brain sync-progress "$FILE_PATH" || true
   exit 0
 fi
 

@@ -2,7 +2,7 @@
 name: fix
 version: 1.0.0
 description: Create a fix document for bug tracking. Use when user reports a bug or wants to track a fix with full test plan.
-allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*)
+allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # Fix Creation Skill
@@ -147,7 +147,16 @@ npx tiny-brain sync-file .tiny-brain/fixes/{fix-id}.md
 
 This updates `.tiny-brain/fixes/progress.json` with the fix tasks.
 
-### Step 8: Confirm and Offer Implementation
+### Step 8: Commit Fix Document
+
+After creating and syncing, commit the fix document so it's tracked in git:
+
+```bash
+git add .tiny-brain/fixes/{fix-id}.md .tiny-brain/fixes/progress.json
+git commit -m "chore: add fix document for {fix-id}"
+```
+
+### Step 9: Confirm and Offer Implementation
 
 Tell the user:
 > "I've created fix document '{title}' at `.tiny-brain/fixes/{fix-id}.md` with {N} tasks."
@@ -241,7 +250,7 @@ All tasks in the commit get the same commit SHA in progress tracking.
 ### Tracking
 
 Commits with `Fix:` and `Task:` headers are automatically tracked in `.tiny-brain/fixes/progress.json`:
-- `test:` commits update `testCommitSha` and set status to `tested`
+- `test:` commits update `testCommitSha` and set status to `in_progress`
 - `fix:` commits update `commitSha` and set status to `completed`
 - `refactor:` commits update `refactorCommitSha`
 
@@ -251,8 +260,8 @@ When updating `.tiny-brain/fixes/progress.json` manually, use these statuses:
 
 | Status | When to Use | Requirements |
 |--------|-------------|--------------|
-| `defined` | Task created but not started | None |
-| `tested` | Tests written (RED phase) | `testCommitSha` required |
+| `not_started` | Task created but not started | None |
+| `in_progress` | Work has begun (tests written or implementation underway) | None |
 | `completed` | Implementation done (GREEN phase) | `commitSha` required |
 | `superseded` | Task no longer needed (work done elsewhere or obsolete) | No commit required |
 

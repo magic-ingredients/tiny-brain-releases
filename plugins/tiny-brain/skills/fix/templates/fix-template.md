@@ -63,8 +63,7 @@ resolved: null
 ## Tasks
 
 ### 1. Write failing test
-status: pending
-commitSha: null
+status: not_started
 
 Add test that reproduces the bug.
 
@@ -76,8 +75,7 @@ Add test that reproduces the bug.
 - Test should pass after fix
 
 ### 2. Implement fix
-status: pending
-commitSha: null
+status: not_started
 
 Fix the root cause.
 
@@ -89,8 +87,7 @@ Fix the root cause.
 - Ensure backward compatibility
 
 ### 3. Verify regression tests
-status: pending
-commitSha: null
+status: not_started
 
 Run full test suite.
 

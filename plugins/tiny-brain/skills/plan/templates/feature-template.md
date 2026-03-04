@@ -3,7 +3,7 @@ id: feature-id
 prd_id: parent-prd-id
 number: 1
 title: Feature Title
-status: defined
+status: not_started
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
@@ -28,6 +28,8 @@ updated: YYYY-MM-DD
 [List all implementation tasks. Each task should be a discrete unit of work that can be completed with a single commit (or small set of commits for TDD: test/impl/refactor). Tasks will automatically track commit SHAs when using git hooks with conventional commit messages.]
 
 ### 1. Task Name
+status: not_started
+
 [Brief description of what needs to be done]
 
 **Files to modify/create:**
@@ -40,6 +42,8 @@ updated: YYYY-MM-DD
 - Change 3: [Description]
 
 ### 2. Task Name
+status: not_started
+
 [Brief description of what needs to be done]
 
 **Files to modify/create:**
@@ -50,6 +54,7 @@ updated: YYYY-MM-DD
 - Change 2: [Description]
 
 [Add more tasks as needed. Each task will track:
+- status: not_started | in_progress | completed | superseded
 - testCommitSha: When you commit with "test: ..." prefix
 - commitSha: When you commit with "feat: ..." prefix
 - refactorCommitSha: When you commit with "refactor: ..." prefix]
