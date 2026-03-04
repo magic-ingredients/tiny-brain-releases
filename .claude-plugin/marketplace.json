@@ -10,7 +10,7 @@
       "name": "tiny-brain",
       "source": "./plugins/tiny-brain",
       "description": "AI-powered development workflows with TDD enforcement, planning, quality tracking, and 7 bundled agents",
-      "version": "0.21.0",
+      "version": "0.21.1",
       "keywords": [
         "tdd",
         "planning",

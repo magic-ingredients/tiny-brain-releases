@@ -37,6 +37,10 @@ resolved: null
 
 ## Root Cause Analysis
 
+<!-- IMPORTANT: Do NOT use "### N." numbered headings outside the ## Tasks section.
+     sync-file parses "### N. Title" as task definitions. Using them here will
+     create duplicate task IDs. Use **bold text** or unnumbered ### headings instead. -->
+
 [Explain why this bug occurs. Be specific about the code path and logic error.]
 
 ### Affected Files

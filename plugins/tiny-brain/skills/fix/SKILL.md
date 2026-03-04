@@ -64,6 +64,8 @@ In the fix document, clearly explain:
 3. What the fix approach is
 4. What tests will validate the fix
 
+**IMPORTANT:** Do NOT use `### N.` numbered headings (e.g., `### 1. Some heading`) outside the `## Tasks` section. The sync-file parser treats `### N. Title` as task definitions — using them in Root Cause Analysis or elsewhere will create duplicate task IDs. Use **bold text** or unnumbered `###` headings instead.
+
 ### Step 5: Identify and Document Test Plan
 
 **IMPORTANT:** Before documenting the test plan, you must actively analyze the codebase to identify relevant tests. Do NOT guess - read the actual test files.

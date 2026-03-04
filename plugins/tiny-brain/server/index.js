@@ -31186,6 +31186,26 @@ var init_planning_service = __esm({
         return plan;
       }
       /**
+       * Read fixes progress from .tiny-brain/fixes/progress.json without rewriting it.
+       * Use this for read-only operations (e.g. dashboard GET endpoints).
+       *
+       * @param repoPath - Path to repository root
+       * @returns FixesProgress object, or empty if file doesn't exist
+       */
+      async getFixesProgress(repoPath) {
+        const progressPath = path2.join(repoPath, ".tiny-brain", "fixes", "progress.json");
+        try {
+          const content = await fs.readFile(progressPath, "utf-8");
+          const parsed = JSON.parse(content);
+          if (parsed && Array.isArray(parsed.fixes)) {
+            return parsed;
+          }
+          return { fixes: [], lastSynced: "" };
+        } catch {
+          return { fixes: [], lastSynced: "" };
+        }
+      }
+      /**
        * Sync fixes from markdown files to .tiny-brain/fixes/progress.json
        * Reads all fix documents, extracts frontmatter and tasks, and generates progress tracking
        *
@@ -38161,7 +38181,7 @@ var init_quality_service = __esm({
         for (const [, pattern] of patterns) {
           const count = pattern.files.length;
           lines.push(`### ${taskNum}. Fix: ${pattern.message}`);
-          lines.push("status: pending");
+          lines.push("status: not_started");
           if (count > 1) {
             lines.push(`- **Instances:** ${count}`);
             const maxFiles = 5;
@@ -66292,23 +66312,15 @@ function createRepoRoutes(bridge, sse) {
       }
       const plans = await bridge.planning.listPlans({ repoPath: repo.path });
       if (repo.worktrees?.length) {
-        const planIndex = /* @__PURE__ */ new Map();
-        plans.forEach((p, i) => planIndex.set(p.id, i));
+        const planIds = /* @__PURE__ */ new Set();
+        plans.forEach((p) => planIds.add(p.id));
         for (const wt of repo.worktrees) {
           try {
             const wtPlans = await bridge.planning.listPlans({ repoPath: wt.path });
             for (const wp of wtPlans) {
-              const existingIdx = planIndex.get(wp.id);
-              if (existingIdx === void 0) {
-                planIndex.set(wp.id, plans.length);
+              if (!planIds.has(wp.id)) {
+                planIds.add(wp.id);
                 plans.push({ ...wp, sourceWorktree: { name: wt.name, branch: wt.branch } });
-              } else {
-                const existing = plans[existingIdx];
-                const existingTime = existing.lastUpdated || "";
-                const wtTime = wp.lastUpdated || "";
-                if (wtTime > existingTime) {
-                  plans[existingIdx] = { ...wp, sourceWorktree: { name: wt.name, branch: wt.branch } };
-                }
               }
             }
           } catch {
@@ -66329,7 +66341,7 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const fixesProgress = await bridge.planning.syncFixes(repo.path);
+      const fixesProgress = await bridge.planning.getFixesProgress(repo.path);
       const fix = fixesProgress.fixes.find((f) => f.id === fixId);
       if (!fix) {
         return c.json({ error: "Fix not found" }, 404);
@@ -66353,29 +66365,18 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const fixesProgress = await bridge.planning.syncFixes(repo.path);
+      const fixesProgress = await bridge.planning.getFixesProgress(repo.path);
       const fixes = [...fixesProgress.fixes];
       if (repo.worktrees?.length) {
-        const fixIndex = /* @__PURE__ */ new Map();
-        fixes.forEach((f, i) => fixIndex.set(f.id, i));
-        const fixSyncTime = /* @__PURE__ */ new Map();
-        fixes.forEach((f) => fixSyncTime.set(f.id, fixesProgress.lastSynced || ""));
+        const fixIds = /* @__PURE__ */ new Set();
+        fixes.forEach((f) => fixIds.add(f.id));
         for (const wt of repo.worktrees) {
           try {
-            const wtFixesProgress = await bridge.planning.syncFixes(wt.path);
+            const wtFixesProgress = await bridge.planning.getFixesProgress(wt.path);
             for (const wf of wtFixesProgress.fixes) {
-              const existingIdx = fixIndex.get(wf.id);
-              if (existingIdx === void 0) {
-                fixIndex.set(wf.id, fixes.length);
-                fixSyncTime.set(wf.id, wtFixesProgress.lastSynced || "");
+              if (!fixIds.has(wf.id)) {
+                fixIds.add(wf.id);
                 fixes.push({ ...wf, sourceWorktree: { name: wt.name, branch: wt.branch } });
-              } else {
-                const existingTime = fixSyncTime.get(wf.id) || "";
-                const wtTime = wtFixesProgress.lastSynced || "";
-                if (wtTime > existingTime) {
-                  fixes[existingIdx] = { ...wf, sourceWorktree: { name: wt.name, branch: wt.branch } };
-                  fixSyncTime.set(wf.id, wtTime);
-                }
               }
             }
           } catch {
@@ -67865,10 +67866,10 @@ var FileWatcher = class {
   repoWatchers = /* @__PURE__ */ new Map();
   // Watcher for repos.json to detect new repo registrations
   reposConfigWatcher = null;
-  // Cache for plans per repo: Map<repoId, Map<prdId, plan>>
-  plansCache = /* @__PURE__ */ new Map();
-  // Cache for fixes per repo: Map<repoId, fixes>
-  fixesCache = /* @__PURE__ */ new Map();
+  // Snapshot for plans per repo: Map<repoId, Map<prdId, stringifiedPlan>>
+  plansSnapshot = /* @__PURE__ */ new Map();
+  // Snapshot for fixes per repo: Map<repoId, Map<fixId, stringifiedFix>>
+  fixesSnapshot = /* @__PURE__ */ new Map();
   // Cache for quality runs per repo: Map<repoId, Map<runId, run>>
   qualityCache = /* @__PURE__ */ new Map();
   // RepoConfigService instance
@@ -67913,11 +67914,28 @@ var FileWatcher = class {
       repoId,
       repoPath
     };
-    if (!this.plansCache.has(repoId)) {
-      this.plansCache.set(repoId, /* @__PURE__ */ new Map());
+    if (!this.plansSnapshot.has(repoId)) {
+      this.plansSnapshot.set(repoId, /* @__PURE__ */ new Map());
     }
     if (!this.qualityCache.has(repoId)) {
       this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
+    }
+    if (!this.fixesSnapshot.has(repoId)) {
+      const fixesPath = path27.join(repoPath, ".tiny-brain", "fixes", "progress.json");
+      try {
+        const content = await fs25.promises.readFile(fixesPath, "utf-8");
+        const parsed = JSON.parse(content);
+        if (parsed && Array.isArray(parsed.fixes)) {
+          const snapshot = /* @__PURE__ */ new Map();
+          for (const fix of parsed.fixes) {
+            snapshot.set(fix.id, JSON.stringify(fix));
+          }
+          this.fixesSnapshot.set(repoId, snapshot);
+          this.context.logger.info(`[FileWatcher] Pre-warmed fixes snapshot for repo ${repoId}`);
+        }
+      } catch {
+        this.context.logger.debug(`[FileWatcher] No fixes/progress.json to pre-warm for ${repoId}`);
+      }
     }
     const tinyBrainPath = path27.join(repoPath, ".tiny-brain");
     if (!fs25.existsSync(tinyBrainPath)) {
@@ -68190,8 +68208,8 @@ var FileWatcher = class {
       this.reposConfigWatcher.stop();
       this.reposConfigWatcher = null;
     }
-    this.plansCache.clear();
-    this.fixesCache.clear();
+    this.plansSnapshot.clear();
+    this.fixesSnapshot.clear();
     this.qualityCache.clear();
     this.running = false;
   }
@@ -68223,214 +68241,62 @@ var FileWatcher = class {
   async handleProgressChange(repoId, prdId, change, worktree) {
     try {
       this.context.logger.info(`[FileWatcher] handleProgressChange called for PRD: ${prdId} in repo: ${repoId}`);
-      let repoCache = this.plansCache.get(repoId);
-      if (!repoCache) {
-        repoCache = /* @__PURE__ */ new Map();
-        this.plansCache.set(repoId, repoCache);
+      let repoSnapshot = this.plansSnapshot.get(repoId);
+      if (!repoSnapshot) {
+        repoSnapshot = /* @__PURE__ */ new Map();
+        this.plansSnapshot.set(repoId, repoSnapshot);
       }
       if (change.type === "deleted") {
-        repoCache.delete(prdId);
-        this.context.logger.info(`[FileWatcher] Broadcasting SSE event: removed for PRD: ${prdId}`);
-        await this.sse.broadcast("plan-change", {
-          type: "removed",
-          repoId,
-          prdId,
-          ...worktree ? { worktree } : {},
-          plan: null
-        });
+        const hadPlan = repoSnapshot.has(prdId);
+        repoSnapshot.delete(prdId);
+        if (hadPlan) {
+          await this.sse.broadcast("invalidate", {
+            resource: "plans",
+            repoId,
+            ...worktree ? { worktree } : {},
+            entities: [],
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          });
+        }
         return;
       }
       let newPlan;
       try {
-        this.context.logger.debug(`[FileWatcher] Reading file: ${change.filePath}`);
         const content = await fs25.promises.readFile(change.filePath, "utf-8");
         newPlan = JSON.parse(content);
       } catch (error2) {
         this.context.logger.error(`Error reading progress file ${change.filePath}:`, error2);
         return;
       }
-      const oldPlan = repoCache.get(prdId);
-      const isNew = !oldPlan;
-      if (isNew) {
-        this.context.logger.info(`[FileWatcher] New PRD detected: ${prdId} in repo: ${repoId}`);
-        repoCache.set(prdId, newPlan);
-        await this.sse.broadcast("plan-change", {
-          eventType: "prd:created",
+      const newJson = JSON.stringify(newPlan);
+      const oldJson = repoSnapshot.get(prdId);
+      repoSnapshot.set(prdId, newJson);
+      if (!oldJson) {
+        await this.sse.broadcast("invalidate", {
+          resource: "plans",
           repoId,
-          prdId: newPlan.id || prdId,
-          prdPath: newPlan.prdDirPath || `docs/prd/${prdId}`,
           ...worktree ? { worktree } : {},
-          timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-          plan: newPlan
+          entities: [newPlan],
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
         });
-        this.context.logger.info(`[FileWatcher] \u2705 Broadcast prd:created for: ${prdId} in repo: ${repoId}`);
-        return;
-      }
-      const events = this.diffPlans(repoId, oldPlan, newPlan);
-      this.context.logger.info(`[FileWatcher] Detected ${events.length} granular changes in PRD: ${prdId}`);
-      repoCache.set(prdId, newPlan);
-      for (const event of events) {
-        this.context.logger.debug(`[FileWatcher] Broadcasting ${event.eventType} for PRD: ${prdId}`);
-        await this.sse.broadcast("plan-change", {
-          ...event,
-          ...worktree ? { worktree } : {}
+        this.context.logger.info(`[FileWatcher] \u2705 Broadcast invalidate (new plan) for: ${prdId} in repo: ${repoId}`);
+      } else if (oldJson !== newJson) {
+        await this.sse.broadcast("invalidate", {
+          resource: "plan",
+          repoId,
+          ...worktree ? { worktree } : {},
+          entities: [newPlan],
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
         });
+        this.context.logger.info(`[FileWatcher] \u2705 Broadcast invalidate (plan changed) for: ${prdId} in repo: ${repoId}`);
+      } else {
+        this.context.logger.info(`[FileWatcher] No changes detected for PRD: ${prdId} \u2014 skipping broadcast`);
       }
-      this.context.logger.info(`[FileWatcher] \u2705 Successfully broadcast ${events.length} events for PRD: ${prdId} in repo: ${repoId}`);
     } catch (error2) {
       this.context.logger.error("Error handling progress change:", error2);
     }
   }
-  /**
-   * Diff old and new plan to generate granular PRDChangeEvents
-   * Detects task and feature updates
-   */
-  diffPlans(repoId, oldPlan, newPlan) {
-    const events = [];
-    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-    const prdPath = newPlan.prdDirPath || `docs/prd/${newPlan.id}`;
-    const oldFeatures = oldPlan.features || [];
-    const newFeatures = newPlan.features || [];
-    for (const newFeature of newFeatures) {
-      const oldFeature = oldFeatures.find((f) => f.id === newFeature.id);
-      if (!oldFeature) {
-        const newTasks2 = newFeature.tasks || [];
-        events.push({
-          eventType: "prd:feature:added",
-          repoId,
-          prdId: newPlan.id,
-          prdPath,
-          timestamp: timestamp2,
-          feature: {
-            id: newFeature.id,
-            number: newFeature.number,
-            title: newFeature.title,
-            status: newFeature.status,
-            tasks: newTasks2.map((t) => ({
-              id: t.id,
-              description: t.description,
-              status: t.status
-            }))
-          }
-        });
-      }
-      if (oldFeature && oldFeature.status !== newFeature.status) {
-        events.push({
-          eventType: "prd:feature:updated",
-          repoId,
-          prdId: newPlan.id,
-          prdPath,
-          timestamp: timestamp2,
-          feature: {
-            id: newFeature.id,
-            number: newFeature.number,
-            title: newFeature.title,
-            status: newFeature.status
-          },
-          delta: {
-            statusChanged: true,
-            oldStatus: oldFeature.status,
-            newStatus: newFeature.status
-          }
-        });
-      }
-      const oldTasks = oldFeature?.tasks || [];
-      const newTasks = newFeature.tasks || [];
-      for (const newTask of newTasks) {
-        const oldTask = oldTasks.find((t) => t.id === newTask.id);
-        if (!oldTask) {
-          events.push({
-            eventType: "prd:feature:tasks:added",
-            repoId,
-            prdId: newPlan.id,
-            prdPath,
-            timestamp: timestamp2,
-            feature: {
-              id: newFeature.id,
-              number: newFeature.number,
-              title: newFeature.title,
-              status: newFeature.status
-            },
-            tasks: [{
-              id: newTask.id,
-              description: newTask.description,
-              status: newTask.status
-            }],
-            delta: {
-              tasksAdded: 1
-            }
-          });
-          continue;
-        }
-        const taskChanged = oldTask.status !== newTask.status || oldTask.commitSha !== newTask.commitSha || oldTask.testCommitSha !== newTask.testCommitSha || oldTask.refactorCommitSha !== newTask.refactorCommitSha || oldTask.currentPhase !== newTask.currentPhase;
-        if (taskChanged) {
-          if (oldTask.status !== "completed" && newTask.status === "completed") {
-            events.push({
-              eventType: "prd:feature:task:completed",
-              repoId,
-              prdId: newPlan.id,
-              prdPath,
-              timestamp: timestamp2,
-              feature: {
-                id: newFeature.id,
-                number: newFeature.number,
-                title: newFeature.title,
-                status: newFeature.status
-              },
-              task: {
-                id: newTask.id,
-                description: newTask.description,
-                status: newTask.status,
-                testCommitSha: newTask.testCommitSha,
-                commitSha: newTask.commitSha,
-                refactorCommitSha: newTask.refactorCommitSha,
-                testCommittedAt: newTask.testCommittedAt,
-                committedAt: newTask.committedAt,
-                refactorCommittedAt: newTask.refactorCommittedAt
-              },
-              delta: {
-                tasksCompleted: 1,
-                statusChanged: true,
-                oldStatus: oldTask.status,
-                newStatus: newTask.status
-              }
-            });
-          } else {
-            events.push({
-              eventType: "prd:feature:task:updated",
-              repoId,
-              prdId: newPlan.id,
-              prdPath,
-              timestamp: timestamp2,
-              feature: {
-                id: newFeature.id,
-                number: newFeature.number,
-                title: newFeature.title,
-                status: newFeature.status
-              },
-              task: {
-                id: newTask.id,
-                description: newTask.description,
-                status: newTask.status,
-                testCommitSha: newTask.testCommitSha,
-                commitSha: newTask.commitSha,
-                refactorCommitSha: newTask.refactorCommitSha,
-                testCommittedAt: newTask.testCommittedAt,
-                committedAt: newTask.committedAt,
-                refactorCommittedAt: newTask.refactorCommittedAt
-              },
-              delta: {
-                statusChanged: oldTask.status !== newTask.status,
-                oldStatus: oldTask.status,
-                newStatus: newTask.status
-              }
-            });
-          }
-        }
-      }
-    }
-    return events;
-  }
+  // diffPlans removed — replaced by entity-push invalidation in handleProgressChange
   /**
    * Handle changes to the fixes progress.json file
    */
@@ -68446,115 +68312,71 @@ var FileWatcher = class {
         return;
       }
       if (change.type === "deleted") {
-        this.fixesCache.delete(repoId);
-        await this.sse.broadcast("fix-change", {
-          eventType: "fixes:cleared",
+        this.fixesSnapshot.delete(repoId);
+        await this.sse.broadcast("invalidate", {
+          resource: "fixes",
           repoId,
           ...worktree ? { worktree } : {},
+          entities: [],
           timestamp: (/* @__PURE__ */ new Date()).toISOString()
         });
         return;
       }
-      let newFixes;
+      let newData;
       try {
         const content = await fs25.promises.readFile(change.filePath, "utf-8");
-        newFixes = JSON.parse(content);
+        newData = JSON.parse(content);
       } catch (error2) {
         this.context.logger.error(`Error reading fixes progress file ${change.filePath}:`, error2);
         return;
       }
-      const oldFixes = this.fixesCache.get(repoId);
-      this.fixesCache.set(repoId, newFixes);
-      const events = this.diffFixes(repoId, oldFixes, newFixes);
-      for (const event of events) {
-        this.context.logger.debug(`[FileWatcher] Broadcasting ${event.eventType} for fix: ${event.fixId}`);
-        await this.sse.broadcast("fix-change", {
-          ...event,
-          ...worktree ? { worktree } : {}
+      if (!newData || !Array.isArray(newData.fixes)) {
+        return;
+      }
+      const newFixes = newData.fixes;
+      const oldSnapshot = this.fixesSnapshot.get(repoId) || /* @__PURE__ */ new Map();
+      const newSnapshot = /* @__PURE__ */ new Map();
+      const changedEntities = [];
+      let listChanged = false;
+      for (const fix of newFixes) {
+        const newJson = JSON.stringify(fix);
+        newSnapshot.set(fix.id, newJson);
+        if (!oldSnapshot.has(fix.id)) {
+          listChanged = true;
+          changedEntities.push(fix);
+        } else if (oldSnapshot.get(fix.id) !== newJson) {
+          changedEntities.push(fix);
+        }
+      }
+      for (const id of oldSnapshot.keys()) {
+        if (!newSnapshot.has(id)) {
+          listChanged = true;
+        }
+      }
+      this.fixesSnapshot.set(repoId, newSnapshot);
+      if (listChanged) {
+        await this.sse.broadcast("invalidate", {
+          resource: "fixes",
+          repoId,
+          ...worktree ? { worktree } : {},
+          entities: newFixes,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        });
+      } else if (changedEntities.length > 0) {
+        await this.sse.broadcast("invalidate", {
+          resource: "fix",
+          repoId,
+          ...worktree ? { worktree } : {},
+          entities: changedEntities,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
         });
       }
-      this.context.logger.info(`[FileWatcher] \u2705 Successfully broadcast ${events.length} fix events for repo: ${repoId}`);
+      this.context.logger.info(`[FileWatcher] \u2705 Fixes invalidation: ${changedEntities.length} changed, listChanged=${listChanged} for repo: ${repoId}`);
     } catch (error2) {
       this.context.logger.error("Error handling fixes change:", error2);
     }
   }
-  /**
-   * Diff old and new fixes to generate granular events
-   */
-  diffFixes(repoId, oldData, newData) {
-    const events = [];
-    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-    const oldFixes = oldData?.fixes || [];
-    const newFixes = newData?.fixes || [];
-    for (const newFix of newFixes) {
-      const oldFix = oldFixes.find((f) => f.id === newFix.id);
-      if (!oldFix) {
-        events.push({
-          eventType: "fix:created",
-          repoId,
-          fixId: newFix.id,
-          timestamp: timestamp2,
-          fix: newFix
-        });
-        continue;
-      }
-      if (oldFix.status !== newFix.status) {
-        events.push({
-          eventType: "fix:updated",
-          repoId,
-          fixId: newFix.id,
-          timestamp: timestamp2,
-          fix: newFix,
-          delta: {
-            statusChanged: true,
-            oldStatus: oldFix.status,
-            newStatus: newFix.status
-          }
-        });
-      }
-      const oldTasks = oldFix.tasks || [];
-      const newTasks = newFix.tasks || [];
-      for (const newTask of newTasks) {
-        const oldTask = oldTasks.find((t) => t.id === newTask.id);
-        if (!oldTask) {
-          events.push({
-            eventType: "fix:task:added",
-            repoId,
-            fixId: newFix.id,
-            timestamp: timestamp2,
-            task: newTask
-          });
-          continue;
-        }
-        const taskChanged = oldTask.status !== newTask.status || oldTask.commitSha !== newTask.commitSha || oldTask.testCommitSha !== newTask.testCommitSha || oldTask.refactorCommitSha !== newTask.refactorCommitSha || oldTask.currentPhase !== newTask.currentPhase;
-        if (taskChanged) {
-          if (oldTask.status !== "completed" && newTask.status === "completed") {
-            events.push({
-              eventType: "fix:task:completed",
-              repoId,
-              fixId: newFix.id,
-              timestamp: timestamp2,
-              task: newTask
-            });
-          } else {
-            events.push({
-              eventType: "fix:task:updated",
-              repoId,
-              fixId: newFix.id,
-              timestamp: timestamp2,
-              task: newTask,
-              delta: {
-                statusChanged: oldTask.status !== newTask.status,
-                oldStatus: oldTask.status,
-                newStatus: newTask.status
-              }
-            });
-          }
-        }
-      }
-    }
-    return events;
-  }
+  // diffFixes removed — replaced by entity-push invalidation in handleFixesChange
   /**
    * Handle changes to quality run files in docs/quality/runs/
    */
