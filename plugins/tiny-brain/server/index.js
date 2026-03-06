@@ -19657,7 +19657,7 @@ async function applyBulkUpdates(input) {
     if (progressPercent === 0) {
       updatedPlan.status = "not_started";
     } else if (progressPercent === 100) {
-      updatedPlan.status = "complete";
+      updatedPlan.status = "completed";
     } else {
       updatedPlan.status = "in_progress";
     }
@@ -19743,7 +19743,6 @@ async function applyFeatureUpdate(plan, update, bulkChanges) {
           "committedAt",
           "refactorCommitSha",
           "refactorCommittedAt",
-          "currentPhase",
           "adversarialStartedAt",
           "adversarialCompletedAt",
           "adversarialRefactorStartedAt",
@@ -19756,6 +19755,12 @@ async function applyFeatureUpdate(plan, update, bulkChanges) {
           "mutantRefactorCompletedAt",
           "mutantRefactorCommitSha",
           "mutantRefactorCommittedAt",
+          "adversarialReviewSha",
+          "adversarialVerdict",
+          "mutantReviewSha",
+          "mutantVerdict",
+          "redCompletedAt",
+          "greenCompletedAt",
           "worktree"
         ];
         for (const field of taskCopyFields) {
@@ -20168,6 +20173,692 @@ ${testingStrategy}
 var init_feature_template = __esm({
   "packages/tiny-brain-core/src/modules/planning/feature-template.ts"() {
     "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/types/user-preferences.ts
+var DEFAULT_PREFERENCES;
+var init_user_preferences = __esm({
+  "packages/tiny-brain-core/src/types/user-preferences.ts"() {
+    "use strict";
+    DEFAULT_PREFERENCES = {
+      repo: {
+        autoArchive: true,
+        autoCommitProgress: false,
+        enableAgenticCoding: false,
+        enableSDD: true,
+        enableTDD: true,
+        combineRedGreenCommits: false,
+        enableAdversarial: true,
+        enableADR: true,
+        enableQuality: true,
+        manageAgentsMd: true,
+        directories: {
+          docs: "docs",
+          adr: "docs/adr",
+          prd: "docs/prd"
+        },
+        testPatterns: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/types/user-preferences.schema.ts
+var RepoConfigSchema, UserPreferencesSchema, DeepPartialRepoConfigSchema, PartialUserPreferencesSchema, PreferencesConfigSchema, PartialPreferencesConfigSchema;
+var init_user_preferences_schema = __esm({
+  "packages/tiny-brain-core/src/types/user-preferences.schema.ts"() {
+    "use strict";
+    init_zod();
+    RepoConfigSchema = external_exports.object({
+      /**
+       * Auto-archive completed PRDs and resolved fixes during sync
+       */
+      autoArchive: external_exports.boolean().default(true),
+      /**
+       * Auto-commit progress.json changes after task tracking
+       */
+      autoCommitProgress: external_exports.boolean().default(false),
+      /**
+       * Enable agentic coding mode (AI-driven development)
+       */
+      enableAgenticCoding: external_exports.boolean().default(false),
+      /**
+       * Enable Suggestion-Driven Development (SDD)
+       */
+      enableSDD: external_exports.boolean().default(true),
+      /**
+       * Enable Test-Driven Development (TDD)
+       */
+      enableTDD: external_exports.boolean().default(true),
+      /**
+       * Enable Architecture Decision Records (ADR)
+       */
+      enableADR: external_exports.boolean().default(true),
+      /**
+       * Enable Quality Analysis
+       */
+      enableQuality: external_exports.boolean().default(true),
+      /**
+       * Manage AGENTS.md file during analyse
+       */
+      manageAgentsMd: external_exports.boolean().default(true),
+      /**
+       * Directory configuration
+       */
+      directories: external_exports.object({
+        /**
+         * Documentation directory path
+         */
+        docs: external_exports.string().min(1).default("docs"),
+        /**
+         * ADR directory path
+         */
+        adr: external_exports.string().min(1).default("docs/adr"),
+        /**
+         * PRD directory path
+         */
+        prd: external_exports.string().min(1).default("docs/prd")
+      }).strict().default({
+        docs: "docs",
+        adr: "docs/adr",
+        prd: "docs/prd"
+      }),
+      /**
+       * Test file patterns for test detection
+       */
+      testPatterns: external_exports.array(external_exports.string()).default(["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"])
+    }).strict().default({
+      autoArchive: true,
+      autoCommitProgress: false,
+      enableAgenticCoding: false,
+      enableSDD: true,
+      enableTDD: true,
+      enableADR: true,
+      enableQuality: true,
+      manageAgentsMd: true,
+      directories: {
+        docs: "docs",
+        adr: "docs/adr",
+        prd: "docs/prd"
+      },
+      testPatterns: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
+    });
+    UserPreferencesSchema = external_exports.object({
+      /**
+       * Repository-level configuration (team decisions, overridable per-repo)
+       */
+      repo: RepoConfigSchema
+    }).strict();
+    DeepPartialRepoConfigSchema = external_exports.object({
+      autoArchive: external_exports.boolean().optional(),
+      autoCommitProgress: external_exports.boolean().optional(),
+      enableAgenticCoding: external_exports.boolean().optional(),
+      enableSDD: external_exports.boolean().optional(),
+      enableTDD: external_exports.boolean().optional(),
+      enableADR: external_exports.boolean().optional(),
+      enableQuality: external_exports.boolean().optional(),
+      manageAgentsMd: external_exports.boolean().optional(),
+      directories: external_exports.object({
+        docs: external_exports.string().min(1).optional(),
+        adr: external_exports.string().min(1).optional(),
+        prd: external_exports.string().min(1).optional()
+      }).optional(),
+      testPatterns: external_exports.array(external_exports.string()).optional()
+    }).strict();
+    PartialUserPreferencesSchema = external_exports.object({
+      repo: DeepPartialRepoConfigSchema.optional()
+    }).strict();
+    PreferencesConfigSchema = external_exports.object({
+      version: external_exports.string(),
+      preferences: UserPreferencesSchema
+    });
+    PartialPreferencesConfigSchema = external_exports.object({
+      version: external_exports.string(),
+      preferences: PartialUserPreferencesSchema
+    });
+  }
+});
+
+// packages/tiny-brain-core/src/services/config/config-service.ts
+import { readFile } from "fs/promises";
+import { join } from "path";
+var CONFIG_VERSION, PREFERENCES_CONFIG_PATH, REPO_CONFIG_PATH, PREFERENCE_KEYS, ConfigService;
+var init_config_service = __esm({
+  "packages/tiny-brain-core/src/services/config/config-service.ts"() {
+    "use strict";
+    init_user_preferences();
+    init_user_preferences_schema();
+    CONFIG_VERSION = "1.0.0";
+    PREFERENCES_CONFIG_PATH = "config/preferences";
+    REPO_CONFIG_PATH = ".tiny-brain/config.json";
+    PREFERENCE_KEYS = {
+      boolean: ["autoArchive", "autoCommitProgress", "enableAgenticCoding", "enableSDD", "enableTDD", "enableADR", "enableQuality", "manageAgentsMd"],
+      path: ["docsDirectory", "adrDirectory", "prdDirectory"],
+      array: ["testPatterns"]
+    };
+    ConfigService = class {
+      constructor(context) {
+        this.context = context;
+      }
+      /**
+       * Get all user preferences using three-tier resolution
+       * Priority: repo config > global config > defaults
+       */
+      async getPreferences() {
+        const repoPrefs = await this.loadRepoConfig();
+        const globalPrefs = await this.loadGlobalConfig();
+        return this.mergePreferences(repoPrefs, globalPrefs, DEFAULT_PREFERENCES);
+      }
+      /**
+       * Get preference sources for debugging and visibility
+       * Returns individual config sources and the merged result
+       */
+      async getPreferenceSources() {
+        const repo = await this.loadRepoConfig();
+        const global2 = await this.loadGlobalConfig();
+        const merged = this.mergePreferences(repo, global2, DEFAULT_PREFERENCES);
+        return {
+          repo,
+          global: global2,
+          defaults: DEFAULT_PREFERENCES,
+          merged
+        };
+      }
+      /**
+       * Get a specific preference value
+       */
+      async getPreference(key) {
+        const preferences = await this.getPreferences();
+        return preferences[key];
+      }
+      /**
+       * Set a specific preference value (saves to global config)
+       */
+      async setPreference(key, value) {
+        const config2 = await this.loadConfig();
+        config2.preferences[key] = value;
+        await this.saveConfig(config2);
+      }
+      /**
+       * Set a specific preference value to repository config
+       * Writes to [repo]/.tiny-brain/config.json
+       */
+      async setPreferenceToRepo(key, value) {
+        await this.saveRepoConfig({ [key]: value });
+      }
+      /**
+       * Reset all preferences to defaults
+       */
+      async resetPreferences() {
+        const config2 = this.createDefaultConfig();
+        await this.saveConfig(config2);
+      }
+      // ===================================================================
+      // Feature-Specific Preference Getters
+      // Type-safe convenience methods for accessing individual preferences
+      // ===================================================================
+      /**
+       * Check if automatic progress commit is enabled
+       */
+      async isAutoCommitProgressEnabled() {
+        const repo = await this.getPreference("repo");
+        return repo.autoCommitProgress;
+      }
+      /**
+       * Check if auto-archive is enabled for completed PRDs and resolved fixes
+       */
+      async isAutoArchiveEnabled() {
+        const repo = await this.getPreference("repo");
+        return repo.autoArchive;
+      }
+      /**
+       * Check if agentic coding mode is enabled
+       */
+      async isAgenticCodingEnabled() {
+        const repo = await this.getPreference("repo");
+        return repo.enableAgenticCoding;
+      }
+      /**
+       * Check if Suggestion-Driven Development is enabled
+       */
+      async isSDDEnabled() {
+        const repo = await this.getPreference("repo");
+        return repo.enableSDD;
+      }
+      /**
+       * Check if Test-Driven Development is enabled
+       */
+      async isTDDEnabled() {
+        const repo = await this.getPreference("repo");
+        return repo.enableTDD;
+      }
+      /**
+       * Check if Architecture Decision Records are enabled
+       */
+      async isADREnabled() {
+        const repo = await this.getPreference("repo");
+        return repo.enableADR;
+      }
+      /**
+       * Check if Quality Analysis is enabled
+       */
+      async isQualityEnabled() {
+        const repo = await this.getPreference("repo");
+        return repo.enableQuality;
+      }
+      /**
+       * Check if AGENTS.md management is enabled
+       */
+      async isManageAgentsMdEnabled() {
+        const repo = await this.getPreference("repo");
+        return repo.manageAgentsMd;
+      }
+      /**
+       * Get the configured documentation directory path
+       */
+      async getDocsDirectory() {
+        const repo = await this.getPreference("repo");
+        return repo.directories.docs;
+      }
+      /**
+       * Get the configured ADR directory path
+       */
+      async getADRDirectory() {
+        const repo = await this.getPreference("repo");
+        return repo.directories.adr;
+      }
+      /**
+       * Get the configured PRD directory path
+       */
+      async getPRDDirectory() {
+        const repo = await this.getPreference("repo");
+        return repo.directories.prd;
+      }
+      /**
+       * Get the configured test file patterns
+       */
+      async getTestPatterns() {
+        const repo = await this.getPreference("repo");
+        return repo.testPatterns;
+      }
+      // ===================================================================
+      // Flat Key Access Methods
+      // Used by CLI and MCP tools to access preferences with flat key names
+      // ===================================================================
+      /**
+       * Get all valid preference keys
+       * Used for validation and help text generation
+       */
+      getValidKeys() {
+        return [
+          ...PREFERENCE_KEYS.boolean,
+          ...PREFERENCE_KEYS.path,
+          ...PREFERENCE_KEYS.array
+        ];
+      }
+      /**
+       * Get a preference value by flat key name
+       * Maps flat keys (e.g., 'docsDirectory') to nested structure (e.g., repo.directories.docs)
+       */
+      async getPreferenceByKey(key) {
+        const validKeys = this.getValidKeys();
+        if (!validKeys.includes(key)) {
+          return {
+            isValid: false,
+            error: `Unknown preference key: ${key}. Valid keys: ${validKeys.join(", ")}`
+          };
+        }
+        const preferences = await this.getPreferences();
+        const repo = preferences.repo;
+        let value;
+        switch (key) {
+          case "autoArchive":
+            value = repo.autoArchive;
+            break;
+          case "autoCommitProgress":
+            value = repo.autoCommitProgress;
+            break;
+          case "enableAgenticCoding":
+            value = repo.enableAgenticCoding;
+            break;
+          case "enableSDD":
+            value = repo.enableSDD;
+            break;
+          case "enableTDD":
+            value = repo.enableTDD;
+            break;
+          case "enableADR":
+            value = repo.enableADR;
+            break;
+          case "enableQuality":
+            value = repo.enableQuality;
+            break;
+          case "manageAgentsMd":
+            value = repo.manageAgentsMd;
+            break;
+          case "docsDirectory":
+            value = repo.directories.docs;
+            break;
+          case "adrDirectory":
+            value = repo.directories.adr;
+            break;
+          case "prdDirectory":
+            value = repo.directories.prd;
+            break;
+          case "testPatterns":
+            value = repo.testPatterns;
+            break;
+          default:
+            return {
+              isValid: false,
+              error: `Unknown preference key: ${key}`
+            };
+        }
+        return { isValid: true, value };
+      }
+      /**
+       * Set a preference value by flat key name with validation
+       * Validates the value type and saves to the specified scope
+       */
+      async setPreferenceByKey(key, value, scope) {
+        const validKeys = this.getValidKeys();
+        if (!validKeys.includes(key)) {
+          return {
+            success: false,
+            error: `Unknown preference key: ${key}. Valid keys: ${validKeys.join(", ")}`
+          };
+        }
+        const booleanKeys = PREFERENCE_KEYS.boolean;
+        const pathKeys = PREFERENCE_KEYS.path;
+        const arrayKeys = PREFERENCE_KEYS.array;
+        let parsedValue;
+        if (booleanKeys.includes(key)) {
+          if (value !== "true" && value !== "false") {
+            return {
+              success: false,
+              error: `${key} must be "true" or "false"`
+            };
+          }
+          parsedValue = value === "true";
+        } else if (pathKeys.includes(key)) {
+          if (!value || value.trim() === "") {
+            return {
+              success: false,
+              error: `${key} must be a non-empty string`
+            };
+          }
+          parsedValue = value;
+        } else if (arrayKeys.includes(key)) {
+          try {
+            const parsed = JSON.parse(value);
+            if (!Array.isArray(parsed)) {
+              return {
+                success: false,
+                error: `${key} must be a JSON array of strings`
+              };
+            }
+            if (!parsed.every((item) => typeof item === "string")) {
+              return {
+                success: false,
+                error: `${key} must be an array of strings`
+              };
+            }
+            parsedValue = parsed;
+          } catch {
+            return {
+              success: false,
+              error: `${key} must be a valid JSON array`
+            };
+          }
+        }
+        if (scope === "repo" && !this.context.repositoryRoot) {
+          return {
+            success: false,
+            error: "Cannot save to repository config: not in a repository"
+          };
+        }
+        const currentRepo = await this.getPreference("repo");
+        let updatedRepo;
+        if (booleanKeys.includes(key)) {
+          updatedRepo = { ...currentRepo, [key]: parsedValue };
+        } else if (pathKeys.includes(key)) {
+          const dirMap = {
+            docsDirectory: "docs",
+            adrDirectory: "adr",
+            prdDirectory: "prd"
+          };
+          const dirKey = dirMap[key];
+          updatedRepo = {
+            ...currentRepo,
+            directories: {
+              ...currentRepo.directories,
+              [dirKey]: parsedValue
+            }
+          };
+        } else if (arrayKeys.includes(key)) {
+          updatedRepo = { ...currentRepo, [key]: parsedValue };
+        } else {
+          return {
+            success: false,
+            error: `Unknown preference key: ${key}`
+          };
+        }
+        try {
+          if (scope === "global") {
+            await this.setPreference("repo", updatedRepo);
+          } else {
+            await this.setPreferenceToRepo("repo", updatedRepo);
+          }
+          return { success: true };
+        } catch (error2) {
+          return {
+            success: false,
+            error: error2 instanceof Error ? error2.message : String(error2)
+          };
+        }
+      }
+      /**
+       * Validate config files on startup
+       *
+       * Checks both repo and global config files for:
+       * - Valid JSON syntax
+       * - Schema compliance via Zod validation
+       *
+       * Config files are optional - missing files are not errors.
+       *
+       * @returns ConfigValidationResult with isValid flag and error messages
+       */
+      async validateConfigFiles() {
+        const errors = [];
+        if (this.context.repositoryRoot) {
+          try {
+            const configPath = join(this.context.repositoryRoot, REPO_CONFIG_PATH);
+            const data = await readFile(configPath, "utf-8");
+            let parsed;
+            try {
+              parsed = JSON.parse(data);
+            } catch (jsonError) {
+              errors.push(`Repository config (.tiny-brain/config.json) contains invalid JSON: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`);
+              parsed = null;
+            }
+            if (parsed !== null) {
+              const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
+              if (!validationResult.success) {
+                errors.push(`Repository config (.tiny-brain/config.json) failed schema validation: ${validationResult.error.message}`);
+              }
+            }
+          } catch (error2) {
+            if (error2 instanceof Error && !error2.message.includes("ENOENT")) {
+              errors.push(`Failed to read repository config: ${error2.message}`);
+            }
+          }
+        }
+        try {
+          const data = await this.context.storage.getUserData(
+            `${PREFERENCES_CONFIG_PATH}.json`,
+            this.context.userId
+          );
+          if (data) {
+            let parsed;
+            try {
+              parsed = JSON.parse(data);
+            } catch (jsonError) {
+              errors.push(`Global config (~/.tiny-brain/config/preferences.json) contains invalid JSON: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`);
+              parsed = null;
+            }
+            if (parsed !== null) {
+              const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
+              if (!validationResult.success) {
+                errors.push(`Global config (~/.tiny-brain/config/preferences.json) failed schema validation: ${validationResult.error.message}`);
+              }
+            }
+          }
+        } catch (error2) {
+          if (error2 instanceof Error) {
+            errors.push(`Failed to read global config: ${error2.message}`);
+          }
+        }
+        return {
+          isValid: errors.length === 0,
+          errors
+        };
+      }
+      /**
+       * Load global user preferences from ~/.tiny-brain/config/preferences.json
+       */
+      async loadGlobalConfig() {
+        try {
+          const data = await this.context.storage.getUserData(
+            `${PREFERENCES_CONFIG_PATH}.json`,
+            this.context.userId
+          );
+          if (!data) {
+            return {};
+          }
+          const parsed = JSON.parse(data);
+          const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
+          if (!validationResult.success) {
+            this.context.logger.warn("Failed to validate global config", validationResult.error);
+            return {};
+          }
+          return validationResult.data.preferences;
+        } catch (error2) {
+          this.context.logger.warn("Failed to load global preferences config", error2);
+          return {};
+        }
+      }
+      /**
+       * Load repository-specific preferences from [repo]/.tiny-brain/config.json
+       */
+      async loadRepoConfig() {
+        if (!this.context.repositoryRoot) {
+          return {};
+        }
+        try {
+          const configPath = join(this.context.repositoryRoot, REPO_CONFIG_PATH);
+          const data = await readFile(configPath, "utf-8");
+          const parsed = JSON.parse(data);
+          const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
+          if (!validationResult.success) {
+            this.context.logger.warn("Failed to validate repo config", validationResult.error);
+            return {};
+          }
+          return validationResult.data.preferences;
+        } catch {
+          return {};
+        }
+      }
+      /**
+       * Merge preferences from three sources with proper precedence
+       * Priority: repo > global > defaults
+       * Uses deep merging for nested repo structure
+       */
+      mergePreferences(repo, global2, defaults2) {
+        return {
+          repo: {
+            ...defaults2.repo,
+            ...global2.repo || {},
+            ...repo.repo || {},
+            // Deep merge directories
+            directories: {
+              ...defaults2.repo.directories,
+              ...global2.repo?.directories || {},
+              ...repo.repo?.directories || {}
+            }
+          }
+        };
+      }
+      /**
+       * Load preferences config from storage (legacy method for backwards compatibility)
+       */
+      async loadConfig() {
+        try {
+          const data = await this.context.storage.getUserData(
+            `${PREFERENCES_CONFIG_PATH}.json`,
+            this.context.userId
+          );
+          if (!data) {
+            return this.createDefaultConfig();
+          }
+          const config2 = JSON.parse(data);
+          return config2;
+        } catch (error2) {
+          this.context.logger.warn("Failed to load preferences config, using defaults", error2);
+          return this.createDefaultConfig();
+        }
+      }
+      /**
+       * Save preferences config to storage (global config)
+       */
+      async saveConfig(config2) {
+        await this.context.storage.storeUserData(
+          `${PREFERENCES_CONFIG_PATH}.json`,
+          JSON.stringify(config2, null, 2),
+          this.context.userId
+        );
+      }
+      /**
+       * Save preferences to repository config
+       * Merges with existing repo config if present
+       */
+      async saveRepoConfig(preferences) {
+        if (!this.context.repositoryRoot) {
+          throw new Error("Cannot save repo config: not in a repository");
+        }
+        const { writeFile: writeFile8, mkdir: mkdir5 } = await import("fs/promises");
+        const configPath = join(this.context.repositoryRoot, REPO_CONFIG_PATH);
+        const configDir = join(this.context.repositoryRoot, ".tiny-brain");
+        const existing = await this.loadRepoConfig();
+        const merged = {
+          ...existing,
+          ...preferences,
+          repo: {
+            ...existing.repo || {},
+            ...preferences.repo || {},
+            directories: {
+              ...existing.repo?.directories || {},
+              ...preferences.repo?.directories || {}
+            }
+          }
+        };
+        await mkdir5(configDir, { recursive: true });
+        const config2 = {
+          version: CONFIG_VERSION,
+          preferences: merged
+        };
+        await writeFile8(configPath, JSON.stringify(config2, null, 2), "utf-8");
+      }
+      /**
+       * Create default config
+       */
+      createDefaultConfig() {
+        return {
+          version: CONFIG_VERSION,
+          preferences: { ...DEFAULT_PREFERENCES }
+        };
+      }
+    };
   }
 });
 
@@ -29796,6 +30487,7 @@ var init_planning_service = __esm({
     init_planning();
     init_prd_template();
     init_feature_template();
+    init_config_service();
     init_esm7();
     init_js_yaml();
     execAsync = promisify(exec);
@@ -30404,7 +31096,7 @@ var init_planning_service = __esm({
             id: planName,
             title: plan.title,
             type: "active",
-            status: percentComplete === 100 ? "complete" : completedTasks > 0 ? "in_progress" : "not_started",
+            status: percentComplete === 100 ? "completed" : completedTasks > 0 ? "in_progress" : "not_started",
             prdId: planName,
             prdDirPath: prdPath,
             overview: plan.overview || "",
@@ -31110,7 +31802,7 @@ var init_planning_service = __esm({
           id: frontmatter.id,
           title: frontmatter.title,
           type: frontmatter.archived === true ? "archived" : "active",
-          status: frontmatter.status === "archived" ? "archived" : completedTasks === totalTasks && totalTasks > 0 ? "complete" : completedTasks > 0 ? "in_progress" : "not_started",
+          status: frontmatter.status === "archived" ? "archived" : completedTasks === totalTasks && totalTasks > 0 ? "completed" : completedTasks > 0 ? "in_progress" : "not_started",
           created: existingPlan?.created || (/* @__PURE__ */ new Date()).toISOString(),
           lastUpdated: (/* @__PURE__ */ new Date()).toISOString(),
           prdId: frontmatter.id,
@@ -31150,17 +31842,35 @@ var init_planning_service = __esm({
         await fs.mkdir(progressDir, { recursive: true });
         const progressPath = path2.join(progressDir, `${frontmatter.id}.json`);
         await fs.writeFile(progressPath, JSON.stringify(plan, null, 2));
+        let currentPrdContent = prdContent;
+        let prdNeedsWrite = false;
         if (plan.status !== frontmatter.status) {
-          const frontmatterMatch = prdContent.match(/^(---\n)([\s\S]*?)(\n---)/);
+          const frontmatterMatch = currentPrdContent.match(/^(---\n)([\s\S]*?)(\n---)/);
           if (frontmatterMatch) {
             const updatedFrontmatter = frontmatterMatch[2].replace(
               /^status:\s*.+$/m,
               `status: ${plan.status}`
             );
-            const updatedContent = frontmatterMatch[1] + updatedFrontmatter + frontmatterMatch[3] + prdContent.slice(frontmatterMatch[0].length);
-            const prdMdPath = path2.join(prdPath, "prd.md");
-            await fs.writeFile(prdMdPath, updatedContent, "utf-8");
+            currentPrdContent = frontmatterMatch[1] + updatedFrontmatter + frontmatterMatch[3] + currentPrdContent.slice(frontmatterMatch[0].length);
+            prdNeedsWrite = true;
           }
+        }
+        if (plan.status === "completed" && frontmatter.archived !== true) {
+          const configService = new ConfigService(this.context);
+          const autoArchive = await configService.isAutoArchiveEnabled();
+          if (autoArchive) {
+            const match3 = currentPrdContent.match(/^(---\n)([\s\S]*?)(\n---)/);
+            if (match3) {
+              const block = match3[2];
+              const updated = /^archived:\s*.+$/m.test(block) ? block.replace(/^archived:\s*.+$/m, "archived: true") : block + "\narchived: true";
+              currentPrdContent = match3[1] + updated + match3[3] + currentPrdContent.slice(match3[0].length);
+              prdNeedsWrite = true;
+            }
+          }
+        }
+        if (prdNeedsWrite) {
+          const prdMdPath = path2.join(prdPath, "prd.md");
+          await fs.writeFile(prdMdPath, currentPrdContent, "utf-8");
         }
         if (currentFeature) {
           const syncEvent = {
@@ -31224,12 +31934,18 @@ var init_planning_service = __esm({
           existingProgress = JSON.parse(content);
         } catch {
         }
+        const configService = new ConfigService(this.context);
+        const autoArchive = await configService.isAutoArchiveEnabled();
         const fixes = [];
         for (const filePath of mdFiles) {
           try {
             const content = await fs.readFile(filePath, "utf-8");
             const fix = this.parseFixMarkdown(content, filePath, repoPath, existingProgress);
             if (fix) {
+              if (autoArchive && fix.status === "completed" && fix.archived !== true) {
+                await this.writeArchivedToFrontmatter(filePath, content);
+                fix.archived = true;
+              }
               fixes.push(fix);
             }
           } catch (error2) {
@@ -31247,6 +31963,13 @@ var init_planning_service = __esm({
       /**
        * Parse a fix markdown file into a FixProgress object
        */
+      async writeArchivedToFrontmatter(filePath, content) {
+        const match3 = content.match(/^(---\n)([\s\S]*?)(\n---)/);
+        if (!match3) return;
+        const block = match3[2];
+        const updated = /^archived:\s*.+$/m.test(block) ? block.replace(/^archived:\s*.+$/m, "archived: true") : block + "\narchived: true";
+        await fs.writeFile(filePath, match3[1] + updated + match3[3] + content.slice(match3[0].length), "utf-8");
+      }
       parseFixMarkdown(content, filePath, repoPath, existingProgress) {
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (!frontmatterMatch) {
@@ -31304,7 +32027,6 @@ var init_planning_service = __esm({
               mutantRefactorCompletedAt: existingTask.mutantRefactorCompletedAt,
               mutantRefactorCommitSha: existingTask.mutantRefactorCommitSha,
               mutantRefactorCommittedAt: existingTask.mutantRefactorCommittedAt,
-              currentPhase: existingTask.currentPhase,
               completedAt: existingTask.completedAt
             };
           }
@@ -34923,13 +35645,13 @@ var init_strategy_service = __esm({
 
 // packages/tiny-brain-core/src/services/repo-config/repo-config-service.ts
 import { createHash } from "crypto";
-import { readFile, readdir as readdir2, access } from "fs/promises";
-import { join } from "path";
-var CONFIG_VERSION, REPOS_CONFIG_PATH, RepoConfigService;
+import { readFile as readFile2, readdir as readdir2, access } from "fs/promises";
+import { join as join2 } from "path";
+var CONFIG_VERSION2, REPOS_CONFIG_PATH, RepoConfigService;
 var init_repo_config_service = __esm({
   "packages/tiny-brain-core/src/services/repo-config/repo-config-service.ts"() {
     "use strict";
-    CONFIG_VERSION = "1.0.0";
+    CONFIG_VERSION2 = "1.0.0";
     REPOS_CONFIG_PATH = "repos/repos";
     RepoConfigService = class {
       constructor(context) {
@@ -35032,14 +35754,14 @@ var init_repo_config_service = __esm({
           complete: 0
         };
         try {
-          const prdDir = join(repoPath, "docs", "prd");
+          const prdDir = join2(repoPath, "docs", "prd");
           await access(prdDir);
           const entries = await readdir2(prdDir, { withFileTypes: true });
           const prdDirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith("_"));
           for (const dir of prdDirs) {
             try {
-              const progressPath = join(prdDir, dir.name, "progress.json");
-              const content = await readFile(progressPath, "utf-8");
+              const progressPath = join2(prdDir, dir.name, "progress.json");
+              const content = await readFile2(progressPath, "utf-8");
               const progress = JSON.parse(content);
               const status = progress.status?.toLowerCase();
               if (status === "in_progress") {
@@ -35144,7 +35866,7 @@ var init_repo_config_service = __esm({
        */
       createDefaultConfig() {
         return {
-          version: CONFIG_VERSION,
+          version: CONFIG_VERSION2,
           repos: []
         };
       }
@@ -35162,16 +35884,16 @@ var init_repo_config_service = __esm({
       async extractContextFileData(repoPath) {
         const result = {};
         try {
-          const analysisPath = join(repoPath, ".tiny-brain", "analysis.json");
-          const analysisContent = await readFile(analysisPath, "utf-8");
+          const analysisPath = join2(repoPath, ".tiny-brain", "analysis.json");
+          const analysisContent = await readFile2(analysisPath, "utf-8");
           const analysisData = JSON.parse(analysisContent);
           if (analysisData.detectedAt) {
             result.lastAnalyzed = analysisData.detectedAt;
           }
         } catch {
           try {
-            const contextFilePath = join(repoPath, "CLAUDE.md");
-            const content = await readFile(contextFilePath, "utf-8");
+            const contextFilePath = join2(repoPath, "CLAUDE.md");
+            const content = await readFile2(contextFilePath, "utf-8");
             const yamlData = this.parseRepositoryContextYAML(content);
             if (yamlData?.analysisDate) {
               result.lastAnalyzed = yamlData.analysisDate;
@@ -35181,8 +35903,8 @@ var init_repo_config_service = __esm({
         }
         try {
           const contextFileName = "CLAUDE.md";
-          const contextFilePath = join(repoPath, contextFileName);
-          const content = await readFile(contextFilePath, "utf-8");
+          const contextFilePath = join2(repoPath, contextFileName);
+          const content = await readFile2(contextFilePath, "utf-8");
           result.contextFile = contextFileName;
           result.installedAgentCount = this.countInstalledAgents(content);
         } catch {
@@ -35228,673 +35950,6 @@ var init_repo_config_service = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/types/user-preferences.ts
-var DEFAULT_PREFERENCES;
-var init_user_preferences = __esm({
-  "packages/tiny-brain-core/src/types/user-preferences.ts"() {
-    "use strict";
-    DEFAULT_PREFERENCES = {
-      repo: {
-        autoCommitProgress: false,
-        enableAgenticCoding: false,
-        enableSDD: true,
-        enableTDD: true,
-        enableADR: true,
-        enableQuality: true,
-        manageAgentsMd: true,
-        directories: {
-          docs: "docs",
-          adr: "docs/adr",
-          prd: "docs/prd"
-        },
-        testPatterns: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
-      }
-    };
-  }
-});
-
-// packages/tiny-brain-core/src/types/user-preferences.schema.ts
-var RepoConfigSchema, UserPreferencesSchema, DeepPartialRepoConfigSchema, PartialUserPreferencesSchema, PreferencesConfigSchema, PartialPreferencesConfigSchema;
-var init_user_preferences_schema = __esm({
-  "packages/tiny-brain-core/src/types/user-preferences.schema.ts"() {
-    "use strict";
-    init_zod();
-    RepoConfigSchema = external_exports.object({
-      /**
-       * Auto-commit progress.json changes after task tracking
-       */
-      autoCommitProgress: external_exports.boolean().default(false),
-      /**
-       * Enable agentic coding mode (AI-driven development)
-       */
-      enableAgenticCoding: external_exports.boolean().default(false),
-      /**
-       * Enable Suggestion-Driven Development (SDD)
-       */
-      enableSDD: external_exports.boolean().default(true),
-      /**
-       * Enable Test-Driven Development (TDD)
-       */
-      enableTDD: external_exports.boolean().default(true),
-      /**
-       * Enable Architecture Decision Records (ADR)
-       */
-      enableADR: external_exports.boolean().default(true),
-      /**
-       * Enable Quality Analysis
-       */
-      enableQuality: external_exports.boolean().default(true),
-      /**
-       * Manage AGENTS.md file during analyse
-       */
-      manageAgentsMd: external_exports.boolean().default(true),
-      /**
-       * Directory configuration
-       */
-      directories: external_exports.object({
-        /**
-         * Documentation directory path
-         */
-        docs: external_exports.string().min(1).default("docs"),
-        /**
-         * ADR directory path
-         */
-        adr: external_exports.string().min(1).default("docs/adr"),
-        /**
-         * PRD directory path
-         */
-        prd: external_exports.string().min(1).default("docs/prd")
-      }).strict().default({
-        docs: "docs",
-        adr: "docs/adr",
-        prd: "docs/prd"
-      }),
-      /**
-       * Test file patterns for test detection
-       */
-      testPatterns: external_exports.array(external_exports.string()).default(["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"])
-    }).strict().default({
-      autoCommitProgress: false,
-      enableAgenticCoding: false,
-      enableSDD: true,
-      enableTDD: true,
-      enableADR: true,
-      enableQuality: true,
-      manageAgentsMd: true,
-      directories: {
-        docs: "docs",
-        adr: "docs/adr",
-        prd: "docs/prd"
-      },
-      testPatterns: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
-    });
-    UserPreferencesSchema = external_exports.object({
-      /**
-       * Repository-level configuration (team decisions, overridable per-repo)
-       */
-      repo: RepoConfigSchema
-    }).strict();
-    DeepPartialRepoConfigSchema = external_exports.object({
-      autoCommitProgress: external_exports.boolean().optional(),
-      enableAgenticCoding: external_exports.boolean().optional(),
-      enableSDD: external_exports.boolean().optional(),
-      enableTDD: external_exports.boolean().optional(),
-      enableADR: external_exports.boolean().optional(),
-      enableQuality: external_exports.boolean().optional(),
-      manageAgentsMd: external_exports.boolean().optional(),
-      directories: external_exports.object({
-        docs: external_exports.string().min(1).optional(),
-        adr: external_exports.string().min(1).optional(),
-        prd: external_exports.string().min(1).optional()
-      }).optional(),
-      testPatterns: external_exports.array(external_exports.string()).optional()
-    }).strict();
-    PartialUserPreferencesSchema = external_exports.object({
-      repo: DeepPartialRepoConfigSchema.optional()
-    }).strict();
-    PreferencesConfigSchema = external_exports.object({
-      version: external_exports.string(),
-      preferences: UserPreferencesSchema
-    });
-    PartialPreferencesConfigSchema = external_exports.object({
-      version: external_exports.string(),
-      preferences: PartialUserPreferencesSchema
-    });
-  }
-});
-
-// packages/tiny-brain-core/src/services/config/config-service.ts
-import { readFile as readFile2 } from "fs/promises";
-import { join as join2 } from "path";
-var CONFIG_VERSION2, PREFERENCES_CONFIG_PATH, REPO_CONFIG_PATH, PREFERENCE_KEYS, ConfigService;
-var init_config_service = __esm({
-  "packages/tiny-brain-core/src/services/config/config-service.ts"() {
-    "use strict";
-    init_user_preferences();
-    init_user_preferences_schema();
-    CONFIG_VERSION2 = "1.0.0";
-    PREFERENCES_CONFIG_PATH = "config/preferences";
-    REPO_CONFIG_PATH = ".tiny-brain/config.json";
-    PREFERENCE_KEYS = {
-      boolean: ["autoCommitProgress", "enableAgenticCoding", "enableSDD", "enableTDD", "enableADR", "enableQuality", "manageAgentsMd"],
-      path: ["docsDirectory", "adrDirectory", "prdDirectory"],
-      array: ["testPatterns"]
-    };
-    ConfigService = class {
-      constructor(context) {
-        this.context = context;
-      }
-      /**
-       * Get all user preferences using three-tier resolution
-       * Priority: repo config > global config > defaults
-       */
-      async getPreferences() {
-        const repoPrefs = await this.loadRepoConfig();
-        const globalPrefs = await this.loadGlobalConfig();
-        return this.mergePreferences(repoPrefs, globalPrefs, DEFAULT_PREFERENCES);
-      }
-      /**
-       * Get preference sources for debugging and visibility
-       * Returns individual config sources and the merged result
-       */
-      async getPreferenceSources() {
-        const repo = await this.loadRepoConfig();
-        const global2 = await this.loadGlobalConfig();
-        const merged = this.mergePreferences(repo, global2, DEFAULT_PREFERENCES);
-        return {
-          repo,
-          global: global2,
-          defaults: DEFAULT_PREFERENCES,
-          merged
-        };
-      }
-      /**
-       * Get a specific preference value
-       */
-      async getPreference(key) {
-        const preferences = await this.getPreferences();
-        return preferences[key];
-      }
-      /**
-       * Set a specific preference value (saves to global config)
-       */
-      async setPreference(key, value) {
-        const config2 = await this.loadConfig();
-        config2.preferences[key] = value;
-        await this.saveConfig(config2);
-      }
-      /**
-       * Set a specific preference value to repository config
-       * Writes to [repo]/.tiny-brain/config.json
-       */
-      async setPreferenceToRepo(key, value) {
-        await this.saveRepoConfig({ [key]: value });
-      }
-      /**
-       * Reset all preferences to defaults
-       */
-      async resetPreferences() {
-        const config2 = this.createDefaultConfig();
-        await this.saveConfig(config2);
-      }
-      // ===================================================================
-      // Feature-Specific Preference Getters
-      // Type-safe convenience methods for accessing individual preferences
-      // ===================================================================
-      /**
-       * Check if automatic progress commit is enabled
-       */
-      async isAutoCommitProgressEnabled() {
-        const repo = await this.getPreference("repo");
-        return repo.autoCommitProgress;
-      }
-      /**
-       * Check if agentic coding mode is enabled
-       */
-      async isAgenticCodingEnabled() {
-        const repo = await this.getPreference("repo");
-        return repo.enableAgenticCoding;
-      }
-      /**
-       * Check if Suggestion-Driven Development is enabled
-       */
-      async isSDDEnabled() {
-        const repo = await this.getPreference("repo");
-        return repo.enableSDD;
-      }
-      /**
-       * Check if Test-Driven Development is enabled
-       */
-      async isTDDEnabled() {
-        const repo = await this.getPreference("repo");
-        return repo.enableTDD;
-      }
-      /**
-       * Check if Architecture Decision Records are enabled
-       */
-      async isADREnabled() {
-        const repo = await this.getPreference("repo");
-        return repo.enableADR;
-      }
-      /**
-       * Check if Quality Analysis is enabled
-       */
-      async isQualityEnabled() {
-        const repo = await this.getPreference("repo");
-        return repo.enableQuality;
-      }
-      /**
-       * Check if AGENTS.md management is enabled
-       */
-      async isManageAgentsMdEnabled() {
-        const repo = await this.getPreference("repo");
-        return repo.manageAgentsMd;
-      }
-      /**
-       * Get the configured documentation directory path
-       */
-      async getDocsDirectory() {
-        const repo = await this.getPreference("repo");
-        return repo.directories.docs;
-      }
-      /**
-       * Get the configured ADR directory path
-       */
-      async getADRDirectory() {
-        const repo = await this.getPreference("repo");
-        return repo.directories.adr;
-      }
-      /**
-       * Get the configured PRD directory path
-       */
-      async getPRDDirectory() {
-        const repo = await this.getPreference("repo");
-        return repo.directories.prd;
-      }
-      /**
-       * Get the configured test file patterns
-       */
-      async getTestPatterns() {
-        const repo = await this.getPreference("repo");
-        return repo.testPatterns;
-      }
-      // ===================================================================
-      // Flat Key Access Methods
-      // Used by CLI and MCP tools to access preferences with flat key names
-      // ===================================================================
-      /**
-       * Get all valid preference keys
-       * Used for validation and help text generation
-       */
-      getValidKeys() {
-        return [
-          ...PREFERENCE_KEYS.boolean,
-          ...PREFERENCE_KEYS.path,
-          ...PREFERENCE_KEYS.array
-        ];
-      }
-      /**
-       * Get a preference value by flat key name
-       * Maps flat keys (e.g., 'docsDirectory') to nested structure (e.g., repo.directories.docs)
-       */
-      async getPreferenceByKey(key) {
-        const validKeys = this.getValidKeys();
-        if (!validKeys.includes(key)) {
-          return {
-            isValid: false,
-            error: `Unknown preference key: ${key}. Valid keys: ${validKeys.join(", ")}`
-          };
-        }
-        const preferences = await this.getPreferences();
-        const repo = preferences.repo;
-        let value;
-        switch (key) {
-          case "autoCommitProgress":
-            value = repo.autoCommitProgress;
-            break;
-          case "enableAgenticCoding":
-            value = repo.enableAgenticCoding;
-            break;
-          case "enableSDD":
-            value = repo.enableSDD;
-            break;
-          case "enableTDD":
-            value = repo.enableTDD;
-            break;
-          case "enableADR":
-            value = repo.enableADR;
-            break;
-          case "enableQuality":
-            value = repo.enableQuality;
-            break;
-          case "manageAgentsMd":
-            value = repo.manageAgentsMd;
-            break;
-          case "docsDirectory":
-            value = repo.directories.docs;
-            break;
-          case "adrDirectory":
-            value = repo.directories.adr;
-            break;
-          case "prdDirectory":
-            value = repo.directories.prd;
-            break;
-          case "testPatterns":
-            value = repo.testPatterns;
-            break;
-          default:
-            return {
-              isValid: false,
-              error: `Unknown preference key: ${key}`
-            };
-        }
-        return { isValid: true, value };
-      }
-      /**
-       * Set a preference value by flat key name with validation
-       * Validates the value type and saves to the specified scope
-       */
-      async setPreferenceByKey(key, value, scope) {
-        const validKeys = this.getValidKeys();
-        if (!validKeys.includes(key)) {
-          return {
-            success: false,
-            error: `Unknown preference key: ${key}. Valid keys: ${validKeys.join(", ")}`
-          };
-        }
-        const booleanKeys = PREFERENCE_KEYS.boolean;
-        const pathKeys = PREFERENCE_KEYS.path;
-        const arrayKeys = PREFERENCE_KEYS.array;
-        let parsedValue;
-        if (booleanKeys.includes(key)) {
-          if (value !== "true" && value !== "false") {
-            return {
-              success: false,
-              error: `${key} must be "true" or "false"`
-            };
-          }
-          parsedValue = value === "true";
-        } else if (pathKeys.includes(key)) {
-          if (!value || value.trim() === "") {
-            return {
-              success: false,
-              error: `${key} must be a non-empty string`
-            };
-          }
-          parsedValue = value;
-        } else if (arrayKeys.includes(key)) {
-          try {
-            const parsed = JSON.parse(value);
-            if (!Array.isArray(parsed)) {
-              return {
-                success: false,
-                error: `${key} must be a JSON array of strings`
-              };
-            }
-            if (!parsed.every((item) => typeof item === "string")) {
-              return {
-                success: false,
-                error: `${key} must be an array of strings`
-              };
-            }
-            parsedValue = parsed;
-          } catch {
-            return {
-              success: false,
-              error: `${key} must be a valid JSON array`
-            };
-          }
-        }
-        if (scope === "repo" && !this.context.repositoryRoot) {
-          return {
-            success: false,
-            error: "Cannot save to repository config: not in a repository"
-          };
-        }
-        const currentRepo = await this.getPreference("repo");
-        let updatedRepo;
-        if (booleanKeys.includes(key)) {
-          updatedRepo = { ...currentRepo, [key]: parsedValue };
-        } else if (pathKeys.includes(key)) {
-          const dirMap = {
-            docsDirectory: "docs",
-            adrDirectory: "adr",
-            prdDirectory: "prd"
-          };
-          const dirKey = dirMap[key];
-          updatedRepo = {
-            ...currentRepo,
-            directories: {
-              ...currentRepo.directories,
-              [dirKey]: parsedValue
-            }
-          };
-        } else if (arrayKeys.includes(key)) {
-          updatedRepo = { ...currentRepo, [key]: parsedValue };
-        } else {
-          return {
-            success: false,
-            error: `Unknown preference key: ${key}`
-          };
-        }
-        try {
-          if (scope === "global") {
-            await this.setPreference("repo", updatedRepo);
-          } else {
-            await this.setPreferenceToRepo("repo", updatedRepo);
-          }
-          return { success: true };
-        } catch (error2) {
-          return {
-            success: false,
-            error: error2 instanceof Error ? error2.message : String(error2)
-          };
-        }
-      }
-      /**
-       * Validate config files on startup
-       *
-       * Checks both repo and global config files for:
-       * - Valid JSON syntax
-       * - Schema compliance via Zod validation
-       *
-       * Config files are optional - missing files are not errors.
-       *
-       * @returns ConfigValidationResult with isValid flag and error messages
-       */
-      async validateConfigFiles() {
-        const errors = [];
-        if (this.context.repositoryRoot) {
-          try {
-            const configPath = join2(this.context.repositoryRoot, REPO_CONFIG_PATH);
-            const data = await readFile2(configPath, "utf-8");
-            let parsed;
-            try {
-              parsed = JSON.parse(data);
-            } catch (jsonError) {
-              errors.push(`Repository config (.tiny-brain/config.json) contains invalid JSON: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`);
-              parsed = null;
-            }
-            if (parsed !== null) {
-              const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
-              if (!validationResult.success) {
-                errors.push(`Repository config (.tiny-brain/config.json) failed schema validation: ${validationResult.error.message}`);
-              }
-            }
-          } catch (error2) {
-            if (error2 instanceof Error && !error2.message.includes("ENOENT")) {
-              errors.push(`Failed to read repository config: ${error2.message}`);
-            }
-          }
-        }
-        try {
-          const data = await this.context.storage.getUserData(
-            `${PREFERENCES_CONFIG_PATH}.json`,
-            this.context.userId
-          );
-          if (data) {
-            let parsed;
-            try {
-              parsed = JSON.parse(data);
-            } catch (jsonError) {
-              errors.push(`Global config (~/.tiny-brain/config/preferences.json) contains invalid JSON: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`);
-              parsed = null;
-            }
-            if (parsed !== null) {
-              const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
-              if (!validationResult.success) {
-                errors.push(`Global config (~/.tiny-brain/config/preferences.json) failed schema validation: ${validationResult.error.message}`);
-              }
-            }
-          }
-        } catch (error2) {
-          if (error2 instanceof Error) {
-            errors.push(`Failed to read global config: ${error2.message}`);
-          }
-        }
-        return {
-          isValid: errors.length === 0,
-          errors
-        };
-      }
-      /**
-       * Load global user preferences from ~/.tiny-brain/config/preferences.json
-       */
-      async loadGlobalConfig() {
-        try {
-          const data = await this.context.storage.getUserData(
-            `${PREFERENCES_CONFIG_PATH}.json`,
-            this.context.userId
-          );
-          if (!data) {
-            return {};
-          }
-          const parsed = JSON.parse(data);
-          const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
-          if (!validationResult.success) {
-            this.context.logger.warn("Failed to validate global config", validationResult.error);
-            return {};
-          }
-          return validationResult.data.preferences;
-        } catch (error2) {
-          this.context.logger.warn("Failed to load global preferences config", error2);
-          return {};
-        }
-      }
-      /**
-       * Load repository-specific preferences from [repo]/.tiny-brain/config.json
-       */
-      async loadRepoConfig() {
-        if (!this.context.repositoryRoot) {
-          return {};
-        }
-        try {
-          const configPath = join2(this.context.repositoryRoot, REPO_CONFIG_PATH);
-          const data = await readFile2(configPath, "utf-8");
-          const parsed = JSON.parse(data);
-          const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
-          if (!validationResult.success) {
-            this.context.logger.warn("Failed to validate repo config", validationResult.error);
-            return {};
-          }
-          return validationResult.data.preferences;
-        } catch {
-          return {};
-        }
-      }
-      /**
-       * Merge preferences from three sources with proper precedence
-       * Priority: repo > global > defaults
-       * Uses deep merging for nested repo structure
-       */
-      mergePreferences(repo, global2, defaults2) {
-        return {
-          repo: {
-            ...defaults2.repo,
-            ...global2.repo || {},
-            ...repo.repo || {},
-            // Deep merge directories
-            directories: {
-              ...defaults2.repo.directories,
-              ...global2.repo?.directories || {},
-              ...repo.repo?.directories || {}
-            }
-          }
-        };
-      }
-      /**
-       * Load preferences config from storage (legacy method for backwards compatibility)
-       */
-      async loadConfig() {
-        try {
-          const data = await this.context.storage.getUserData(
-            `${PREFERENCES_CONFIG_PATH}.json`,
-            this.context.userId
-          );
-          if (!data) {
-            return this.createDefaultConfig();
-          }
-          const config2 = JSON.parse(data);
-          return config2;
-        } catch (error2) {
-          this.context.logger.warn("Failed to load preferences config, using defaults", error2);
-          return this.createDefaultConfig();
-        }
-      }
-      /**
-       * Save preferences config to storage (global config)
-       */
-      async saveConfig(config2) {
-        await this.context.storage.storeUserData(
-          `${PREFERENCES_CONFIG_PATH}.json`,
-          JSON.stringify(config2, null, 2),
-          this.context.userId
-        );
-      }
-      /**
-       * Save preferences to repository config
-       * Merges with existing repo config if present
-       */
-      async saveRepoConfig(preferences) {
-        if (!this.context.repositoryRoot) {
-          throw new Error("Cannot save repo config: not in a repository");
-        }
-        const { writeFile: writeFile8, mkdir: mkdir5 } = await import("fs/promises");
-        const configPath = join2(this.context.repositoryRoot, REPO_CONFIG_PATH);
-        const configDir = join2(this.context.repositoryRoot, ".tiny-brain");
-        const existing = await this.loadRepoConfig();
-        const merged = {
-          ...existing,
-          ...preferences,
-          repo: {
-            ...existing.repo || {},
-            ...preferences.repo || {},
-            directories: {
-              ...existing.repo?.directories || {},
-              ...preferences.repo?.directories || {}
-            }
-          }
-        };
-        await mkdir5(configDir, { recursive: true });
-        const config2 = {
-          version: CONFIG_VERSION2,
-          preferences: merged
-        };
-        await writeFile8(configPath, JSON.stringify(config2, null, 2), "utf-8");
-      }
-      /**
-       * Create default config
-       */
-      createDefaultConfig() {
-        return {
-          version: CONFIG_VERSION2,
-          preferences: { ...DEFAULT_PREFERENCES }
-        };
-      }
-    };
-  }
-});
-
 // packages/tiny-brain-core/src/services/fix/fix-service.ts
 import { promises as fs2 } from "fs";
 import path3 from "path";
@@ -35922,7 +35977,7 @@ var init_fix_service = __esm({
         return {
           id: fixId,
           title: details.title,
-          status: "investigating",
+          status: "not_started",
           created: now,
           updated: now,
           problem: details.problem
@@ -36050,7 +36105,7 @@ var init_fix_service = __esm({
         return {
           id: fixId,
           title: frontmatter.title || fixId,
-          status: frontmatter.status || "investigating",
+          status: frontmatter.status || "not_started",
           created: frontmatter.created || "",
           updated: frontmatter.updated || "",
           testPlan,
@@ -36106,7 +36161,7 @@ ${commitLines}
         return `---
 id: {{fix-id}}
 title: {{title}}
-status: investigating
+status: not_started
 created: {{date}}
 updated: {{date}}
 ---
@@ -38160,7 +38215,7 @@ var init_quality_service = __esm({
           "---",
           `id: ${fixId}`,
           `title: ${initiative.title}`,
-          "status: documented",
+          "status: not_started",
           `severity: ${severity}`,
           `reported: ${(/* @__PURE__ */ new Date()).toISOString()}`,
           `qip: ${planId}`,
@@ -42723,7 +42778,7 @@ Only skip delegation for trivial tasks (single-line fixes, config changes).
 **BEFORE EVERY COMMIT**, check if you're working on tracked work:
 
 1. **Active PRDs?** Check \`.tiny-brain/progress/\` for \`in_progress\` status
-2. **Open Fixes?** Check \`.tiny-brain/fixes/progress.json\` for \`documented\` or \`in_progress\` status
+2. **Open Fixes?** Check \`.tiny-brain/fixes/progress.json\` for \`not_started\` or \`in_progress\` status
 
 **If YES, you MUST include tracking headers or the commit will be REJECTED.**
 
@@ -42775,7 +42830,7 @@ Description of changes...
 
 ### Fix Status Workflow
 
-Fix documents have three statuses: \`documented\` \u2192 \`in_progress\` \u2192 \`resolved\`
+Fix documents have four statuses: \`not_started\` \u2192 \`in_progress\` \u2192 \`completed\` | \`superseded\`
 
 **When starting work on a fix:**
 1. Open the fix file: \`.tiny-brain/fixes/{fix-id}.md\`
@@ -42799,12 +42854,12 @@ Fix documents have three statuses: \`documented\` \u2192 \`in_progress\` \u2192 
 4. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
 
 **When all tasks are complete:**
-1. **ONLY set \`status: resolved\`** when ALL tasks are accounted for:
+1. **ONLY set \`status: completed\`** when ALL tasks are accounted for:
    - 100% of tasks must have either \`status: completed\` (with commitSha) or \`status: superseded\`
-   - Example: A fix with 5 tasks could be: 3 completed + 2 superseded = resolved
+   - Example: A fix with 5 tasks could be: 3 completed + 2 superseded = completed
    - A fix with incomplete tasks stays \`in_progress\`
 2. Update YAML frontmatter:
-   - Set \`status: resolved\`
+   - Set \`status: completed\`
    - Set \`resolved: YYYY-MM-DDTHH:mm:ss.sssZ\` (ISO timestamp)
    - Add \`resolution\` object:
      \`\`\`yaml
@@ -42831,7 +42886,8 @@ IMPORTANT: This repository follows strict Test-Driven Development (TDD) with a 3
 **Red \u2192 Green \u2192 Refactor Cycle:**
 
 1. **Red Phase** (\`test:\` or \`test(scope):\` commits):
-   - Before writing tests: \`npx tiny-brain update-phase --phase red --event start --task '...' [--fix ID | --prd ID --feature ID]\`
+   - **CRITICAL \u2014 you MUST run before writing tests:**
+     \`npx tiny-brain task-start --task '...' [--fix ID | --prd ID --feature ID]\`
    - Write failing tests first
    - Tests SHOULD fail (that's the point!)
    - Use: \`git commit -m "test: ..."\` or \`git commit -m "test(api): ..."\`
@@ -42839,26 +42895,27 @@ IMPORTANT: This repository follows strict Test-Driven Development (TDD) with a 3
    - Tracked in: \`testCommitSha\` field
 
 2. **Green Phase** (\`feat:\` or \`feat(scope):\` commits):
-   - Before writing implementation: \`npx tiny-brain update-phase --phase green --event start --task '...' [--fix ID | --prd ID --feature ID]\`
+   - Phase is derived automatically from commit SHAs (no manual step needed)
    - Implement minimum code to make tests pass
    - Use: \`git commit -m "feat: ..."\` or \`git commit -m "feat(auth): ..."\`
    - Git hook automatically runs full checks (typecheck + lint + test)
    - Tracked in: \`commitSha\` field
-   - **Marks task as COMPLETED**
+   - **After commit:** adversarial review starts automatically
 
 3. **Refactor Phase** (\`refactor:\` or \`refactor(scope):\` commits - optional):
+   - Triggered by adversarial review suggestions
    - Improve code quality without changing behavior
    - Use: \`git commit -m "refactor: ..."\` or \`git commit -m "refactor(plan): ..."\`
    - Git hook automatically runs full checks (typecheck + lint + test)
-   - Tracked in: \`refactorCommitSha\` field
-   - After adversarial refactor: \`npx tiny-brain update-phase --phase adversarial-refactor --event complete --task '...' [--fix ID | --prd ID --feature ID]\`
-   - After mutant refactor: \`npx tiny-brain update-phase --phase mutant-refactor --event complete --task '...' [--fix ID | --prd ID --feature ID]\`
+   - **After commit:** post-commit hook automatically records refactor completion
 
-**Why This Matters:**
-- Git hooks automatically detect commit type and run appropriate checks
-- Separate commit tracking enables Feature 9 (TDD phase tracking in dashboard)
-- Provides audit trail of development process
-- Only \`feat:\` or \`feat(scope):\` commits mark tasks as completed
+4. **Progress Commit** (end of cycle):
+   - After the full RED\u2192GREEN\u2192REFACTOR cycle is complete
+   - Run: \`npx tiny-brain commit-progress\`
+
+**What you must do manually:** Only \`task-start\` before writing tests. Everything else is automated by hooks.
+
+**What you must NOT do:** Do not manually manage phase transitions \u2014 they are derived from commit SHAs.
 
 `;
       }
@@ -44467,6 +44524,118 @@ var init_types10 = __esm({
 var init_types11 = __esm({
   "packages/tiny-brain-core/src/services/planning/types.ts"() {
     "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/planning/phase-derivation.ts
+function getActivePipeline(config2) {
+  const phases = ["red"];
+  if (!config2.combineRedGreenCommits) {
+    phases.push("green");
+  }
+  if (config2.enableAdversarial) {
+    phases.push("adversarial", "adversarial-refactor");
+  }
+  if (config2.hasMutantCapability) {
+    phases.push("mutant", "mutant-refactor");
+  }
+  phases.push("complete");
+  return phases;
+}
+function derivePhase(task, config2 = DEFAULT_CONFIG) {
+  if (!task.redStartedAt) return "idle";
+  if (!task.testCommitSha) return "red";
+  if (!task.commitSha) {
+    return config2.combineRedGreenCommits ? "red" : "green";
+  }
+  if (config2.enableAdversarial) {
+    if (!task.adversarialReviewSha) return "adversarial";
+    if (task.adversarialVerdict === "needs-refactoring") {
+      if (!task.adversarialRefactorCommitSha) return "adversarial-refactor";
+    }
+  }
+  if (config2.hasMutantCapability) {
+    if (!task.mutantReviewSha) return "mutant";
+    if (task.mutantVerdict === "needs-refactoring") {
+      if (!task.mutantRefactorCommitSha) return "mutant-refactor";
+    }
+  }
+  return "complete";
+}
+function isPhaseComplete(task, phase) {
+  switch (phase) {
+    case "red":
+      return !!task.testCommitSha;
+    case "green":
+      return !!task.commitSha;
+    case "adversarial":
+      return !!task.adversarialReviewSha;
+    case "adversarial-refactor":
+      return !!task.adversarialRefactorCommitSha;
+    case "mutant":
+      return !!task.mutantReviewSha;
+    case "mutant-refactor":
+      return !!task.mutantRefactorCommitSha;
+    case "complete":
+      return false;
+    // "complete" is a terminal state, not a phase with a SHA
+    case "idle":
+      return false;
+  }
+}
+function isPhaseInProgress(task, phase) {
+  switch (phase) {
+    case "red":
+      return !!task.redStartedAt && !task.testCommitSha;
+    case "green":
+      return !!task.testCommitSha && !task.commitSha;
+    case "adversarial":
+      return !!task.commitSha && !task.adversarialReviewSha;
+    case "adversarial-refactor":
+      return !!task.adversarialReviewSha && task.adversarialVerdict === "needs-refactoring" && !task.adversarialRefactorCommitSha;
+    case "mutant":
+      return isAdversarialDone(task) && !task.mutantReviewSha;
+    case "mutant-refactor":
+      return !!task.mutantReviewSha && task.mutantVerdict === "needs-refactoring" && !task.mutantRefactorCommitSha;
+    default:
+      return false;
+  }
+}
+function isTaskComplete(task, config2 = DEFAULT_CONFIG) {
+  return derivePhase(task, config2) === "complete";
+}
+function getPhaseDuration(task, phase) {
+  const timestamps = PHASE_TIMESTAMPS[phase];
+  if (!timestamps) return void 0;
+  const startedAt = task[timestamps.startedAt];
+  const completedAt = task[timestamps.completedAt];
+  if (!startedAt || !completedAt) return void 0;
+  const duration3 = new Date(completedAt).getTime() - new Date(startedAt).getTime();
+  return Number.isNaN(duration3) ? void 0 : duration3;
+}
+function isAdversarialDone(task) {
+  if (!task.adversarialReviewSha) return false;
+  if (task.adversarialVerdict === "clean") return true;
+  if (task.adversarialVerdict === "needs-refactoring" && task.adversarialRefactorCommitSha) return true;
+  return false;
+}
+var DEFAULT_CONFIG, PHASE_TIMESTAMPS;
+var init_phase_derivation = __esm({
+  "packages/tiny-brain-core/src/services/planning/phase-derivation.ts"() {
+    "use strict";
+    DEFAULT_CONFIG = {
+      combineRedGreenCommits: false,
+      enableAdversarial: true,
+      hasMutantCapability: false
+    };
+    PHASE_TIMESTAMPS = {
+      red: { startedAt: "redStartedAt", completedAt: "redCompletedAt" },
+      green: { startedAt: "greenStartedAt", completedAt: "greenCompletedAt" },
+      adversarial: { startedAt: "adversarialStartedAt", completedAt: "adversarialCompletedAt" },
+      "adversarial-refactor": { startedAt: "adversarialRefactorStartedAt", completedAt: "adversarialRefactorCompletedAt" },
+      mutant: { startedAt: "mutantStartedAt", completedAt: "mutantCompletedAt" },
+      "mutant-refactor": { startedAt: "mutantRefactorStartedAt", completedAt: "mutantRefactorCompletedAt" }
+    };
   }
 });
 
@@ -51375,6 +51544,7 @@ __export(src_exports, {
   createPersonaModule: () => createPersonaModule,
   deepClone: () => deepClone,
   deepMerge: () => deepMerge,
+  derivePhase: () => derivePhase,
   detectADRPatterns: () => detectADRPatterns,
   detectClaudeCliStatus: () => detectClaudeCliStatus,
   detectRepositoryRoot: () => detectRepositoryRoot,
@@ -51422,11 +51592,13 @@ __export(src_exports, {
   generateRunId: () => generateRunId,
   generateStatusReport: () => generateStatusReport,
   generateThinkingReport: () => generateThinkingReport,
+  getActivePipeline: () => getActivePipeline,
   getBootstrapInfo: () => getBootstrapInfo,
   getCurrentTimestamp: () => getCurrentTimestamp,
   getErrorMessage: () => getErrorMessage,
   getISOTimestamp: () => getISOTimestamp,
   getIntentConfidence: () => getIntentConfidence,
+  getPhaseDuration: () => getPhaseDuration,
   getRelativeTime: () => getRelativeTime,
   getServiceUrls: () => getServiceUrls,
   getTBRUrl: () => getTBRUrl,
@@ -51447,7 +51619,10 @@ __export(src_exports, {
   isNullOrUndefined: () => isNullOrUndefined,
   isNumber: () => isNumber,
   isObject: () => isObject3,
+  isPhaseComplete: () => isPhaseComplete,
+  isPhaseInProgress: () => isPhaseInProgress,
   isString: () => isString,
+  isTaskComplete: () => isTaskComplete,
   last: () => last,
   logServiceConfig: () => logServiceConfig,
   mergePersonaBlocks: () => mergePersonaBlocks,
@@ -51510,6 +51685,7 @@ var init_src = __esm({
     init_analysis();
     init_types10();
     init_types11();
+    init_phase_derivation();
     init_types12();
     init_repo_config();
     init_user_preferences();
@@ -67068,12 +67244,21 @@ function createReviewRoutes(bridge) {
     if (!repo) {
       return c.json({ error: "Repository not found" }, 404);
     }
-    const reviewPath = join19(repo.path, ".tiny-brain", "reviews", reviewType, `${commitSha}.json`);
+    const reviewDir = join19(repo.path, ".tiny-brain", "reviews", reviewType);
+    const reviewPath = join19(reviewDir, `${commitSha}.json`);
     let content;
     try {
       content = await readFile12(reviewPath, "utf-8");
     } catch {
-      return c.json({ error: "Review not found" }, 404);
+      if (commitSha.length > 8) {
+        try {
+          content = await readFile12(join19(reviewDir, `${commitSha.substring(0, 8)}.json`), "utf-8");
+        } catch {
+          return c.json({ error: "Review not found" }, 404);
+        }
+      } else {
+        return c.json({ error: "Review not found" }, 404);
+      }
     }
     try {
       return c.json(JSON.parse(content));
@@ -67915,7 +68100,26 @@ var FileWatcher = class {
       repoPath
     };
     if (!this.plansSnapshot.has(repoId)) {
-      this.plansSnapshot.set(repoId, /* @__PURE__ */ new Map());
+      const progressDir = path27.join(repoPath, ".tiny-brain", "progress");
+      const snapshot = /* @__PURE__ */ new Map();
+      try {
+        const files = await fs25.promises.readdir(progressDir);
+        for (const file of files) {
+          if (!file.endsWith(".json")) continue;
+          try {
+            const content = await fs25.promises.readFile(path27.join(progressDir, file), "utf-8");
+            const parsed = JSON.parse(content);
+            if (parsed && parsed.id) {
+              snapshot.set(parsed.id, content);
+            }
+          } catch {
+          }
+        }
+        this.context.logger.info(`[FileWatcher] Pre-warmed plans snapshot for repo ${repoId} (${snapshot.size} plans)`);
+      } catch {
+        this.context.logger.debug(`[FileWatcher] No progress/ directory to pre-warm for ${repoId}`);
+      }
+      this.plansSnapshot.set(repoId, snapshot);
     }
     if (!this.qualityCache.has(repoId)) {
       this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
@@ -69537,7 +69741,7 @@ var PlanTool = class _PlanTool {
       const allPlans = await planningService.listPlans({
         type: serviceStatus === "all" ? void 0 : serviceStatus
       });
-      const plans = status === "completed" ? allPlans.filter((plan) => plan.status === "complete") : allPlans;
+      const plans = status === "completed" ? allPlans.filter((plan) => plan.status === "completed") : allPlans;
       if (plans.length === 0) {
         return createSuccessResult(
           `No ${status} plans found in repository.`
@@ -69551,7 +69755,7 @@ var PlanTool = class _PlanTool {
         lines.push("Available plans:");
         lines.push("");
         for (const plan of plans) {
-          const statusEmoji = plan.type === "active" ? "\u{1F7E2}" : plan.status === "complete" ? "\u2705" : "\u{1F4E6}";
+          const statusEmoji = plan.type === "active" ? "\u{1F7E2}" : plan.status === "completed" ? "\u2705" : "\u{1F4E6}";
           lines.push(`${statusEmoji} **${plan.title}** (${plan.id})`);
           lines.push(
             `   Progress: ${plan.currentState.overallProgress.percentComplete}% - ${plan.currentState.overallProgress.completedFeatures}/${plan.features?.length || 0} features, ${plan.currentState.overallProgress.completedTasks}/${plan.currentState.overallProgress.totalTasks} tasks`
@@ -70378,7 +70582,7 @@ Only skip delegation for trivial tasks (single-line fixes, config changes).
 **BEFORE EVERY COMMIT**, check if you're working on tracked work:
 
 1. **Active PRDs?** Check \`.tiny-brain/progress/\` for \`in_progress\` status
-2. **Open Fixes?** Check \`.tiny-brain/fixes/progress.json\` for \`documented\` or \`in_progress\` status
+2. **Open Fixes?** Check \`.tiny-brain/fixes/progress.json\` for \`not_started\` or \`in_progress\` status
 
 **If YES, you MUST include tracking headers or the commit will be REJECTED.**
 
@@ -70417,7 +70621,7 @@ Description of changes...
 
 ### Fix Status Workflow
 
-Fix documents have three statuses: \`documented\` \u2192 \`in_progress\` \u2192 \`resolved\`
+Fix documents have four statuses: \`not_started\` \u2192 \`in_progress\` \u2192 \`completed\` | \`superseded\`
 
 **When starting work on a fix:**
 1. Open the fix file: \`.tiny-brain/fixes/{fix-id}.md\`
@@ -70441,12 +70645,12 @@ Fix documents have three statuses: \`documented\` \u2192 \`in_progress\` \u2192 
 4. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
 
 **When all tasks are complete:**
-1. **ONLY set \`status: resolved\`** when ALL tasks are accounted for:
+1. **ONLY set \`status: completed\`** when ALL tasks are accounted for:
    - 100% of tasks must have either \`status: completed\` (with commitSha) or \`status: superseded\`
-   - Example: A fix with 5 tasks could be: 3 completed + 2 superseded = resolved
+   - Example: A fix with 5 tasks could be: 3 completed + 2 superseded = completed
    - A fix with incomplete tasks stays \`in_progress\`
 2. Update YAML frontmatter:
-   - Set \`status: resolved\`
+   - Set \`status: completed\`
    - Set \`resolved: YYYY-MM-DDTHH:mm:ss.sssZ\` (ISO timestamp)
    - Add \`resolution\` object:
      \`\`\`yaml
@@ -70477,37 +70681,35 @@ IMPORTANT: This repository follows strict Test-Driven Development (TDD) with a 3
 
 1. **Red Phase** (\`test:\` or \`test(scope):\` commits):
    - **CRITICAL \u2014 you MUST run before writing tests:**
-     \`npx tiny-brain update-phase --phase red --event start --task '...' [--fix ID | --prd ID --feature ID]\`
+     \`npx tiny-brain task-start --task '...' [--fix ID | --prd ID --feature ID]\`
    - Write failing tests first
    - Tests SHOULD fail (that's the point!)
    - Use: \`git commit -m "test: ..."\` or \`git commit -m "test(api): ..."\`
    - Git hook automatically runs typecheck + lint but SKIPS tests
    - Tracked in: \`testCommitSha\` field
-   - **After commit:** post-commit hook automatically transitions to \`green:start\`
 
 2. **Green Phase** (\`feat:\` or \`feat(scope):\` commits):
-   - Phase started automatically by post-commit hook after \`test:\` commit (no manual step needed)
+   - Phase is derived automatically from commit SHAs (no manual step needed)
    - Implement minimum code to make tests pass
    - Use: \`git commit -m "feat: ..."\` or \`git commit -m "feat(auth): ..."\`
    - Git hook automatically runs full checks (typecheck + lint + test)
    - Tracked in: \`commitSha\` field
-   - **Marks task as COMPLETED**
-   - **After commit:** adversarial review hook sets \`adversarial:start\` and outputs review instructions
+   - **After commit:** adversarial review starts automatically
 
 3. **Refactor Phase** (\`refactor:\` or \`refactor(scope):\` commits - optional):
    - Triggered by adversarial review suggestions
    - Improve code quality without changing behavior
    - Use: \`git commit -m "refactor: ..."\` or \`git commit -m "refactor(plan): ..."\`
    - Git hook automatically runs full checks (typecheck + lint + test)
-   - **After commit:** post-commit hook automatically transitions \`adversarial-refactor:complete\`
+   - **After commit:** post-commit hook automatically records refactor completion
 
 4. **Progress Commit** (end of cycle):
    - After the full RED\u2192GREEN\u2192REFACTOR cycle is complete
    - Run: \`npx tiny-brain commit-progress\`
 
-**What you must do manually:** Only \`update-phase --phase red --event start\` before writing tests. Everything else is automated by hooks.
+**What you must do manually:** Only \`task-start\` before writing tests. Everything else is automated by hooks.
 
-**What you must NOT do:** Do not manually call \`update-phase\` for green:start, adversarial:start, or adversarial-refactor:complete \u2014 the hooks handle these.
+**What you must NOT do:** Do not manually manage phase transitions \u2014 they are derived from commit SHAs.
 
 `;
   }

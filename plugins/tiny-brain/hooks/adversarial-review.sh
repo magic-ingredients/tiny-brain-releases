@@ -104,17 +104,19 @@ fi
 
 TASK_DESC=$(echo "$LATEST_MSG" | sed -E 's/^[a-z]+(\([^)]+\))?:[[:space:]]*//')
 
-# --- Set adversarialStartedAt via update-phase ---
-if [ -n "$CURRENT_TASK" ]; then
-  UPDATE_ARGS="--task \"$CURRENT_TASK\" --phase adversarial --event start"
-  if [ -n "$CURRENT_FIX" ]; then
-    UPDATE_ARGS="$UPDATE_ARGS --fix \"$CURRENT_FIX\""
-  elif [ -n "$CURRENT_PRD" ] && [ -n "$CURRENT_FEATURE" ]; then
-    UPDATE_ARGS="$UPDATE_ARGS --prd \"$CURRENT_PRD\" --feature \"$CURRENT_FEATURE\""
+# --- Set adversarialStartedAt via update-phase for ALL tasks ---
+echo "$FULL_MSG" | grep '^Task:' | sed 's/^Task:[[:space:]]*//' | while IFS= read -r TASK_LINE; do
+  if [ -n "$TASK_LINE" ]; then
+    UPDATE_ARGS="--task \"$TASK_LINE\" --phase adversarial --event start"
+    if [ -n "$CURRENT_FIX" ]; then
+      UPDATE_ARGS="$UPDATE_ARGS --fix \"$CURRENT_FIX\""
+    elif [ -n "$CURRENT_PRD" ] && [ -n "$CURRENT_FEATURE" ]; then
+      UPDATE_ARGS="$UPDATE_ARGS --prd \"$CURRENT_PRD\" --feature \"$CURRENT_FEATURE\""
+    fi
+    eval npx tiny-brain update-phase $UPDATE_ARGS 2>/dev/null || true
   fi
-  eval npx tiny-brain update-phase $UPDATE_ARGS 2>/dev/null || true
-  echo "[adversarial-review] set adversarialStartedAt via update-phase" >&2
-fi
+done
+echo "[adversarial-review] set adversarialStartedAt for all tasks via update-phase" >&2
 
 # Build the instruction message
 INSTRUCTION="ADVERSARIAL REVIEW REQUIRED
@@ -140,17 +142,26 @@ INSTRUCTION="$INSTRUCTION
 
 After review, implement suggestions as refactor(scope): commits."
 
-# Add update-phase completion instruction if we have tracking headers
-if [ -n "$CURRENT_TASK" ]; then
-  PHASE_ARGS="--task '$CURRENT_TASK' --phase adversarial --event complete"
-  if [ -n "$CURRENT_FIX" ]; then
-    PHASE_ARGS="$PHASE_ARGS --fix '$CURRENT_FIX'"
-  elif [ -n "$CURRENT_PRD" ] && [ -n "$CURRENT_FEATURE" ]; then
-    PHASE_ARGS="$PHASE_ARGS --prd '$CURRENT_PRD' --feature '$CURRENT_FEATURE'"
+# Add update-phase completion instructions for ALL tasks (with --verdict)
+PHASE_CMDS=""
+echo "$FULL_MSG" | grep '^Task:' | sed 's/^Task:[[:space:]]*//' | while IFS= read -r TASK_LINE; do
+  if [ -n "$TASK_LINE" ]; then
+    TASK_PHASE_ARGS="--task '$TASK_LINE' --phase adversarial --event complete --verdict <verdict>"
+    if [ -n "$CURRENT_FIX" ]; then
+      TASK_PHASE_ARGS="$TASK_PHASE_ARGS --fix '$CURRENT_FIX'"
+    elif [ -n "$CURRENT_PRD" ] && [ -n "$CURRENT_FEATURE" ]; then
+      TASK_PHASE_ARGS="$TASK_PHASE_ARGS --prd '$CURRENT_PRD' --feature '$CURRENT_FEATURE'"
+    fi
+    echo "  npx tiny-brain update-phase $TASK_PHASE_ARGS"
   fi
+done > /tmp/tb-phase-cmds-$$ 2>/dev/null || true
+PHASE_CMDS=$(cat /tmp/tb-phase-cmds-$$ 2>/dev/null || true)
+rm -f /tmp/tb-phase-cmds-$$ 2>/dev/null || true
+
+if [ -n "$PHASE_CMDS" ]; then
   INSTRUCTION="$INSTRUCTION
-After the adversarial review completes, run:
-  npx tiny-brain update-phase $PHASE_ARGS"
+After the adversarial review completes, run these commands (replace <verdict> with the review verdict: clean, minor-issues, or needs-refactoring):
+$PHASE_CMDS"
 fi
 
 INSTRUCTION="$INSTRUCTION
