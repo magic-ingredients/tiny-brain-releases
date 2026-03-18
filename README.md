@@ -65,14 +65,6 @@ Dashboard available at `localhost:8765`
 - Quality scoring across 8 categories
 - 100% local — no data leaves your machine
 
-## Pro (coming soon — $9/user/month)
-
-- Tech-specific agents (React, Next.js, Python, Go, etc.)
-- Cloud-synced personas across machines
-- Agent maintenance as frameworks evolve
-- Team quality dashboard
-- CI integration (BYOK)
-
 ## Security & privacy
 
 - **100% local** — all data stored on your machine
