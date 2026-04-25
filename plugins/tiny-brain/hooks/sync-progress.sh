@@ -8,6 +8,9 @@
 # Input: JSON on stdin with tool_input.file_path
 #
 
+# Resolve package manager exec command from analysis.json
+. "$(dirname "$0")/resolve-exec.sh"
+
 # Read file path from stdin JSON (no jq dependency)
 FILE_PATH=$(sed -n 's/.*"file_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
 
@@ -24,7 +27,7 @@ fi
 if [[ "$FILE_PATH" =~ \.tiny-brain/fixes/.*\.md$ ]]; then
   echo ""
   echo "🧠 Syncing fix progress: $(basename "$FILE_PATH")"
-  npx tiny-brain sync-progress "$FILE_PATH" || true
+  $EXEC tiny-brain task sync "$FILE_PATH" || true
   exit 0
 fi
 
@@ -32,7 +35,7 @@ fi
 if [[ "$FILE_PATH" =~ docs/prd/.*\.md$ ]]; then
   echo ""
   echo "🧠 Syncing PRD progress: $(basename "$FILE_PATH")"
-  npx tiny-brain sync-progress "$FILE_PATH" || true
+  $EXEC tiny-brain task sync "$FILE_PATH" || true
   exit 0
 fi
 

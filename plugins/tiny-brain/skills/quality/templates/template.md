@@ -1,6 +1,6 @@
 # Quality Run Output Template
 
-This template defines the markdown format for quality run reports saved to `docs/quality/runs/`.
+This template defines the markdown format for quality run reports saved to `.tiny-brain/quality/runs/`.
 
 ## File Naming
 

@@ -1,0 +1,397 @@
+#!/bin/sh
+#
+# Git commit-msg hook for TDD workflow
+# Validates conventional commit format and runs tests for implementation commits
+#
+# Installed by: tiny-brain analyse
+# To reinstall: tiny-brain hooks install
+#
+
+# Resolve package manager commands from analysis.json
+HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
+EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
+EXEC_CMD=$(echo $EXEC | cut -d' ' -f1)
+RUN=$("$HOOKS_DIR/tiny-brain-exec" run 2>/dev/null || echo "npm run")
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Extract first line for validation
+FIRST_LINE=$(echo "$COMMIT_MSG" | head -n 1)
+
+# Check for merge commits (allow them, no tests needed)
+if echo "$FIRST_LINE" | grep -qE "^Merge "; then
+  exit 0
+fi
+
+# Check for revert commits (allow them, no tests needed)
+if echo "$FIRST_LINE" | grep -qE "^Revert "; then
+  exit 0
+fi
+
+# Check for conventional commit prefixes
+if ! echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor|fix|chore|docs|style|ci|build|perf|untracked)(\(.+\))?:"; then
+  echo ""
+  echo "❌ Commit message must use conventional commit format"
+  echo ""
+  echo "   Format: <type>(<scope>): <subject>"
+  echo ""
+  echo "   Types for TDD tracking:"
+  echo "     test:     Write failing tests (RED phase)"
+  echo "     feat:     Implement to pass tests (GREEN phase)"
+  echo "     refactor: Improve without changing behavior (REFACTOR phase)"
+  echo "     fix:      Bug fixes (GREEN phase)"
+  echo ""
+  echo "   Other types:"
+  echo "     chore:    Maintenance tasks"
+  echo "     docs:     Documentation changes"
+  echo "     style:    Formatting, no code change"
+  echo "     ci:       CI/CD changes"
+  echo "     build:    Build system changes"
+  echo "     perf:     Performance improvements"
+  echo "     untracked: Work not related to any PRD or Fix"
+  echo ""
+  echo "   Your message: $FIRST_LINE"
+  echo ""
+  exit 1
+fi
+
+# For test:/feat:/refactor: commits, validate PRD/Task headers when active PRDs exist
+if echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor)(\(.+\))?:"; then
+  PROGRESS_DIR=".tiny-brain/progress"
+  if [ -d "$PROGRESS_DIR" ]; then
+    # Count active PRDs (status is not_started or in_progress)
+    ACTIVE_PRDS=$(find "$PROGRESS_DIR" -name "*.json" -exec grep -l '"status":\s*"\(not_started\|in_progress\)"' {} \; 2>/dev/null | wc -l | tr -d ' ')
+
+    if [ "$ACTIVE_PRDS" -gt 0 ]; then
+      # Check for PRD: or Fix: header (either is acceptable for tracking)
+      HAS_PRD=$(echo "$COMMIT_MSG" | grep -qE "^PRD:\s*.+" && echo "yes" || echo "no")
+      HAS_FIX=$(echo "$COMMIT_MSG" | grep -qE "^Fix:\s*.+" && echo "yes" || echo "no")
+
+      if [ "$HAS_PRD" = "no" ] && [ "$HAS_FIX" = "no" ]; then
+        echo ""
+        echo "${RED}❌ Tracked commit requires PRD or Fix headers${NC}"
+        echo ""
+        echo "   There are $ACTIVE_PRDS active PRD(s). Add tracking headers:"
+        echo ""
+        echo "   For PRD-tracked work:"
+        echo "     PRD: <prd-id>"
+        echo "     Feature: <feature-id>"
+        echo "     Task: <exact task description>"
+        echo ""
+        echo "   For Fix-tracked work:"
+        echo "     Fix: <fix-id>"
+        echo "     Task: <exact task description>"
+        echo ""
+        echo "   Active PRDs:"
+        find "$PROGRESS_DIR" -name "*.json" -exec grep -l '"status":\s*"\(not_started\|in_progress\)"' {} \; 2>/dev/null | while read f; do
+          basename "$f" .json | sed 's/^/     - /'
+        done
+        echo ""
+        exit 1
+      fi
+
+      # Validate PRD-tracked commits
+      if [ "$HAS_PRD" = "yes" ]; then
+        # Check if Feature: header is present
+        if ! echo "$COMMIT_MSG" | grep -qE "^Feature:\s*.+"; then
+          echo ""
+          echo "${RED}❌ PRD-tracked commit requires Feature header${NC}"
+          echo ""
+          echo "   PRD: header found, but Feature: header is missing."
+          echo "   Add the feature ID from the PRD:"
+          echo ""
+          echo "   Feature: <feature-id>"
+          echo ""
+          exit 1
+        fi
+
+        # Check if Task: header is present
+        if ! echo "$COMMIT_MSG" | grep -qE "^Task:\s*.+"; then
+          echo ""
+          echo "${RED}❌ PRD-tracked commit requires Task header${NC}"
+          echo ""
+          echo "   PRD: and Feature: headers found, but Task: header is missing."
+          echo "   Add the exact task description from the feature document:"
+          echo ""
+          echo "   Task: <exact task description>"
+          echo ""
+          exit 1
+        fi
+
+        # Validate PRD/Feature/Task references using tiny-brain CLI
+        if command -v $EXEC_CMD >/dev/null 2>&1; then
+          if ! $EXEC tiny-brain commit validate "$COMMIT_MSG_FILE"; then
+            echo ""
+            echo "${RED}❌ PRD/Feature/Task validation failed${NC}"
+            echo ""
+            exit 1
+          fi
+        fi
+      fi
+
+      # Validate Fix-tracked commits
+      if [ "$HAS_FIX" = "yes" ]; then
+        # Check if Task: header is present
+        if ! echo "$COMMIT_MSG" | grep -qE "^Task:\s*.+"; then
+          echo ""
+          echo "${RED}❌ Fix-tracked commit requires Task header${NC}"
+          echo ""
+          echo "   Fix: header found, but Task: header is missing."
+          echo "   Add the exact task description from the fix document:"
+          echo ""
+          echo "   Task: <exact task description>"
+          echo ""
+          exit 1
+        fi
+
+        # Validate Fix/Task references using tiny-brain CLI
+        if command -v $EXEC_CMD >/dev/null 2>&1; then
+          if ! $EXEC tiny-brain commit validate "$COMMIT_MSG_FILE"; then
+            echo ""
+            echo "${RED}❌ Fix/Task validation failed${NC}"
+            echo ""
+            exit 1
+          fi
+        fi
+      fi
+    fi
+  fi
+fi
+
+# For fix: commits, validate Fix/Task headers when open fixes exist
+if echo "$FIRST_LINE" | grep -qE "^fix(\(.+\))?:"; then
+  FIXES_FILE=".tiny-brain/fixes/progress.json"
+  if [ -f "$FIXES_FILE" ]; then
+    # Count open fixes (not_started or in_progress status)
+    OPEN_FIXES=$(grep -E '"status":\s*"(not_started|in_progress)"' "$FIXES_FILE" 2>/dev/null | wc -l | tr -d ' ')
+
+    if [ "$OPEN_FIXES" -gt 0 ]; then
+      # Check if Fix: header is present in commit message
+      if ! echo "$COMMIT_MSG" | grep -qE "^Fix:\s*.+"; then
+        echo ""
+        echo "${RED}❌ fix: commit requires Fix tracking header${NC}"
+        echo ""
+        echo "   There are $OPEN_FIXES open fix(es). Add tracking headers:"
+        echo ""
+        echo "   fix(scope): your commit message"
+        echo ""
+        echo "   Fix: <fix-id>"
+        echo "   Task: <exact task description from fix document>"
+        echo ""
+        echo "   Open fixes:"
+        # Extract and display open fix IDs
+        grep -B5 '"status":\s*"not_started"' "$FIXES_FILE" 2>/dev/null | grep '"id"' | sed 's/.*"id":\s*"\([^"]*\)".*/     - \1/' || true
+        grep -B5 '"status":\s*"in_progress"' "$FIXES_FILE" 2>/dev/null | grep '"id"' | sed 's/.*"id":\s*"\([^"]*\)".*/     - \1/' || true
+        echo ""
+        exit 1
+      fi
+
+      # Check if Task: header is present
+      if ! echo "$COMMIT_MSG" | grep -qE "^Task:\s*.+"; then
+        echo ""
+        echo "${RED}❌ fix: commit requires Task tracking header${NC}"
+        echo ""
+        echo "   Fix: header found, but Task: header is missing."
+        echo "   Add the exact task description from the fix document:"
+        echo ""
+        echo "   Task: <exact task description>"
+        echo ""
+        exit 1
+      fi
+
+      # Validate fix/task references using tiny-brain CLI
+      if command -v $EXEC_CMD >/dev/null 2>&1; then
+        if ! $EXEC tiny-brain commit validate "$COMMIT_MSG_FILE"; then
+          echo ""
+          echo "${RED}❌ Fix/Task validation failed${NC}"
+          echo ""
+          exit 1
+        fi
+      fi
+    fi
+  fi
+fi
+
+# For refactor: commits with tracking headers, validate phase context
+if echo "$FIRST_LINE" | grep -qE "^refactor(\(.+\))?:"; then
+  HAS_PRD_HEADER=$(echo "$COMMIT_MSG" | grep -qE "^PRD:\s*.+" && echo "yes" || echo "no")
+  HAS_FIX_HEADER=$(echo "$COMMIT_MSG" | grep -qE "^Fix:\s*.+" && echo "yes" || echo "no")
+
+  if [ "$HAS_PRD_HEADER" = "yes" ] || [ "$HAS_FIX_HEADER" = "yes" ]; then
+    # Has tracking headers — validate that a review phase is active using derived phase
+    if command -v $EXEC_CMD >/dev/null 2>&1; then
+      TASK_DESC=$(echo "$COMMIT_MSG" | grep '^Task:' | head -1 | sed 's/^Task:[[:space:]]*//')
+      PHASE_ARGS="--task-id \"$TASK_DESC\" --quiet"
+
+      if [ "$HAS_FIX_HEADER" = "yes" ]; then
+        FIX_ID=$(echo "$COMMIT_MSG" | grep '^Fix:' | head -1 | sed 's/^Fix:[[:space:]]*//')
+        PHASE_ARGS="$PHASE_ARGS --fix \"$FIX_ID\""
+      elif [ "$HAS_PRD_HEADER" = "yes" ]; then
+        PRD_ID=$(echo "$COMMIT_MSG" | grep '^PRD:' | head -1 | sed 's/^PRD:[[:space:]]*//')
+        FEATURE_ID=$(echo "$COMMIT_MSG" | grep '^Feature:' | head -1 | sed 's/^Feature:[[:space:]]*//')
+        PHASE_ARGS="$PHASE_ARGS --prd \"$PRD_ID\" --feature \"$FEATURE_ID\""
+      fi
+
+      CURRENT_PHASE=$(eval $EXEC tiny-brain pipeline $PHASE_ARGS 2>/dev/null | tail -1 || echo "")
+
+      if [ -n "$CURRENT_PHASE" ]; then
+        case "$CURRENT_PHASE" in
+          review:*|refactor:*)
+            # Valid phase for refactor: commit
+            ;;
+          *)
+            echo ""
+            echo "${RED}❌ refactor: commit rejected — no active review phase${NC}"
+            echo ""
+            echo "   Derived phase: ${CURRENT_PHASE:-none}"
+            echo "   refactor: commits are only valid during an active review or refactor phase."
+            echo ""
+            exit 1
+            ;;
+        esac
+      else
+        echo ""
+        echo "${RED}❌ refactor: commit rejected — could not determine current phase${NC}"
+        echo ""
+        echo "   The task was not found or has no active phase."
+        echo "   Verify the Task: header matches the exact task description."
+        echo ""
+        exit 1
+      fi
+    fi
+  fi
+fi
+
+# For test: commits, skip test execution (they should fail - TDD red phase)
+if echo "$FIRST_LINE" | grep -qE "^test(\(.+\))?:"; then
+  echo "   ⏭ Tests (TDD RED phase)"
+  exit 0
+fi
+
+# For untracked: commits, reject when active TDD work exists
+if echo "$FIRST_LINE" | grep -qE "^untracked(\(.+\))?:"; then
+  if [ "$FORCE_UNTRACKED" = "1" ]; then
+    exit 0
+  fi
+
+  HAS_ACTIVE_WORK="no"
+
+  # Check for active PRDs
+  PROGRESS_DIR=".tiny-brain/progress"
+  if [ -d "$PROGRESS_DIR" ]; then
+    ACTIVE_PRDS=$(find "$PROGRESS_DIR" -name "*.json" -exec grep -l '"status":\s*"\(not_started\|in_progress\)"' {} \; 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$ACTIVE_PRDS" -gt 0 ]; then
+      HAS_ACTIVE_WORK="yes"
+    fi
+  fi
+
+  # Check for open fixes
+  FIXES_FILE=".tiny-brain/fixes/progress.json"
+  if [ -f "$FIXES_FILE" ]; then
+    OPEN_FIXES=$(grep -cE '"status":\s*"(not_started|in_progress)"' "$FIXES_FILE" 2>/dev/null || echo "0")
+    if [ "$OPEN_FIXES" -gt 0 ]; then
+      HAS_ACTIVE_WORK="yes"
+    fi
+  fi
+
+  if [ "$HAS_ACTIVE_WORK" = "yes" ]; then
+    echo ""
+    echo "${RED}❌ untracked: commits are not allowed during active TDD work${NC}"
+    echo ""
+    echo "   There are active PRDs or open fixes. Use a tracked commit type instead:"
+    echo "     test:     Writing failing tests (RED phase)"
+    echo "     feat:     Implementation (GREEN phase)"
+    echo "     fix:      Bug fixes"
+    echo "     refactor: Code improvement"
+    echo ""
+    echo "   If this is genuinely unrelated work, use:"
+    echo "     FORCE_UNTRACKED=1 git commit ..."
+    echo ""
+    exit 1
+  fi
+
+  exit 0
+fi
+
+# For chore/docs/style/ci/build commits, skip test execution
+if echo "$FIRST_LINE" | grep -qE "^(chore|docs|style|ci|build)(\(.+\))?:"; then
+  exit 0
+fi
+
+# For feat:/fix:/refactor:/perf: commits, run test-dependent hook steps (e.g. coverage)
+# These were skipped in pre-commit (which used --skip-test-runners)
+if command -v $EXEC_CMD >/dev/null 2>&1; then
+  HOOK_OUTPUT_FILE=$(mktemp)
+  if $EXEC tiny-brain hooks run pre-commit --only-test-runners >"$HOOK_OUTPUT_FILE" 2>&1; then
+    if [ -s "$HOOK_OUTPUT_FILE" ]; then
+      cat "$HOOK_OUTPUT_FILE"
+    fi
+  else
+    cat "$HOOK_OUTPUT_FILE"
+    rm -f "$HOOK_OUTPUT_FILE"
+    exit 1
+  fi
+  rm -f "$HOOK_OUTPUT_FILE"
+fi
+
+# For feat:/fix:/refactor:/perf: commits, run tests (they should pass)
+if [ ! -f "package.json" ]; then
+  exit 0
+fi
+
+if grep -q '"test"' package.json 2>/dev/null; then
+  # Check if this is a monorepo with packages/
+  if [ -d "packages" ]; then
+    # Monorepo: scope tests to affected packages
+    CHANGED_PACKAGES=$(git diff --cached --name-only | grep '^packages/' | cut -d'/' -f2 | sort -u)
+
+    if [ -n "$CHANGED_PACKAGES" ]; then
+      FILTER_ARGS=""
+      for pkg in $CHANGED_PACKAGES; do
+        FILTER_ARGS="$FILTER_ARGS --filter=./packages/$pkg"
+      done
+      TEST_OUTPUT_FILE=$(mktemp)
+      if $EXEC turbo run test $FILTER_ARGS >"$TEST_OUTPUT_FILE" 2>&1; then
+        echo "   ✅ Tests"
+      else
+        echo "   ❌ Tests"
+        echo ""
+        grep -E "FAIL|✗|×|AssertionError|Error:|expected|received|FAILED" "$TEST_OUTPUT_FILE" | head -30
+        echo ""
+        echo "   Tests must pass for feat:/fix:/refactor: commits"
+        echo "   Use 'test:' prefix when writing failing tests (TDD red phase)"
+        rm -f "$TEST_OUTPUT_FILE"
+        exit 1
+      fi
+      rm -f "$TEST_OUTPUT_FILE"
+    else
+      # Changes outside packages/ (root config, docs, etc.) - skip tests
+      echo "   ⏭ Tests"
+    fi
+  else
+    # Single-package repo: run all tests
+    TEST_OUTPUT_FILE=$(mktemp)
+    if $RUN test >"$TEST_OUTPUT_FILE" 2>&1; then
+      echo "   Tests ✅"
+    else
+      echo "   Tests ❌"
+      echo ""
+      grep -E "FAIL|✗|×|AssertionError|Error:|expected|received|FAILED" "$TEST_OUTPUT_FILE" | head -30
+      echo ""
+      echo "   Tests must pass for feat:/fix:/refactor: commits"
+      echo "   Use 'test:' prefix when writing failing tests (TDD red phase)"
+      rm -f "$TEST_OUTPUT_FILE"
+      exit 1
+    fi
+    rm -f "$TEST_OUTPUT_FILE"
+  fi
+fi
+
+exit 0

@@ -36,7 +36,7 @@ This ensures:
 Each quality run gets a nested directory based on timestamp:
 
 **RunId format:** `YYYY-MM-DDTHH-mm` (e.g., `2026-02-10T18-03`)
-**Disk path:** `docs/quality/runs/YYYY-MM-DD/HH-mm/`
+**Disk path:** `.tiny-brain/quality/runs/YYYY-MM-DD/HH-mm/`
 
 Files within a run directory:
 | File | Source | Content |
@@ -46,13 +46,13 @@ Files within a run directory:
 | `analysers/` | MCP run-analysers | Raw per-analyzer output files (e.g., `eslint-0.json`, `typescript-0.txt`) |
 | `analysis.json` | MCP run-analysers | Merged/normalized analyzer issues |
 | `agents/` | Specialist agents | Agent findings subdirectory |
-| `agents/security-quality-reviewer-output.json` | security-quality-reviewer agent | Security findings |
-| `agents/performance-quality-reviewer-output.json` | performance-quality-reviewer agent | Performance & Reliability findings |
-| `agents/testing-quality-reviewer-output.json` | testing-quality-reviewer agent | Testing findings |
-| `agents/code-quality-reviewer-output.json` | code-quality-reviewer agent | Code Review findings |
+| `agents/security-quality-reviewer.json` | security-quality-reviewer agent | Security findings |
+| `agents/performance-quality-reviewer.json` | performance-quality-reviewer agent | Performance & Reliability findings |
+| `agents/testing-quality-reviewer.json` | testing-quality-reviewer agent | Testing findings |
+| `agents/code-quality-reviewer.json` | code-quality-reviewer agent | Code Review findings |
 | `quality.md` | MCP assemble-run | Final merged report |
 
-Legacy runs (pre-v3) use flat `docs/quality/runs/YYYY-MM-DD-*.json` naming.
+Legacy runs (pre-v3) use flat `.tiny-brain/quality/runs/YYYY-MM-DD-*.json` naming.
 
 ## Phase 1: Discovery
 
@@ -74,7 +74,7 @@ Legacy runs (pre-v3) use flat `docs/quality/runs/YYYY-MM-DD-*.json` naming.
 Analyzing repository...
   Found 87 source files, 34 test files
   Detected 3 analyzers: ESLint, TypeScript, npm audit
-  Run directory: docs/quality/runs/2026-02-10/18-03/
+  Run directory: .tiny-brain/quality/runs/2026-02-10/18-03/
 ```
 
 ## Phase 2: Parallel Launch

@@ -304,4 +304,4 @@ This file can be customized per-repository to adjust:
 - Theme tags for project-specific concerns
 - Effort calibration ranges for your team's velocity
 
-To customize, copy this file to `docs/quality/quality_criteria.md` in your repository and modify as needed.
+To customize, copy this file to `.tiny-brain/quality/quality_criteria.md` in your repository and modify as needed.

@@ -43,7 +43,7 @@ Understand the repository before analysis:
 1. Read `package.json`, `tsconfig.json` for context
 2. Read `.tiny-brain/analysis.json` for detected tech stack
 3. Read `.tiny-brain/tech/*.md` files and extract `## Quality Scoring` tables
-4. Look for `docs/quality/quality_criteria.md` for custom standards
+4. Look for `.tiny-brain/quality/quality_criteria.md` for custom standards
 5. List source files eligible for investigation using Glob (e.g., `**/*.ts`, `**/*.tsx`, excluding `node_modules`, `dist`, test files)
 
 **Output**: Repository context, tech-specific quality patterns, file list
@@ -209,7 +209,7 @@ Present results to the user:
 
 ### Run Details
 - Run ID: YYYY-MM-DD-quality
-- Saved to: docs/quality/runs/YYYY-MM-DD-quality.md
+- Saved to: .tiny-brain/quality/runs/YYYY-MM-DD-quality.md
 ```
 
 ## Error Handling

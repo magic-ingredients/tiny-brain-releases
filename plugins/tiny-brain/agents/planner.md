@@ -40,6 +40,12 @@ For each feature, define tasks that:
 - Include specific files to modify
 - Have clear expected outcomes
 
+**CRITICAL:** Do NOT split TDD phases into separate tasks. Each task describes WHAT to build (the behavior), not HOW to build it (the process). TDD red/green/refactor happens within each task.
+
+BAD: "Write failing tests for X" then "Implement X" as two tasks
+BAD: "Verify all tests pass" or "Run integration tests" (no commit, always superseded)
+GOOD: "Add X with Y behavior" as one task (TDD cycle happens inside it)
+
 ### Step 4: Documentation
 Create structured documents:
 - PRD with purpose, goals, and feature list

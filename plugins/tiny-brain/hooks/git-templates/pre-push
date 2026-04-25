@@ -1,0 +1,64 @@
+#!/bin/sh
+#
+# Git pre-push hook for push pipeline
+# Reads pushPipeline from config and runs each review type's command.
+#
+# Installed by: tiny-brain analyse
+# To reinstall: tiny-brain hooks install
+#
+
+# Resolve package manager exec command from analysis.json
+HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
+EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
+
+# Read push pipeline step types from config
+# The config returns JSON objects — extract just the "type" values
+RAW_PIPELINE=$($EXEC tiny-brain config preferences get pushPipeline 2>/dev/null)
+PUSH_PIPELINE=$(echo "$RAW_PIPELINE" | grep -oE '"type":"[^"]*"' | sed 's/"type":"//;s/"//' | tr '\n' ',' | sed 's/,$//')
+
+if [ -z "$PUSH_PIPELINE" ]; then
+  # No push pipeline configured — nothing to run
+  exit 0
+fi
+
+echo ""
+echo "🧠 Running push pipeline..."
+echo ""
+
+# Split comma-separated pipeline into items (POSIX-compatible)
+FAILED=0
+OLD_IFS="$IFS"
+IFS=','
+
+for ITEM in $PUSH_PIPELINE; do
+  # Skip empty items
+  [ -z "$ITEM" ] && continue
+
+  echo "   Running: $ITEM"
+
+  # Each push pipeline item has a registered script
+  # Capability installers create these during installation
+  PUSH_SCRIPT=".tiny-brain/push-scripts/${ITEM}.sh"
+  if [ -f "$PUSH_SCRIPT" ]; then
+    if ! sh "$PUSH_SCRIPT"; then
+      echo "   ❌ $ITEM failed"
+      FAILED=1
+    else
+      echo "   ✓ $ITEM passed"
+    fi
+  else
+    echo "   ⏭ $ITEM: no push script found (install capability first)"
+  fi
+done
+
+IFS="$OLD_IFS"
+
+if [ "$FAILED" -ne 0 ]; then
+  echo ""
+  echo "❌ Push pipeline failed. Push aborted."
+  echo "   Fix the issues above, or use 'git push --no-verify' to skip."
+  echo ""
+  exit 1
+fi
+
+exit 0

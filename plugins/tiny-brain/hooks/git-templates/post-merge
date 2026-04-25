@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+# Git post-merge hook for progress.json re-synchronization
+# Re-syncs progress.json from markdown sources after a merge
+# to resolve conflicts and ensure consistency.
+#
+# Installed by: tiny-brain analyse
+# To reinstall: tiny-brain hooks install
+#
+
+# Resolve package manager exec command from analysis.json
+HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
+EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
+
+# Check if any progress files were involved in the merge
+CHANGED_PROGRESS=$(git diff-tree -r --name-only ORIG_HEAD HEAD 2>/dev/null | grep -E '\.tiny-brain/(progress/|fixes/progress\.json)')
+
+if [ -z "$CHANGED_PROGRESS" ]; then
+  exit 0
+fi
+
+echo ""
+echo "🧠 Progress files changed during merge — re-syncing from markdown sources..."
+
+# Re-sync PRD progress from feature markdown files
+for feature_md in docs/prd/*/features/*.md; do
+  [ -f "$feature_md" ] || continue
+  $EXEC tiny-brain task sync "$feature_md" 2>/dev/null || true
+done
+
+# Re-sync fix progress from fix markdown files
+for fix_md in .tiny-brain/fixes/*.md; do
+  [ -f "$fix_md" ] || continue
+  $EXEC tiny-brain task sync "$fix_md" 2>/dev/null || true
+done
+
+# Stage regenerated progress files
+git add .tiny-brain/progress/*.json .tiny-brain/fixes/progress.json 2>/dev/null || true
+
+# Check if there are staged changes to commit
+if git diff --cached --quiet 2>/dev/null; then
+  exit 0
+fi
+
+git commit -m "chore: re-sync progress after merge" --no-verify 2>/dev/null || true
+
+echo "✅ Progress re-synced and committed"
+echo ""
+
+exit 0

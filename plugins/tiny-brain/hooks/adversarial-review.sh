@@ -15,6 +15,9 @@
 # only visible in verbose mode (Ctrl+O) and is NOT added to context.
 #
 
+# Resolve package manager exec command from analysis.json
+. "$(dirname "$0")/resolve-exec.sh"
+
 # --- Gate 1: Was this a git commit command? ---
 INPUT=$(cat)
 if ! echo "$INPUT" | grep -q 'git commit'; then
@@ -104,28 +107,21 @@ fi
 
 TASK_DESC=$(echo "$LATEST_MSG" | sed -E 's/^[a-z]+(\([^)]+\))?:[[:space:]]*//')
 
-# --- Set adversarialStartedAt via update-phase for ALL tasks ---
-echo "$FULL_MSG" | grep '^Task:' | sed 's/^Task:[[:space:]]*//' | while IFS= read -r TASK_LINE; do
-  if [ -n "$TASK_LINE" ]; then
-    UPDATE_ARGS="--task \"$TASK_LINE\" --phase adversarial --event start"
-    if [ -n "$CURRENT_FIX" ]; then
-      UPDATE_ARGS="$UPDATE_ARGS --fix \"$CURRENT_FIX\""
-    elif [ -n "$CURRENT_PRD" ] && [ -n "$CURRENT_FEATURE" ]; then
-      UPDATE_ARGS="$UPDATE_ARGS --prd \"$CURRENT_PRD\" --feature \"$CURRENT_FEATURE\""
-    fi
-    eval npx tiny-brain update-phase $UPDATE_ARGS 2>/dev/null || true
-  fi
-done
-echo "[adversarial-review] set adversarialStartedAt for all tasks via update-phase" >&2
+# --- Read first review type from pipeline config ---
+FIRST_REVIEW_TYPE=$($EXEC tiny-brain config preferences get reviewPipeline 2>/dev/null | grep -oE '\[.*\]' | sed 's/\[//;s/\]//;s/"//g;s/,.*//;s/ //g')
+if [ -z "$FIRST_REVIEW_TYPE" ]; then
+  FIRST_REVIEW_TYPE="adversarial"
+fi
+echo "[adversarial-review] first review type in pipeline: $FIRST_REVIEW_TYPE" >&2
 
 # Build the instruction message
 INSTRUCTION="ADVERSARIAL REVIEW REQUIRED
 
-A non-trivial feat: commit was detected ($COMMIT_SHA).
-You MUST now invoke the adversarial reviewer for critical review from an isolated context before proceeding.
+A non-trivial feat:/fix: commit was detected ($COMMIT_SHA).
+You MUST now invoke the adversarial reviewer before proceeding with any other work.
 
-Use the Task tool with:
-  subagent_type: tiny-brain:adversarial-reviewer
+Use the Agent tool with:
+  subagent_type: tiny-brain:${FIRST_REVIEW_TYPE}-reviewer
   prompt: |
     Review the following TDD work:"
 
@@ -138,35 +134,25 @@ INSTRUCTION="$INSTRUCTION
     - Implementation commit: $COMMIT_SHA
     - Task: $TASK_DESC
     Critically analyze the test quality and implementation.
-    Return structured JSON refactoring suggestions.
+    Return structured JSON refactoring suggestions."
 
-After review, implement suggestions as refactor(scope): commits."
-
-# Add update-phase completion instructions for ALL tasks (with --verdict)
-PHASE_CMDS=""
-echo "$FULL_MSG" | grep '^Task:' | sed 's/^Task:[[:space:]]*//' | while IFS= read -r TASK_LINE; do
-  if [ -n "$TASK_LINE" ]; then
-    TASK_PHASE_ARGS="--task '$TASK_LINE' --phase adversarial --event complete --verdict <verdict>"
-    if [ -n "$CURRENT_FIX" ]; then
-      TASK_PHASE_ARGS="$TASK_PHASE_ARGS --fix '$CURRENT_FIX'"
-    elif [ -n "$CURRENT_PRD" ] && [ -n "$CURRENT_FEATURE" ]; then
-      TASK_PHASE_ARGS="$TASK_PHASE_ARGS --prd '$CURRENT_PRD' --feature '$CURRENT_FEATURE'"
-    fi
-    echo "  npx tiny-brain update-phase $TASK_PHASE_ARGS"
-  fi
-done > /tmp/tb-phase-cmds-$$ 2>/dev/null || true
-PHASE_CMDS=$(cat /tmp/tb-phase-cmds-$$ 2>/dev/null || true)
-rm -f /tmp/tb-phase-cmds-$$ 2>/dev/null || true
-
-if [ -n "$PHASE_CMDS" ]; then
-  INSTRUCTION="$INSTRUCTION
-After the adversarial review completes, run these commands (replace <verdict> with the review verdict: clean, minor-issues, or needs-refactoring):
-$PHASE_CMDS"
+PIPELINE_ARGS="--task-id '$CURRENT_TASK' --agent $FIRST_REVIEW_TYPE --sha $COMMIT_SHA"
+if [ -n "$CURRENT_FIX" ]; then
+  PIPELINE_ARGS="$PIPELINE_ARGS --fix '$CURRENT_FIX'"
+elif [ -n "$CURRENT_PRD" ] && [ -n "$CURRENT_FEATURE" ]; then
+  PIPELINE_ARGS="$PIPELINE_ARGS --prd '$CURRENT_PRD' --feature '$CURRENT_FEATURE'"
 fi
 
 INSTRUCTION="$INSTRUCTION
-When the TDD cycle is complete, run:
-  npx tiny-brain commit-progress"
+
+    After persisting review JSON, advance the pipeline (replace <verdict> with: clean or dirty):
+  $EXEC tiny-brain pipeline $PIPELINE_ARGS --decision <verdict>
+
+After the ${FIRST_REVIEW_TYPE} review agent returns, tell the user:
+  - If verdict is needs-refactoring: '🧠 😈 Adversarial review complete for: [task] — refactoring needed'
+  - If verdict is clean: '🧠 😈 Adversarial review complete for: [task] — clean, no refactor needed'
+Then implement refactor suggestions as refactor(scope): commits if needed.
+When the TDD cycle is complete, run: $EXEC tiny-brain commit progress"
 
 # Output structured JSON using jq for proper escaping
 # Per docs: additionalContext in hookSpecificOutput is added to Claude's context

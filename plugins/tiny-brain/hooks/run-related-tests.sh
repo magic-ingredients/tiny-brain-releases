@@ -5,6 +5,9 @@
 # Input: JSON on stdin with tool_input.file_path
 #
 
+# Resolve package manager exec command from analysis.json
+. "$(dirname "$0")/resolve-exec.sh"
+
 FILE_PATH=$(sed -n 's/.*"file_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
 
 # Skip if no file path or not a TS/TSX file
@@ -52,4 +55,4 @@ else
 fi
 
 # Run the test from the working directory
-cd "$WORK_DIR" && npx vitest run "$TEST_FILE" 2>&1 | tail -5 || true
+cd "$WORK_DIR" && $EXEC vitest run "$TEST_FILE" 2>&1 | tail -5 || true

@@ -25,7 +25,18 @@ updated: YYYY-MM-DD
 
 ## Tasks
 
-[List all implementation tasks. Each task should be a discrete unit of work that can be completed with a single commit (or small set of commits for TDD: test/impl/refactor). Tasks will automatically track commit SHAs when using git hooks with conventional commit messages.]
+[List all implementation tasks. Each task should be a discrete unit of work that can be completed with a single commit (or small set of commits for TDD: test/impl/refactor). Tasks will automatically track commit SHAs when using git hooks with conventional commit messages.
+
+IMPORTANT - Do NOT split TDD phases into separate tasks. TDD is the workflow for completing each task, not the task itself. Each task describes WHAT to build; the red/green/refactor cycle is HOW you build it.
+
+BAD (never do this):
+- "Write failing tests for calculateScore"
+- "Implement calculateScore"
+
+GOOD:
+- "Add calculateScore function with grade thresholds"
+
+Also never create verification-only tasks like "Verify all tests pass" or "Run integration tests". These produce no commits and always end up superseded. Verification is part of the TDD cycle, not a standalone task.]
 
 ### 1. Task Name
 status: not_started

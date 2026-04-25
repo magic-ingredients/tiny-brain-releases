@@ -49,10 +49,10 @@ Save to: `.tiny-brain/fixes/{fix-id}.md`
 ---
 id: fix-kebab-case-id
 title: Brief Description of the Fix
-status: documented
+status: not_started
 severity: low | medium | high | critical
 reported: 2026-01-07T15:30:00.000Z  # Use new Date().toISOString()
-resolved: null  # Set to ISO timestamp when resolved
+resolved: null  # Set to ISO timestamp when completed
 ---
 ```
 
@@ -270,11 +270,11 @@ When updating `.tiny-brain/fixes/progress.json` manually, use these statuses:
 **Important:**
 - `completed` MUST have a `commitSha` - this is how we verify work was done
 - `superseded` is for tasks that were resolved by other work (e.g., a refactoring that fixed multiple issues) or are no longer relevant
-- When marking a fix as `resolved`, all tasks should be either `completed` (with commit) or `superseded`
+- When marking a fix as `completed`, all tasks should be either `completed` (with commit) or `superseded`
 
-## Resolving a Fix
+## Completing a Fix
 
-When all tasks are complete (either `completed` with commit SHA or `superseded`), mark the fix as resolved:
+When all tasks are complete (either `completed` with commit SHA or `superseded`), mark the fix as completed:
 
 ### Step 1: Update Frontmatter
 
@@ -284,7 +284,7 @@ Edit the fix document's YAML frontmatter:
 ---
 id: dashboard-sse-fix
 title: Dashboard SSE connection fails
-status: resolved  # Change from in_progress
+status: completed  # Change from in_progress
 severity: medium
 reported: 2026-01-07T15:30:00.000Z
 resolved: 2026-01-21T15:30:00.000Z  # Add ISO timestamp

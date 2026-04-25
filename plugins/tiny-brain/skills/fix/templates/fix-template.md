@@ -1,11 +1,11 @@
 ---
 id: fix-id-here
 title: Brief Description of the Fix
-status: documented
+status: not_started
 severity: medium
 reported: YYYY-MM-DDTHH:MM:SS.sssZ
 resolved: null
-# When resolved, add:
+# When completed, add:
 # resolution:
 #   rootCause: Brief description of what caused the issue
 #   fix:
@@ -22,7 +22,7 @@ resolved: null
 
 **Reported:** [Date]
 **Severity:** [low | medium | high | critical]
-**Status:** [documented | in_progress | resolved]
+**Status:** [not_started | in_progress | completed | superseded]
 
 ### Reproduction Steps
 1. Step to reproduce
@@ -103,7 +103,7 @@ Run full test suite.
 ## Resolution
 
 When all tasks are complete, update the YAML frontmatter:
-1. Set `status: resolved`
+1. Set `status: completed`
 2. Set `resolved:` to ISO timestamp (e.g., `2026-01-21T15:30:00.000Z`)
 3. Add `resolution:` object with `rootCause`, `fix` (array), and `filesModified` (array)
 4. Run `npx tiny-brain sync-file .tiny-brain/fixes/{fix-id}.md`

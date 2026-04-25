@@ -1,82 +1,50 @@
-# 🧠 tiny-brain
+# tiny-brain Releases
 
-**Stop vibe coding. Start shipping.**
+This repository contains public releases of tiny-brain for Claude Code.
 
-Your AI writes code fast. tiny-brain makes sure it actually works — tested, tracked, and ready to deploy.
-
-## What it does
-
-tiny-brain is a Claude Code plugin that makes your codebase AI-ready. It analyses your code, sets up guardrails, and gives AI agents the context they need to write code you'd actually approve in a PR.
-
-## The problem
-
-AI coding is fast. Until it isn't. You ship a feature in 20 minutes, then spend 2 hours fixing what it broke. No tests, no specs, no audit trail — just you cleaning up after AI.
-
-## How tiny-brain fixes it
-
-### Make your code AI-ready
-One command analyses your codebase — languages, frameworks, test setup, project structure — and makes it all navigable for AI. Agents stop guessing and start working *with* your code.
+## Quick Install (Claude Code Plugin)
 
 ```bash
-npx tiny-brain analyse
+# Add the marketplace (once)
+/plugin marketplace add magic-ingredients/tiny-brain-releases
+
+# Install tiny-brain (includes all 7 agents)
+/plugin install tiny-brain@magic-ingredients
 ```
 
-### Every task has a pipeline
-Every task flows through a full pipeline, visible in real time on your local dashboard.
+## tiny-brain (v0.22.8)
 
-**Per commit:** 🔴 Red → 🟢 Green → 😈 Adversarial review
+AI-powered development workflows with TDD enforcement, planning, and quality tracking.
 
-**Per push:** 🧟 Mutation testing → 📦 Dependency analysis
+**Includes:**
+- Skills: /plan, /feature, /fix, /adr
+- Agents (7 bundled): developer, planner, reviewer, architect, tdd-validator, security-reviewer, performance-engineer
+- MCP tools for personas, planning, analysis
+- TDD enforcement hooks
+- Real-time dashboard
 
-### Full audit trail
-Every task records its test SHA, implementation SHA, review verdict, and refactor SHA. You can trace any line of code back to the task that created it.
+## Alternative Installation Methods
 
-### Personas
-AI that already knows your stack. No more re-explaining your conventions and preferences — personas load full context so you go straight to building.
+### DXT Extension
+- **Latest:** [Download DXT](./latest/tiny-brain-latest.dxt)
+- **All Versions:** [Browse Releases](./releases/)
 
-### Quality scoring
-Score your codebase across 8 categories. Know exactly where you stand before adding AI — because adding AI to a poor quality codebase just makes things worse.
-
-## Get started
-
-```
-# In Claude Code
-/plugin marketplace add https://github.com/magic-ingredients/tiny-brain-releases
-
-/plugin install tiny-brain@tiny-brain-marketplace
-
-# In your terminal
-npx tiny-brain analyse
-
-# Back in Claude Code
-as developer
-/plan "add user authentication"
+```bash
+curl -L -o tiny-brain.dxt \
+  "https://raw.githubusercontent.com/magic-ingredients/tiny-brain-releases/main/latest/tiny-brain-latest.dxt"
+dxt install tiny-brain.dxt
 ```
 
-Dashboard available at `localhost:8765`
+### NPM
+```bash
+npm install -g @magic-ingredients/tiny-brain-local
+```
 
-## What's included
+## API Endpoints
 
-- 8 specialized agents
-- 5 built-in skills (`/plan`, `/feature`, `/fix`, `/adr`, `/quality`)
-- Local dashboard with real-time progress tracking
-- Personas (local + git-based sharing)
-- Git hooks + TDD enforcement
-- Quality scoring across 8 categories
-- 100% local — no data leaves your machine
+- **Latest Version Info:** `https://raw.githubusercontent.com/magic-ingredients/tiny-brain-releases/main/latest/version.json`
+- **Plugin Marketplace:** `https://github.com/magic-ingredients/tiny-brain-releases`
 
-## Security & privacy
+## Documentation
 
-- **100% local** — all data stored on your machine
-- **No accounts, no telemetry** — install and go
-- **Open source** — inspect everything
-- **Uninstall anytime** — no lock-in
-
-## Links
-
-- [Website](https://tiny-brain.com)
-- [Issues](https://github.com/magic-ingredients/tiny-brain-releases/issues)
-
----
-
-Built by [magic ingredients](https://tiny-brain.com). Free and open source.
+Visit [tiny-brain.io](https://tiny-brain.io) for full documentation.

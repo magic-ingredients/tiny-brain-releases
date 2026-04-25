@@ -1,0 +1,94 @@
+#!/bin/sh
+#
+# Git post-commit hook for TDD progress tracking
+# - Calls pipeline to record SHAs, advance phases, and persist state
+#
+# Installed by: tiny-brain analyse
+# To reinstall: tiny-brain hooks install
+#
+
+# Resolve package manager exec command from analysis.json
+HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
+EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
+
+# Get the commit SHA
+COMMIT_SHA=$(git rev-parse HEAD 2>/dev/null)
+if [ -z "$COMMIT_SHA" ]; then
+  exit 0
+fi
+
+# Get commit message
+COMMIT_MSG=$(git log -1 --format=%B "$COMMIT_SHA" 2>/dev/null)
+# Get commit subject (first line only)
+COMMIT_SUBJECT=$(git log -1 --format='%s' "$COMMIT_SHA" 2>/dev/null)
+
+# ─── Pipeline advancement ───
+
+# Extract tracking context from commit message
+CURRENT_FIX=$(echo "$COMMIT_MSG" | grep '^Fix:' | head -1 | sed 's/^Fix:[[:space:]]*//')
+CURRENT_PRD=$(echo "$COMMIT_MSG" | grep '^PRD:' | head -1 | sed 's/^PRD:[[:space:]]*//')
+CURRENT_FEATURE=$(echo "$COMMIT_MSG" | grep '^Feature:' | head -1 | sed 's/^Feature:[[:space:]]*//')
+
+# Must have tracking headers
+HAS_HEADERS=""
+if [ -n "$CURRENT_FIX" ]; then
+  HAS_HEADERS="fix"
+elif [ -n "$CURRENT_PRD" ] && [ -n "$CURRENT_FEATURE" ]; then
+  HAS_HEADERS="prd"
+fi
+
+if [ -z "$HAS_HEADERS" ]; then
+  exit 0
+fi
+
+# Must be a tracked commit type (test/feat/fix/refactor)
+if ! echo "$COMMIT_SUBJECT" | grep -qE '^(test|feat|fix|refactor)(\([^)]+\))?:'; then
+  exit 0
+fi
+
+# Map commit prefix to pipeline agent name
+COMMIT_TYPE=$(echo "$COMMIT_SUBJECT" | sed -E 's/^([a-z]+)(\([^)]+\))?.*/\1/')
+case "$COMMIT_TYPE" in
+  test) AGENT="red" ;;
+  feat|fix) AGENT="green" ;;
+  refactor) AGENT="__derive__" ;; # will be resolved per-task from current phase
+  *) exit 0 ;;
+esac
+
+# For each task, call pipeline to record the step and get next instructions
+echo "$COMMIT_MSG" | grep '^Task:' | sed 's/^Task:[[:space:]]*//' | while IFS= read -r TASK_LINE; do
+  if [ -n "$TASK_LINE" ]; then
+    # Build tracking args (shared for inspect + advance)
+    TRACKING_ARGS="--task-id \"$TASK_LINE\""
+    if [ "$HAS_HEADERS" = "fix" ]; then
+      TRACKING_ARGS="$TRACKING_ARGS --fix \"$CURRENT_FIX\""
+    elif [ "$HAS_HEADERS" = "prd" ]; then
+      TRACKING_ARGS="$TRACKING_ARGS --prd \"$CURRENT_PRD\" --feature \"$CURRENT_FEATURE\""
+    fi
+
+    RESOLVED_AGENT="$AGENT"
+
+    # For refactor commits, derive the review type from current phase
+    if [ "$RESOLVED_AGENT" = "__derive__" ]; then
+      CURRENT_PHASE=$(eval $EXEC tiny-brain pipeline $TRACKING_ARGS --quiet 2>/dev/null | tail -1)
+      case "$CURRENT_PHASE" in
+        refactor:*)
+          RESOLVED_AGENT="${CURRENT_PHASE#refactor:}"
+          ;;
+        *)
+          # Not in a refactor phase — skip
+          RESOLVED_AGENT=""
+          ;;
+      esac
+    fi
+
+    PIPELINE_ARGS="$TRACKING_ARGS"
+    if [ -n "$RESOLVED_AGENT" ]; then
+      PIPELINE_ARGS="$PIPELINE_ARGS --agent $RESOLVED_AGENT --sha $COMMIT_SHA"
+    fi
+
+    eval $EXEC tiny-brain pipeline $PIPELINE_ARGS 2>/dev/null || true
+  fi
+done
+
+exit 0

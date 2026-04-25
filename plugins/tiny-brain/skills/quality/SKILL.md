@@ -1,7 +1,7 @@
 ---
 name: quality
 version: 3.0.0
-description: Run comprehensive code quality analysis on the repository. Performs weighted scoring across 8 categories using automated analyzers and 4 specialist investigation agents.
+description: Run comprehensive code quality analysis on the repository using analyzer and agent steps from the qualityPipeline config.
 allowed-tools: Read, Write, Bash, Glob, Grep, Task, TaskOutput, mcp__plugin_tiny-brain_mcp__quality
 ---
 
@@ -9,26 +9,24 @@ allowed-tools: Read, Write, Bash, Glob, Grep, Task, TaskOutput, mcp__plugin_tiny
 
 ## Architecture
 
-Three-layer specialist model keeps the main conversation under ~10-15K tokens:
+Two-layer model driven by `qualityPipeline` config:
 
 ```
 Main Conversation (thin orchestrator)
   |
-  |-- Layer 1: MCP run-analysers -> writes analysis.json (zero context cost)
-  |-- Layer 2: 4 specialist Task agents (background) -> write domain.json files
-  |-- Layer 3: MCP assemble-run -> reads all files, merges, scores, saves report
+  |-- Analyzer steps (step.analyzer set): CLI `run-analyser` commands
+  |-- Agent steps (no step.analyzer): LLM Task agents (background)
+  |-- Assembly: MCP assemble-run -> reads all files, merges, saves report
 ```
 
-### Specialist Agent Mapping
+### Step Partitioning
 
-| Agent (subagent_type) | Model | Categories | Checklists |
-|---|---|---|---|
-| `tiny-brain:security-quality-reviewer` | opus | Security | SEC-* (7 checks) |
-| `tiny-brain:performance-quality-reviewer` | sonnet | Performance, Reliability | PERF-* (5), REL-* (6) = 11 checks |
-| `tiny-brain:testing-quality-reviewer` | sonnet | Testing | TEST-* (4 checks) |
-| `tiny-brain:code-quality-reviewer` | sonnet | Maintainability, Architecture, Documentation, Operations | MAINT-* (6), ARCH-* (5), DOC-* (4), OPS-* (4) = 19 checks |
+The `qualityPipeline` config contains ALL steps. Each step has a `type`, `agent`, and optionally an `analyzer` field:
 
-42 checks across 4 specialists covering all 8 categories.
+- **Analyzer steps** (`step.analyzer` is set): Run via `npx tiny-brain run-analyser <id> --quality`. No LLM agent spawned.
+- **Agent steps** (no `step.analyzer`): Spawn as LLM Task agents.
+
+Do NOT use `mcp quality detect-analysers` or `mcp quality run-analysers`. Do NOT hardcode any step names. The pipeline config is the single source of truth.
 
 ## When to Use
 
@@ -45,8 +43,20 @@ Run a quality analysis when the user wants to:
 
 Run discovery directly in the main conversation:
 
-1. Read `templates/agent_findings.md` to understand the output schema agents must follow
-2. Call `mcp quality detect-analysers` to find available CLI analyzers
+1. Read `packages/tiny-brain-plugin/skills/quality/templates/quality_report.md` — you will paste its full content into every agent prompt (Phase 2)
+2. Run `npx tiny-brain config preferences get qualityPipeline` to get the configured quality pipeline steps. The output is a JSON array of step objects:
+   ```json
+   [
+     {"type":"coverage","agent":"tiny-brain:analyzer-agent","analyzer":"coverage",...},
+     {"type":"security","agent":"tiny-brain:security-reviewer",...},
+     ...
+   ]
+   ```
+   Parse this array and partition into two lists:
+   - **Analyzer steps**: entries where `analyzer` field is present (these have `"agent":"tiny-brain:analyzer-agent"` — ignore the agent field, use the CLI instead)
+   - **Agent steps**: entries where `analyzer` field is NOT present (use the `agent` field to spawn the Task agent, use the `type` field as the step type for persist)
+
+   If the config is empty or not set, warn the user: "No qualityPipeline configured. Run `npx tiny-brain analyse` to detect and configure quality steps." and stop.
 3. Use Bash `find` to list eligible source files (the Glob tool cannot exclude directories):
    ```bash
    find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rb" -o -name "*.go" -o -name "*.rs" -o -name "*.java" \) \
@@ -56,12 +66,15 @@ Run discovery directly in the main conversation:
      -not -path "*/coverage/*" \
      -not -path "*/.next/*" \
      -not -path "*/.tiny-brain/*" \
+     -not -path "*/.claude/*" \
+     -not -path "*/.stryker-tmp/*" \
+     -not -path "*/docs/*" \
      | sort
    ```
 4. Separate test files (matching `*.{test,spec}.{ts,tsx,js,jsx}` or `__tests__/` in the path) from source files
 5. Read `.tiny-brain/analysis.json` for tech context (languages, frameworks)
 6. Generate runId: `YYYY-MM-DDTHH-mm` format (e.g., `2026-02-10T18-03`)
-7. Create run directory: `docs/quality/runs/YYYY-MM-DD/HH-mm/`
+7. Create run directory: `.tiny-brain/quality/runs/YYYY-MM-DD/HH-mm/`
 8. Write `{runDir}/files.txt` using `&&` chaining (zsh does not support `{ }` command groups):
    ```bash
    find . -type f ... | grep -v test_pattern > {runDir}/files.txt && echo "---TESTS---" >> {runDir}/files.txt && find . -type f ... | grep test_pattern >> {runDir}/files.txt
@@ -75,8 +88,8 @@ Run discovery directly in the main conversation:
 ```
 Analyzing repository...
   Found {N} source files, {M} test files
-  Detected {K} analyzers: ESLint, TypeScript, npm audit
-  Run directory: docs/quality/runs/YYYY-MM-DD/HH-mm/
+  Pipeline: {K} analyzer steps, {J} agent steps
+  Run directory: .tiny-brain/quality/runs/YYYY-MM-DD/HH-mm/
 ```
 
 ### Phase 1.5: Incremental Detection (optional)
@@ -104,103 +117,102 @@ Incremental analysis (base: {baseRunId})
 
 ### Phase 2: Parallel Launch
 
-Launch ALL operations in a **single message** - MCP + 4 Task agents:
+Launch ALL operations in a **single message** — analyzers via CLI, agents via Task tool.
 
-**Layer 1: MCP run-analysers** (writes to file, returns summary only):
-```
-mcp quality run-analysers runId={runId}
+You already have the partitioned steps from Phase 1 step 2.
+
+**Analyzer steps** — run each via Bash (all in the same message, parallel):
+
+For each analyzer step, run:
+```bash
+npx tiny-brain run-analyser {step.type} --quality
 ```
 
-**Layer 2: 4 specialist Task agents** (all `run_in_background: true`):
+This reads the analyzer invocation from `analysis.json`, runs it, and persists the result to `{runDir}/analysers/{step.type}.json`. No LLM agent needed.
 
-Each Task prompt is minimal (~10 lines). The specialist agents have their checklists built in.
+**Agent steps** — launch each as a background Task agent (all in the same message, parallel):
 
-```
-Task tool:
-  subagent_type: "tiny-brain:security-quality-reviewer"
-  model: "opus"
-  run_in_background: true
-  prompt: |
-    Analyze repository for security quality issues.
-    Repository path: {repo_path}
-    Read file list from: {runDir}/files.txt (source files only, above ---TESTS--- line)
-    Write findings JSON to: {runDir}/agents/security-quality-reviewer-output.json
-    Follow the agent_findings schema from templates/agent_findings.md.
-    Set source: "llm" and ruleId: "SEC-*" check IDs on all issues.
-```
+**Replace `{quality_report_template_content}` with the full text of `quality_report.md` that you read in Phase 1 step 1:**
 
 ```
 Task tool:
-  subagent_type: "tiny-brain:performance-quality-reviewer"
-  model: "sonnet"
+  subagent_type: "{step.agent}"
   run_in_background: true
   prompt: |
-    Analyze repository for performance and reliability quality issues.
+    Analyze repository for quality issues.
     Repository path: {repo_path}
-    Read file list from: {runDir}/files.txt (source files only, above ---TESTS--- line)
-    Write findings JSON to: {runDir}/agents/performance-quality-reviewer-output.json
-    Follow the agent_findings schema from templates/agent_findings.md.
-    Set source: "llm" and ruleId: "PERF-*" or "REL-*" check IDs on all issues.
+    Read file list from: {runDir}/files.txt
+
+    MANDATORY OUTPUT SCHEMA — your persist JSON MUST follow this exactly:
+
+    {quality_report_template_content}
+
+    Persist using:
+      npx tiny-brain persist {step.type} --quality --json '<your-json>'
+    The --quality flag routes output to the active quality run directory.
+    Do NOT use --sha or write to .tiny-brain/reviews/ — that is for the commit pipeline.
 ```
 
-```
-Task tool:
-  subagent_type: "tiny-brain:testing-quality-reviewer"
-  model: "sonnet"
-  run_in_background: true
-  prompt: |
-    Analyze repository for testing quality issues.
-    Repository path: {repo_path}
-    Read file list from: {runDir}/files.txt (ALL files - both source and test files)
-    Write findings JSON to: {runDir}/agents/testing-quality-reviewer-output.json
-    Follow the agent_findings schema from templates/agent_findings.md.
-    Set source: "llm" and ruleId: "TEST-*" check IDs on all issues.
-```
+**If a previous run exists** (Phase 1.5 found a `baseRunId`), append this context to each agent's prompt:
 
 ```
-Task tool:
-  subagent_type: "tiny-brain:code-quality-reviewer"
-  model: "sonnet"
-  run_in_background: true
-  prompt: |
-    Analyze repository for maintainability, architecture, documentation, and operations quality issues.
-    Repository path: {repo_path}
-    Read file list from: {runDir}/files.txt (source files only, above ---TESTS--- line)
-    Write findings JSON to: {runDir}/agents/code-quality-reviewer-output.json
-    Follow the agent_findings schema from templates/agent_findings.md.
-    Set source: "llm" and ruleId: "MAINT-*", "ARCH-*", "DOC-*", or "OPS-*" check IDs on all issues.
+    Previous run findings: {baseRunDir}/agents/{step.type}.json
+    If the file does not exist or cannot be parsed, skip comparison and treat all findings as new.
+    Otherwise, compare your findings against the previous run:
+    - Tag current findings with previousRunStatus: "new" (not in previous run) or "unchanged" (same issue persists)
+    - For resolved issues (in previous run but no longer found), add a summary in your metadata, not as findings
 ```
+
+For any agent step whose `type` contains "testing", include "(ALL files - both source and test files)" in the prompt so it reads test files too.
+
+**IMPORTANT:** Do NOT launch agents for analyzer steps. Steps with `step.analyzer` set are handled entirely by the CLI command above.
 
 **Report to user:**
 ```
-Launching specialist investigations...
-  Security Review: analyzing {N} files...
-  Performance & Reliability: analyzing {N} files...
-  Testing Review: analyzing {M} test + {N} source files...
-  Code Review: analyzing {N} files...
+Launching quality analysis...
+  Analyzers: running {K} static analyzers via CLI
+  Agents: spawning {J} specialist reviewers
 ```
 
 ### Phase 3: Monitor & Report Progress
 
-Use **TaskOutput** to check background agent completion (NOT Read on JSON files):
-
-1. When the MCP run-analysers returns: report analyzer summary
-2. For each specialist agent: use `TaskOutput` with the agent's task_id to check completion. The agent's final message includes summary counts - no need to read full JSON files.
+1. Analyzer CLI commands return immediately with output path — report each as it completes
+2. For each specialist agent: use `TaskOutput` with the agent's task_id to check completion
 
 **Report to user progressively:**
 ```
-Running analyzers...
-  ESLint: {N} issues
-  TypeScript: {N} errors
-  npm audit: {N} vulnerabilities
+Static analyzers:
+  ESLint: complete
+  TypeScript: complete
+  Coverage: complete
+  Dependency Audit: complete
 
-  Testing Review: complete ({N} issues)
-  Security Review: complete ({N} issues)
-  Performance & Reliability: complete ({N} issues)
-  Code Review: complete ({N} issues)
+Specialist agents:
+  {agent-1}: complete ({N} issues)
+  {agent-2}: complete ({N} issues)
+  ...
 
 All investigations complete. Assembling report...
 ```
+
+### Phase 3.5: Verify Agent Outputs
+
+After all agents complete, verify their output files exist before assembly:
+
+1. List files in `{runDir}/agents/` using Bash `ls`
+2. For each expected agent step, check that `{step.type}.json` exists
+3. Log warnings for any missing agent outputs:
+   ```
+   Verifying agent outputs...
+     {step-type}.json ✓
+     {step-type}.json ✗ MISSING
+   ```
+4. If ALL agent outputs are missing, warn the user:
+   ```
+   ⚠️ No agent output files found in {runDir}/agents/
+   Agents may have written to the wrong location. Check .tiny-brain/reviews/ for stray outputs.
+   ```
+5. Proceed with assembly even if some are missing (analyzers still produce data)
 
 ### Phase 4: Assemble
 
@@ -360,22 +372,19 @@ Compares two quality runs to show improvement or regression.
 ## Templates
 
 - `templates/quality_criteria.md` - Category standards and weights
-- `templates/quality_process.md` - Three-layer specialist architecture documentation
-- `templates/agent_findings.md` - Standard JSON schema for agent output
+- `templates/quality_process.md` - Analyzer/agent architecture documentation
+- `templates/quality_report.md` - Standard JSON schema for agent output
 - `templates/template.md` - Run output format
 
 ## Persistence
 
-Run directory: `docs/quality/runs/YYYY-MM-DD/HH-mm/`
+Run directory: `.tiny-brain/quality/runs/YYYY-MM-DD/HH-mm/`
 
 Intermediate files (in run directory):
-- `analysers/` - Raw per-analyzer output files (e.g., `eslint-0.json`, `typescript-0.txt`)
-- `analysis.json` - Merged/normalized analyzer issues (from MCP run-analysers)
-- `agents/` - Specialist agent findings:
-  - `security-quality-reviewer-output.json` - Security specialist findings
-  - `performance-quality-reviewer-output.json` - Performance & Reliability findings
-  - `testing-quality-reviewer-output.json` - Testing specialist findings
-  - `code-quality-reviewer-output.json` - Code Review specialist findings
+- `analysers/` - Raw per-analyzer output files (e.g., `{analyser-id}.json`)
+- `analysis.json` - Merged/normalized analyzer issues (from CLI run-analyser commands)
+- `agents/` - Capability agent findings (one per discovered capability):
+  - `{step-type}.json` - one file per agent step
 - `files.txt` - File list used by agents
 - `metadata.json` - Run metadata (commitSha, baseRunId, file counts) for incremental runs
 
@@ -388,30 +397,22 @@ Final report:
 User: "Run a quality check on this repo"
 
 Claude:
-1. Read templates/agent_findings.md for output schema
+1. Read templates/quality_report.md for output schema
 2. Discovery:
+   - Run: npx tiny-brain config preferences get qualityPipeline
+   - Partition steps by step.analyzer field into analyzer steps and agent steps
    - "Found 87 source files, 34 test files"
-   - "Detected 3 analyzers: ESLint, TypeScript, npm audit"
-   - Generate runId: 2026-02-10T14-30
-   - Create directory: docs/quality/runs/2026-02-10/14-30/
-   - Write files.txt to run directory
-3. Launch ALL in a single message (1 MCP + 4 Task agents):
-   - MCP: run-analysers runId=2026-02-10T14-30
-   - Task: security-reviewer (read files.txt, write agents/security.json)
-   - Task: performance-engineer (read files.txt, write agents/performance-reliability.json)
-   - Task: tdd-validator (read files.txt, write agents/testing.json)
-   - Task: reviewer (read files.txt, write agents/review.json)
-4. Report progress via TaskOutput as each completes:
-   - "ESLint: 12 issues, TypeScript: 0 errors, npm audit: 2 vulnerabilities"
-   - "Testing Review: complete (3 issues)"
-   - "Security Review: complete (5 issues)"
-   - "Performance & Reliability: complete (2 issues)"
-   - "Code Review: complete (8 issues)"
+   - Generate runId, create run directory, write files.txt
+3. Launch ALL in a single message:
+   - For each analyzer step: Bash: npx tiny-brain run-analyser {step.type} --quality
+   - For each agent step: Task: {step.agent} (background)
+4. Report progress as each completes:
+   - "{analyzer}: complete"
+   - "{agent}: complete ({N} issues)"
 5. "All investigations complete. Assembling report..."
-6. MCP: assemble-run runId=2026-02-10T14-30
-   - "14 analyzer + 18 specialist -> 28 unique (4 duplicates removed)"
+6. MCP: assemble-run runId=...
 7. Present full summary to user
-8. Offer follow-up actions (including implement plan)
+8. Offer follow-up actions
 
 User: "/quality implement"
 Claude:

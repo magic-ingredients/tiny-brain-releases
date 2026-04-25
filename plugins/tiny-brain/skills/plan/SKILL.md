@@ -66,7 +66,7 @@ id: feature-kebab-case-id
 prd_id: parent-prd-id
 number: 1  # Increment for each feature: 1, 2, 3...
 title: Feature Title
-status: defined
+status: not_started
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 ---
@@ -93,6 +93,8 @@ Description...
 - Related tasks that are naturally implemented together CAN be grouped in a single commit
 - Each task needs its own `Task:` header in the commit message for tracking
 - Multiple `Task:` headers in one commit will all be tracked with the same commit SHA
+- **NEVER split TDD phases into separate tasks.** A task describes WHAT to build, not HOW. "Write failing tests for X" and "Implement X" should be ONE task: "Add X". The TDD cycle (test/impl/refactor) happens within each task.
+- **NEVER create verification-only tasks** like "Verify all tests pass" or "Run integration tests". These produce no commits and always end up superseded. Verification is part of the TDD cycle, not a standalone task.
 
 Example multi-task commit:
 ```
