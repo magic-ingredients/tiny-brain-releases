@@ -58,19 +58,26 @@ esac
 # For each task, call pipeline to record the step and get next instructions
 echo "$COMMIT_MSG" | grep '^Task:' | sed 's/^Task:[[:space:]]*//' | while IFS= read -r TASK_LINE; do
   if [ -n "$TASK_LINE" ]; then
-    # Build tracking args (shared for inspect + advance)
-    TRACKING_ARGS="--task-id \"$TASK_LINE\""
+    # Build tracking args as positional parameters — passes each value
+    # as a separate argv entry. No eval, no re-parsing, so backticks /
+    # $(...) / other shell metacharacters in TASK_LINE, CURRENT_FIX,
+    # CURRENT_PRD etc. are treated as literal data.
+    set -- --task-id "$TASK_LINE"
     if [ "$HAS_HEADERS" = "fix" ]; then
-      TRACKING_ARGS="$TRACKING_ARGS --fix \"$CURRENT_FIX\""
+      set -- "$@" --fix "$CURRENT_FIX"
     elif [ "$HAS_HEADERS" = "prd" ]; then
-      TRACKING_ARGS="$TRACKING_ARGS --prd \"$CURRENT_PRD\" --feature \"$CURRENT_FEATURE\""
+      set -- "$@" --prd "$CURRENT_PRD" --feature "$CURRENT_FEATURE"
     fi
 
     RESOLVED_AGENT="$AGENT"
 
-    # For refactor commits, derive the review type from current phase
+    # For refactor commits, derive the review type from current phase.
+    # $EXEC intentionally unquoted — may be a multi-word prefix like
+    # "pnpm exec" — but everything after is quoted argv so headers
+    # reach pipeline verbatim.
     if [ "$RESOLVED_AGENT" = "__derive__" ]; then
-      CURRENT_PHASE=$(eval $EXEC tiny-brain pipeline $TRACKING_ARGS --quiet 2>/dev/null | tail -1)
+      # shellcheck disable=SC2086
+      CURRENT_PHASE=$($EXEC tiny-brain pipeline "$@" --quiet 2>/dev/null | tail -1)
       case "$CURRENT_PHASE" in
         refactor:*)
           RESOLVED_AGENT="${CURRENT_PHASE#refactor:}"
@@ -82,12 +89,12 @@ echo "$COMMIT_MSG" | grep '^Task:' | sed 's/^Task:[[:space:]]*//' | while IFS= r
       esac
     fi
 
-    PIPELINE_ARGS="$TRACKING_ARGS"
     if [ -n "$RESOLVED_AGENT" ]; then
-      PIPELINE_ARGS="$PIPELINE_ARGS --agent $RESOLVED_AGENT --sha $COMMIT_SHA"
+      set -- "$@" --agent "$RESOLVED_AGENT" --sha "$COMMIT_SHA"
     fi
 
-    eval $EXEC tiny-brain pipeline $PIPELINE_ARGS 2>/dev/null || true
+    # shellcheck disable=SC2086
+    $EXEC tiny-brain pipeline "$@" 2>/dev/null || true
   fi
 done
 

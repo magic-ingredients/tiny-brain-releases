@@ -46,6 +46,6 @@ Some agents add extra top-level fields alongside the standard schema:
 
 | Agent | Extra Fields |
 |-------|-------------|
-| coverage-reviewer | `overallCoverage`, `threshold`, `findings` (ScoringFinding array for step scoring) |
+| analyzer-agent (coverage) | `overallCoverage`, `threshold`, `findings` (ScoringFinding array for step scoring) |
 
 These are additive — the core `{ summary, verdict, suggestions }` shape must still be present.

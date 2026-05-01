@@ -76,13 +76,35 @@ Parse the `files` object to find surviving mutants.
 
 ### Step 4: Analyze Results
 
-From the JSON report, identify:
-- **Killed** — tests caught the mutation (good)
-- **Survived** — tests did NOT catch the mutation (bad)
-- **NoCoverage** — no test exercises this code path
-- **Timeout** — mutation caused infinite loop (usually fine)
+From the JSON report, count mutants per status. **Do NOT trust the headline
+`mutationScore` field** — it collapses real assertion-driven kills with
+runner failures and inflates the number when mutations crash module load
+(common on schema/barrel files where mutating an FK reference produces an
+unloadable module).
 
-Focus on **Survived** and **NoCoverage** mutants.
+Status taxonomy:
+- **Killed** — your tests asserted the mutation away (good)
+- **Survived** — your tests did NOT catch the mutation (bad — fix)
+- **NoCoverage** — no test exercises this code path (bad — fix)
+- **Timeout** — the runner couldn't decide within the timeout window. This
+  can be an actual infinite loop (usually fine) OR a module that crashes on
+  load (NOT fine — your test never ran). On schema/import-heavy files,
+  assume the latter.
+- **CompileError** — the mutated source didn't typecheck (tooling artefact;
+  no signal about your tests)
+- **RuntimeError** — the mutated module threw at load time (tooling
+  artefact; no signal about your tests)
+
+**Always report a per-status breakdown** in your summary
+(`Killed: X, Survived: Y, NoCoverage: Z, Timeout: T, CompileError: C, RuntimeError: R`),
+not just the headline score. The breakdown is what tells the user whether
+the mutation run produced real signal.
+
+Focus your suggestions on **Survived** and **NoCoverage** mutants. When
+`Timeout + CompileError + RuntimeError` dominate (rule of thumb: > 30% of
+mutants on a file) AND `Killed < 50%`, call out that mutation signal is
+weak for this file — recommend tightening the stryker `mutate` glob or
+adjusting `timeout` / `coverageAnalysis` for that file pattern.
 
 ### Step 5: Generate Suggestions
 
@@ -96,6 +118,14 @@ Return your analysis as structured JSON:
 {
   "summary": "Mutation testing results: X killed, Y survived, Z no coverage",
   "verdict": "clean | needs-refactoring",
+  "statusBreakdown": {
+    "killed": 0,
+    "survived": 0,
+    "noCoverage": 0,
+    "timeout": 0,
+    "compileError": 0,
+    "runtimeError": 0
+  },
   "testQuality": "Assessment of mutation score and test gaps",
   "suggestions": [
     {
@@ -111,12 +141,25 @@ Return your analysis as structured JSON:
 }
 ```
 
+**`statusBreakdown` is REQUIRED** — count every mutant in the report by
+its actual status. Do NOT trust the headline `mutationScore`; it counts
+runner failures (Timeout/CompileError/RuntimeError) as kills, which
+inflates the number on schema/import-heavy files.
+
 ### Verdict Criteria
 
 **IMPORTANT: The ONLY valid verdict values are `clean` or `needs-refactoring`.**
 
-- **`clean`** — All mutants killed or mutation score > 80%. Tests are solid.
-- **`needs-refactoring`** — Significant surviving mutants indicate test gaps that should be addressed.
+- **`clean`** — All mutants Killed (assertion-driven) or near-100% Killed
+  rate with negligible Survived/NoCoverage AND no dominant runner-failure
+  rate. The `mutationScore` field alone is NOT sufficient — it counts
+  Timeout/CompileError/RuntimeError as kills even though no assertion fired.
+- **`needs-refactoring`** — Any of:
+  - Significant surviving mutants
+  - NoCoverage mutants present
+  - Runner failures dominate (Timeout + CompileError + RuntimeError > 30%
+    of mutants while Killed < 50%) — the score is unreliable here, treat
+    as weak signal and recommend stryker config investigation
 
 ## Persisting the Review
 
@@ -163,7 +206,14 @@ Replace `<SHA>`, `<task>`, `<fix>`, `<prd>`, `<feature>` with values from your i
 
 ### Follow pipeline instructions
 
-The `pipeline` command may output a `<system-reminder>` with instructions for the next step.
-**You MUST follow these instructions exactly.**
+The `pipeline` command may output a `<system-reminder>` with instructions for the next step — for example, spawning the next review agent in the pipeline.
+**You MUST follow these instructions exactly** — they may ask you to invoke another reviewer or run another analysis step.
 
-If the pipeline outputs no system-reminder, your work is done. Return your results to the caller.
+If the pipeline outputs a refactoring reminder or no system-reminder, your work is done. Return your results to the caller — the main session handles refactoring.
+
+## What You Are NOT
+
+- You are NOT the implementor. You do not write or modify source code.
+- You are NOT a feature suggester. Do not propose additions beyond what exists.
+- You persist reviews via `npx tiny-brain persist` and advance the pipeline. That is your only side effect.
+- The `Write` tool is for writing review JSON to temp files only — never for writing source code.

@@ -508,8 +508,8 @@ var init_parseUtil = __esm({
     init_errors();
     init_en();
     makeIssue = (params) => {
-      const { data, path: path33, errorMaps, issueData } = params;
-      const fullPath = [...path33, ...issueData.path || []];
+      const { data, path: path36, errorMaps, issueData } = params;
+      const fullPath = [...path36, ...issueData.path || []];
       const fullIssue = {
         ...issueData,
         path: fullPath
@@ -817,11 +817,11 @@ var init_types = __esm({
     init_parseUtil();
     init_util();
     ParseInputLazyPath = class {
-      constructor(parent, value, path33, key) {
+      constructor(parent, value, path36, key) {
         this._cachedPath = [];
         this.parent = parent;
         this.data = value;
-        this._path = path33;
+        this._path = path36;
         this._key = key;
       }
       get path() {
@@ -6897,16 +6897,16 @@ async function applyFeatureUpdate(plan, update, bulkChanges) {
           "adversarialRefactorCompletedAt",
           "adversarialRefactorCommitSha",
           "adversarialRefactorCommittedAt",
-          "mutantStartedAt",
-          "mutantCompletedAt",
-          "mutantRefactorStartedAt",
-          "mutantRefactorCompletedAt",
-          "mutantRefactorCommitSha",
-          "mutantRefactorCommittedAt",
+          "mutationStartedAt",
+          "mutationCompletedAt",
+          "mutationRefactorStartedAt",
+          "mutationRefactorCompletedAt",
+          "mutationRefactorCommitSha",
+          "mutationRefactorCommittedAt",
           "adversarialReviewSha",
           "adversarialVerdict",
-          "mutantReviewSha",
-          "mutantVerdict",
+          "mutationReviewSha",
+          "mutationVerdict",
           "redCompletedAt",
           "greenCompletedAt",
           "worktree"
@@ -7392,7 +7392,13 @@ function isPipelineStep(entry) {
 function normalizePipeline(input) {
   if (!input) return [];
   return input.map((entry) => {
-    let step = isPipelineStep(entry) ? entry : stringToStep(String(entry));
+    let step;
+    if (isPipelineStep(entry)) {
+      const defaults2 = KNOWN_DEFAULTS[entry.type];
+      step = defaults2 ? { ...defaults2, ...entry } : entry;
+    } else {
+      step = stringToStep(String(entry));
+    }
     if (step.mode === "tollgate" && step.maxAttempts === void 0) {
       step = { ...step, maxAttempts: 3 };
     }
@@ -7439,6 +7445,7 @@ var init_pipeline_normalizer = __esm({
       // green
       analyzer: "coverage",
       analyzerThreshold: { min: 80 },
+      mode: "tollgate",
       runsTests: true
     };
     TYPESCRIPT_HOOK_STEP = {
@@ -7479,18 +7486,6 @@ var init_pipeline_normalizer = __esm({
         // purple
       },
       "mutation": {
-        type: "mutation",
-        agent: "tiny-brain:analyzer-agent",
-        label: "Mutation Testing",
-        emoji: "\u{1F9DF}",
-        // 🧟
-        color: "#8bc34a",
-        // lime
-        analyzer: "mutation-testing",
-        runsTests: true
-      },
-      // Legacy alias — normalizes to 'mutation'
-      mutant: {
         type: "mutation",
         agent: "tiny-brain:analyzer-agent",
         label: "Mutation Testing",
@@ -12713,12 +12708,12 @@ var init_esm6 = __esm({
       /**
        * Get the Path object referenced by the string path, resolved from this Path
        */
-      resolve(path33) {
-        if (!path33) {
+      resolve(path36) {
+        if (!path36) {
           return this;
         }
-        const rootPath = this.getRootString(path33);
-        const dir = path33.substring(rootPath.length);
+        const rootPath = this.getRootString(path36);
+        const dir = path36.substring(rootPath.length);
         const dirParts = dir.split(this.splitSep);
         const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
         return result;
@@ -13470,8 +13465,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path33) {
-        return win32.parse(path33).root;
+      getRootString(path36) {
+        return win32.parse(path36).root;
       }
       /**
        * @internal
@@ -13517,8 +13512,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path33) {
-        return path33.startsWith("/") ? "/" : "";
+      getRootString(path36) {
+        return path36.startsWith("/") ? "/" : "";
       }
       /**
        * @internal
@@ -13567,8 +13562,8 @@ var init_esm6 = __esm({
        *
        * @internal
        */
-      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs30 = defaultFS } = {}) {
-        this.#fs = fsFromOption(fs30);
+      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs34 = defaultFS } = {}) {
+        this.#fs = fsFromOption(fs34);
         if (cwd instanceof URL || cwd.startsWith("file://")) {
           cwd = fileURLToPath(cwd);
         }
@@ -13607,11 +13602,11 @@ var init_esm6 = __esm({
       /**
        * Get the depth of a provided path, string, or the cwd
        */
-      depth(path33 = this.cwd) {
-        if (typeof path33 === "string") {
-          path33 = this.cwd.resolve(path33);
+      depth(path36 = this.cwd) {
+        if (typeof path36 === "string") {
+          path36 = this.cwd.resolve(path36);
         }
-        return path33.depth();
+        return path36.depth();
       }
       /**
        * Return the cache of child entries.  Exposed so subclasses can create
@@ -14005,14 +14000,14 @@ var init_esm6 = __esm({
               if (er)
                 return results.emit("error", er);
               if (follow && !didRealpaths) {
-                const promises3 = [];
+                const promises5 = [];
                 for (const e of entries) {
                   if (e.isSymbolicLink()) {
-                    promises3.push(e.realpath().then((r) => r?.isUnknown() ? r.lstat() : r));
+                    promises5.push(e.realpath().then((r) => r?.isUnknown() ? r.lstat() : r));
                   }
                 }
-                if (promises3.length) {
-                  Promise.all(promises3).then(() => onReaddir(null, entries, true));
+                if (promises5.length) {
+                  Promise.all(promises5).then(() => onReaddir(null, entries, true));
                   return;
                 }
               }
@@ -14098,9 +14093,9 @@ var init_esm6 = __esm({
         process2();
         return results;
       }
-      chdir(path33 = this.cwd) {
+      chdir(path36 = this.cwd) {
         const oldCwd = this.cwd;
-        this.cwd = typeof path33 === "string" ? this.cwd.resolve(path33) : path33;
+        this.cwd = typeof path36 === "string" ? this.cwd.resolve(path36) : path36;
         this.cwd[setAsCwd](oldCwd);
       }
     };
@@ -14126,8 +14121,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs30) {
-        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs30 });
+      newRoot(fs34) {
+        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs34 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -14155,8 +14150,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs30) {
-        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs30 });
+      newRoot(fs34) {
+        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs34 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -14475,8 +14470,8 @@ var init_processor = __esm({
       }
       // match, absolute, ifdir
       entries() {
-        return [...this.store.entries()].map(([path33, n]) => [
-          path33,
+        return [...this.store.entries()].map(([path36, n]) => [
+          path36,
           !!(n & 2),
           !!(n & 1)
         ]);
@@ -14689,9 +14684,9 @@ var init_walker = __esm({
       signal;
       maxDepth;
       includeChildMatches;
-      constructor(patterns, path33, opts) {
+      constructor(patterns, path36, opts) {
         this.patterns = patterns;
-        this.path = path33;
+        this.path = path36;
         this.opts = opts;
         this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
         this.includeChildMatches = opts.includeChildMatches !== false;
@@ -14710,11 +14705,11 @@ var init_walker = __esm({
           });
         }
       }
-      #ignored(path33) {
-        return this.seen.has(path33) || !!this.#ignore?.ignored?.(path33);
+      #ignored(path36) {
+        return this.seen.has(path36) || !!this.#ignore?.ignored?.(path36);
       }
-      #childrenIgnored(path33) {
-        return !!this.#ignore?.childrenIgnored?.(path33);
+      #childrenIgnored(path36) {
+        return !!this.#ignore?.childrenIgnored?.(path36);
       }
       // backpressure mechanism
       pause() {
@@ -14929,8 +14924,8 @@ var init_walker = __esm({
     };
     GlobWalker = class extends GlobUtil {
       matches = /* @__PURE__ */ new Set();
-      constructor(patterns, path33, opts) {
-        super(patterns, path33, opts);
+      constructor(patterns, path36, opts) {
+        super(patterns, path36, opts);
       }
       matchEmit(e) {
         this.matches.add(e);
@@ -14967,8 +14962,8 @@ var init_walker = __esm({
     };
     GlobStream = class extends GlobUtil {
       results;
-      constructor(patterns, path33, opts) {
-        super(patterns, path33, opts);
+      constructor(patterns, path36, opts) {
+        super(patterns, path36, opts);
         this.results = new Minipass({
           signal: this.signal,
           objectMode: true
@@ -18448,14 +18443,14 @@ var init_planning_service = __esm({
         if (!listeners || listeners.length === 0) {
           return;
         }
-        const promises3 = listeners.map(async (listener) => {
+        const promises5 = listeners.map(async (listener) => {
           try {
             await listener(event);
           } catch (error) {
             this.log("error", "Plan change listener failed:", error);
           }
         });
-        await Promise.all(promises3);
+        await Promise.all(promises5);
       }
       async loadPlanById(planId, _personaId) {
         return this.loadPlanFromRepo(planId);
@@ -19444,13 +19439,34 @@ var init_planning_service = __esm({
         for (const filePath of mdFiles) {
           try {
             const content = await fs.readFile(filePath, "utf-8");
-            const fix = this.parseFixMarkdown(content, filePath, repoPath, existingProgress);
-            if (fix) {
-              if (autoArchive && fix.status === "completed" && fix.archived !== true) {
-                await this.writeArchivedToFrontmatter(filePath, content);
-                fix.archived = true;
+            const result2 = this.parseFixMarkdown(content, filePath, repoPath, existingProgress);
+            switch (result2.kind) {
+              case "ok": {
+                const fix = result2.fix;
+                if (autoArchive && fix.status === "completed" && fix.archived !== true) {
+                  await this.writeArchivedToFrontmatter(filePath, content);
+                  fix.archived = true;
+                }
+                fixes.push(fix);
+                break;
               }
-              fixes.push(fix);
+              case "parse-error": {
+                const relativePath = path2.relative(repoPath, filePath);
+                const existing = existingProgress?.fixes.find(
+                  (f) => f.filePath === relativePath
+                );
+                if (existing) {
+                  fixes.push(existing);
+                }
+                break;
+              }
+              case "no-frontmatter":
+              case "missing-fields":
+                break;
+              default: {
+                const _exhaustive = result2;
+                throw new Error(`Unhandled ParseFixResult kind: ${JSON.stringify(_exhaustive)}`);
+              }
             }
           } catch (error) {
             this.log("warn", `Failed to parse fix file: ${filePath}`, error);
@@ -19488,10 +19504,18 @@ var init_planning_service = __esm({
       parseFixMarkdown(content, filePath, repoPath, existingProgress) {
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (!frontmatterMatch) {
-          return null;
+          return { kind: "no-frontmatter" };
         }
         const frontmatterText = frontmatterMatch[1];
-        const parsed = this.parseYamlFrontmatter(frontmatterText);
+        const parseResult = this.parseYamlFrontmatter(frontmatterText);
+        if (!parseResult.ok) {
+          this.log(
+            "warn",
+            `Frontmatter parse failed in ${path2.relative(repoPath, filePath)}: ${parseResult.error.message}. Preserving existing progress entry if any.`
+          );
+          return { kind: "parse-error", error: parseResult.error };
+        }
+        const parsed = parseResult.value;
         const getString = (key) => {
           const val = parsed[key];
           if (typeof val === "string") return val;
@@ -19503,7 +19527,16 @@ var init_planning_service = __esm({
         const status = getString("status");
         const severity = getString("severity");
         if (!id || !title || !status || !severity) {
-          return null;
+          const missing = [];
+          if (!id) missing.push("id");
+          if (!title) missing.push("title");
+          if (!status) missing.push("status");
+          if (!severity) missing.push("severity");
+          this.log(
+            "warn",
+            `Required frontmatter fields missing in ${path2.relative(repoPath, filePath)}: ${missing.join(", ")}. Skipping.`
+          );
+          return { kind: "missing-fields", missing };
         }
         const qip = getString("qip");
         const frontmatter = {
@@ -19545,28 +19578,34 @@ var init_planning_service = __esm({
         const isTerminal = terminalStatuses.includes(frontmatter.status) || frontmatter.archived;
         const derivedStatus = isTerminal ? frontmatter.status : deriveContainerStatus(mergedTasks);
         return {
-          id: frontmatter.id,
-          title: frontmatter.title,
-          status: derivedStatus,
-          severity: frontmatter.severity,
-          tasks: mergedTasks,
-          filePath: relativePath,
-          reported: frontmatter.reported,
-          resolved: frontmatter.resolved,
-          resolution,
-          archived: frontmatter.archived ?? false,
-          ...frontmatter.qip ? { qip: frontmatter.qip } : {}
+          kind: "ok",
+          fix: {
+            id: frontmatter.id,
+            title: frontmatter.title,
+            status: derivedStatus,
+            severity: frontmatter.severity,
+            tasks: mergedTasks,
+            filePath: relativePath,
+            reported: frontmatter.reported,
+            resolved: frontmatter.resolved,
+            resolution,
+            archived: frontmatter.archived ?? false,
+            ...frontmatter.qip ? { qip: frontmatter.qip } : {}
+          }
         };
       }
       /**
-       * Parse YAML frontmatter into an object using js-yaml
+       * Parse YAML frontmatter into a discriminated result. Returning the
+       * specific Error rather than swallowing it lets callers (parseFixMarkdown
+       * + sync-progress) emit a useful diagnostic and decide whether to
+       * preserve existing state.
        */
       parseYamlFrontmatter(text) {
         try {
           const parsed = load(text);
-          return parsed || {};
-        } catch {
-          return {};
+          return { ok: true, value: parsed || {} };
+        } catch (err) {
+          return { ok: false, error: err instanceof Error ? err : new Error(String(err)) };
         }
       }
       /**
@@ -24150,8 +24189,8 @@ var init_repo_config_service = __esm({
       /**
        * Generate a unique repo ID from path
        */
-      generateRepoId(path33) {
-        const hash = createHash("sha256").update(path33).digest("hex");
+      generateRepoId(path36) {
+        const hash = createHash("sha256").update(path36).digest("hex");
         return `repo-${hash.substring(0, 12)}`;
       }
       /**
@@ -27133,6 +27172,18 @@ function isValidMutant(value) {
   const start = loc.start;
   return typeof start.line === "number";
 }
+function dominantFailureStatus(counts) {
+  const order = ["Timeout", "CompileError", "RuntimeError"];
+  let best = "Timeout";
+  let bestCount = -1;
+  for (const status of order) {
+    if (counts[status] > bestCount) {
+      best = status;
+      bestCount = counts[status];
+    }
+  }
+  return best;
+}
 function parseMutationTestingOutput(output, repoPath) {
   if (!output.trim()) return [];
   let parsed;
@@ -27151,9 +27202,26 @@ function parseMutationTestingOutput(output, repoPath) {
     const entry = fileEntry;
     if (!Array.isArray(entry.mutants)) continue;
     const file = repoPath ? stripRepoPath(filePath, repoPath) : filePath;
+    let total = 0;
+    let killed = 0;
+    let runnerFailures = 0;
+    const failureCounts = {
+      Timeout: 0,
+      CompileError: 0,
+      RuntimeError: 0
+    };
     for (const raw2 of entry.mutants) {
       if (!isValidMutant(raw2)) continue;
-      if (SKIP_STATUSES.has(raw2.status)) continue;
+      total += 1;
+      if (SKIP_STATUSES.has(raw2.status)) {
+        killed += 1;
+        continue;
+      }
+      if (RUNNER_FAILURE_STATUSES.has(raw2.status)) {
+        runnerFailures += 1;
+        failureCounts[raw2.status] += 1;
+        continue;
+      }
       const isSurvived = raw2.status === "Survived";
       const severity = isSurvived ? "major" : "minor";
       const ruleId = isSurvived ? "mutation-testing/survived" : "mutation-testing/no-coverage";
@@ -27170,15 +27238,40 @@ function parseMutationTestingOutput(output, repoPath) {
         suggestion: `Add a test that detects the ${raw2.mutatorName} mutation on line ${raw2.location.start.line}`
       });
     }
+    if (total >= WEAK_SIGNAL_MIN_TOTAL) {
+      const failureRate = runnerFailures / total;
+      const killRate = killed / total;
+      if (failureRate > RUNNER_FAILURE_DOMINANT_THRESHOLD && killRate < WEAK_KILL_RATE_THRESHOLD) {
+        const dominantStatus = dominantFailureStatus(failureCounts);
+        const failurePct = Math.round(failureRate * 100);
+        issues.push({
+          file,
+          // line: 1 is the convention for file-level rollup issues across
+          // this parser family. This isn't a per-line finding — it speaks
+          // to the file as a whole — but QualityIssue requires `line`.
+          line: 1,
+          message: `Weak mutation signal: ${failurePct}% of mutants in this file ended in a runner failure (dominant: ${dominantStatus}). Stryker counts these toward the score, but no assertion fired. Investigate the stryker config (timeout, mutate glob, coverageAnalysis) for this file pattern.`,
+          severity: "minor",
+          category: "Testing",
+          ruleId: "mutation-testing/weak-signal",
+          source: "mutation-testing",
+          suggestion: `Tighten stryker mutate glob to exclude this file pattern, or adjust timeout/coverageAnalysis so mutants can fully execute.`
+        });
+      }
+    }
   }
   return issues;
 }
-var SKIP_STATUSES;
+var SKIP_STATUSES, RUNNER_FAILURE_STATUSES, RUNNER_FAILURE_DOMINANT_THRESHOLD, WEAK_KILL_RATE_THRESHOLD, WEAK_SIGNAL_MIN_TOTAL;
 var init_mutation_testing_parser = __esm({
   "packages/tiny-brain-core/src/services/quality/parsers/mutation-testing-parser.ts"() {
     "use strict";
     init_strip_repo_path();
-    SKIP_STATUSES = /* @__PURE__ */ new Set(["Killed", "Timeout", "CompileError", "RuntimeError"]);
+    SKIP_STATUSES = /* @__PURE__ */ new Set(["Killed"]);
+    RUNNER_FAILURE_STATUSES = /* @__PURE__ */ new Set(["Timeout", "CompileError", "RuntimeError"]);
+    RUNNER_FAILURE_DOMINANT_THRESHOLD = 0.3;
+    WEAK_KILL_RATE_THRESHOLD = 0.5;
+    WEAK_SIGNAL_MIN_TOTAL = 3;
   }
 });
 
@@ -27504,15 +27597,17 @@ async function readCachedAnalyzers(repoPath, options) {
     const valid = parsed.analyzers.filter(isValidEntry);
     if (valid.length === 0) return null;
     return valid.map((entry) => {
-      let command = entry.commands.quality;
+      let template = entry.commands.quality;
       if (options?.changed && entry.commands.pipeline) {
-        command = entry.commands.pipeline.replace(/\{sha\}/g, options.changed);
+        template = entry.commands.pipeline.replace(/\{sha\}/g, options.changed);
       }
+      const hasConfigPlaceholder = template.includes("{config}");
+      const commands = hasConfigPlaceholder ? entry.configPaths.map((cp) => template.replace(/\{config\}/g, cp)) : [template];
       return {
         analyzerId: entry.id,
         name: entry.name,
         configPaths: [...entry.configPaths],
-        commands: [command],
+        commands,
         categories: [...entry.categories]
       };
     });
@@ -31046,8 +31141,8 @@ var init_library_client = __esm({
       /**
        * Get agent by path (new agent system)
        */
-      async getAgentByPath(token, path33) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path33}`, {
+      async getAgentByPath(token, path36) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path36}`, {
           method: "GET",
           headers: {
             "Accept": "application/json",
@@ -31063,8 +31158,8 @@ var init_library_client = __esm({
       /**
        * Store agent at specified path (new agent system)
        */
-      async storeAgent(token, path33, agent) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path33}`, {
+      async storeAgent(token, path36, agent) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path36}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -31079,8 +31174,8 @@ var init_library_client = __esm({
       /**
        * Archive agent at specified path (new agent system)
        */
-      async archiveAgent(token, path33) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path33}`, {
+      async archiveAgent(token, path36) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path36}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -31730,6 +31825,7 @@ esac
         const flags = await this.readConfigFlags();
         const isMonorepo = await this.detectMonorepo();
         const dirResult = await this.initializeDirectories(flags);
+        await this.ensureGitignoreEntries();
         const gitHooksInstalled = await this.installGitHooks();
         const skillPermissionsAdded = await this.injectSkillPermissions();
         const contextBlockUpdated = await this.writeContextBlock(flags, isMonorepo);
@@ -31750,6 +31846,32 @@ esac
         const qualityInitialized = flags.enableQuality ? await this.createDirectoryIfMissing(path19.join(".tiny-brain", "quality")) : false;
         const fixesInitialized = flags.enableSDD ? await this.createDirectoryWithProgress(path19.join(".tiny-brain", "fixes"), "progress.json") : false;
         return { prdInitialized, adrInitialized, qualityInitialized, fixesInitialized };
+      }
+      /**
+       * Ensure .gitignore contains entries for operational .tiny-brain/ directories.
+       * Idempotent — skips entries that already exist.
+       */
+      async ensureGitignoreEntries() {
+        const gitignorePath = path19.join(this.repoPath, ".gitignore");
+        let content = "";
+        try {
+          content = await fs19.readFile(gitignorePath, "utf-8");
+        } catch {
+        }
+        const entries = [
+          ".tiny-brain/fixes/",
+          ".tiny-brain/reviews/",
+          ".tiny-brain/telemetry/"
+        ];
+        const missing = entries.filter((e) => !content.includes(e));
+        if (missing.length === 0) return;
+        const block = [
+          "",
+          "# tiny-brain operational data (auto-added by analyse)",
+          ...missing
+        ].join("\n") + "\n";
+        await fs19.appendFile(gitignorePath, block, "utf-8");
+        this.logger.info(`Added ${missing.length} entries to .gitignore`);
       }
       /**
        * Install git hooks from source directory to .git/hooks/.
@@ -32027,31 +32149,15 @@ When working in a specific package, also read that package's \`AGENTS.md\` for p
 
 `;
         if (enableAgenticCoding) {
-          content += `## Agent Delegation (MANDATORY)
+          content += `## TDD Implementation
 
-IMPORTANT: You MUST delegate implementation work to specialized agents using the Task tool. Do NOT write production code or tests directly.
+Write tests and production code directly in the main session. Follow the RED/GREEN/REFACTOR cycle:
 
-When the user asks you to implement a feature, fix a bug, or refactor code, delegate in two phases:
-
-1. **RED**: Spawn developer agent to write failing tests
-   - \`Task(subagent_type="tiny-brain:developer")\` with phase=RED in prompt
-   - Agent writes tests, stages files, returns proposed commit message
-   - **VERIFY staging before committing**: Run \`git diff --staged --name-only\` and confirm ONLY test files are staged (e.g., \`*.test.ts\`, \`*.test.tsx\`). If non-test files are staged, unstage them with \`git reset HEAD <file>\` before committing.
-   - YOU commit with \`test:\` prefix (PostToolUse hooks fire)
-2. **GREEN**: Spawn developer agent to write implementation
-   - \`Task(subagent_type="tiny-brain:developer")\` with phase=GREEN in prompt
-   - Agent writes code, stages files, returns proposed commit message
-   - **VERIFY staging before committing**: Run \`git diff --staged --name-only\` and confirm NO test files are staged. If test files are staged, unstage them with \`git reset HEAD <file>\` before committing.
-   - YOU commit with \`feat:\` prefix (PostToolUse hooks fire)
+1. **RED**: Write failing tests, commit with \`test:\` prefix
+2. **GREEN**: Write minimum implementation to pass tests, commit with \`feat:\` prefix
    - The review pipeline triggers automatically after feat: commits (via pipeline command)
    - Handle refactoring from review as \`refactor:\` commits
 3. Run \`npx tiny-brain commit progress\` when the TDD cycle is complete
-
-The developer agent does NOT commit. All commits happen in the main session where PostToolUse hooks fire correctly.
-
-**IMPORTANT: Never blindly trust what the developer agent stages.** Always verify with \`git diff --staged --name-only\` that the staged files match the current TDD phase before committing.
-
-Only skip delegation for trivial tasks (single-line fixes, config changes).
 
 `;
         }
@@ -34392,14 +34498,29 @@ function applyEvent(task, event, pipeline) {
   const existing = t.reviews[step.type] ?? {};
   if (event.decision && event.sha) {
     const verdict = event.decision === "clean" ? "clean" : "needs-refactoring";
+    if (existing.reviewSha === event.sha && existing.verdict === verdict) {
+      return task;
+    }
+    const flippingCleanToDirty = existing.reviewSha === event.sha && existing.verdict === "clean" && verdict === "needs-refactoring";
+    let baseExisting;
+    if (flippingCleanToDirty) {
+      const { refactorCommitSha: _ignoredCommitSha, refactorCompletedAt: _ignoredCompletedAt, ...rest } = existing;
+      baseExisting = rest;
+    } else {
+      baseExisting = existing;
+    }
+    const refactorAlreadyDone = existing.reviewSha === event.sha && typeof existing.refactorCommitSha === "string" && existing.refactorCommitSha !== "skipped";
     t.reviews[step.type] = {
-      ...existing,
+      ...baseExisting,
       completedAt: now,
       reviewSha: event.sha,
       verdict,
-      refactorStartedAt: now,
-      // Clean verdict: skip refactor phase — no findings to address
-      ...verdict === "clean" ? { refactorCommitSha: "skipped", refactorCompletedAt: now } : {}
+      refactorStartedAt: baseExisting.refactorStartedAt ?? now,
+      // Clean verdict: skip refactor phase — UNLESS a real refactor was
+      // already recorded for this sha (e.g. dirty→clean flip after the
+      // refactor landed; preserve the historical commitSha rather than
+      // overwriting with 'skipped').
+      ...verdict === "clean" && !refactorAlreadyDone ? { refactorCommitSha: "skipped", refactorCompletedAt: now } : {}
     };
     return t;
   }
@@ -34487,7 +34608,9 @@ function stepForPhase(phase, pipeline) {
 function advancePipeline(task, pipeline, event) {
   const config = { combineRedGreenCommits: false, reviewPipeline: pipeline };
   const corrections = [];
-  let current = event ? applyEvent(task, event, pipeline) : { ...task };
+  const applied = event ? applyEvent(task, event, pipeline) : { ...task };
+  const wasNoop = event?.decision !== void 0 && applied === task;
+  let current = applied;
   const corrected = autoCorrect(current);
   corrections.push(...corrected.corrections);
   current = corrected.task;
@@ -34504,7 +34627,7 @@ function advancePipeline(task, pipeline, event) {
     const previousReviewSha = prevAttempts?.length ? prevAttempts[prevAttempts.length - 1].reviewSha : void 0;
     tollgate = { attempt, maxAttempts, previousReviewSha };
   }
-  return { phase, action, step, corrections, task: current, tollgate };
+  return { phase, action, step, corrections, task: current, tollgate, wasNoop };
 }
 function formatSystemReminder(result, context) {
   const trackingArgs = context.fixId ? `--fix "${context.fixId}"` : context.prdId && context.featureId ? `--prd "${context.prdId}" --feature "${context.featureId}"` : "";
@@ -34584,6 +34707,123 @@ var init_pipeline = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/services/planning/pipeline-telemetry.ts
+import fs24 from "node:fs";
+import path26 from "node:path";
+function writePipelineTelemetry(repoPath, entry) {
+  try {
+    const dir = path26.join(repoPath, ".tiny-brain", "telemetry");
+    const file = path26.join(dir, "pipeline-advancement.jsonl");
+    fs24.mkdirSync(dir, { recursive: true });
+    fs24.appendFileSync(file, JSON.stringify(entry) + "\n");
+  } catch {
+  }
+}
+var init_pipeline_telemetry = __esm({
+  "packages/tiny-brain-core/src/services/planning/pipeline-telemetry.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/telemetry/event-types.ts
+function taskRefsMatch(a, b) {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "prd" && b.kind === "prd") {
+    return a.prd === b.prd && a.feature === b.feature && a.task === b.task;
+  }
+  if (a.kind === "fix" && b.kind === "fix") {
+    return a.fix === b.fix && a.task === b.task;
+  }
+  return false;
+}
+var init_event_types = __esm({
+  "packages/tiny-brain-core/src/services/telemetry/event-types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/telemetry/event-store.ts
+import fs25 from "node:fs";
+import path27 from "node:path";
+import readline from "node:readline";
+function eventsPath(repoPath) {
+  return path27.join(repoPath, TELEMETRY_DIR, EVENTS_FILE);
+}
+function ensureDir(repoPath) {
+  fs25.mkdirSync(path27.join(repoPath, TELEMETRY_DIR), { recursive: true });
+}
+function hasTaskRef(obj) {
+  const ref = obj["taskRef"];
+  if (typeof ref !== "object" || ref === null) return false;
+  const r = ref;
+  return typeof r["kind"] === "string" && typeof r["task"] === "string";
+}
+function isValidEvent(obj) {
+  if (typeof obj !== "object" || obj === null) return false;
+  const rec = obj;
+  return typeof rec["kind"] === "string" && typeof rec["ts"] === "string" && hasTaskRef(rec);
+}
+function parseLine(line) {
+  const trimmed = line.trim();
+  if (trimmed.length === 0) return void 0;
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (isValidEvent(parsed)) return parsed;
+    return void 0;
+  } catch {
+    return void 0;
+  }
+}
+function appendEvent(repoPath, event) {
+  ensureDir(repoPath);
+  const filePath = eventsPath(repoPath);
+  const line = JSON.stringify(event) + "\n";
+  const fd = fs25.openSync(filePath, "a");
+  try {
+    fs25.writeSync(fd, line);
+    fs25.fsyncSync(fd);
+  } finally {
+    fs25.closeSync(fd);
+  }
+}
+async function readEventsForTask(repoPath, taskRef) {
+  const filePath = eventsPath(repoPath);
+  if (!fs25.existsSync(filePath)) return [];
+  const events = [];
+  const stream3 = fs25.createReadStream(filePath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: stream3, crlfDelay: Infinity });
+  for await (const line of rl) {
+    const event = parseLine(line);
+    if (event && taskRefsMatch(event.taskRef, taskRef)) {
+      events.push(event);
+    }
+  }
+  events.sort((a, b) => a.ts.localeCompare(b.ts));
+  return events;
+}
+async function* readAllEvents(repoPath, opts) {
+  const filePath = eventsPath(repoPath);
+  if (!fs25.existsSync(filePath)) return;
+  const stream3 = fs25.createReadStream(filePath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: stream3, crlfDelay: Infinity });
+  for await (const line of rl) {
+    const event = parseLine(line);
+    if (!event) continue;
+    if (opts?.since && event.ts < opts.since) continue;
+    yield event;
+  }
+}
+var TELEMETRY_DIR, EVENTS_FILE;
+var init_event_store = __esm({
+  "packages/tiny-brain-core/src/services/telemetry/event-store.ts"() {
+    "use strict";
+    init_event_types();
+    init_event_types();
+    TELEMETRY_DIR = path27.join(".tiny-brain", "telemetry");
+    EVENTS_FILE = "events.jsonl";
+  }
+});
+
 // packages/tiny-brain-core/src/services/planning/pipeline-service.ts
 function toTaskUpdate(task) {
   const update = {};
@@ -34612,6 +34852,9 @@ var init_pipeline_service = __esm({
   "packages/tiny-brain-core/src/services/planning/pipeline-service.ts"() {
     "use strict";
     init_pipeline();
+    init_phase_derivation();
+    init_pipeline_telemetry();
+    init_event_store();
     PipelineService = class {
       constructor(planningService, configService, repoPath = process.cwd()) {
         this.planningService = planningService;
@@ -34621,6 +34864,7 @@ var init_pipeline_service = __esm({
       async advance(options) {
         const loaded = await this.loadTask(options);
         const pipeline = await this.loadPipeline();
+        const phaseBefore = derivePhase(loaded.input, { combineRedGreenCommits: false, reviewPipeline: pipeline });
         const event = {
           agent: options.agent,
           sha: options.sha,
@@ -34629,6 +34873,36 @@ var init_pipeline_service = __esm({
         const result = advancePipeline(loaded.input, pipeline, event);
         const systemReminder = formatSystemReminder(result, this.buildContext(options));
         await this.persistTask(loaded, result.task, result.phase);
+        const taskRef = this.buildTaskRef(options);
+        if (options.decision) {
+          const ts = (/* @__PURE__ */ new Date()).toISOString();
+          writePipelineTelemetry(this.repoPath, {
+            ts,
+            sha: options.sha,
+            gate: options.agent,
+            decision: options.decision,
+            source: options.source ?? "agent",
+            was_noop: result.wasNoop
+          });
+          if (taskRef && options.sha) {
+            try {
+              appendEvent(this.repoPath, {
+                kind: "pipeline.decision",
+                ts,
+                taskRef,
+                gate: options.agent,
+                sha: options.sha,
+                decision: options.decision,
+                source: options.source ?? "agent",
+                was_noop: result.wasNoop
+              });
+            } catch {
+            }
+          }
+        }
+        if (taskRef && !result.wasNoop && phaseBefore !== "complete") {
+          this.emitLifecycleTelemetry(taskRef, options, phaseBefore, result);
+        }
         return { ...result, systemReminder };
       }
       async inspect(options) {
@@ -34709,6 +34983,43 @@ var init_pipeline_service = __esm({
           await this.planningService.saveFixProgress(this.repoPath, loaded.fixesProgress);
         }
       }
+      emitLifecycleTelemetry(taskRef, options, phaseBefore, result) {
+        const ts = (/* @__PURE__ */ new Date()).toISOString();
+        const events = [];
+        if (options.sha) {
+          let commitType;
+          if (options.agent === "red") commitType = "test";
+          else if (options.agent === "green") commitType = "feat";
+          else if (!options.decision && options.agent !== "red" && options.agent !== "green") commitType = "refactor";
+          if (commitType) {
+            events.push({ kind: "commit.tracked", ts, taskRef, sha: options.sha, type: commitType });
+          }
+        }
+        if (phaseBefore !== result.phase) {
+          events.push({ kind: "phase.entered", ts, taskRef, phase: result.phase });
+        }
+        if (result.phase === "complete") {
+          const finalSha = options.sha ?? result.task.commitSha;
+          if (finalSha) {
+            events.push({ kind: "task.completed", ts, taskRef, final_sha: finalSha });
+          }
+        }
+        for (const evt of events) {
+          try {
+            appendEvent(this.repoPath, evt);
+          } catch {
+          }
+        }
+      }
+      buildTaskRef(options) {
+        if (options.fixId) {
+          return { kind: "fix", fix: options.fixId, task: options.taskId };
+        }
+        if (options.prdId && options.featureId) {
+          return { kind: "prd", prd: options.prdId, feature: options.featureId, task: options.taskId };
+        }
+        return void 0;
+      }
       buildContext(options) {
         return {
           taskId: options.taskId,
@@ -34726,6 +35037,12 @@ var init_pipeline_service = __esm({
 // packages/tiny-brain-core/src/services/planning/persist.ts
 function resolvePersistPath(agentName, sha) {
   return `.tiny-brain/reviews/${agentName}/${sha}.json`;
+}
+function normalizeStepType(name) {
+  if (STEP_TYPE_ALIASES[name]) return STEP_TYPE_ALIASES[name];
+  const stripped = name.replace(/-(reviewer|review)$/, "");
+  if (STEP_TYPE_ALIASES[stripped]) return STEP_TYPE_ALIASES[stripped];
+  return stripped;
 }
 function resolveQualityPersistPath(agentType, runPath) {
   if (!agentType) throw new Error("agentType is required");
@@ -34748,11 +35065,169 @@ function parsePersistedReview(jsonStr) {
     raw: { ...parsed, verdict }
   };
 }
-var VALID_VERDICTS;
+var VALID_VERDICTS, STEP_TYPE_ALIASES;
 var init_persist = __esm({
   "packages/tiny-brain-core/src/services/planning/persist.ts"() {
     "use strict";
     VALID_VERDICTS = ["clean", "needs-refactoring"];
+    STEP_TYPE_ALIASES = {
+      "mutation-testing": "mutation",
+      "code-coverage": "coverage"
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/planning/review-watcher.ts
+function dedupeKey(gate, sha) {
+  return `${gate}:${sha}`;
+}
+var KNOWN_VERDICTS, ReviewWatcher;
+var init_review_watcher = __esm({
+  "packages/tiny-brain-core/src/services/planning/review-watcher.ts"() {
+    "use strict";
+    KNOWN_VERDICTS = ["clean", "needs-refactoring"];
+    ReviewWatcher = class _ReviewWatcher {
+      constructor(advancer, logger, telemetry) {
+        this.advancer = advancer;
+        this.logger = logger;
+        this.telemetry = telemetry ?? {};
+      }
+      processed = /* @__PURE__ */ new Set();
+      telemetry;
+      async handleFileEvent(event, source = "watcher") {
+        const key = dedupeKey(event.gate, event.sha);
+        if (this.processed.has(key)) {
+          return void 0;
+        }
+        this.processed.add(key);
+        try {
+          const alreadyDone = await this.advancer.isAlreadyAdvanced(event.gate, event.sha);
+          if (alreadyDone) {
+            return void 0;
+          }
+          const reminder = await this.advancer.advanceDecision(event.gate, event.sha, event.verdict, source);
+          if (reminder !== void 0) {
+            try {
+              await Promise.resolve(this.telemetry.onReminderWritten?.({ gate: event.gate, sha: event.sha, reminder }));
+            } catch {
+            }
+          }
+          return reminder;
+        } catch (err) {
+          this.logger.error(`[review-watcher] Failed to advance ${event.gate}/${event.sha}:`, err);
+          return void 0;
+        }
+      }
+      async scanAndReconcile(files) {
+        const results = [];
+        for (const file of files) {
+          const parsed = _ReviewWatcher.parseReviewPath(file.relativePath);
+          if (!parsed) continue;
+          const json2 = _ReviewWatcher.parseReviewJson(file.content);
+          if (!json2) {
+            this.logger.warn(`[review-watcher] Skipping malformed review: ${file.relativePath}`);
+            continue;
+          }
+          const reminder = await this.handleFileEvent({
+            gate: parsed.gate,
+            sha: parsed.sha,
+            verdict: json2.verdict
+          }, "reconciliation");
+          if (reminder !== void 0) {
+            results.push({ gate: parsed.gate, sha: parsed.sha, reminder });
+          }
+        }
+        return results;
+      }
+      static parseReviewPath(relativePath) {
+        const parts = relativePath.split("/");
+        if (parts.length !== 2) return void 0;
+        const [gate, filename] = parts;
+        if (!filename.endsWith(".json")) return void 0;
+        const sha = filename.slice(0, -".json".length);
+        if (!gate || !sha) return void 0;
+        return { gate, sha };
+      }
+      static parseReviewJson(jsonStr) {
+        let raw2;
+        try {
+          raw2 = JSON.parse(jsonStr);
+        } catch {
+          return void 0;
+        }
+        if (typeof raw2 !== "object" || raw2 === null) return void 0;
+        const parsed = raw2;
+        if (typeof parsed.verdict !== "string") return void 0;
+        if (!KNOWN_VERDICTS.includes(parsed.verdict)) return void 0;
+        const verdict = parsed.verdict === "clean" ? "clean" : "dirty";
+        return { verdict };
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/planning/reminder-inbox.ts
+import * as fs26 from "fs";
+import * as path28 from "path";
+import { randomBytes as randomBytes2 } from "crypto";
+var ReminderInbox;
+var init_reminder_inbox = __esm({
+  "packages/tiny-brain-core/src/services/planning/reminder-inbox.ts"() {
+    "use strict";
+    ReminderInbox = class {
+      constructor(inboxDir, telemetry) {
+        this.inboxDir = inboxDir;
+        this.telemetry = telemetry ?? {};
+      }
+      telemetry;
+      async write(reminder) {
+        await fs26.promises.mkdir(this.inboxDir, { recursive: true });
+        const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+        const random = randomBytes2(4).toString("hex");
+        const basename3 = `${timestamp2}-${random}`;
+        const tmpPath = path28.join(this.inboxDir, `${basename3}.tmp`);
+        const finalPath = path28.join(this.inboxDir, `${basename3}.reminder`);
+        await fs26.promises.writeFile(tmpPath, reminder, "utf-8");
+        await fs26.promises.rename(tmpPath, finalPath);
+        try {
+          await Promise.resolve(this.telemetry.onReminderWritten?.({ reminderId: basename3 }));
+        } catch {
+        }
+        return basename3;
+      }
+      async drain() {
+        let entries;
+        try {
+          entries = await fs26.promises.readdir(this.inboxDir);
+        } catch (err) {
+          if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
+            return [];
+          }
+          throw err;
+        }
+        const reminderFiles = entries.filter((f) => f.endsWith(".reminder")).sort();
+        const results = [];
+        for (const file of reminderFiles) {
+          const filePath = path28.join(this.inboxDir, file);
+          try {
+            const content = await fs26.promises.readFile(filePath, "utf-8");
+            await fs26.promises.unlink(filePath);
+            results.push(content);
+            try {
+              const reminderId = file.slice(0, -".reminder".length);
+              await Promise.resolve(this.telemetry.onReminderDrained?.({ reminderId }));
+            } catch {
+            }
+          } catch (err) {
+            if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
+              continue;
+            }
+            throw err;
+          }
+        }
+        return results;
+      }
+    };
   }
 });
 
@@ -34771,8 +35246,8 @@ var init_repo_config = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
-import * as fs24 from "fs/promises";
-import * as path26 from "path";
+import * as fs27 from "fs/promises";
+import * as path29 from "path";
 var SkillLoader;
 var init_skill_loader = __esm({
   "packages/tiny-brain-core/src/services/api/skill-loader.ts"() {
@@ -34789,9 +35264,9 @@ var init_skill_loader = __esm({
         if (cached) {
           return cached;
         }
-        const skillPath = path26.join(this.skillsPath, skillName);
-        const skillFile = path26.join(skillPath, "SKILL.md");
-        const content = await fs24.readFile(skillFile, "utf-8");
+        const skillPath = path29.join(this.skillsPath, skillName);
+        const skillFile = path29.join(skillPath, "SKILL.md");
+        const content = await fs27.readFile(skillFile, "utf-8");
         const { metadata, body } = this.parseFrontmatter(content);
         const templates = await this.loadTemplates(skillPath);
         const skill = {
@@ -34831,14 +35306,14 @@ var init_skill_loader = __esm({
         return { metadata, body };
       }
       async loadTemplates(skillPath) {
-        const templatesPath = path26.join(skillPath, "templates");
+        const templatesPath = path29.join(skillPath, "templates");
         const templates = {};
         try {
-          const entries = await fs24.readdir(templatesPath, { withFileTypes: true });
+          const entries = await fs27.readdir(templatesPath, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isFile() && entry.name.endsWith(".md")) {
-              const templatePath = path26.join(templatesPath, entry.name);
-              const content = await fs24.readFile(templatePath, "utf-8");
+              const templatePath = path29.join(templatesPath, entry.name);
+              const content = await fs27.readFile(templatePath, "utf-8");
               templates[entry.name] = content;
             }
           }
@@ -35130,9 +35605,9 @@ var init_claude_cli_client = __esm({
             results.push(callbacks.onToolUse(block.name, block.input));
           }
         }
-        const promises3 = results.filter((r) => r != null && typeof r.then === "function");
-        if (promises3.length > 0) {
-          return Promise.all(promises3).then(() => {
+        const promises5 = results.filter((r) => r != null && typeof r.then === "function");
+        if (promises5.length > 0) {
+          return Promise.all(promises5).then(() => {
           });
         }
       }
@@ -35148,9 +35623,9 @@ var init_claude_cli_client = __esm({
             }));
           }
         }
-        const promises3 = results.filter((r) => r != null && typeof r.then === "function");
-        if (promises3.length > 0) {
-          return Promise.all(promises3).then(() => {
+        const promises5 = results.filter((r) => r != null && typeof r.then === "function");
+        if (promises5.length > 0) {
+          return Promise.all(promises5).then(() => {
           });
         }
       }
@@ -36118,16 +36593,16 @@ var init_parallel_executor = __esm({
 
 // packages/tiny-brain-core/src/utils/git.ts
 import { exec as exec4, execSync } from "child_process";
-import path27 from "path";
+import path30 from "path";
 import { promisify as promisify4 } from "util";
 function buildWorktreeInfo(commonDirOut, toplevelOut, branchOut) {
   const worktreePath = String(toplevelOut).trim();
   const branch = String(branchOut).trim();
   const commonDirTrimmed = String(commonDirOut).trim();
-  const resolvedCommonDir = path27.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path27.resolve(worktreePath, commonDirTrimmed);
-  const mainRepoPath = path27.dirname(resolvedCommonDir);
+  const resolvedCommonDir = path30.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path30.resolve(worktreePath, commonDirTrimmed);
+  const mainRepoPath = path30.dirname(resolvedCommonDir);
   const isWorktree = mainRepoPath !== worktreePath;
-  const worktreeName = isWorktree ? path27.basename(worktreePath) : "";
+  const worktreeName = isWorktree ? path30.basename(worktreePath) : "";
   return { isWorktree, worktreePath, mainRepoPath, branch, worktreeName };
 }
 async function detectRepositoryRoot() {
@@ -36314,9 +36789,11 @@ __export(src_exports, {
   QualityRunSummarySchema: () => QualityRunSummarySchema,
   QualityService: () => QualityService,
   RecommendationService: () => RecommendationService,
+  ReminderInbox: () => ReminderInbox,
   RepoConfigService: () => RepoConfigService,
   ResponseValidationService: () => ResponseValidationService,
   Result: () => ResultHelpers,
+  ReviewWatcher: () => ReviewWatcher,
   RulesService: () => RulesService,
   RunComparisonSchema: () => RunComparisonSchema,
   SEVERITY_DEFAULT_HOURS: () => SEVERITY_DEFAULT_HOURS,
@@ -36342,6 +36819,7 @@ __export(src_exports, {
   analyzeContextDrift: () => analyzeContextDrift,
   analyzeEmotionalTone: () => analyzeEmotionalTone,
   analyzeThoughtHistory: () => analyzeThoughtHistory,
+  appendEvent: () => appendEvent,
   applyBulkUpdates: () => applyBulkUpdates,
   applyEvent: () => applyEvent,
   autoCorrect: () => autoCorrect,
@@ -36473,6 +36951,7 @@ __export(src_exports, {
   mergeSimilarFacts: () => mergeSimilarFacts,
   mergeUpdates: () => mergeUpdates,
   normalizePipeline: () => normalizePipeline,
+  normalizeStepType: () => normalizeStepType,
   omit: () => omit,
   parseCommitMessage: () => parseCommitMessage,
   parseFactsFromText: () => parseFactsFromText,
@@ -36488,7 +36967,9 @@ __export(src_exports, {
   planContentStrategy: () => planContentStrategy,
   planResponseStructure: () => planResponseStructure,
   processThought: () => processThought,
+  readAllEvents: () => readAllEvents,
   readCachedAnalyzers: () => readCachedAnalyzers,
+  readEventsForTask: () => readEventsForTask,
   repairJsonEscapes: () => repairJsonEscapes,
   resolveFeatureFlags: () => resolveFeatureFlags,
   resolvePersistPath: () => resolvePersistPath,
@@ -36502,6 +36983,7 @@ __export(src_exports, {
   simpleHash: () => simpleHash,
   stepForPhase: () => stepForPhase,
   stringToStep: () => stringToStep,
+  taskRefsMatch: () => taskRefsMatch,
   toCamelCase: () => toCamelCase,
   toKebabCase: () => toKebabCase,
   trimAll: () => trimAll,
@@ -36552,6 +37034,10 @@ var init_src = __esm({
     init_persist();
     init_quality_run_finder();
     init_status_derivation();
+    init_review_watcher();
+    init_reminder_inbox();
+    init_event_store();
+    init_event_types();
     init_types12();
     init_repo_config();
     init_user_preferences();
@@ -37255,26 +37741,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path33) => {
-  const paths = path33.split("/");
+var splitPath = (path36) => {
+  const paths = path36.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path33 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path33);
+  const { groups, path: path36 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path36);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path33) => {
+var extractGroupsFromPath = (path36) => {
   const groups = [];
-  path33 = path33.replace(/\{[^}]+\}/g, (match3, index) => {
+  path36 = path36.replace(/\{[^}]+\}/g, (match3, index) => {
     const mark = `@${index}`;
     groups.push([mark, match3]);
     return mark;
   });
-  return { groups, path: path33 };
+  return { groups, path: path36 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -37331,8 +37817,8 @@ var getPath = (request) => {
       const queryIndex = url.indexOf("?", i);
       const hashIndex = url.indexOf("#", i);
       const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
-      const path33 = url.slice(start, end);
-      return tryDecodeURI(path33.includes("%25") ? path33.replace(/%25/g, "%2525") : path33);
+      const path36 = url.slice(start, end);
+      return tryDecodeURI(path36.includes("%25") ? path36.replace(/%25/g, "%2525") : path36);
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -37349,11 +37835,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path33) => {
-  if (path33.charCodeAt(path33.length - 1) !== 63 || !path33.includes(":")) {
+var checkOptionalParameter = (path36) => {
+  if (path36.charCodeAt(path36.length - 1) !== 63 || !path36.includes(":")) {
     return null;
   }
-  const segments = path33.split("/");
+  const segments = path36.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -37494,9 +37980,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path33 = "/", matchResult = [[]]) {
+  constructor(request, path36 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path33;
+    this.path = path36;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -38233,8 +38719,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path33, ...handlers) => {
-      for (const p of [path33].flat()) {
+    this.on = (method, path36, ...handlers) => {
+      for (const p of [path36].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -38291,8 +38777,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path33, app) {
-    const subApp = this.basePath(path33);
+  route(path36, app) {
+    const subApp = this.basePath(path36);
     app.routes.map((r) => {
       let handler;
       if (app.errorHandler === errorHandler) {
@@ -38318,9 +38804,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path33) {
+  basePath(path36) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path33);
+    subApp._basePath = mergePath(this._basePath, path36);
     return subApp;
   }
   /**
@@ -38394,7 +38880,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path33, applicationHandler, options) {
+  mount(path36, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -38421,7 +38907,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path33);
+      const mergedPath = mergePath(this._basePath, path36);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -38436,14 +38922,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path33, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path36, "*"), handler);
     return this;
   }
-  #addRoute(method, path33, handler) {
+  #addRoute(method, path36, handler) {
     method = method.toUpperCase();
-    path33 = mergePath(this._basePath, path33);
-    const r = { basePath: this._basePath, path: path33, method, handler };
-    this.router.add(method, path33, [handler, r]);
+    path36 = mergePath(this._basePath, path36);
+    const r = { basePath: this._basePath, path: path36, method, handler };
+    this.router.add(method, path36, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -38456,10 +38942,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path33 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path33);
+    const path36 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path36);
     const c = new Context(request, {
-      path: path33,
+      path: path36,
       matchResult,
       env,
       executionCtx,
@@ -38559,7 +39045,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path33) {
+function match(method, path36) {
   const matchers = this.buildAllMatchers();
   const match22 = ((method2, path210) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -38575,7 +39061,7 @@ function match(method, path33) {
     return [matcher[1][index], match3];
   });
   this.match = match22;
-  return match22(method, path33);
+  return match22(method, path36);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -38690,12 +39176,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path33, index, pathErrorCheckOnly) {
+  insert(path36, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path33 = path33.replace(/\{[^}]+\}/g, (m) => {
+      path36 = path36.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -38706,7 +39192,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path33.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path36.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -38745,9 +39231,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path33) {
-  return wildcardRegExpCache[path33] ??= new RegExp(
-    path33 === "*" ? "" : `^${path33.replace(
+function buildWildcardRegExp(path36) {
+  return wildcardRegExpCache[path36] ??= new RegExp(
+    path36 === "*" ? "" : `^${path36.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -38769,17 +39255,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path33, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path36, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path33] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path36] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path33, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path36, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path33) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path36) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -38813,12 +39299,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path33) {
+function findMiddleware(middleware, path36) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path33)) {
+    if (buildWildcardRegExp(k).test(path36)) {
       return [...middleware[k]];
     }
   }
@@ -38832,7 +39318,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path33, handler) {
+  add(method, path36, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -38847,18 +39333,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path33 === "/*") {
-      path33 = "*";
+    if (path36 === "/*") {
+      path36 = "*";
     }
-    const paramCount = (path33.match(/\/:/g) || []).length;
-    if (/\*$/.test(path33)) {
-      const re = buildWildcardRegExp(path33);
+    const paramCount = (path36.match(/\/:/g) || []).length;
+    if (/\*$/.test(path36)) {
+      const re = buildWildcardRegExp(path36);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path33] ||= findMiddleware(middleware[m], path33) || findMiddleware(middleware[METHOD_NAME_ALL], path33) || [];
+          middleware[m][path36] ||= findMiddleware(middleware[m], path36) || findMiddleware(middleware[METHOD_NAME_ALL], path36) || [];
         });
       } else {
-        middleware[method][path33] ||= findMiddleware(middleware[method], path33) || findMiddleware(middleware[METHOD_NAME_ALL], path33) || [];
+        middleware[method][path36] ||= findMiddleware(middleware[method], path36) || findMiddleware(middleware[METHOD_NAME_ALL], path36) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -38876,7 +39362,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path33) || [path33];
+    const paths = checkOptionalParameter(path36) || [path36];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path210 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -38903,13 +39389,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path33) => [path33, r[method][path33]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path36) => [path36, r[method][path36]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path33) => [path33, r[METHOD_NAME_ALL][path33]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path36) => [path36, r[METHOD_NAME_ALL][path36]])
         );
       }
     });
@@ -38929,13 +39415,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path33, handler) {
+  add(method, path36, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path33, handler]);
+    this.#routes.push([method, path36, handler]);
   }
-  match(method, path33) {
+  match(method, path36) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -38950,7 +39436,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path33);
+        res = router.match(method, path36);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -39000,10 +39486,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path33, handler) {
+  insert(method, path36, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path33);
+    const parts = splitRoutingPath(path36);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -39052,12 +39538,12 @@ var Node2 = class _Node2 {
       }
     }
   }
-  search(method, path33) {
+  search(method, path36) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path33);
+    const parts = splitPath(path36);
     const curNodesQueue = [];
     const len = parts.length;
     let partOffsets = null;
@@ -39099,13 +39585,13 @@ var Node2 = class _Node2 {
           if (matcher instanceof RegExp) {
             if (partOffsets === null) {
               partOffsets = new Array(len);
-              let offset = path33[0] === "/" ? 1 : 0;
+              let offset = path36[0] === "/" ? 1 : 0;
               for (let p = 0; p < len; p++) {
                 partOffsets[p] = offset;
                 offset += parts[p].length + 1;
               }
             }
-            const restPathString = path33.substring(partOffsets[i]);
+            const restPathString = path36.substring(partOffsets[i]);
             const m = matcher.exec(restPathString);
             if (m) {
               params[name] = m[0];
@@ -39158,18 +39644,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path33, handler) {
-    const results = checkOptionalParameter(path33);
+  add(method, path36, handler) {
+    const results = checkOptionalParameter(path36);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path33, handler);
+    this.#node.insert(method, path36, handler);
   }
-  match(method, path33) {
-    return this.#node.search(method, path33);
+  match(method, path36) {
+    return this.#node.search(method, path36);
   }
 };
 
@@ -39385,10 +39871,10 @@ var createStreamBody = (stream3) => {
   });
   return body;
 };
-var getStats = (path33) => {
+var getStats = (path36) => {
   let stats;
   try {
-    stats = statSync(path33);
+    stats = statSync(path36);
   } catch {
   }
   return stats;
@@ -39417,21 +39903,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path33 = join(
+    let path36 = join(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path33);
+    let stats = getStats(path36);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path33 = join(path33, indexFile);
-      stats = getStats(path33);
+      path36 = join(path36, indexFile);
+      stats = getStats(path36);
     }
     if (!stats) {
-      await options.onNotFound?.(path33, c);
+      await options.onNotFound?.(path36, c);
       return next();
     }
-    const mimeType = getMimeType(path33);
+    const mimeType = getMimeType(path36);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -39441,12 +39927,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path33 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path36 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path33 = path33 + ENCODINGS[encoding];
+          path36 = path36 + ENCODINGS[encoding];
           break;
         }
       }
@@ -39460,7 +39946,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range2) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path33)), 200);
+      result = c.body(createStreamBody(createReadStream(path36)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -39471,20 +39957,20 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream3 = createReadStream(path33, { start, end });
+      const stream3 = createReadStream(path36, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
       result = c.body(createStreamBody(stream3), 206);
     }
-    await options.onFound?.(path33, c);
+    await options.onFound?.(path36, c);
     return result;
   };
 };
 
 // packages/tiny-brain-dashboard/server/app.ts
-import path30 from "node:path";
+import path33 from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
-import fs27 from "node:fs";
+import fs30 from "node:fs";
 
 // packages/tiny-brain-dashboard/server/services/bridge.service.ts
 init_src();
@@ -40063,7 +40549,7 @@ var streamSSE = (c, cb, onError) => {
 // packages/tiny-brain-dashboard/server/routes/repos.routes.ts
 init_src();
 import { readdir as readdir8, readFile as readFile10, stat as stat3, writeFile as writeFile3, mkdir as mkdir2 } from "fs/promises";
-import { join as join15 } from "path";
+import { join as join16 } from "path";
 import { createHash as createHash4 } from "crypto";
 
 // packages/tiny-brain-dashboard/server/routes/provenance.ts
@@ -40083,7 +40569,7 @@ function attachAgentProvenance(agents, installed) {
   const originMap = buildOriginMap(
     installed,
     "agent",
-    (path33) => path33.replace(".claude/agents/", "").replace(".md", "")
+    (path36) => path36.replace(".claude/agents/", "").replace(".md", "")
   );
   return agents.map((agent) => {
     const origin = originMap.get(agent.id);
@@ -40094,7 +40580,7 @@ function attachSkillProvenance(skills, installed) {
   const originMap = buildOriginMap(
     installed,
     "skill",
-    (path33) => path33.replace(".claude/skills/", "").replace("/SKILL.md", "")
+    (path36) => path36.replace(".claude/skills/", "").replace("/SKILL.md", "")
   );
   return skills.map((skill) => {
     const origin = originMap.get(skill.id);
@@ -40105,7 +40591,7 @@ function attachHookProvenance(hooks, installed) {
   const originMap = buildOriginMap(
     installed,
     "hook",
-    (path33) => path33.replace(".claude/hooks/", "").replace(".json", "")
+    (path36) => path36.replace(".claude/hooks/", "").replace(".json", "")
   );
   return hooks.map((hook) => {
     const origin = originMap.get(hook.name);
@@ -40301,7 +40787,7 @@ function createRepoRoutes(bridge, sse) {
         console.log("[Feature API] Repository not found:", repoId);
         return c.json({ error: "Repository not found" }, 404);
       }
-      const featurePath = join15(repo.path, "docs", "prd", planId, "features", `${featureId}.md`);
+      const featurePath = join16(repo.path, "docs", "prd", planId, "features", `${featureId}.md`);
       console.log("[Feature API] Looking for file:", featurePath);
       try {
         const content = await readFile10(featurePath, "utf-8");
@@ -40364,7 +40850,7 @@ function createRepoRoutes(bridge, sse) {
       if (!fix) {
         return c.json({ error: "Fix not found" }, 404);
       }
-      const fixPath = join15(repo.path, fix.filePath);
+      const fixPath = join16(repo.path, fix.filePath);
       const content = await readFile10(fixPath, "utf-8");
       const tasks = parseTasksFromMarkdown(content);
       for (const task of tasks) {
@@ -40415,13 +40901,13 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const agentsPath = join15(repo.path, ".claude", "agents");
+      const agentsPath = join16(repo.path, ".claude", "agents");
       const agents = [];
       try {
         const files = await readdir8(agentsPath);
         const mdFiles = files.filter((f) => f.endsWith(".md"));
         for (const file of mdFiles) {
-          const content = await readFile10(join15(agentsPath, file), "utf-8");
+          const content = await readFile10(join16(agentsPath, file), "utf-8");
           const frontmatter = parseFrontmatter2(content);
           const id = file.replace(".md", "");
           agents.push({
@@ -40453,13 +40939,13 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const skillsPath = join15(repo.path, ".claude", "skills");
+      const skillsPath = join16(repo.path, ".claude", "skills");
       const skills = [];
       try {
         const entries = await readdir8(skillsPath, { withFileTypes: true });
         const directories = entries.filter((e) => e.isDirectory());
         for (const dir of directories) {
-          const skillMdPath = join15(skillsPath, dir.name, "SKILL.md");
+          const skillMdPath = join16(skillsPath, dir.name, "SKILL.md");
           try {
             const content = await readFile10(skillMdPath, "utf-8");
             const frontmatter = parseFrontmatter2(content);
@@ -40494,7 +40980,7 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const skillPath = join15(repo.path, ".claude", "skills", skillName);
+      const skillPath = join16(repo.path, ".claude", "skills", skillName);
       try {
         const skillStat = await stat3(skillPath);
         if (!skillStat.isDirectory()) {
@@ -40521,8 +41007,8 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const analysisPath = join15(repo.path, ".tiny-brain", "analysis.json");
-      const agentsMdPath = join15(repo.path, "AGENTS.md");
+      const analysisPath = join16(repo.path, ".tiny-brain", "analysis.json");
+      const agentsMdPath = join16(repo.path, "AGENTS.md");
       let agentsMdStatus;
       try {
         const agentsStat = await stat3(agentsMdPath);
@@ -40540,21 +41026,21 @@ function createRepoRoutes(bridge, sse) {
         if (analysis?.monorepo?.packages) {
           packageScripts = [];
           for (const pkg of analysis.monorepo.packages) {
-            const pkgAgentsPath = join15(repo.path, pkg, "AGENTS.md");
+            const pkgAgentsPath = join16(repo.path, pkg, "AGENTS.md");
             try {
               const pkgStat = await stat3(pkgAgentsPath);
               const pkgContent = await readFile10(pkgAgentsPath, "utf-8");
               agentsMdFiles.push({
-                path: join15(pkg, "AGENTS.md"),
+                path: join16(pkg, "AGENTS.md"),
                 exists: true,
                 lastModified: pkgStat.mtime.toISOString(),
                 content: pkgContent
               });
             } catch {
-              agentsMdFiles.push({ path: join15(pkg, "AGENTS.md"), exists: false });
+              agentsMdFiles.push({ path: join16(pkg, "AGENTS.md"), exists: false });
             }
             try {
-              const pkgJsonContent = await readFile10(join15(repo.path, pkg, "package.json"), "utf-8");
+              const pkgJsonContent = await readFile10(join16(repo.path, pkg, "package.json"), "utf-8");
               const pkgJson = JSON.parse(pkgJsonContent);
               if (pkgJson.scripts && Object.keys(pkgJson.scripts).length > 0) {
                 const entry = {
@@ -40637,18 +41123,18 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const qualityRunsPath = join15(repo.path, ".tiny-brain", "quality", "runs");
+      const qualityRunsPath = join16(repo.path, ".tiny-brain", "quality", "runs");
       const runs = [];
       try {
         const entries = await readdir8(qualityRunsPath, { withFileTypes: true });
         for (const entry of entries) {
           if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)) {
             try {
-              const dateDirPath = join15(qualityRunsPath, entry.name);
+              const dateDirPath = join16(qualityRunsPath, entry.name);
               const timeEntries = await readdir8(dateDirPath, { withFileTypes: true });
               for (const timeEntry of timeEntries) {
                 if (timeEntry.isDirectory() && /^\d{2}-\d{2}$/.test(timeEntry.name)) {
-                  const qualityFile = join15(dateDirPath, timeEntry.name, "quality.md");
+                  const qualityFile = join16(dateDirPath, timeEntry.name, "quality.md");
                   try {
                     const content = await readFile10(qualityFile, "utf-8");
                     const frontmatter = parseFrontmatter2(content);
@@ -40670,7 +41156,7 @@ function createRepoRoutes(bridge, sse) {
         }
         for (const entry of entries) {
           if (!entry.isDirectory() && entry.name.endsWith("-quality.md")) {
-            const content = await readFile10(join15(qualityRunsPath, entry.name), "utf-8");
+            const content = await readFile10(join16(qualityRunsPath, entry.name), "utf-8");
             const frontmatter = parseFrontmatter2(content);
             const runId = entry.name.replace(".md", "");
             runs.push({
@@ -40705,7 +41191,7 @@ function createRepoRoutes(bridge, sse) {
         return c.json({ error: "Repository not found" }, 404);
       }
       const isNested = runId.includes("T");
-      const runPath = isNested ? join15(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "quality.md") : join15(repo.path, ".tiny-brain", "quality", "runs", `${runId}.md`);
+      const runPath = isNested ? join16(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "quality.md") : join16(repo.path, ".tiny-brain", "quality", "runs", `${runId}.md`);
       try {
         const content = await readFile10(runPath, "utf-8");
         const frontmatter = parseFrontmatter2(content);
@@ -40717,13 +41203,13 @@ function createRepoRoutes(bridge, sse) {
           issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10),
           rawContent: content
         };
-        const planPath = join15(repo.path, ".tiny-brain", "quality", "plans", `${runId}-plan.md`);
+        const planPath = join16(repo.path, ".tiny-brain", "quality", "plans", `${runId}-plan.md`);
         try {
           run2.planContent = await readFile10(planPath, "utf-8");
         } catch {
         }
         if (isNested) {
-          const analysisPath = join15(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "analysis.json");
+          const analysisPath = join16(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "analysis.json");
           try {
             const analysisContent = await readFile10(analysisPath, "utf-8");
             const parsed = JSON.parse(analysisContent);
@@ -40742,7 +41228,7 @@ function createRepoRoutes(bridge, sse) {
             }
           } catch {
           }
-          const coverageSummaryPath = join15(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "analysers", "coverage-0", "coverage-summary.json");
+          const coverageSummaryPath = join16(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "analysers", "coverage-0", "coverage-summary.json");
           try {
             const covContent = await readFile10(coverageSummaryPath, "utf-8");
             const covData = JSON.parse(covContent);
@@ -40782,10 +41268,10 @@ function createRepoRoutes(bridge, sse) {
         return c.json({ error: "Repository not found" }, 404);
       }
       const [date, time] = runId.split("T");
-      const agentsDir = join15(repo.path, ".tiny-brain", "quality", "runs", date, time, "agents");
+      const agentsDir = join16(repo.path, ".tiny-brain", "quality", "runs", date, time, "agents");
       let content;
       try {
-        content = await readFile10(join15(agentsDir, `${agentName}.json`), "utf-8");
+        content = await readFile10(join16(agentsDir, `${agentName}.json`), "utf-8");
       } catch (err) {
         if (err.code === "ENOENT") {
           return c.json({ error: "Agent output not found" }, 404);
@@ -40818,7 +41304,7 @@ function createRepoRoutes(bridge, sse) {
         return c.json({ error: "Repository not found" }, 404);
       }
       const [date, time] = runId.split("T");
-      const agentPath = join15(repo.path, ".tiny-brain", "quality", "runs", date, time, "agents", `${stepType}.json`);
+      const agentPath = join16(repo.path, ".tiny-brain", "quality", "runs", date, time, "agents", `${stepType}.json`);
       let agentContent;
       try {
         agentContent = await readFile10(agentPath, "utf-8");
@@ -40830,7 +41316,7 @@ function createRepoRoutes(bridge, sse) {
       }
       const agentOutput = JSON.parse(agentContent);
       const issues = Array.isArray(agentOutput) ? agentOutput : agentOutput.issues ?? [];
-      const qipPath = join15(repo.path, ".tiny-brain", "fixes", `qip-${stepType}.md`);
+      const qipPath = join16(repo.path, ".tiny-brain", "fixes", `qip-${stepType}.md`);
       const stepLabel = stepType.charAt(0).toUpperCase() + stepType.slice(1);
       let markdown;
       let created = false;
@@ -40844,7 +41330,7 @@ function createRepoRoutes(bridge, sse) {
       if (!markdown) {
         return c.json({ fixId: `qip-${stepType}`, created: false, taskCount: 0 });
       }
-      await mkdir2(join15(repo.path, ".tiny-brain", "fixes"), { recursive: true });
+      await mkdir2(join16(repo.path, ".tiny-brain", "fixes"), { recursive: true });
       await writeFile3(qipPath, markdown, "utf-8");
       const taskCount = (markdown.match(/^### \d+\./gm) ?? []).length;
       return c.json({ fixId: `qip-${stepType}`, created, taskCount });
@@ -40885,7 +41371,7 @@ function createRepoRoutes(bridge, sse) {
       if (!fix) {
         return c.json({ error: "QIP not found" }, 404);
       }
-      const fixPath = join15(repo.path, fix.filePath);
+      const fixPath = join16(repo.path, fix.filePath);
       const content = await readFile10(fixPath, "utf-8");
       const tasks = parseTasksFromMarkdown(content);
       for (const task of tasks) {
@@ -40980,7 +41466,7 @@ function createRepoRoutes(bridge, sse) {
       if ((STRING_FLAG_KEYS.has(body.key) || DIRECTORY_KEYS.has(body.key)) && typeof body.value !== "string") {
         return c.json({ error: "Value must be a string" }, 400);
       }
-      const configPath = join15(repo.path, ".tiny-brain", "config.json");
+      const configPath = join16(repo.path, ".tiny-brain", "config.json");
       let config = {};
       try {
         const content = await readFile10(configPath, "utf-8");
@@ -41000,7 +41486,7 @@ function createRepoRoutes(bridge, sse) {
       } else {
         repoConfig[body.key] = body.value;
       }
-      await mkdir2(join15(repo.path, ".tiny-brain"), { recursive: true });
+      await mkdir2(join16(repo.path, ".tiny-brain"), { recursive: true });
       await writeFile3(configPath, JSON.stringify(config, null, 2));
       const configService = new ConfigService({ ...bridge.context, repositoryRoot: repo.path });
       const sources = await configService.getPreferenceSources();
@@ -41052,7 +41538,7 @@ function createRepoRoutes(bridge, sse) {
       }
       let analysis;
       try {
-        const analysisPath = join15(repo.path, ".tiny-brain", "analysis.json");
+        const analysisPath = join16(repo.path, ".tiny-brain", "analysis.json");
         const content = await readFile10(analysisPath, "utf-8");
         analysis = JSON.parse(content);
       } catch {
@@ -41132,7 +41618,7 @@ function createRepoRoutes(bridge, sse) {
     }
     let analysis;
     try {
-      const analysisPath = join15(repo.path, ".tiny-brain", "analysis.json");
+      const analysisPath = join16(repo.path, ".tiny-brain", "analysis.json");
       const content = await readFile10(analysisPath, "utf-8");
       analysis = JSON.parse(content);
     } catch {
@@ -41248,7 +41734,7 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const prdPath = join15(repo.path, "docs", "prd", planId, "prd.md");
+      const prdPath = join16(repo.path, "docs", "prd", planId, "prd.md");
       let content;
       try {
         content = await readFile10(prdPath, "utf-8");
@@ -41265,7 +41751,7 @@ function createRepoRoutes(bridge, sse) {
         updatedContent = content.replace(/^(---\s*\n[\s\S]*?)\n---/, "$1\narchived: true\n---");
       }
       await writeFile3(prdPath, updatedContent, "utf-8");
-      const result = await bridge.planning.syncPlanFromMarkdown(join15(repo.path, "docs", "prd", planId));
+      const result = await bridge.planning.syncPlanFromMarkdown(join16(repo.path, "docs", "prd", planId));
       return c.json({ plan: result });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -41280,7 +41766,7 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const prdPath = join15(repo.path, "docs", "prd", planId, "prd.md");
+      const prdPath = join16(repo.path, "docs", "prd", planId, "prd.md");
       let content;
       try {
         content = await readFile10(prdPath, "utf-8");
@@ -41292,7 +41778,7 @@ function createRepoRoutes(bridge, sse) {
       }
       const updatedContent = content.replace(/^(---\s*\n[\s\S]*?)\narchived: true([\s\S]*?\n---)/, "$1$2");
       await writeFile3(prdPath, updatedContent, "utf-8");
-      const result = await bridge.planning.syncPlanFromMarkdown(join15(repo.path, "docs", "prd", planId));
+      const result = await bridge.planning.syncPlanFromMarkdown(join16(repo.path, "docs", "prd", planId));
       return c.json({ plan: result });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -41312,7 +41798,7 @@ function createRepoRoutes(bridge, sse) {
       if (!fix) {
         return c.json({ error: "Fix not found" }, 404);
       }
-      const fixPath = join15(repo.path, fix.filePath);
+      const fixPath = join16(repo.path, fix.filePath);
       const content = await readFile10(fixPath, "utf-8");
       let updatedContent;
       if (/^archived:\s*.+$/m.test(content)) {
@@ -41342,7 +41828,7 @@ function createRepoRoutes(bridge, sse) {
       if (!fix) {
         return c.json({ error: "Fix not found" }, 404);
       }
-      const fixPath = join15(repo.path, fix.filePath);
+      const fixPath = join16(repo.path, fix.filePath);
       const content = await readFile10(fixPath, "utf-8");
       const updatedContent = content.replace(/^(---\s*\n[\s\S]*?)\narchived: true([\s\S]*?\n---)/, "$1$2");
       await writeFile3(fixPath, updatedContent, "utf-8");
@@ -41414,8 +41900,9 @@ ${body}` : subject;
 }
 
 // packages/tiny-brain-dashboard/server/routes/reviews.routes.ts
+init_src();
 import { readFile as readFile11 } from "node:fs/promises";
-import { join as join16 } from "node:path";
+import { join as join17 } from "node:path";
 var COMMIT_SHA_PATTERN = /^[a-f0-9]{7,40}$/;
 function createReviewRoutes(bridge) {
   const app = new Hono2();
@@ -41436,15 +41923,16 @@ function createReviewRoutes(bridge) {
     if (!repo) {
       return c.json({ error: "Repository not found" }, 404);
     }
-    const reviewDir = join16(repo.path, ".tiny-brain", "reviews", reviewType);
-    const reviewPath = join16(reviewDir, `${commitSha}.json`);
+    const canonicalType = normalizeStepType(reviewType);
+    const reviewDir = join17(repo.path, ".tiny-brain", "reviews", canonicalType);
+    const reviewPath = join17(reviewDir, `${commitSha}.json`);
     let content;
     try {
       content = await readFile11(reviewPath, "utf-8");
     } catch {
       if (commitSha.length > 8) {
         try {
-          content = await readFile11(join16(reviewDir, `${commitSha.substring(0, 8)}.json`), "utf-8");
+          content = await readFile11(join17(reviewDir, `${commitSha.substring(0, 8)}.json`), "utf-8");
         } catch {
           return c.json({ error: "Review not found" }, 404);
         }
@@ -41463,8 +41951,8 @@ function createReviewRoutes(bridge) {
 
 // packages/tiny-brain-dashboard/server/routes/pipeline.routes.ts
 init_src();
-import { promises as fs25 } from "fs";
-import path28 from "path";
+import { promises as fs28 } from "fs";
+import path31 from "path";
 function validatePipelineStepArray(value, name, allowEmpty = true) {
   if (!Array.isArray(value)) return `${name} must be an array`;
   if (!allowEmpty && value.length === 0) return `${name} must be a non-empty array`;
@@ -41485,8 +41973,8 @@ function createPipelineRoutes(bridge) {
     const prefs = await configService.getPreferences();
     let installedCapabilities = [];
     try {
-      const installedPath = path28.join(repo.path, ".tiny-brain", "capabilities", "installed.json");
-      const data = await fs25.readFile(installedPath, "utf-8");
+      const installedPath = path31.join(repo.path, ".tiny-brain", "capabilities", "installed.json");
+      const data = await fs28.readFile(installedPath, "utf-8");
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) installedCapabilities = parsed;
     } catch {
@@ -41860,13 +42348,13 @@ ${JSON.stringify(userContext, null, 2)}
 }
 
 // packages/tiny-brain-dashboard/server/routes/capabilities.routes.ts
-import { promises as fs26 } from "fs";
-import path29 from "path";
+import { promises as fs29 } from "fs";
+import path32 from "path";
 function getCapabilitiesDir() {
   if (process.env.CLAUDE_PLUGIN_ROOT) {
-    return path29.join(process.env.CLAUDE_PLUGIN_ROOT, "capabilities");
+    return path32.join(process.env.CLAUDE_PLUGIN_ROOT, "capabilities");
   }
-  return path29.join(process.cwd(), "packages", "tiny-brain-plugin", "capabilities");
+  return path32.join(process.cwd(), "packages", "tiny-brain-plugin", "capabilities");
 }
 function parseFrontmatter3(content) {
   const match3 = content.match(/^---\n([\s\S]*?)\n---/);
@@ -41904,7 +42392,7 @@ function createCapabilitiesRoutes() {
     const capDir = getCapabilitiesDir();
     let files;
     try {
-      files = await fs26.readdir(capDir);
+      files = await fs29.readdir(capDir);
     } catch {
       return c.json({ capabilities: [] });
     }
@@ -41912,7 +42400,7 @@ function createCapabilitiesRoutes() {
     for (const file of files) {
       if (!file.endsWith(".md") || file.startsWith("_")) continue;
       try {
-        const content = await fs26.readFile(path29.join(capDir, file), "utf-8");
+        const content = await fs29.readFile(path32.join(capDir, file), "utf-8");
         const frontmatter = parseFrontmatter3(content);
         if (!frontmatter.id || !frontmatter.name) continue;
         capabilities.push({
@@ -41965,8 +42453,56 @@ function createQualityRoutes(bridge) {
   return app;
 }
 
+// packages/tiny-brain-dashboard/server/routes/telemetry.routes.ts
+init_src();
+function parseTaskRef(segments) {
+  if (segments.length < 1) return void 0;
+  const first2 = segments[0];
+  if (first2.startsWith("fix:")) {
+    const fix = first2.slice("fix:".length);
+    const task = segments[1];
+    if (!fix || !task) return void 0;
+    return { kind: "fix", fix, task };
+  }
+  if (first2.startsWith("prd:")) {
+    const prd = first2.slice("prd:".length);
+    const feature = segments[1];
+    const task = segments[2];
+    if (!prd || !feature || !task) return void 0;
+    return { kind: "prd", prd, feature, task };
+  }
+  return void 0;
+}
+function createTelemetryRoutes(bridge) {
+  const app = new Hono2();
+  app.get("/:taskPath{.+}/telemetry", async (c) => {
+    const repoId = c.req.param("repoId") ?? "";
+    const repo = await bridge.repoConfig.getRepo(repoId);
+    if (!repo) {
+      return c.json({ error: "Repository not found" }, 404);
+    }
+    const taskPath = c.req.param("taskPath") ?? "";
+    const segments = taskPath.split("/");
+    const taskRef = parseTaskRef(segments);
+    if (!taskRef) {
+      return c.json({ error: "Invalid task ref format. Use fix:<fixId>/<taskId> or prd:<prdId>/<featureId>/<taskId>" }, 400);
+    }
+    try {
+      const events = await readEventsForTask(repo.path, taskRef);
+      if (events.length === 0) {
+        return c.json({ error: "No telemetry events found for this task" }, 404);
+      }
+      return c.json({ events });
+    } catch (err) {
+      bridge.context.logger.error("Failed to read telemetry events", { repoId, taskPath, error: String(err) });
+      return c.json({ error: "Failed to read telemetry events" }, 500);
+    }
+  });
+  return app;
+}
+
 // packages/tiny-brain-dashboard/server/app.ts
-var __dirname = path30.dirname(fileURLToPath4(import.meta.url));
+var __dirname = path33.dirname(fileURLToPath4(import.meta.url));
 function createApp(context, sse, options = {}) {
   const app = new Hono2();
   const bridge = new ServiceBridge(context);
@@ -41985,6 +42521,7 @@ function createApp(context, sse, options = {}) {
   app.route("/api/skills", createSkillsRoutes(bridge));
   app.route("/api/capabilities", createCapabilitiesRoutes());
   app.route("/api/repos/:repoId/quality-scores", createQualityRoutes(bridge));
+  app.route("/api/repos/:repoId/tasks", createTelemetryRoutes(bridge));
   app.get("/events", async (c) => {
     c.header("Content-Type", "text/event-stream");
     c.header("Cache-Control", "no-cache");
@@ -42027,47 +42564,22 @@ data: ${JSON.stringify(initialData)}
   if (options.skipStaticFiles) {
     return app;
   }
-  const distPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH ? path30.resolve(process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH) : path30.resolve(__dirname, "../dist");
-  const distExists = fs27.existsSync(distPath);
-  if (distExists) {
-    app.use("/assets/*", serveStatic({
-      root: distPath,
-      rewriteRequestPath: (path33) => path33.replace("/assets", "/assets")
-    }));
-    app.use("/favicon.png", serveStatic({
-      root: distPath,
-      rewriteRequestPath: () => "/favicon.png"
-    }));
-    app.get("/*", async (c) => {
-      const reqPath = c.req.path;
-      if (reqPath.startsWith("/api") || reqPath.startsWith("/events") || reqPath === "/health") {
-        return c.notFound();
-      }
-      const indexPath = path30.join(distPath, "index.html");
-      if (fs27.existsSync(indexPath)) {
-        const indexHtml = fs27.readFileSync(indexPath, "utf-8");
-        return c.html(indexHtml);
-      }
-      return c.html(`<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tiny Brain Dashboard</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <p>Dashboard build not found. Please build the dashboard first.</p>
-  </body>
-</html>`);
-    });
-  } else {
-    app.get("/*", async (c) => {
-      const reqPath = c.req.path;
-      if (reqPath.startsWith("/api") || reqPath.startsWith("/events") || reqPath === "/health") {
-        return c.notFound();
-      }
-      return c.html(`<!DOCTYPE html>
+  const distPath = options.distPath ?? resolveDashboardStaticPath(__dirname);
+  app.use("/assets/*", serveStatic({
+    root: distPath,
+    rewriteRequestPath: (path36) => path36.replace("/assets", "/assets")
+  }));
+  app.use("/favicon.png", serveStatic({
+    root: distPath,
+    rewriteRequestPath: () => "/favicon.png"
+  }));
+  app.get("/*", async (c) => {
+    const indexHtml = readIndexHtml(distPath);
+    return c.html(indexHtml ?? notBuiltHtml);
+  });
+  return app;
+}
+var notBuiltHtml = `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -42078,10 +42590,25 @@ data: ${JSON.stringify(initialData)}
     <div id="root"></div>
     <p>Dashboard not built. Please run 'npm run build' in the dashboard package.</p>
   </body>
-</html>`);
-    });
+</html>`;
+function resolveDashboardStaticPath(dir) {
+  const envPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH;
+  if (envPath) {
+    const resolved = path33.resolve(envPath);
+    if (fs30.existsSync(path33.join(resolved, "index.html"))) return resolved;
   }
-  return app;
+  const dashboardPath = path33.resolve(dir, "../dashboard");
+  if (fs30.existsSync(path33.join(dashboardPath, "index.html"))) return dashboardPath;
+  return path33.resolve(dir, "../dist");
+}
+function readIndexHtml(distPath) {
+  const indexPath = path33.join(distPath, "index.html");
+  try {
+    const html = fs30.readFileSync(indexPath, "utf-8");
+    return html.length > 0 ? html : null;
+  } catch {
+    return null;
+  }
 }
 
 // packages/tiny-brain-dashboard/server/services/sse.service.ts
@@ -42100,15 +42627,15 @@ data: ${JSON.stringify(data)}
 ` : `data: ${JSON.stringify(data)}
 
 `;
-    const promises3 = [];
+    const promises5 = [];
     for (const stream3 of this.connections) {
-      promises3.push(
+      promises5.push(
         stream3.write(message).catch(() => {
           this.connections.delete(stream3);
         })
       );
     }
-    await Promise.all(promises3);
+    await Promise.all(promises5);
   }
   closeAll() {
     this.connections.clear();
@@ -42120,13 +42647,13 @@ data: ${JSON.stringify(data)}
 
 // packages/tiny-brain-dashboard/server/services/file-watcher.service.ts
 init_src();
-import * as path32 from "path";
-import * as fs29 from "fs";
+import * as path35 from "path";
+import * as fs33 from "fs";
 import * as os2 from "os";
 
 // packages/tiny-brain-dashboard/server/services/generic-file-watcher.ts
-import * as fs28 from "fs";
-import * as path31 from "path";
+import * as fs31 from "fs";
+import * as path34 from "path";
 import { EventEmitter as EventEmitter2 } from "events";
 var FileWatcherService = class extends EventEmitter2 {
   fsWatcher = null;
@@ -42155,14 +42682,14 @@ var FileWatcherService = class extends EventEmitter2 {
       ...this.options,
       ...options
     };
-    if (!fs28.existsSync(watchPath)) {
+    if (!fs31.existsSync(watchPath)) {
       throw new Error(`Watch path does not exist: ${watchPath}`);
     }
-    const stats = fs28.statSync(watchPath);
+    const stats = fs31.statSync(watchPath);
     if (!stats.isDirectory()) {
       throw new Error(`Watch path is not a directory: ${watchPath}`);
     }
-    this.fsWatcher = fs28.watch(
+    this.fsWatcher = fs31.watch(
       watchPath,
       { recursive: this.options.recursive },
       (eventType, filename) => {
@@ -42181,7 +42708,7 @@ var FileWatcherService = class extends EventEmitter2 {
    */
   handleWatchEvent(eventType, filename) {
     if (!filename || !this.watchPath) return;
-    const fullPath = path31.join(this.watchPath, filename);
+    const fullPath = path34.join(this.watchPath, filename);
     if (!this.options.fileFilter(fullPath)) return;
     const existingTimer = this.debounceTimers.get(filename);
     if (existingTimer) {
@@ -42201,7 +42728,7 @@ var FileWatcherService = class extends EventEmitter2 {
     try {
       if (eventType === "rename") {
         try {
-          const stats = await fs28.promises.stat(fullPath);
+          const stats = await fs31.promises.stat(fullPath);
           const change = {
             type: "added",
             filePath: fullPath,
@@ -42222,7 +42749,7 @@ var FileWatcherService = class extends EventEmitter2 {
           }
         }
       } else if (eventType === "change") {
-        const stats = await fs28.promises.stat(fullPath);
+        const stats = await fs31.promises.stat(fullPath);
         const change = {
           type: "modified",
           filePath: fullPath,
@@ -42265,6 +42792,47 @@ var FileWatcherService = class extends EventEmitter2 {
   }
 };
 
+// packages/tiny-brain-dashboard/server/services/telemetry-tail.service.ts
+import * as fs32 from "fs";
+var TelemetryTailService = class {
+  offsets = /* @__PURE__ */ new Map();
+  async readNewEvents(filePath) {
+    let stat4;
+    try {
+      stat4 = await fs32.promises.stat(filePath);
+    } catch {
+      return [];
+    }
+    const offset = this.offsets.get(filePath) ?? 0;
+    if (stat4.size <= offset) {
+      this.offsets.set(filePath, stat4.size);
+      return [];
+    }
+    const fd = await fs32.promises.open(filePath, "r");
+    try {
+      const buf = Buffer.alloc(stat4.size - offset);
+      await fd.read(buf, 0, buf.length, offset);
+      const raw2 = buf.toString("utf-8");
+      const lastNewline = raw2.lastIndexOf("\n");
+      if (lastNewline === -1) {
+        return [];
+      }
+      this.offsets.set(filePath, offset + lastNewline + 1);
+      const lines = raw2.slice(0, lastNewline).split("\n").filter((l) => l.trim().length > 0);
+      const events = [];
+      for (const line of lines) {
+        try {
+          events.push(JSON.parse(line));
+        } catch {
+        }
+      }
+      return events;
+    } finally {
+      await fd.close();
+    }
+  }
+};
+
 // packages/tiny-brain-dashboard/server/services/file-watcher.service.ts
 var FileWatcher = class {
   constructor(context, sse) {
@@ -42284,6 +42852,8 @@ var FileWatcher = class {
   qualityCache = /* @__PURE__ */ new Map();
   // RepoConfigService instance
   repoConfigService;
+  // Tail reader for telemetry JSONL
+  telemetryTail = new TelemetryTailService();
   // Track if running
   running = false;
   async start() {
@@ -42325,14 +42895,14 @@ var FileWatcher = class {
       repoPath
     };
     if (!this.plansSnapshot.has(repoId)) {
-      const progressDir = path32.join(repoPath, ".tiny-brain", "progress");
+      const progressDir = path35.join(repoPath, ".tiny-brain", "progress");
       const snapshot = /* @__PURE__ */ new Map();
       try {
-        const files = await fs29.promises.readdir(progressDir);
+        const files = await fs33.promises.readdir(progressDir);
         for (const file of files) {
           if (!file.endsWith(".json")) continue;
           try {
-            const content = await fs29.promises.readFile(path32.join(progressDir, file), "utf-8");
+            const content = await fs33.promises.readFile(path35.join(progressDir, file), "utf-8");
             const parsed = JSON.parse(content);
             if (parsed && parsed.id) {
               snapshot.set(parsed.id, content);
@@ -42350,9 +42920,9 @@ var FileWatcher = class {
       this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
     }
     if (!this.fixesSnapshot.has(repoId)) {
-      const fixesPath = path32.join(repoPath, ".tiny-brain", "fixes", "progress.json");
+      const fixesPath = path35.join(repoPath, ".tiny-brain", "fixes", "progress.json");
       try {
-        const content = await fs29.promises.readFile(fixesPath, "utf-8");
+        const content = await fs33.promises.readFile(fixesPath, "utf-8");
         const parsed = JSON.parse(content);
         if (parsed && Array.isArray(parsed.fixes)) {
           const snapshot = /* @__PURE__ */ new Map();
@@ -42366,10 +42936,10 @@ var FileWatcher = class {
         this.context.logger.debug(`[FileWatcher] No fixes/progress.json to pre-warm for ${repoId}`);
       }
     }
-    const tinyBrainPath = path32.join(repoPath, ".tiny-brain");
-    if (!fs29.existsSync(tinyBrainPath)) {
+    const tinyBrainPath = path35.join(repoPath, ".tiny-brain");
+    if (!fs33.existsSync(tinyBrainPath)) {
       try {
-        await fs29.promises.mkdir(tinyBrainPath, { recursive: true });
+        await fs33.promises.mkdir(tinyBrainPath, { recursive: true });
         this.context.logger.info(`[FileWatcher] Created .tiny-brain directory for repo ${repoId}`);
       } catch (error) {
         this.context.logger.error(`[FileWatcher] Failed to create .tiny-brain for ${repoId}:`, error);
@@ -42382,16 +42952,16 @@ var FileWatcher = class {
       });
       await watchers.tinyBrainWatcher.start(tinyBrainPath, {
         recursive: true,
-        fileFilter: (filePath) => filePath.endsWith(".json") || filePath.endsWith(".md")
+        fileFilter: (filePath) => filePath.endsWith(".json") || filePath.endsWith(".md") || filePath.endsWith(".jsonl")
       });
       this.context.logger.info(`[FileWatcher] .tiny-brain watcher started for repo ${repoId}: ${tinyBrainPath}`);
     } catch (error) {
       this.context.logger.error(`[FileWatcher] Failed to start .tiny-brain watcher for ${repoId}:`, error);
     }
-    const docsPath = path32.join(repoPath, "docs");
-    if (!fs29.existsSync(docsPath)) {
+    const docsPath = path35.join(repoPath, "docs");
+    if (!fs33.existsSync(docsPath)) {
       try {
-        await fs29.promises.mkdir(docsPath, { recursive: true });
+        await fs33.promises.mkdir(docsPath, { recursive: true });
         this.context.logger.info(`[FileWatcher] Created docs directory for repo ${repoId}`);
       } catch (error) {
         this.context.logger.error(`[FileWatcher] Failed to create docs for ${repoId}:`, error);
@@ -42425,7 +42995,7 @@ var FileWatcher = class {
     const repoWatcher = this.repoWatchers.get(repoId);
     if (!repoWatcher) return;
     for (const worktree of worktrees) {
-      if (!fs29.existsSync(worktree.path)) {
+      if (!fs33.existsSync(worktree.path)) {
         this.context.logger.warn(`[FileWatcher] Worktree path does not exist, skipping: ${worktree.path}`);
         continue;
       }
@@ -42433,8 +43003,8 @@ var FileWatcher = class {
       let tinyBrainWatcher = null;
       let docsWatcher = null;
       const worktreeContext = { name: worktree.name, branch: worktree.branch };
-      const tinyBrainPath = path32.join(worktree.path, ".tiny-brain");
-      if (fs29.existsSync(tinyBrainPath)) {
+      const tinyBrainPath = path35.join(worktree.path, ".tiny-brain");
+      if (fs33.existsSync(tinyBrainPath)) {
         try {
           tinyBrainWatcher = new FileWatcherService(this.context.logger);
           tinyBrainWatcher.on("change", (change) => {
@@ -42442,7 +43012,7 @@ var FileWatcher = class {
           });
           await tinyBrainWatcher.start(tinyBrainPath, {
             recursive: true,
-            fileFilter: (filePath) => filePath.endsWith(".json") || filePath.endsWith(".md")
+            fileFilter: (filePath) => filePath.endsWith(".json") || filePath.endsWith(".md") || filePath.endsWith(".jsonl")
           });
           this.context.logger.info(`[FileWatcher] Worktree .tiny-brain watcher started for ${worktree.name} in repo ${repoId}`);
         } catch (error) {
@@ -42450,8 +43020,8 @@ var FileWatcher = class {
           tinyBrainWatcher = null;
         }
       }
-      const docsPath = path32.join(worktree.path, "docs");
-      if (fs29.existsSync(docsPath)) {
+      const docsPath = path35.join(worktree.path, "docs");
+      if (fs33.existsSync(docsPath)) {
         try {
           docsWatcher = new FileWatcherService(this.context.logger);
           docsWatcher.on("change", (change) => {
@@ -42531,6 +43101,8 @@ var FileWatcher = class {
         relativePath: rel.slice("quality/runs/".length)
       };
       this.handleQualityChange(repoId, adjustedChange, worktree);
+    } else if (rel === "telemetry/events.jsonl") {
+      void this.handleTelemetryChange(repoId, change);
     }
   }
   /**
@@ -42553,8 +43125,8 @@ var FileWatcher = class {
    * Start watching ~/.tiny-brain/repos/repos.json for new repo registrations
    */
   async startReposConfigWatcher() {
-    const reposDir = path32.join(os2.homedir(), ".tiny-brain", "repos");
-    if (!fs29.existsSync(reposDir)) {
+    const reposDir = path35.join(os2.homedir(), ".tiny-brain", "repos");
+    if (!fs33.existsSync(reposDir)) {
       this.context.logger.info(`[FileWatcher] Repos config directory does not exist: ${reposDir}`);
       return;
     }
@@ -42601,7 +43173,7 @@ var FileWatcher = class {
           const newWorktrees = updatedWorktrees.filter((wt) => !currentWorktreeNames.has(wt.name));
           const validNewWorktrees = [];
           for (const wt of newWorktrees) {
-            if (!fs29.existsSync(wt.path)) {
+            if (!fs33.existsSync(wt.path)) {
               this.context.logger.warn(`[FileWatcher] New worktree path does not exist, cleaning up: ${wt.path}`);
               try {
                 await this.repoConfigService.removeWorktree(repo.id, wt.name);
@@ -42645,6 +43217,21 @@ var FileWatcher = class {
   isRunning() {
     return this.running;
   }
+  async handleTelemetryChange(repoId, change) {
+    try {
+      const newEvents = await this.telemetryTail.readNewEvents(change.filePath);
+      for (const event of newEvents) {
+        await this.sse.broadcast("telemetry-change", {
+          type: "telemetryChange",
+          timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+          repoId,
+          event
+        });
+      }
+    } catch (error) {
+      this.context.logger.error(`[FileWatcher] Failed to process telemetry change for ${repoId}:`, error);
+    }
+  }
   async handleFileChange(repoId, change, worktree) {
     try {
       this.context.logger.info(`[FileWatcher] Detected file change in repo ${repoId}: ${change.type} - ${change.relativePath}`);
@@ -42654,7 +43241,7 @@ var FileWatcher = class {
         this.context.logger.info(`[FileWatcher] No SSE clients connected - skipping file processing`);
         return;
       }
-      const fileName = path32.basename(change.relativePath);
+      const fileName = path35.basename(change.relativePath);
       this.context.logger.debug(`[FileWatcher] File name:`, fileName);
       if (!fileName.endsWith(".json")) {
         this.context.logger.debug(`[FileWatcher] Not a valid progress file - skipping`);
@@ -42691,7 +43278,7 @@ var FileWatcher = class {
       }
       let newPlan;
       try {
-        const content = await fs29.promises.readFile(change.filePath, "utf-8");
+        const content = await fs33.promises.readFile(change.filePath, "utf-8");
         newPlan = JSON.parse(content);
       } catch (error) {
         this.context.logger.error(`Error reading progress file ${change.filePath}:`, error);
@@ -42753,7 +43340,7 @@ var FileWatcher = class {
       }
       let newData;
       try {
-        const content = await fs29.promises.readFile(change.filePath, "utf-8");
+        const content = await fs33.promises.readFile(change.filePath, "utf-8");
         newData = JSON.parse(content);
       } catch (error) {
         this.context.logger.error(`Error reading fixes progress file ${change.filePath}:`, error);
@@ -42821,7 +43408,7 @@ var FileWatcher = class {
         return;
       }
       const nestedMatch = change.relativePath.match(/^(\d{4}-\d{2}-\d{2})\/(\d{2}-\d{2})\/quality\.md$/);
-      const runId = nestedMatch ? `${nestedMatch[1]}T${nestedMatch[2]}` : path32.basename(change.relativePath).replace(/\.md$/, "");
+      const runId = nestedMatch ? `${nestedMatch[1]}T${nestedMatch[2]}` : path35.basename(change.relativePath).replace(/\.md$/, "");
       let repoCache = this.qualityCache.get(repoId);
       if (!repoCache) {
         repoCache = /* @__PURE__ */ new Map();
@@ -42840,7 +43427,7 @@ var FileWatcher = class {
       }
       const runData = { runId };
       try {
-        const content = await fs29.promises.readFile(change.filePath, "utf-8");
+        const content = await fs33.promises.readFile(change.filePath, "utf-8");
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (frontmatterMatch) {
           const frontmatter = frontmatterMatch[1];
@@ -42956,7 +43543,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs29.promises.readFile(change.filePath, "utf-8");
+        content = await fs33.promises.readFile(change.filePath, "utf-8");
       } catch (error) {
         this.context.logger.error(`Error reading PRD doc file ${change.filePath}:`, error);
         return;
@@ -43017,7 +43604,7 @@ var FileWatcher = class {
         return;
       }
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-      const fixId = path32.basename(change.relativePath, ".md");
+      const fixId = path35.basename(change.relativePath, ".md");
       if (change.type === "deleted") {
         await this.sse.broadcast("fix-doc-change", {
           eventType: "fix:doc:deleted",
@@ -43030,7 +43617,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs29.promises.readFile(change.filePath, "utf-8");
+        content = await fs33.promises.readFile(change.filePath, "utf-8");
       } catch (error) {
         this.context.logger.error(`Error reading fix doc file ${change.filePath}:`, error);
         return;

@@ -66,39 +66,32 @@ resolved: null
 
 ## Tasks
 
-### 1. Write failing test
+<!--
+  Each task is ONE complete TDD cycle: failing test + implementation +
+  any refactors triggered by review, all under the same task.
+
+  - DO NOT split into "Write test for X" + "Implement X" — that's half a
+    cycle each.
+  - DO NOT add manual / verification-only tasks (e.g. "User checks the
+    dashboard", "Run tests"). They produce no commit and always end up
+    superseded.
+  - DO bundle tests with the behaviour they cover.
+-->
+
+### 1. Reproduce and fix [behaviour]
 status: not_started
 
-Add test that reproduces the bug.
+End-to-end task — failing test, implementation, and any review-driven
+refactors land under this one task.
 
 **Files to modify/create:**
-- `path/to/test.ts`
-
-**Expected changes:**
-- Add test case that fails with current code
-- Test should pass after fix
-
-### 2. Implement fix
-status: not_started
-
-Fix the root cause.
-
-**Files to modify/create:**
+- `path/to/__tests__/file.test.ts`
 - `path/to/file.ts`
 
 **Expected changes:**
-- Fix the logic error
-- Ensure backward compatibility
-
-### 3. Verify regression tests
-status: not_started
-
-Run full test suite.
-
-**Expected outcome:**
-- All regression tests pass
-- New test passes
-- No unexpected failures
+- Add failing test that reproduces the bug
+- Implement the fix so the test passes
+- All existing tests still pass
 
 ## Resolution
 

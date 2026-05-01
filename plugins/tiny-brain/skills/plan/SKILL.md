@@ -96,6 +96,24 @@ Description...
 - **NEVER split TDD phases into separate tasks.** A task describes WHAT to build, not HOW. "Write failing tests for X" and "Implement X" should be ONE task: "Add X". The TDD cycle (test/impl/refactor) happens within each task.
 - **NEVER create verification-only tasks** like "Verify all tests pass" or "Run integration tests". These produce no commits and always end up superseded. Verification is part of the TDD cycle, not a standalone task.
 
+**Anti-patterns to reject if the user asks for them:**
+```markdown
+# ❌ Splits one cycle across two tasks — DO NOT
+### 1. Write failing tests for user authentication
+### 2. Implement user authentication
+
+# ❌ Manual / verification-only — DO NOT
+### 3. User visually verifies in dev dashboard
+### 4. Run integration test suite
+### 5. Confirm rollout in staging
+```
+
+**Correct shape — one task per behaviour, full TDD cycle inside:**
+```markdown
+### 1. Add user authentication
+Failing test + implementation + any review-driven refactors land here.
+```
+
 Example multi-task commit:
 ```
 feat(api): add user endpoints

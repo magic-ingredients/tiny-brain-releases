@@ -121,22 +121,52 @@ Use the emoji schema for test categorization:
 
 ### Step 6: Define Tasks
 
-Use the same task format as features:
+Each task MUST describe a complete unit of behaviour change — RED + GREEN + any
+refactors all roll up to the same task. The TDD cycle happens *within* each
+task, not *across* tasks.
+
+**Tasks MUST:**
+- Bundle tests with the implementation they cover. The failing-test commit
+  (`test:`) and the implementation commit (`fix:`/`feat:`) for the same
+  behaviour belong to the SAME task.
+- Describe WHAT to build, not HOW.
+- Be implementable as a single TDD cycle that yields one `commitSha` (the
+  GREEN). Refactors triggered by review still land under the same task.
+
+**Tasks MUST NOT:**
+- Be a single TDD phase on their own. NEVER write a task like
+  "Write failing test for X" or "Add tests for Y" — that is half a cycle.
+  The tests for X belong inside the X task.
+- Be manual / verification-only steps. NEVER write a task like
+  "User visually verifies in dev dashboard", "Run the test suite", or
+  "Check the deploy". These produce no commits and always end up
+  superseded. Manual checks are part of finishing a task, not a task
+  themselves.
+
+**Format:**
 
 ```markdown
 ## Tasks
 
-### 1. Write failing test for the fix
-Add test that reproduces the bug.
+### 1. Reproduce and fix the SSE reconnection bug
+End-to-end task — failing test, implementation, and any review-driven
+refactors all land under this one task.
 
 **Files to modify:**
-- `src/__tests__/service.test.ts`
+- `src/services/__tests__/SSEClient.test.ts`
+- `src/services/SSEClient.ts`
+```
 
-### 2. Implement the fix
-Fix the root cause.
+**Anti-patterns to reject if the user asks for them:**
 
-**Files to modify:**
-- `src/service.ts`
+```markdown
+# ❌ DO NOT DO THIS — splits one cycle across two tasks
+### 1. Write failing test for SSE reconnection
+### 2. Implement SSE reconnection
+
+# ❌ DO NOT DO THIS — manual task with no commit
+### 3. Visually verify in dev dashboard
+### 4. Run integration tests
 ```
 
 ### Step 7: Sync Progress

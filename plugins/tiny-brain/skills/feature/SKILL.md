@@ -92,6 +92,23 @@ Each `### N. Title` becomes a trackable task with:
 - **NEVER split TDD phases into separate tasks.** A task describes WHAT to build, not HOW. "Write failing tests for X" and "Implement X" should be ONE task: "Add X". The TDD cycle (test/impl/refactor) happens within each task.
 - **NEVER create verification-only tasks** like "Verify all tests pass" or "Run integration tests". These produce no commits and always end up superseded. Verification is part of the TDD cycle, not a standalone task.
 
+**Anti-patterns to reject if the user asks for them:**
+```markdown
+# ❌ Splits one cycle across two tasks — DO NOT
+### 1. Write failing tests for hooks display
+### 2. Implement hooks display
+
+# ❌ Manual / verification-only — DO NOT
+### 3. User visually verifies in dev dashboard
+### 4. Run integration test suite
+```
+
+**Correct shape — one task per behaviour, full TDD cycle inside:**
+```markdown
+### 1. Add hooks display component
+Failing test + implementation + any review-driven refactors land here.
+```
+
 Example multi-task commit:
 ```
 feat(dashboard): add hooks display components

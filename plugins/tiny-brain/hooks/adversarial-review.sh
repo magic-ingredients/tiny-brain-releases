@@ -108,7 +108,11 @@ fi
 TASK_DESC=$(echo "$LATEST_MSG" | sed -E 's/^[a-z]+(\([^)]+\))?:[[:space:]]*//')
 
 # --- Read first review type from pipeline config ---
-FIRST_REVIEW_TYPE=$($EXEC tiny-brain config preferences get reviewPipeline 2>/dev/null | grep -oE '\[.*\]' | sed 's/\[//;s/\]//;s/"//g;s/,.*//;s/ //g')
+PIPELINE_JSON=$($EXEC tiny-brain config preferences get reviewPipeline 2>/dev/null | sed 's/^reviewPipeline:[[:space:]]*//')
+FIRST_REVIEW_TYPE=""
+if [ -n "$PIPELINE_JSON" ] && command -v jq >/dev/null 2>&1; then
+  FIRST_REVIEW_TYPE=$(echo "$PIPELINE_JSON" | jq -r '[.[] | select(.hook == null)][0].type // empty' 2>/dev/null)
+fi
 if [ -z "$FIRST_REVIEW_TYPE" ]; then
   FIRST_REVIEW_TYPE="adversarial"
 fi

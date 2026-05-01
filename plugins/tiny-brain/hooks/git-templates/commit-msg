@@ -228,18 +228,27 @@ if echo "$FIRST_LINE" | grep -qE "^refactor(\(.+\))?:"; then
     # Has tracking headers — validate that a review phase is active using derived phase
     if command -v $EXEC_CMD >/dev/null 2>&1; then
       TASK_DESC=$(echo "$COMMIT_MSG" | grep '^Task:' | head -1 | sed 's/^Task:[[:space:]]*//')
-      PHASE_ARGS="--task-id \"$TASK_DESC\" --quiet"
+
+      # Build argv as positional parameters — passes each value as a
+      # separate argv entry. No eval, no re-parsing, so backticks /
+      # $(...) / other shell metacharacters in TASK_DESC, FIX_ID, etc.
+      # are treated as literal data.
+      set -- --task-id "$TASK_DESC" --quiet
 
       if [ "$HAS_FIX_HEADER" = "yes" ]; then
         FIX_ID=$(echo "$COMMIT_MSG" | grep '^Fix:' | head -1 | sed 's/^Fix:[[:space:]]*//')
-        PHASE_ARGS="$PHASE_ARGS --fix \"$FIX_ID\""
+        set -- "$@" --fix "$FIX_ID"
       elif [ "$HAS_PRD_HEADER" = "yes" ]; then
         PRD_ID=$(echo "$COMMIT_MSG" | grep '^PRD:' | head -1 | sed 's/^PRD:[[:space:]]*//')
         FEATURE_ID=$(echo "$COMMIT_MSG" | grep '^Feature:' | head -1 | sed 's/^Feature:[[:space:]]*//')
-        PHASE_ARGS="$PHASE_ARGS --prd \"$PRD_ID\" --feature \"$FEATURE_ID\""
+        set -- "$@" --prd "$PRD_ID" --feature "$FEATURE_ID"
       fi
 
-      CURRENT_PHASE=$(eval $EXEC tiny-brain pipeline $PHASE_ARGS 2>/dev/null | tail -1 || echo "")
+      # $EXEC intentionally unquoted — may be a multi-word prefix like
+      # "pnpm exec" — but everything after is quoted argv so headers
+      # reach pipeline verbatim.
+      # shellcheck disable=SC2086
+      CURRENT_PHASE=$($EXEC tiny-brain pipeline "$@" 2>/dev/null | tail -1 || echo "")
 
       if [ -n "$CURRENT_PHASE" ]; then
         case "$CURRENT_PHASE" in
@@ -379,9 +388,9 @@ if grep -q '"test"' package.json 2>/dev/null; then
     # Single-package repo: run all tests
     TEST_OUTPUT_FILE=$(mktemp)
     if $RUN test >"$TEST_OUTPUT_FILE" 2>&1; then
-      echo "   Tests ✅"
+      echo "   ✅ Tests"
     else
-      echo "   Tests ❌"
+      echo "   ❌ Tests"
       echo ""
       grep -E "FAIL|✗|×|AssertionError|Error:|expected|received|FAILED" "$TEST_OUTPUT_FILE" | head -30
       echo ""

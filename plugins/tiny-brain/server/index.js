@@ -449,8 +449,8 @@ var init_parseUtil = __esm({
     init_errors();
     init_en();
     makeIssue = (params) => {
-      const { data, path: path35, errorMaps, issueData } = params;
-      const fullPath = [...path35, ...issueData.path || []];
+      const { data, path: path38, errorMaps, issueData } = params;
+      const fullPath = [...path38, ...issueData.path || []];
       const fullIssue = {
         ...issueData,
         path: fullPath
@@ -758,11 +758,11 @@ var init_types = __esm({
     init_parseUtil();
     init_util();
     ParseInputLazyPath = class {
-      constructor(parent, value, path35, key) {
+      constructor(parent, value, path38, key) {
         this._cachedPath = [];
         this.parent = parent;
         this.data = value;
-        this._path = path35;
+        this._path = path38;
         this._key = key;
       }
       get path() {
@@ -7328,8 +7328,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path35) {
-      let input = path35;
+    function removeDotSegments(path38) {
+      let input = path38;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -7528,8 +7528,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path35, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path35 && path35 !== "/" ? path35 : void 0;
+        const [path38, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path38 && path38 !== "/" ? path38 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -16586,12 +16586,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs31, exportName) {
+    function addFormats(ajv, list, fs34, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs31[f]);
+        ajv.addFormat(f, fs34[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -19390,16 +19390,16 @@ async function applyFeatureUpdate(plan, update, bulkChanges) {
           "adversarialRefactorCompletedAt",
           "adversarialRefactorCommitSha",
           "adversarialRefactorCommittedAt",
-          "mutantStartedAt",
-          "mutantCompletedAt",
-          "mutantRefactorStartedAt",
-          "mutantRefactorCompletedAt",
-          "mutantRefactorCommitSha",
-          "mutantRefactorCommittedAt",
+          "mutationStartedAt",
+          "mutationCompletedAt",
+          "mutationRefactorStartedAt",
+          "mutationRefactorCompletedAt",
+          "mutationRefactorCommitSha",
+          "mutationRefactorCommittedAt",
           "adversarialReviewSha",
           "adversarialVerdict",
-          "mutantReviewSha",
-          "mutantVerdict",
+          "mutationReviewSha",
+          "mutationVerdict",
           "redCompletedAt",
           "greenCompletedAt",
           "worktree"
@@ -19885,7 +19885,13 @@ function isPipelineStep(entry) {
 function normalizePipeline(input) {
   if (!input) return [];
   return input.map((entry) => {
-    let step = isPipelineStep(entry) ? entry : stringToStep(String(entry));
+    let step;
+    if (isPipelineStep(entry)) {
+      const defaults2 = KNOWN_DEFAULTS[entry.type];
+      step = defaults2 ? { ...defaults2, ...entry } : entry;
+    } else {
+      step = stringToStep(String(entry));
+    }
     if (step.mode === "tollgate" && step.maxAttempts === void 0) {
       step = { ...step, maxAttempts: 3 };
     }
@@ -19932,6 +19938,7 @@ var init_pipeline_normalizer = __esm({
       // green
       analyzer: "coverage",
       analyzerThreshold: { min: 80 },
+      mode: "tollgate",
       runsTests: true
     };
     TYPESCRIPT_HOOK_STEP = {
@@ -19972,18 +19979,6 @@ var init_pipeline_normalizer = __esm({
         // purple
       },
       "mutation": {
-        type: "mutation",
-        agent: "tiny-brain:analyzer-agent",
-        label: "Mutation Testing",
-        emoji: "\u{1F9DF}",
-        // 🧟
-        color: "#8bc34a",
-        // lime
-        analyzer: "mutation-testing",
-        runsTests: true
-      },
-      // Legacy alias — normalizes to 'mutation'
-      mutant: {
         type: "mutation",
         agent: "tiny-brain:analyzer-agent",
         label: "Mutation Testing",
@@ -25206,12 +25201,12 @@ var init_esm6 = __esm({
       /**
        * Get the Path object referenced by the string path, resolved from this Path
        */
-      resolve(path35) {
-        if (!path35) {
+      resolve(path38) {
+        if (!path38) {
           return this;
         }
-        const rootPath = this.getRootString(path35);
-        const dir = path35.substring(rootPath.length);
+        const rootPath = this.getRootString(path38);
+        const dir = path38.substring(rootPath.length);
         const dirParts = dir.split(this.splitSep);
         const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
         return result;
@@ -25963,8 +25958,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path35) {
-        return win32.parse(path35).root;
+      getRootString(path38) {
+        return win32.parse(path38).root;
       }
       /**
        * @internal
@@ -26010,8 +26005,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path35) {
-        return path35.startsWith("/") ? "/" : "";
+      getRootString(path38) {
+        return path38.startsWith("/") ? "/" : "";
       }
       /**
        * @internal
@@ -26060,8 +26055,8 @@ var init_esm6 = __esm({
        *
        * @internal
        */
-      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs31 = defaultFS } = {}) {
-        this.#fs = fsFromOption(fs31);
+      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs34 = defaultFS } = {}) {
+        this.#fs = fsFromOption(fs34);
         if (cwd instanceof URL || cwd.startsWith("file://")) {
           cwd = fileURLToPath(cwd);
         }
@@ -26100,11 +26095,11 @@ var init_esm6 = __esm({
       /**
        * Get the depth of a provided path, string, or the cwd
        */
-      depth(path35 = this.cwd) {
-        if (typeof path35 === "string") {
-          path35 = this.cwd.resolve(path35);
+      depth(path38 = this.cwd) {
+        if (typeof path38 === "string") {
+          path38 = this.cwd.resolve(path38);
         }
-        return path35.depth();
+        return path38.depth();
       }
       /**
        * Return the cache of child entries.  Exposed so subclasses can create
@@ -26498,14 +26493,14 @@ var init_esm6 = __esm({
               if (er)
                 return results.emit("error", er);
               if (follow && !didRealpaths) {
-                const promises = [];
+                const promises2 = [];
                 for (const e of entries) {
                   if (e.isSymbolicLink()) {
-                    promises.push(e.realpath().then((r) => r?.isUnknown() ? r.lstat() : r));
+                    promises2.push(e.realpath().then((r) => r?.isUnknown() ? r.lstat() : r));
                   }
                 }
-                if (promises.length) {
-                  Promise.all(promises).then(() => onReaddir(null, entries, true));
+                if (promises2.length) {
+                  Promise.all(promises2).then(() => onReaddir(null, entries, true));
                   return;
                 }
               }
@@ -26591,9 +26586,9 @@ var init_esm6 = __esm({
         process3();
         return results;
       }
-      chdir(path35 = this.cwd) {
+      chdir(path38 = this.cwd) {
         const oldCwd = this.cwd;
-        this.cwd = typeof path35 === "string" ? this.cwd.resolve(path35) : path35;
+        this.cwd = typeof path38 === "string" ? this.cwd.resolve(path38) : path38;
         this.cwd[setAsCwd](oldCwd);
       }
     };
@@ -26619,8 +26614,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs31) {
-        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs31 });
+      newRoot(fs34) {
+        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs34 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -26648,8 +26643,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs31) {
-        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs31 });
+      newRoot(fs34) {
+        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs34 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -26968,8 +26963,8 @@ var init_processor = __esm({
       }
       // match, absolute, ifdir
       entries() {
-        return [...this.store.entries()].map(([path35, n]) => [
-          path35,
+        return [...this.store.entries()].map(([path38, n]) => [
+          path38,
           !!(n & 2),
           !!(n & 1)
         ]);
@@ -27182,9 +27177,9 @@ var init_walker = __esm({
       signal;
       maxDepth;
       includeChildMatches;
-      constructor(patterns, path35, opts) {
+      constructor(patterns, path38, opts) {
         this.patterns = patterns;
-        this.path = path35;
+        this.path = path38;
         this.opts = opts;
         this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
         this.includeChildMatches = opts.includeChildMatches !== false;
@@ -27203,11 +27198,11 @@ var init_walker = __esm({
           });
         }
       }
-      #ignored(path35) {
-        return this.seen.has(path35) || !!this.#ignore?.ignored?.(path35);
+      #ignored(path38) {
+        return this.seen.has(path38) || !!this.#ignore?.ignored?.(path38);
       }
-      #childrenIgnored(path35) {
-        return !!this.#ignore?.childrenIgnored?.(path35);
+      #childrenIgnored(path38) {
+        return !!this.#ignore?.childrenIgnored?.(path38);
       }
       // backpressure mechanism
       pause() {
@@ -27422,8 +27417,8 @@ var init_walker = __esm({
     };
     GlobWalker = class extends GlobUtil {
       matches = /* @__PURE__ */ new Set();
-      constructor(patterns, path35, opts) {
-        super(patterns, path35, opts);
+      constructor(patterns, path38, opts) {
+        super(patterns, path38, opts);
       }
       matchEmit(e) {
         this.matches.add(e);
@@ -27460,8 +27455,8 @@ var init_walker = __esm({
     };
     GlobStream = class extends GlobUtil {
       results;
-      constructor(patterns, path35, opts) {
-        super(patterns, path35, opts);
+      constructor(patterns, path38, opts) {
+        super(patterns, path38, opts);
         this.results = new Minipass({
           signal: this.signal,
           objectMode: true
@@ -30941,14 +30936,14 @@ var init_planning_service = __esm({
         if (!listeners || listeners.length === 0) {
           return;
         }
-        const promises = listeners.map(async (listener) => {
+        const promises2 = listeners.map(async (listener) => {
           try {
             await listener(event);
           } catch (error2) {
             this.log("error", "Plan change listener failed:", error2);
           }
         });
-        await Promise.all(promises);
+        await Promise.all(promises2);
       }
       async loadPlanById(planId, _personaId) {
         return this.loadPlanFromRepo(planId);
@@ -31937,13 +31932,34 @@ var init_planning_service = __esm({
         for (const filePath of mdFiles) {
           try {
             const content = await fs.readFile(filePath, "utf-8");
-            const fix = this.parseFixMarkdown(content, filePath, repoPath, existingProgress);
-            if (fix) {
-              if (autoArchive && fix.status === "completed" && fix.archived !== true) {
-                await this.writeArchivedToFrontmatter(filePath, content);
-                fix.archived = true;
+            const result2 = this.parseFixMarkdown(content, filePath, repoPath, existingProgress);
+            switch (result2.kind) {
+              case "ok": {
+                const fix = result2.fix;
+                if (autoArchive && fix.status === "completed" && fix.archived !== true) {
+                  await this.writeArchivedToFrontmatter(filePath, content);
+                  fix.archived = true;
+                }
+                fixes.push(fix);
+                break;
               }
-              fixes.push(fix);
+              case "parse-error": {
+                const relativePath = path2.relative(repoPath, filePath);
+                const existing = existingProgress?.fixes.find(
+                  (f) => f.filePath === relativePath
+                );
+                if (existing) {
+                  fixes.push(existing);
+                }
+                break;
+              }
+              case "no-frontmatter":
+              case "missing-fields":
+                break;
+              default: {
+                const _exhaustive = result2;
+                throw new Error(`Unhandled ParseFixResult kind: ${JSON.stringify(_exhaustive)}`);
+              }
             }
           } catch (error2) {
             this.log("warn", `Failed to parse fix file: ${filePath}`, error2);
@@ -31981,10 +31997,18 @@ var init_planning_service = __esm({
       parseFixMarkdown(content, filePath, repoPath, existingProgress) {
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (!frontmatterMatch) {
-          return null;
+          return { kind: "no-frontmatter" };
         }
         const frontmatterText = frontmatterMatch[1];
-        const parsed = this.parseYamlFrontmatter(frontmatterText);
+        const parseResult = this.parseYamlFrontmatter(frontmatterText);
+        if (!parseResult.ok) {
+          this.log(
+            "warn",
+            `Frontmatter parse failed in ${path2.relative(repoPath, filePath)}: ${parseResult.error.message}. Preserving existing progress entry if any.`
+          );
+          return { kind: "parse-error", error: parseResult.error };
+        }
+        const parsed = parseResult.value;
         const getString = (key) => {
           const val = parsed[key];
           if (typeof val === "string") return val;
@@ -31996,7 +32020,16 @@ var init_planning_service = __esm({
         const status = getString("status");
         const severity = getString("severity");
         if (!id || !title || !status || !severity) {
-          return null;
+          const missing = [];
+          if (!id) missing.push("id");
+          if (!title) missing.push("title");
+          if (!status) missing.push("status");
+          if (!severity) missing.push("severity");
+          this.log(
+            "warn",
+            `Required frontmatter fields missing in ${path2.relative(repoPath, filePath)}: ${missing.join(", ")}. Skipping.`
+          );
+          return { kind: "missing-fields", missing };
         }
         const qip = getString("qip");
         const frontmatter = {
@@ -32038,28 +32071,34 @@ var init_planning_service = __esm({
         const isTerminal2 = terminalStatuses.includes(frontmatter.status) || frontmatter.archived;
         const derivedStatus = isTerminal2 ? frontmatter.status : deriveContainerStatus(mergedTasks);
         return {
-          id: frontmatter.id,
-          title: frontmatter.title,
-          status: derivedStatus,
-          severity: frontmatter.severity,
-          tasks: mergedTasks,
-          filePath: relativePath,
-          reported: frontmatter.reported,
-          resolved: frontmatter.resolved,
-          resolution,
-          archived: frontmatter.archived ?? false,
-          ...frontmatter.qip ? { qip: frontmatter.qip } : {}
+          kind: "ok",
+          fix: {
+            id: frontmatter.id,
+            title: frontmatter.title,
+            status: derivedStatus,
+            severity: frontmatter.severity,
+            tasks: mergedTasks,
+            filePath: relativePath,
+            reported: frontmatter.reported,
+            resolved: frontmatter.resolved,
+            resolution,
+            archived: frontmatter.archived ?? false,
+            ...frontmatter.qip ? { qip: frontmatter.qip } : {}
+          }
         };
       }
       /**
-       * Parse YAML frontmatter into an object using js-yaml
+       * Parse YAML frontmatter into a discriminated result. Returning the
+       * specific Error rather than swallowing it lets callers (parseFixMarkdown
+       * + sync-progress) emit a useful diagnostic and decide whether to
+       * preserve existing state.
        */
       parseYamlFrontmatter(text) {
         try {
           const parsed = load(text);
-          return parsed || {};
-        } catch {
-          return {};
+          return { ok: true, value: parsed || {} };
+        } catch (err) {
+          return { ok: false, error: err instanceof Error ? err : new Error(String(err)) };
         }
       }
       /**
@@ -36643,8 +36682,8 @@ var init_repo_config_service = __esm({
       /**
        * Generate a unique repo ID from path
        */
-      generateRepoId(path35) {
-        const hash = createHash("sha256").update(path35).digest("hex");
+      generateRepoId(path38) {
+        const hash = createHash("sha256").update(path38).digest("hex");
         return `repo-${hash.substring(0, 12)}`;
       }
       /**
@@ -39626,6 +39665,18 @@ function isValidMutant(value) {
   const start = loc.start;
   return typeof start.line === "number";
 }
+function dominantFailureStatus(counts) {
+  const order = ["Timeout", "CompileError", "RuntimeError"];
+  let best = "Timeout";
+  let bestCount = -1;
+  for (const status of order) {
+    if (counts[status] > bestCount) {
+      best = status;
+      bestCount = counts[status];
+    }
+  }
+  return best;
+}
 function parseMutationTestingOutput(output, repoPath) {
   if (!output.trim()) return [];
   let parsed;
@@ -39644,9 +39695,26 @@ function parseMutationTestingOutput(output, repoPath) {
     const entry = fileEntry;
     if (!Array.isArray(entry.mutants)) continue;
     const file = repoPath ? stripRepoPath(filePath, repoPath) : filePath;
+    let total = 0;
+    let killed = 0;
+    let runnerFailures = 0;
+    const failureCounts = {
+      Timeout: 0,
+      CompileError: 0,
+      RuntimeError: 0
+    };
     for (const raw of entry.mutants) {
       if (!isValidMutant(raw)) continue;
-      if (SKIP_STATUSES.has(raw.status)) continue;
+      total += 1;
+      if (SKIP_STATUSES.has(raw.status)) {
+        killed += 1;
+        continue;
+      }
+      if (RUNNER_FAILURE_STATUSES.has(raw.status)) {
+        runnerFailures += 1;
+        failureCounts[raw.status] += 1;
+        continue;
+      }
       const isSurvived = raw.status === "Survived";
       const severity = isSurvived ? "major" : "minor";
       const ruleId = isSurvived ? "mutation-testing/survived" : "mutation-testing/no-coverage";
@@ -39663,15 +39731,40 @@ function parseMutationTestingOutput(output, repoPath) {
         suggestion: `Add a test that detects the ${raw.mutatorName} mutation on line ${raw.location.start.line}`
       });
     }
+    if (total >= WEAK_SIGNAL_MIN_TOTAL) {
+      const failureRate = runnerFailures / total;
+      const killRate = killed / total;
+      if (failureRate > RUNNER_FAILURE_DOMINANT_THRESHOLD && killRate < WEAK_KILL_RATE_THRESHOLD) {
+        const dominantStatus = dominantFailureStatus(failureCounts);
+        const failurePct = Math.round(failureRate * 100);
+        issues.push({
+          file,
+          // line: 1 is the convention for file-level rollup issues across
+          // this parser family. This isn't a per-line finding — it speaks
+          // to the file as a whole — but QualityIssue requires `line`.
+          line: 1,
+          message: `Weak mutation signal: ${failurePct}% of mutants in this file ended in a runner failure (dominant: ${dominantStatus}). Stryker counts these toward the score, but no assertion fired. Investigate the stryker config (timeout, mutate glob, coverageAnalysis) for this file pattern.`,
+          severity: "minor",
+          category: "Testing",
+          ruleId: "mutation-testing/weak-signal",
+          source: "mutation-testing",
+          suggestion: `Tighten stryker mutate glob to exclude this file pattern, or adjust timeout/coverageAnalysis so mutants can fully execute.`
+        });
+      }
+    }
   }
   return issues;
 }
-var SKIP_STATUSES;
+var SKIP_STATUSES, RUNNER_FAILURE_STATUSES, RUNNER_FAILURE_DOMINANT_THRESHOLD, WEAK_KILL_RATE_THRESHOLD, WEAK_SIGNAL_MIN_TOTAL;
 var init_mutation_testing_parser = __esm({
   "packages/tiny-brain-core/src/services/quality/parsers/mutation-testing-parser.ts"() {
     "use strict";
     init_strip_repo_path();
-    SKIP_STATUSES = /* @__PURE__ */ new Set(["Killed", "Timeout", "CompileError", "RuntimeError"]);
+    SKIP_STATUSES = /* @__PURE__ */ new Set(["Killed"]);
+    RUNNER_FAILURE_STATUSES = /* @__PURE__ */ new Set(["Timeout", "CompileError", "RuntimeError"]);
+    RUNNER_FAILURE_DOMINANT_THRESHOLD = 0.3;
+    WEAK_KILL_RATE_THRESHOLD = 0.5;
+    WEAK_SIGNAL_MIN_TOTAL = 3;
   }
 });
 
@@ -39997,15 +40090,17 @@ async function readCachedAnalyzers(repoPath, options) {
     const valid = parsed.analyzers.filter(isValidEntry);
     if (valid.length === 0) return null;
     return valid.map((entry) => {
-      let command = entry.commands.quality;
+      let template = entry.commands.quality;
       if (options?.changed && entry.commands.pipeline) {
-        command = entry.commands.pipeline.replace(/\{sha\}/g, options.changed);
+        template = entry.commands.pipeline.replace(/\{sha\}/g, options.changed);
       }
+      const hasConfigPlaceholder = template.includes("{config}");
+      const commands = hasConfigPlaceholder ? entry.configPaths.map((cp) => template.replace(/\{config\}/g, cp)) : [template];
       return {
         analyzerId: entry.id,
         name: entry.name,
         configPaths: [...entry.configPaths],
-        commands: [command],
+        commands,
         categories: [...entry.categories]
       };
     });
@@ -43539,8 +43634,8 @@ var init_library_client = __esm({
       /**
        * Get agent by path (new agent system)
        */
-      async getAgentByPath(token, path35) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path35}`, {
+      async getAgentByPath(token, path38) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path38}`, {
           method: "GET",
           headers: {
             "Accept": "application/json",
@@ -43556,8 +43651,8 @@ var init_library_client = __esm({
       /**
        * Store agent at specified path (new agent system)
        */
-      async storeAgent(token, path35, agent) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path35}`, {
+      async storeAgent(token, path38, agent) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path38}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -43572,8 +43667,8 @@ var init_library_client = __esm({
       /**
        * Archive agent at specified path (new agent system)
        */
-      async archiveAgent(token, path35) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path35}`, {
+      async archiveAgent(token, path38) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path38}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -44223,6 +44318,7 @@ esac
         const flags = await this.readConfigFlags();
         const isMonorepo = await this.detectMonorepo();
         const dirResult = await this.initializeDirectories(flags);
+        await this.ensureGitignoreEntries();
         const gitHooksInstalled = await this.installGitHooks();
         const skillPermissionsAdded = await this.injectSkillPermissions();
         const contextBlockUpdated = await this.writeContextBlock(flags, isMonorepo);
@@ -44243,6 +44339,32 @@ esac
         const qualityInitialized = flags.enableQuality ? await this.createDirectoryIfMissing(path19.join(".tiny-brain", "quality")) : false;
         const fixesInitialized = flags.enableSDD ? await this.createDirectoryWithProgress(path19.join(".tiny-brain", "fixes"), "progress.json") : false;
         return { prdInitialized, adrInitialized, qualityInitialized, fixesInitialized };
+      }
+      /**
+       * Ensure .gitignore contains entries for operational .tiny-brain/ directories.
+       * Idempotent — skips entries that already exist.
+       */
+      async ensureGitignoreEntries() {
+        const gitignorePath = path19.join(this.repoPath, ".gitignore");
+        let content = "";
+        try {
+          content = await fs19.readFile(gitignorePath, "utf-8");
+        } catch {
+        }
+        const entries = [
+          ".tiny-brain/fixes/",
+          ".tiny-brain/reviews/",
+          ".tiny-brain/telemetry/"
+        ];
+        const missing = entries.filter((e) => !content.includes(e));
+        if (missing.length === 0) return;
+        const block = [
+          "",
+          "# tiny-brain operational data (auto-added by analyse)",
+          ...missing
+        ].join("\n") + "\n";
+        await fs19.appendFile(gitignorePath, block, "utf-8");
+        this.logger.info(`Added ${missing.length} entries to .gitignore`);
       }
       /**
        * Install git hooks from source directory to .git/hooks/.
@@ -44520,31 +44642,15 @@ When working in a specific package, also read that package's \`AGENTS.md\` for p
 
 `;
         if (enableAgenticCoding) {
-          content += `## Agent Delegation (MANDATORY)
+          content += `## TDD Implementation
 
-IMPORTANT: You MUST delegate implementation work to specialized agents using the Task tool. Do NOT write production code or tests directly.
+Write tests and production code directly in the main session. Follow the RED/GREEN/REFACTOR cycle:
 
-When the user asks you to implement a feature, fix a bug, or refactor code, delegate in two phases:
-
-1. **RED**: Spawn developer agent to write failing tests
-   - \`Task(subagent_type="tiny-brain:developer")\` with phase=RED in prompt
-   - Agent writes tests, stages files, returns proposed commit message
-   - **VERIFY staging before committing**: Run \`git diff --staged --name-only\` and confirm ONLY test files are staged (e.g., \`*.test.ts\`, \`*.test.tsx\`). If non-test files are staged, unstage them with \`git reset HEAD <file>\` before committing.
-   - YOU commit with \`test:\` prefix (PostToolUse hooks fire)
-2. **GREEN**: Spawn developer agent to write implementation
-   - \`Task(subagent_type="tiny-brain:developer")\` with phase=GREEN in prompt
-   - Agent writes code, stages files, returns proposed commit message
-   - **VERIFY staging before committing**: Run \`git diff --staged --name-only\` and confirm NO test files are staged. If test files are staged, unstage them with \`git reset HEAD <file>\` before committing.
-   - YOU commit with \`feat:\` prefix (PostToolUse hooks fire)
+1. **RED**: Write failing tests, commit with \`test:\` prefix
+2. **GREEN**: Write minimum implementation to pass tests, commit with \`feat:\` prefix
    - The review pipeline triggers automatically after feat: commits (via pipeline command)
    - Handle refactoring from review as \`refactor:\` commits
 3. Run \`npx tiny-brain commit progress\` when the TDD cycle is complete
-
-The developer agent does NOT commit. All commits happen in the main session where PostToolUse hooks fire correctly.
-
-**IMPORTANT: Never blindly trust what the developer agent stages.** Always verify with \`git diff --staged --name-only\` that the staged files match the current TDD phase before committing.
-
-Only skip delegation for trivial tasks (single-line fixes, config changes).
 
 `;
         }
@@ -46885,14 +46991,29 @@ function applyEvent(task, event, pipeline) {
   const existing = t.reviews[step.type] ?? {};
   if (event.decision && event.sha) {
     const verdict = event.decision === "clean" ? "clean" : "needs-refactoring";
+    if (existing.reviewSha === event.sha && existing.verdict === verdict) {
+      return task;
+    }
+    const flippingCleanToDirty = existing.reviewSha === event.sha && existing.verdict === "clean" && verdict === "needs-refactoring";
+    let baseExisting;
+    if (flippingCleanToDirty) {
+      const { refactorCommitSha: _ignoredCommitSha, refactorCompletedAt: _ignoredCompletedAt, ...rest } = existing;
+      baseExisting = rest;
+    } else {
+      baseExisting = existing;
+    }
+    const refactorAlreadyDone = existing.reviewSha === event.sha && typeof existing.refactorCommitSha === "string" && existing.refactorCommitSha !== "skipped";
     t.reviews[step.type] = {
-      ...existing,
+      ...baseExisting,
       completedAt: now,
       reviewSha: event.sha,
       verdict,
-      refactorStartedAt: now,
-      // Clean verdict: skip refactor phase — no findings to address
-      ...verdict === "clean" ? { refactorCommitSha: "skipped", refactorCompletedAt: now } : {}
+      refactorStartedAt: baseExisting.refactorStartedAt ?? now,
+      // Clean verdict: skip refactor phase — UNLESS a real refactor was
+      // already recorded for this sha (e.g. dirty→clean flip after the
+      // refactor landed; preserve the historical commitSha rather than
+      // overwriting with 'skipped').
+      ...verdict === "clean" && !refactorAlreadyDone ? { refactorCommitSha: "skipped", refactorCompletedAt: now } : {}
     };
     return t;
   }
@@ -46980,7 +47101,9 @@ function stepForPhase(phase, pipeline) {
 function advancePipeline(task, pipeline, event) {
   const config2 = { combineRedGreenCommits: false, reviewPipeline: pipeline };
   const corrections = [];
-  let current = event ? applyEvent(task, event, pipeline) : { ...task };
+  const applied = event ? applyEvent(task, event, pipeline) : { ...task };
+  const wasNoop = event?.decision !== void 0 && applied === task;
+  let current = applied;
   const corrected = autoCorrect(current);
   corrections.push(...corrected.corrections);
   current = corrected.task;
@@ -46997,7 +47120,7 @@ function advancePipeline(task, pipeline, event) {
     const previousReviewSha = prevAttempts?.length ? prevAttempts[prevAttempts.length - 1].reviewSha : void 0;
     tollgate = { attempt, maxAttempts, previousReviewSha };
   }
-  return { phase, action, step, corrections, task: current, tollgate };
+  return { phase, action, step, corrections, task: current, tollgate, wasNoop };
 }
 function formatSystemReminder(result, context) {
   const trackingArgs = context.fixId ? `--fix "${context.fixId}"` : context.prdId && context.featureId ? `--prd "${context.prdId}" --feature "${context.featureId}"` : "";
@@ -47077,6 +47200,123 @@ var init_pipeline = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/services/planning/pipeline-telemetry.ts
+import fs24 from "node:fs";
+import path26 from "node:path";
+function writePipelineTelemetry(repoPath, entry) {
+  try {
+    const dir = path26.join(repoPath, ".tiny-brain", "telemetry");
+    const file = path26.join(dir, "pipeline-advancement.jsonl");
+    fs24.mkdirSync(dir, { recursive: true });
+    fs24.appendFileSync(file, JSON.stringify(entry) + "\n");
+  } catch {
+  }
+}
+var init_pipeline_telemetry = __esm({
+  "packages/tiny-brain-core/src/services/planning/pipeline-telemetry.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/telemetry/event-types.ts
+function taskRefsMatch(a, b) {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "prd" && b.kind === "prd") {
+    return a.prd === b.prd && a.feature === b.feature && a.task === b.task;
+  }
+  if (a.kind === "fix" && b.kind === "fix") {
+    return a.fix === b.fix && a.task === b.task;
+  }
+  return false;
+}
+var init_event_types = __esm({
+  "packages/tiny-brain-core/src/services/telemetry/event-types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/telemetry/event-store.ts
+import fs25 from "node:fs";
+import path27 from "node:path";
+import readline from "node:readline";
+function eventsPath(repoPath) {
+  return path27.join(repoPath, TELEMETRY_DIR, EVENTS_FILE);
+}
+function ensureDir(repoPath) {
+  fs25.mkdirSync(path27.join(repoPath, TELEMETRY_DIR), { recursive: true });
+}
+function hasTaskRef(obj) {
+  const ref = obj["taskRef"];
+  if (typeof ref !== "object" || ref === null) return false;
+  const r = ref;
+  return typeof r["kind"] === "string" && typeof r["task"] === "string";
+}
+function isValidEvent(obj) {
+  if (typeof obj !== "object" || obj === null) return false;
+  const rec = obj;
+  return typeof rec["kind"] === "string" && typeof rec["ts"] === "string" && hasTaskRef(rec);
+}
+function parseLine(line) {
+  const trimmed = line.trim();
+  if (trimmed.length === 0) return void 0;
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (isValidEvent(parsed)) return parsed;
+    return void 0;
+  } catch {
+    return void 0;
+  }
+}
+function appendEvent(repoPath, event) {
+  ensureDir(repoPath);
+  const filePath = eventsPath(repoPath);
+  const line = JSON.stringify(event) + "\n";
+  const fd = fs25.openSync(filePath, "a");
+  try {
+    fs25.writeSync(fd, line);
+    fs25.fsyncSync(fd);
+  } finally {
+    fs25.closeSync(fd);
+  }
+}
+async function readEventsForTask(repoPath, taskRef) {
+  const filePath = eventsPath(repoPath);
+  if (!fs25.existsSync(filePath)) return [];
+  const events = [];
+  const stream2 = fs25.createReadStream(filePath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: stream2, crlfDelay: Infinity });
+  for await (const line of rl) {
+    const event = parseLine(line);
+    if (event && taskRefsMatch(event.taskRef, taskRef)) {
+      events.push(event);
+    }
+  }
+  events.sort((a, b) => a.ts.localeCompare(b.ts));
+  return events;
+}
+async function* readAllEvents(repoPath, opts) {
+  const filePath = eventsPath(repoPath);
+  if (!fs25.existsSync(filePath)) return;
+  const stream2 = fs25.createReadStream(filePath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: stream2, crlfDelay: Infinity });
+  for await (const line of rl) {
+    const event = parseLine(line);
+    if (!event) continue;
+    if (opts?.since && event.ts < opts.since) continue;
+    yield event;
+  }
+}
+var TELEMETRY_DIR, EVENTS_FILE;
+var init_event_store = __esm({
+  "packages/tiny-brain-core/src/services/telemetry/event-store.ts"() {
+    "use strict";
+    init_event_types();
+    init_event_types();
+    TELEMETRY_DIR = path27.join(".tiny-brain", "telemetry");
+    EVENTS_FILE = "events.jsonl";
+  }
+});
+
 // packages/tiny-brain-core/src/services/planning/pipeline-service.ts
 function toTaskUpdate(task) {
   const update = {};
@@ -47105,6 +47345,9 @@ var init_pipeline_service = __esm({
   "packages/tiny-brain-core/src/services/planning/pipeline-service.ts"() {
     "use strict";
     init_pipeline();
+    init_phase_derivation();
+    init_pipeline_telemetry();
+    init_event_store();
     PipelineService = class {
       constructor(planningService, configService, repoPath = process.cwd()) {
         this.planningService = planningService;
@@ -47114,6 +47357,7 @@ var init_pipeline_service = __esm({
       async advance(options) {
         const loaded = await this.loadTask(options);
         const pipeline = await this.loadPipeline();
+        const phaseBefore = derivePhase(loaded.input, { combineRedGreenCommits: false, reviewPipeline: pipeline });
         const event = {
           agent: options.agent,
           sha: options.sha,
@@ -47122,6 +47366,36 @@ var init_pipeline_service = __esm({
         const result = advancePipeline(loaded.input, pipeline, event);
         const systemReminder = formatSystemReminder(result, this.buildContext(options));
         await this.persistTask(loaded, result.task, result.phase);
+        const taskRef = this.buildTaskRef(options);
+        if (options.decision) {
+          const ts = (/* @__PURE__ */ new Date()).toISOString();
+          writePipelineTelemetry(this.repoPath, {
+            ts,
+            sha: options.sha,
+            gate: options.agent,
+            decision: options.decision,
+            source: options.source ?? "agent",
+            was_noop: result.wasNoop
+          });
+          if (taskRef && options.sha) {
+            try {
+              appendEvent(this.repoPath, {
+                kind: "pipeline.decision",
+                ts,
+                taskRef,
+                gate: options.agent,
+                sha: options.sha,
+                decision: options.decision,
+                source: options.source ?? "agent",
+                was_noop: result.wasNoop
+              });
+            } catch {
+            }
+          }
+        }
+        if (taskRef && !result.wasNoop && phaseBefore !== "complete") {
+          this.emitLifecycleTelemetry(taskRef, options, phaseBefore, result);
+        }
         return { ...result, systemReminder };
       }
       async inspect(options) {
@@ -47202,6 +47476,43 @@ var init_pipeline_service = __esm({
           await this.planningService.saveFixProgress(this.repoPath, loaded.fixesProgress);
         }
       }
+      emitLifecycleTelemetry(taskRef, options, phaseBefore, result) {
+        const ts = (/* @__PURE__ */ new Date()).toISOString();
+        const events = [];
+        if (options.sha) {
+          let commitType;
+          if (options.agent === "red") commitType = "test";
+          else if (options.agent === "green") commitType = "feat";
+          else if (!options.decision && options.agent !== "red" && options.agent !== "green") commitType = "refactor";
+          if (commitType) {
+            events.push({ kind: "commit.tracked", ts, taskRef, sha: options.sha, type: commitType });
+          }
+        }
+        if (phaseBefore !== result.phase) {
+          events.push({ kind: "phase.entered", ts, taskRef, phase: result.phase });
+        }
+        if (result.phase === "complete") {
+          const finalSha = options.sha ?? result.task.commitSha;
+          if (finalSha) {
+            events.push({ kind: "task.completed", ts, taskRef, final_sha: finalSha });
+          }
+        }
+        for (const evt of events) {
+          try {
+            appendEvent(this.repoPath, evt);
+          } catch {
+          }
+        }
+      }
+      buildTaskRef(options) {
+        if (options.fixId) {
+          return { kind: "fix", fix: options.fixId, task: options.taskId };
+        }
+        if (options.prdId && options.featureId) {
+          return { kind: "prd", prd: options.prdId, feature: options.featureId, task: options.taskId };
+        }
+        return void 0;
+      }
       buildContext(options) {
         return {
           taskId: options.taskId,
@@ -47219,6 +47530,12 @@ var init_pipeline_service = __esm({
 // packages/tiny-brain-core/src/services/planning/persist.ts
 function resolvePersistPath(agentName, sha) {
   return `.tiny-brain/reviews/${agentName}/${sha}.json`;
+}
+function normalizeStepType(name) {
+  if (STEP_TYPE_ALIASES[name]) return STEP_TYPE_ALIASES[name];
+  const stripped = name.replace(/-(reviewer|review)$/, "");
+  if (STEP_TYPE_ALIASES[stripped]) return STEP_TYPE_ALIASES[stripped];
+  return stripped;
 }
 function resolveQualityPersistPath(agentType, runPath) {
   if (!agentType) throw new Error("agentType is required");
@@ -47241,11 +47558,169 @@ function parsePersistedReview(jsonStr) {
     raw: { ...parsed, verdict }
   };
 }
-var VALID_VERDICTS;
+var VALID_VERDICTS, STEP_TYPE_ALIASES;
 var init_persist = __esm({
   "packages/tiny-brain-core/src/services/planning/persist.ts"() {
     "use strict";
     VALID_VERDICTS = ["clean", "needs-refactoring"];
+    STEP_TYPE_ALIASES = {
+      "mutation-testing": "mutation",
+      "code-coverage": "coverage"
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/planning/review-watcher.ts
+function dedupeKey(gate, sha) {
+  return `${gate}:${sha}`;
+}
+var KNOWN_VERDICTS, ReviewWatcher;
+var init_review_watcher = __esm({
+  "packages/tiny-brain-core/src/services/planning/review-watcher.ts"() {
+    "use strict";
+    KNOWN_VERDICTS = ["clean", "needs-refactoring"];
+    ReviewWatcher = class _ReviewWatcher {
+      constructor(advancer, logger, telemetry) {
+        this.advancer = advancer;
+        this.logger = logger;
+        this.telemetry = telemetry ?? {};
+      }
+      processed = /* @__PURE__ */ new Set();
+      telemetry;
+      async handleFileEvent(event, source = "watcher") {
+        const key = dedupeKey(event.gate, event.sha);
+        if (this.processed.has(key)) {
+          return void 0;
+        }
+        this.processed.add(key);
+        try {
+          const alreadyDone = await this.advancer.isAlreadyAdvanced(event.gate, event.sha);
+          if (alreadyDone) {
+            return void 0;
+          }
+          const reminder = await this.advancer.advanceDecision(event.gate, event.sha, event.verdict, source);
+          if (reminder !== void 0) {
+            try {
+              await Promise.resolve(this.telemetry.onReminderWritten?.({ gate: event.gate, sha: event.sha, reminder }));
+            } catch {
+            }
+          }
+          return reminder;
+        } catch (err) {
+          this.logger.error(`[review-watcher] Failed to advance ${event.gate}/${event.sha}:`, err);
+          return void 0;
+        }
+      }
+      async scanAndReconcile(files) {
+        const results = [];
+        for (const file of files) {
+          const parsed = _ReviewWatcher.parseReviewPath(file.relativePath);
+          if (!parsed) continue;
+          const json2 = _ReviewWatcher.parseReviewJson(file.content);
+          if (!json2) {
+            this.logger.warn(`[review-watcher] Skipping malformed review: ${file.relativePath}`);
+            continue;
+          }
+          const reminder = await this.handleFileEvent({
+            gate: parsed.gate,
+            sha: parsed.sha,
+            verdict: json2.verdict
+          }, "reconciliation");
+          if (reminder !== void 0) {
+            results.push({ gate: parsed.gate, sha: parsed.sha, reminder });
+          }
+        }
+        return results;
+      }
+      static parseReviewPath(relativePath) {
+        const parts = relativePath.split("/");
+        if (parts.length !== 2) return void 0;
+        const [gate, filename] = parts;
+        if (!filename.endsWith(".json")) return void 0;
+        const sha = filename.slice(0, -".json".length);
+        if (!gate || !sha) return void 0;
+        return { gate, sha };
+      }
+      static parseReviewJson(jsonStr) {
+        let raw;
+        try {
+          raw = JSON.parse(jsonStr);
+        } catch {
+          return void 0;
+        }
+        if (typeof raw !== "object" || raw === null) return void 0;
+        const parsed = raw;
+        if (typeof parsed.verdict !== "string") return void 0;
+        if (!KNOWN_VERDICTS.includes(parsed.verdict)) return void 0;
+        const verdict = parsed.verdict === "clean" ? "clean" : "dirty";
+        return { verdict };
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/planning/reminder-inbox.ts
+import * as fs26 from "fs";
+import * as path28 from "path";
+import { randomBytes as randomBytes2 } from "crypto";
+var ReminderInbox;
+var init_reminder_inbox = __esm({
+  "packages/tiny-brain-core/src/services/planning/reminder-inbox.ts"() {
+    "use strict";
+    ReminderInbox = class {
+      constructor(inboxDir, telemetry) {
+        this.inboxDir = inboxDir;
+        this.telemetry = telemetry ?? {};
+      }
+      telemetry;
+      async write(reminder) {
+        await fs26.promises.mkdir(this.inboxDir, { recursive: true });
+        const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+        const random = randomBytes2(4).toString("hex");
+        const basename2 = `${timestamp2}-${random}`;
+        const tmpPath = path28.join(this.inboxDir, `${basename2}.tmp`);
+        const finalPath = path28.join(this.inboxDir, `${basename2}.reminder`);
+        await fs26.promises.writeFile(tmpPath, reminder, "utf-8");
+        await fs26.promises.rename(tmpPath, finalPath);
+        try {
+          await Promise.resolve(this.telemetry.onReminderWritten?.({ reminderId: basename2 }));
+        } catch {
+        }
+        return basename2;
+      }
+      async drain() {
+        let entries;
+        try {
+          entries = await fs26.promises.readdir(this.inboxDir);
+        } catch (err) {
+          if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
+            return [];
+          }
+          throw err;
+        }
+        const reminderFiles = entries.filter((f) => f.endsWith(".reminder")).sort();
+        const results = [];
+        for (const file of reminderFiles) {
+          const filePath = path28.join(this.inboxDir, file);
+          try {
+            const content = await fs26.promises.readFile(filePath, "utf-8");
+            await fs26.promises.unlink(filePath);
+            results.push(content);
+            try {
+              const reminderId = file.slice(0, -".reminder".length);
+              await Promise.resolve(this.telemetry.onReminderDrained?.({ reminderId }));
+            } catch {
+            }
+          } catch (err) {
+            if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
+              continue;
+            }
+            throw err;
+          }
+        }
+        return results;
+      }
+    };
   }
 });
 
@@ -47264,8 +47739,8 @@ var init_repo_config = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
-import * as fs24 from "fs/promises";
-import * as path26 from "path";
+import * as fs27 from "fs/promises";
+import * as path29 from "path";
 var SkillLoader;
 var init_skill_loader = __esm({
   "packages/tiny-brain-core/src/services/api/skill-loader.ts"() {
@@ -47282,9 +47757,9 @@ var init_skill_loader = __esm({
         if (cached2) {
           return cached2;
         }
-        const skillPath = path26.join(this.skillsPath, skillName);
-        const skillFile = path26.join(skillPath, "SKILL.md");
-        const content = await fs24.readFile(skillFile, "utf-8");
+        const skillPath = path29.join(this.skillsPath, skillName);
+        const skillFile = path29.join(skillPath, "SKILL.md");
+        const content = await fs27.readFile(skillFile, "utf-8");
         const { metadata, body } = this.parseFrontmatter(content);
         const templates = await this.loadTemplates(skillPath);
         const skill = {
@@ -47324,14 +47799,14 @@ var init_skill_loader = __esm({
         return { metadata, body };
       }
       async loadTemplates(skillPath) {
-        const templatesPath = path26.join(skillPath, "templates");
+        const templatesPath = path29.join(skillPath, "templates");
         const templates = {};
         try {
-          const entries = await fs24.readdir(templatesPath, { withFileTypes: true });
+          const entries = await fs27.readdir(templatesPath, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isFile() && entry.name.endsWith(".md")) {
-              const templatePath = path26.join(templatesPath, entry.name);
-              const content = await fs24.readFile(templatePath, "utf-8");
+              const templatePath = path29.join(templatesPath, entry.name);
+              const content = await fs27.readFile(templatePath, "utf-8");
               templates[entry.name] = content;
             }
           }
@@ -47623,9 +48098,9 @@ var init_claude_cli_client = __esm({
             results.push(callbacks.onToolUse(block.name, block.input));
           }
         }
-        const promises = results.filter((r) => r != null && typeof r.then === "function");
-        if (promises.length > 0) {
-          return Promise.all(promises).then(() => {
+        const promises2 = results.filter((r) => r != null && typeof r.then === "function");
+        if (promises2.length > 0) {
+          return Promise.all(promises2).then(() => {
           });
         }
       }
@@ -47641,9 +48116,9 @@ var init_claude_cli_client = __esm({
             }));
           }
         }
-        const promises = results.filter((r) => r != null && typeof r.then === "function");
-        if (promises.length > 0) {
-          return Promise.all(promises).then(() => {
+        const promises2 = results.filter((r) => r != null && typeof r.then === "function");
+        if (promises2.length > 0) {
+          return Promise.all(promises2).then(() => {
           });
         }
       }
@@ -48611,16 +49086,16 @@ var init_parallel_executor = __esm({
 
 // packages/tiny-brain-core/src/utils/git.ts
 import { exec as exec4, execSync } from "child_process";
-import path27 from "path";
+import path30 from "path";
 import { promisify as promisify4 } from "util";
 function buildWorktreeInfo(commonDirOut, toplevelOut, branchOut) {
   const worktreePath = String(toplevelOut).trim();
   const branch = String(branchOut).trim();
   const commonDirTrimmed = String(commonDirOut).trim();
-  const resolvedCommonDir = path27.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path27.resolve(worktreePath, commonDirTrimmed);
-  const mainRepoPath = path27.dirname(resolvedCommonDir);
+  const resolvedCommonDir = path30.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path30.resolve(worktreePath, commonDirTrimmed);
+  const mainRepoPath = path30.dirname(resolvedCommonDir);
   const isWorktree = mainRepoPath !== worktreePath;
-  const worktreeName = isWorktree ? path27.basename(worktreePath) : "";
+  const worktreeName = isWorktree ? path30.basename(worktreePath) : "";
   return { isWorktree, worktreePath, mainRepoPath, branch, worktreeName };
 }
 async function detectRepositoryRoot() {
@@ -48807,9 +49282,11 @@ __export(src_exports, {
   QualityRunSummarySchema: () => QualityRunSummarySchema,
   QualityService: () => QualityService,
   RecommendationService: () => RecommendationService,
+  ReminderInbox: () => ReminderInbox,
   RepoConfigService: () => RepoConfigService,
   ResponseValidationService: () => ResponseValidationService,
   Result: () => ResultHelpers,
+  ReviewWatcher: () => ReviewWatcher,
   RulesService: () => RulesService,
   RunComparisonSchema: () => RunComparisonSchema,
   SEVERITY_DEFAULT_HOURS: () => SEVERITY_DEFAULT_HOURS,
@@ -48835,6 +49312,7 @@ __export(src_exports, {
   analyzeContextDrift: () => analyzeContextDrift,
   analyzeEmotionalTone: () => analyzeEmotionalTone,
   analyzeThoughtHistory: () => analyzeThoughtHistory,
+  appendEvent: () => appendEvent,
   applyBulkUpdates: () => applyBulkUpdates,
   applyEvent: () => applyEvent,
   autoCorrect: () => autoCorrect,
@@ -48966,6 +49444,7 @@ __export(src_exports, {
   mergeSimilarFacts: () => mergeSimilarFacts,
   mergeUpdates: () => mergeUpdates,
   normalizePipeline: () => normalizePipeline,
+  normalizeStepType: () => normalizeStepType,
   omit: () => omit2,
   parseCommitMessage: () => parseCommitMessage,
   parseFactsFromText: () => parseFactsFromText,
@@ -48981,7 +49460,9 @@ __export(src_exports, {
   planContentStrategy: () => planContentStrategy,
   planResponseStructure: () => planResponseStructure,
   processThought: () => processThought,
+  readAllEvents: () => readAllEvents,
   readCachedAnalyzers: () => readCachedAnalyzers,
+  readEventsForTask: () => readEventsForTask,
   repairJsonEscapes: () => repairJsonEscapes,
   resolveFeatureFlags: () => resolveFeatureFlags,
   resolvePersistPath: () => resolvePersistPath,
@@ -48995,6 +49476,7 @@ __export(src_exports, {
   simpleHash: () => simpleHash,
   stepForPhase: () => stepForPhase,
   stringToStep: () => stringToStep,
+  taskRefsMatch: () => taskRefsMatch,
   toCamelCase: () => toCamelCase,
   toKebabCase: () => toKebabCase,
   trimAll: () => trimAll,
@@ -49045,6 +49527,10 @@ var init_src = __esm({
     init_persist();
     init_quality_run_finder();
     init_status_derivation();
+    init_review_watcher();
+    init_reminder_inbox();
+    init_event_store();
+    init_event_types();
     init_types12();
     init_repo_config();
     init_user_preferences();
@@ -51355,8 +51841,8 @@ var require_package = __commonJS({
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs31 = __require("fs");
-    var path35 = __require("path");
+    var fs34 = __require("fs");
+    var path38 = __require("path");
     var os3 = __require("os");
     var crypto4 = __require("crypto");
     var packageJson = require_package();
@@ -51494,7 +51980,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs31.existsSync(filepath)) {
+            if (fs34.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -51502,15 +51988,15 @@ var require_main = __commonJS({
           possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
         }
       } else {
-        possibleVaultPath = path35.resolve(process.cwd(), ".env.vault");
+        possibleVaultPath = path38.resolve(process.cwd(), ".env.vault");
       }
-      if (fs31.existsSync(possibleVaultPath)) {
+      if (fs34.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path35.join(os3.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path38.join(os3.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -51527,7 +52013,7 @@ var require_main = __commonJS({
       return { parsed };
     }
     function configDotenv(options) {
-      const dotenvPath = path35.resolve(process.cwd(), ".env");
+      const dotenvPath = path38.resolve(process.cwd(), ".env");
       let encoding = "utf8";
       let processEnv = process.env;
       if (options && options.processEnv != null) {
@@ -51555,13 +52041,13 @@ var require_main = __commonJS({
       }
       let lastError;
       const parsedAll = {};
-      for (const path36 of optionPaths) {
+      for (const path39 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs31.readFileSync(path36, { encoding }));
+          const parsed = DotenvModule.parse(fs34.readFileSync(path39, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
-            _debug(`Failed to load ${path36} ${e.message}`);
+            _debug(`Failed to load ${path39} ${e.message}`);
           }
           lastError = e;
         }
@@ -51574,7 +52060,7 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative = path35.relative(process.cwd(), filePath);
+            const relative = path38.relative(process.cwd(), filePath);
             shortPaths.push(relative);
           } catch (e) {
             if (debug) {
@@ -51876,15 +52362,15 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path35) {
-  if (!path35)
+function getElementAtPath(obj, path38) {
+  if (!path38)
     return obj;
-  return path35.reduce((acc, key) => acc?.[key], obj);
+  return path38.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
-  const promises = keys.map((key) => promisesObj[key]);
-  return Promise.all(promises).then((results) => {
+  const promises2 = keys.map((key) => promisesObj[key]);
+  return Promise.all(promises2).then((results) => {
     const resolvedObj = {};
     for (let i = 0; i < keys.length; i++) {
       resolvedObj[keys[i]] = results[i];
@@ -52199,11 +52685,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path35, issues) {
+function prefixIssues(path38, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path35);
+    iss.path.unshift(path38);
     return iss;
   });
 }
@@ -57008,11 +57494,11 @@ var StdioServerTransport = class {
 // packages/tiny-brain-mcp/src/index.ts
 import { readFileSync as readFileSync4, appendFileSync, existsSync as existsSync12, mkdirSync as mkdirSync3 } from "fs";
 import { fileURLToPath as fileURLToPath8 } from "url";
-import { dirname as dirname13, join as join25 } from "path";
+import { dirname as dirname13, join as join26 } from "path";
 import { homedir as homedir4 } from "os";
 
 // packages/tiny-brain-mcp/src/core/mcp-server.ts
-import * as path34 from "path";
+import * as path37 from "path";
 import { existsSync as existsSync11, cpSync, readdirSync as readdirSync2, readFileSync as readFileSync3, writeFileSync, mkdirSync as mkdirSync2 } from "fs";
 import { execSync as execSync3 } from "child_process";
 
@@ -59024,30 +59510,30 @@ var SystemPersonaService = class extends BaseService {
 };
 
 // packages/tiny-brain-mcp/src/storage/local-filesystem-adapter.ts
-import { promises as fs25 } from "fs";
-import { dirname as dirname5, join as join15 } from "path";
+import { promises as fs28 } from "fs";
+import { dirname as dirname5, join as join16 } from "path";
 
 // packages/tiny-brain-mcp/src/storage/storage-path-builder.ts
-import { join as join14 } from "path";
+import { join as join15 } from "path";
 var LocalStoragePathBuilder = class {
   basePath;
   constructor(basePath = "~/.tiny-brain") {
-    this.basePath = basePath.startsWith("~") ? join14(process.env.HOME || process.env.USERPROFILE || "", basePath.slice(1)) : basePath;
+    this.basePath = basePath.startsWith("~") ? join15(process.env.HOME || process.env.USERPROFILE || "", basePath.slice(1)) : basePath;
   }
   buildPersonaPath(personaId, fileName, _userId) {
-    return join14(this.basePath, "personas", personaId, fileName);
+    return join15(this.basePath, "personas", personaId, fileName);
   }
   buildPersonaDirectoryPath(personaId, _userId) {
-    return join14(this.basePath, "personas", personaId);
+    return join15(this.basePath, "personas", personaId);
   }
   buildUserDataPath(key, _userId) {
-    return join14(this.basePath, key);
+    return join15(this.basePath, key);
   }
   buildUserBasePath(_userId) {
     return this.basePath;
   }
-  extractPersonaId(path35) {
-    const parts = path35.split(/[/\\]/);
+  extractPersonaId(path38) {
+    const parts = path38.split(/[/\\]/);
     const personasIndex = parts.findIndex((part) => part === "personas");
     return personasIndex !== -1 && personasIndex + 1 < parts.length ? parts[personasIndex + 1] : null;
   }
@@ -59069,7 +59555,7 @@ var LocalFilesystemStorageAdapter = class {
   async initializeUserStorage(_userId) {
     if (!this.autoCreate) return;
     const basePath = this.pathBuilder.buildUserBasePath();
-    const personasPath = join15(basePath, "personas");
+    const personasPath = join16(basePath, "personas");
     await this.ensureDirectoryExists(basePath);
     await this.ensureDirectoryExists(personasPath);
   }
@@ -59079,12 +59565,12 @@ var LocalFilesystemStorageAdapter = class {
     if (this.autoCreate) {
       await this.ensureDirectoryExists(directory);
     }
-    await fs25.writeFile(filePath, content, "utf8");
+    await fs28.writeFile(filePath, content, "utf8");
   }
   async getPersonaFile(personaId, fileName, _userId) {
     const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
     try {
-      return await fs25.readFile(filePath, "utf8");
+      return await fs28.readFile(filePath, "utf8");
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return null;
@@ -59095,7 +59581,7 @@ var LocalFilesystemStorageAdapter = class {
   async deletePersonaFile(personaId, fileName, _userId) {
     const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
     try {
-      await fs25.unlink(filePath);
+      await fs28.unlink(filePath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -59106,11 +59592,11 @@ var LocalFilesystemStorageAdapter = class {
     const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
     try {
       const getAllFiles = async (dir, basePath = "") => {
-        const entries = await fs25.readdir(dir, { withFileTypes: true });
+        const entries = await fs28.readdir(dir, { withFileTypes: true });
         const files = [];
         for (const entry of entries) {
-          const fullPath = join15(dir, entry.name);
-          const relativePath = basePath ? join15(basePath, entry.name) : entry.name;
+          const fullPath = join16(dir, entry.name);
+          const relativePath = basePath ? join16(basePath, entry.name) : entry.name;
           if (entry.isDirectory()) {
             const subFiles = await getAllFiles(fullPath, relativePath);
             files.push(...subFiles);
@@ -59130,13 +59616,13 @@ var LocalFilesystemStorageAdapter = class {
     }
   }
   async listPersonas(_userId) {
-    const personasDir = join15(this.pathBuilder.buildUserBasePath(), "personas");
+    const personasDir = join16(this.pathBuilder.buildUserBasePath(), "personas");
     try {
-      const directories = await fs25.readdir(personasDir);
+      const directories = await fs28.readdir(personasDir);
       const dirStats = await Promise.all(
         directories.map(async (dir) => {
-          const dirPath = join15(personasDir, dir);
-          const stat3 = await fs25.stat(dirPath);
+          const dirPath = join16(personasDir, dir);
+          const stat3 = await fs28.stat(dirPath);
           return { name: dir, isDirectory: stat3.isDirectory() };
         })
       );
@@ -59151,7 +59637,7 @@ var LocalFilesystemStorageAdapter = class {
   async deletePersona(personaId, _userId) {
     const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
     try {
-      await fs25.rm(personaDir, { recursive: true, force: true });
+      await fs28.rm(personaDir, { recursive: true, force: true });
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -59171,12 +59657,12 @@ var LocalFilesystemStorageAdapter = class {
     if (this.autoCreate) {
       await this.ensureDirectoryExists(directory);
     }
-    await fs25.writeFile(filePath, content, "utf8");
+    await fs28.writeFile(filePath, content, "utf8");
   }
   async getUserData(key, _userId) {
     const filePath = this.pathBuilder.buildUserDataPath(key);
     try {
-      return await fs25.readFile(filePath, "utf8");
+      return await fs28.readFile(filePath, "utf8");
     } catch (error2) {
       if (error2.code === "ENOENT") {
         return null;
@@ -59187,7 +59673,7 @@ var LocalFilesystemStorageAdapter = class {
   async deleteUserData(key, _userId) {
     const filePath = this.pathBuilder.buildUserDataPath(key);
     try {
-      await fs25.unlink(filePath);
+      await fs28.unlink(filePath);
     } catch (error2) {
       if (error2.code !== "ENOENT") {
         throw error2;
@@ -59200,7 +59686,7 @@ var LocalFilesystemStorageAdapter = class {
       if (this.autoCreate) {
         await this.ensureDirectoryExists(basePath);
       }
-      await fs25.access(basePath, fs25.constants.R_OK | fs25.constants.W_OK);
+      await fs28.access(basePath, fs28.constants.R_OK | fs28.constants.W_OK);
       return true;
     } catch {
       return false;
@@ -59210,33 +59696,33 @@ var LocalFilesystemStorageAdapter = class {
     const oldPath = dirname5(this.pathBuilder.buildPersonaPath(oldPersonaId, ""));
     const newPath = dirname5(this.pathBuilder.buildPersonaPath(newPersonaId, ""));
     try {
-      await fs25.access(oldPath);
+      await fs28.access(oldPath);
     } catch {
       throw new Error(`Persona '${oldPersonaId}' does not exist`);
     }
     try {
-      await fs25.access(newPath);
+      await fs28.access(newPath);
       throw new Error(`Persona '${newPersonaId}' already exists`);
     } catch {
     }
-    await fs25.rename(oldPath, newPath);
-    const profilePath = join15(newPath, "profile.md");
+    await fs28.rename(oldPath, newPath);
+    const profilePath = join16(newPath, "profile.md");
     try {
-      const profileContent = await fs25.readFile(profilePath, "utf-8");
+      const profileContent = await fs28.readFile(profilePath, "utf-8");
       const lines = profileContent.split("\n");
       if (lines[0].startsWith("#")) {
         lines[0] = `# ${newPersonaId}`;
-        await fs25.writeFile(profilePath, lines.join("\n"), "utf-8");
+        await fs28.writeFile(profilePath, lines.join("\n"), "utf-8");
       }
     } catch {
     }
-    const metadataPath = join15(newPath, "metadata.json");
+    const metadataPath = join16(newPath, "metadata.json");
     try {
-      const metadataContent = await fs25.readFile(metadataPath, "utf-8");
+      const metadataContent = await fs28.readFile(metadataPath, "utf-8");
       const metadata = JSON.parse(metadataContent);
       metadata.name = newPersonaId;
       metadata.lastRenamed = (/* @__PURE__ */ new Date()).toISOString();
-      await fs25.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
+      await fs28.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
     } catch {
     }
   }
@@ -59252,7 +59738,7 @@ var LocalFilesystemStorageAdapter = class {
    */
   async ensureDirectoryExists(dirPath) {
     try {
-      await fs25.mkdir(dirPath, { recursive: true });
+      await fs28.mkdir(dirPath, { recursive: true });
     } catch (error2) {
       if (error2.code !== "EEXIST") {
         throw error2;
@@ -59268,8 +59754,8 @@ var LocalFilesystemStorageAdapter = class {
 };
 
 // packages/tiny-brain-mcp/src/core/file-logger.ts
-import * as fs26 from "fs";
-import * as path28 from "path";
+import * as fs29 from "fs";
+import * as path31 from "path";
 var LOG_LEVELS = {
   debug: 0,
   info: 1,
@@ -59286,7 +59772,7 @@ var FileLogger = class {
   currentFileSize = 0;
   constructor(config2 = {}) {
     const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    const defaultLogPath = path28.join(homeDir, ".tiny-brain", "debug.log");
+    const defaultLogPath = path31.join(homeDir, ".tiny-brain", "debug.log");
     this.config = {
       logFilePath: config2.logFilePath || defaultLogPath,
       maxFileSize: config2.maxFileSize || 10 * 1024 * 1024,
@@ -59309,19 +59795,19 @@ var FileLogger = class {
   }
   initialize() {
     try {
-      const logDir = path28.dirname(this.config.logFilePath);
-      if (!fs26.existsSync(logDir)) {
-        fs26.mkdirSync(logDir, { recursive: true });
+      const logDir = path31.dirname(this.config.logFilePath);
+      if (!fs29.existsSync(logDir)) {
+        fs29.mkdirSync(logDir, { recursive: true });
       }
-      if (fs26.existsSync(this.config.logFilePath)) {
-        const stats = fs26.statSync(this.config.logFilePath);
+      if (fs29.existsSync(this.config.logFilePath)) {
+        const stats = fs29.statSync(this.config.logFilePath);
         this.currentFileSize = stats.size;
         if (this.currentFileSize >= this.config.maxFileSize) {
           this.rotateLogFile();
           this.currentFileSize = 0;
         }
       }
-      this.fileStream = fs26.createWriteStream(this.config.logFilePath, {
+      this.fileStream = fs29.createWriteStream(this.config.logFilePath, {
         flags: this.config.appendMode ? "a" : "w"
       });
       this.writeLog("info", "FileLogger initialized", {
@@ -59336,11 +59822,11 @@ var FileLogger = class {
       for (let i = this.config.maxRotatedFiles - 1; i >= 0; i--) {
         const oldPath = i === 0 ? this.config.logFilePath : `${this.config.logFilePath}.${i}`;
         const newPath = `${this.config.logFilePath}.${i + 1}`;
-        if (fs26.existsSync(oldPath)) {
+        if (fs29.existsSync(oldPath)) {
           if (i === this.config.maxRotatedFiles - 1) {
-            fs26.unlinkSync(oldPath);
+            fs29.unlinkSync(oldPath);
           } else {
-            fs26.renameSync(oldPath, newPath);
+            fs29.renameSync(oldPath, newPath);
           }
         }
       }
@@ -59370,7 +59856,7 @@ var FileLogger = class {
         this.fileStream?.end();
         this.rotateLogFile();
         this.currentFileSize = 0;
-        this.fileStream = fs26.createWriteStream(this.config.logFilePath, {
+        this.fileStream = fs29.createWriteStream(this.config.logFilePath, {
           flags: "a"
         });
       }
@@ -59926,15 +60412,15 @@ var PersonaService2 = class extends PersonaService {
 };
 
 // packages/tiny-brain-mcp/src/services/repo-service.ts
-import * as fs27 from "fs/promises";
+import * as fs30 from "fs/promises";
 import { existsSync as existsSync8, readFileSync } from "fs";
-import * as path29 from "path";
+import * as path32 from "path";
 import { fileURLToPath as fileURLToPath5 } from "url";
 
 // packages/tiny-brain-mcp/src/utils/repo-utils.ts
 import { execSync as execSync2 } from "child_process";
 import { existsSync as existsSync7 } from "fs";
-import { join as join17, dirname as dirname7 } from "path";
+import { join as join18, dirname as dirname7 } from "path";
 import { fileURLToPath as fileURLToPath4 } from "url";
 function findRepoRoot(startPath) {
   const cwd = startPath || process.cwd();
@@ -59952,7 +60438,7 @@ function findRepoRoot(startPath) {
   }
   let currentPath = cwd;
   while (currentPath !== dirname7(currentPath)) {
-    if (existsSync7(join17(currentPath, ".git"))) {
+    if (existsSync7(join18(currentPath, ".git"))) {
       return currentPath;
     }
     currentPath = dirname7(currentPath);
@@ -60000,8 +60486,8 @@ var RepoService = class _RepoService {
   async readRepoBlockFromContextFile(contextFilePath = "CLAUDE.md") {
     try {
       const repoRoot = getRepoRoot();
-      const fullPath = path29.join(repoRoot, contextFilePath);
-      const content = await fs27.readFile(fullPath, "utf-8");
+      const fullPath = path32.join(repoRoot, contextFilePath);
+      const content = await fs30.readFile(fullPath, "utf-8");
       const startMarker = _RepoService.REPO_BLOCK_START;
       const endMarker = _RepoService.REPO_BLOCK_END;
       const startIndex = content.indexOf(startMarker);
@@ -60055,7 +60541,7 @@ var RepoService = class _RepoService {
     }
     try {
       const repoRoot = getRepoRoot();
-      const analysisPath = path29.join(repoRoot, ".tiny-brain", "analysis.json");
+      const analysisPath = path32.join(repoRoot, ".tiny-brain", "analysis.json");
       return existsSync8(analysisPath);
     } catch {
       return false;
@@ -60067,7 +60553,7 @@ var RepoService = class _RepoService {
   getAnalysisVersion() {
     try {
       const currentFilePath = fileURLToPath5(import.meta.url);
-      const packageJsonPath = path29.join(path29.dirname(currentFilePath), "../../package.json");
+      const packageJsonPath = path32.join(path32.dirname(currentFilePath), "../../package.json");
       const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
       return packageJson.version || "0.0.0";
     } catch (error2) {
@@ -60118,10 +60604,10 @@ version: ${version2}
 ${workflowContent}${_RepoService.REPO_BLOCK_END}
 `;
     const repoRoot = getRepoRoot();
-    const fullPath = path29.join(repoRoot, contextPath);
+    const fullPath = path32.join(repoRoot, contextPath);
     let existingContent = "";
     try {
-      existingContent = await fs27.readFile(fullPath, "utf-8");
+      existingContent = await fs30.readFile(fullPath, "utf-8");
     } catch {
     }
     const startMarker = _RepoService.REPO_BLOCK_START;
@@ -60143,8 +60629,8 @@ ${workflowContent}${_RepoService.REPO_BLOCK_END}
     } else {
       existingContent = existingContent.trimEnd() + "\n\n" + repoBlock;
     }
-    await fs27.mkdir(path29.dirname(fullPath), { recursive: true });
-    await fs27.writeFile(fullPath, existingContent, "utf-8");
+    await fs30.mkdir(path32.dirname(fullPath), { recursive: true });
+    await fs30.writeFile(fullPath, existingContent, "utf-8");
     this.context.logger.info(`Updated workflow sections in ${contextPath}`);
   }
   /**
@@ -60167,16 +60653,15 @@ When working in a specific package, also read that package's \`AGENTS.md\` for p
 
 `;
     if (enableAgenticCoding) {
-      content += `## Agent Delegation (MANDATORY)
+      content += `## TDD Implementation
 
-IMPORTANT: You MUST delegate implementation work to specialized agents using the Task tool. Do NOT write production code or tests directly.
+Write tests and production code directly in the main session. Follow the RED/GREEN/REFACTOR cycle:
 
-When the user asks you to implement a feature, fix a bug, or refactor code:
-1. Use the Task tool with \`subagent_type="tiny-brain:developer"\`
-2. Provide the full task context in the prompt
-3. Let the agent handle the TDD workflow (red/green/refactor)
-
-Only skip delegation for trivial tasks (single-line fixes, config changes).
+1. **RED**: Write failing tests, commit with \`test:\` prefix
+2. **GREEN**: Write minimum implementation to pass tests, commit with \`feat:\` prefix
+   - The review pipeline triggers automatically after feat: commits (via pipeline command)
+   - Handle refactoring from review as \`refactor:\` commits
+3. Run \`npx tiny-brain commit progress\` when the TDD cycle is complete
 
 `;
     }
@@ -60673,7 +61158,7 @@ ${exampleSections.join("\n\n")}`;
 
 // packages/tiny-brain-mcp/src/storage/platform-path-builder.ts
 import * as os2 from "os";
-import * as path30 from "path";
+import * as path33 from "path";
 var PlatformPathBuilder = class {
   /**
    * Get Claude Code MCP configuration file path
@@ -60683,7 +61168,7 @@ var PlatformPathBuilder = class {
       case "project":
         return ".mcp.json";
       case "user":
-        return path30.join(os2.homedir(), ".config", "claude", "mcp.json");
+        return path33.join(os2.homedir(), ".config", "claude", "mcp.json");
       case "local":
       default:
         return ".mcp.json";
@@ -60696,7 +61181,7 @@ var PlatformPathBuilder = class {
     const platform2 = os2.platform();
     switch (platform2) {
       case "darwin":
-        return path30.join(
+        return path33.join(
           os2.homedir(),
           "Library",
           "Application Support",
@@ -60704,18 +61189,18 @@ var PlatformPathBuilder = class {
           "claude_desktop_config.json"
         );
       case "win32": {
-        const appData = process.env.APPDATA || path30.join(os2.homedir(), "AppData", "Roaming");
-        return path30.join(appData, "Claude", "claude_desktop_config.json");
+        const appData = process.env.APPDATA || path33.join(os2.homedir(), "AppData", "Roaming");
+        return path33.join(appData, "Claude", "claude_desktop_config.json");
       }
       default:
-        return path30.join(os2.homedir(), ".config", "Claude", "claude_desktop_config.json");
+        return path33.join(os2.homedir(), ".config", "Claude", "claude_desktop_config.json");
     }
   }
   /**
    * Get Cursor IDE configuration file path
    */
   getCursorConfig() {
-    return path30.join(os2.homedir(), ".cursor", "mcp", "config.json");
+    return path33.join(os2.homedir(), ".cursor", "mcp", "config.json");
   }
   /**
    * Get ChatGPT Desktop configuration file path
@@ -60724,13 +61209,13 @@ var PlatformPathBuilder = class {
     const platform2 = os2.platform();
     switch (platform2) {
       case "darwin":
-        return path30.join(os2.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
+        return path33.join(os2.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
       case "win32": {
-        const appData = process.env.APPDATA || path30.join(os2.homedir(), "AppData", "Roaming");
-        return path30.join(appData, "ChatGPT", "config.json");
+        const appData = process.env.APPDATA || path33.join(os2.homedir(), "AppData", "Roaming");
+        return path33.join(appData, "ChatGPT", "config.json");
       }
       default:
-        return path30.join(os2.homedir(), ".config", "ChatGPT", "config.json");
+        return path33.join(os2.homedir(), ".config", "ChatGPT", "config.json");
     }
   }
   /**
@@ -60763,13 +61248,13 @@ var PlatformPathBuilder = class {
    * Get backup directory for platform configs
    */
   getBackupDirectory() {
-    return path30.join(os2.homedir(), ".tiny-brain", "backups");
+    return path33.join(os2.homedir(), ".tiny-brain", "backups");
   }
 };
 
 // packages/tiny-brain-mcp/src/storage/platform-config-adapter.ts
-import { promises as fs28, existsSync as existsSync9 } from "fs";
-import * as path31 from "path";
+import { promises as fs31, existsSync as existsSync9 } from "fs";
+import * as path34 from "path";
 var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystemStorageAdapter {
   platformPathBuilder;
   constructor(config2) {
@@ -60782,7 +61267,7 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
   async readPlatformConfig(platform2, scope) {
     try {
       const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-      const content = await fs28.readFile(configPath, "utf-8");
+      const content = await fs31.readFile(configPath, "utf-8");
       return JSON.parse(content);
     } catch (error2) {
       const err = error2;
@@ -60797,9 +61282,9 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
    */
   async writePlatformConfig(platform2, config2, scope) {
     const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-    const directory = path31.dirname(configPath);
-    await fs28.mkdir(directory, { recursive: true });
-    await fs28.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
+    const directory = path34.dirname(configPath);
+    await fs31.mkdir(directory, { recursive: true });
+    await fs31.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
   }
   /**
    * Backup platform configuration
@@ -60813,9 +61298,9 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/:/g, "-").replace(/\./g, "-");
       const backupDir = this.platformPathBuilder.getBackupDirectory();
       const backupFile = `${platform2}-${timestamp2}.backup`;
-      const backupPath = path31.join(backupDir, backupFile);
-      await fs28.mkdir(backupDir, { recursive: true });
-      await fs28.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
+      const backupPath = path34.join(backupDir, backupFile);
+      await fs31.mkdir(backupDir, { recursive: true });
+      await fs31.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
       return timestamp2;
     } catch (error2) {
       const err = error2;
@@ -60831,8 +61316,8 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
   async restorePlatformConfig(platform2, backupId, scope) {
     const backupDir = this.platformPathBuilder.getBackupDirectory();
     const backupFile = `${platform2}-${backupId}.backup`;
-    const backupPath = path31.join(backupDir, backupFile);
-    const backupContent = await fs28.readFile(backupPath, "utf-8");
+    const backupPath = path34.join(backupDir, backupFile);
+    const backupContent = await fs31.readFile(backupPath, "utf-8");
     const config2 = JSON.parse(backupContent);
     await this.writePlatformConfig(platform2, config2, scope);
   }
@@ -60884,15 +61369,15 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
     const repoRoot = getRepoRoot();
     switch (platform2) {
       case "claude-code":
-        return path31.join(repoRoot, "CLAUDE.md");
+        return path34.join(repoRoot, "CLAUDE.md");
       case "cursor":
-        return path31.join(repoRoot, ".cursorrules");
+        return path34.join(repoRoot, ".cursorrules");
       case "vscode":
-        return path31.join(repoRoot, ".vscode", "context.md");
+        return path34.join(repoRoot, ".vscode", "context.md");
       case "windsurf":
-        return path31.join(repoRoot, ".windsurfrules");
+        return path34.join(repoRoot, ".windsurfrules");
       default:
-        return path31.join(repoRoot, ".claude", "CLAUDE.md");
+        return path34.join(repoRoot, ".claude", "CLAUDE.md");
     }
   }
   /**
@@ -60912,10 +61397,10 @@ var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystem
       return "windsurf";
     }
     const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    if (existsSync9(path31.join(homeDir, ".claude-code"))) {
+    if (existsSync9(path34.join(homeDir, ".claude-code"))) {
       return "claude-code";
     }
-    if (existsSync9(path31.join(homeDir, "Library", "Application Support", "Claude"))) {
+    if (existsSync9(path34.join(homeDir, "Library", "Application Support", "Claude"))) {
       return "claude-desktop";
     }
     return "unknown";
@@ -60980,8 +61465,8 @@ var semver = __toESM(require_semver2(), 1);
 
 // packages/tiny-brain-mcp/src/services/agent-installation-service.ts
 init_src();
-import * as fs29 from "fs/promises";
-import * as path32 from "path";
+import * as fs32 from "fs/promises";
+import * as path35 from "path";
 import * as crypto3 from "crypto";
 var AgentInstallationService = class {
   constructor(context) {
@@ -61044,15 +61529,15 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async installAgent(agentInfo) {
     try {
       const repoRoot = getRepoRoot();
-      const agentsDir = path32.join(repoRoot, ".claude", "agents");
-      await fs29.mkdir(agentsDir, { recursive: true });
+      const agentsDir = path35.join(repoRoot, ".claude", "agents");
+      await fs32.mkdir(agentsDir, { recursive: true });
       let content = agentInfo.content;
       if (!content) {
         const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
         content = downloaded.content;
       }
-      const filePath = path32.join(agentsDir, `${agentInfo.name}.md`);
-      await fs29.writeFile(filePath, content, "utf-8");
+      const filePath = path35.join(agentsDir, `${agentInfo.name}.md`);
+      await fs32.writeFile(filePath, content, "utf-8");
       this.context.logger.info(`Successfully installed agent: ${agentInfo.name}`);
       return { success: true };
     } catch (error2) {
@@ -61077,13 +61562,13 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async updateAgent(agentInfo) {
     try {
       const repoRoot = getRepoRoot();
-      const filePath = path32.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
-      const existingContent = await fs29.readFile(filePath, "utf-8");
+      const filePath = path35.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
+      const existingContent = await fs32.readFile(filePath, "utf-8");
       const hasCustomizations = this.detectCustomizations(existingContent);
       let backupCreated = false;
       if (hasCustomizations) {
         const backupPath = `${filePath}.backup.${Date.now()}`;
-        await fs29.writeFile(backupPath, existingContent, "utf-8");
+        await fs32.writeFile(backupPath, existingContent, "utf-8");
         backupCreated = true;
         this.context.logger.info(`Created backup of customized agent: ${backupPath}`);
       }
@@ -61093,7 +61578,7 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
         newContent = downloaded.content;
       }
       const updatedContent = this.updateAgentMetadata(newContent, agentInfo.version);
-      await fs29.writeFile(filePath, updatedContent, "utf-8");
+      await fs32.writeFile(filePath, updatedContent, "utf-8");
       this.context.logger.info(`Successfully updated agent: ${agentInfo.name} to v${agentInfo.version}`);
       return {
         updated: true,
@@ -61111,9 +61596,9 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async removeAgent(agentName) {
     try {
       const repoRoot = getRepoRoot();
-      const filePath = path32.join(repoRoot, ".claude", "agents", `${agentName}.md`);
-      await fs29.access(filePath);
-      await fs29.unlink(filePath);
+      const filePath = path35.join(repoRoot, ".claude", "agents", `${agentName}.md`);
+      await fs32.access(filePath);
+      await fs32.unlink(filePath);
       this.context.logger.info(`Successfully removed agent: ${agentName}`);
     } catch (error2) {
       if (error2.code === "ENOENT") {
@@ -61133,8 +61618,8 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       failed: []
     };
     const repoRoot = getRepoRoot();
-    const agentsDir = path32.join(repoRoot, ".claude", "agents");
-    await fs29.mkdir(agentsDir, { recursive: true });
+    const agentsDir = path35.join(repoRoot, ".claude", "agents");
+    await fs32.mkdir(agentsDir, { recursive: true });
     for (const agent of agentsToInstall) {
       try {
         const result = await this.installAgent(agent);
@@ -61184,14 +61669,14 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
   async getInstalledAgents() {
     try {
       const repoRoot = getRepoRoot();
-      const agentsDir = path32.join(repoRoot, ".claude", "agents");
-      const files = await fs29.readdir(agentsDir);
+      const agentsDir = path35.join(repoRoot, ".claude", "agents");
+      const files = await fs32.readdir(agentsDir);
       const agentFiles = files.filter((file) => file.endsWith(".md"));
       const installedAgents = [];
       for (const file of agentFiles) {
         try {
-          const filePath = path32.join(agentsDir, file);
-          const content = await fs29.readFile(filePath, "utf-8");
+          const filePath = path35.join(agentsDir, file);
+          const content = await fs32.readFile(filePath, "utf-8");
           const agentName = file.replace(".md", "");
           const metadata = this.extractAgentMetadata(content);
           installedAgents.push({
@@ -61312,20 +61797,20 @@ var AgentService = class {
    * Install formatted agents to the filesystem
    */
   async installAgents(formattedAgents, formatter) {
-    const fs31 = await import("fs/promises");
-    const path35 = await import("path");
+    const fs34 = await import("fs/promises");
+    const path38 = await import("path");
     const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path35.join(repoRoot, activeFormatter.getAgentInstallPath());
+    const agentsPath = path38.join(repoRoot, activeFormatter.getAgentInstallPath());
     this.context.logger.debug("[AgentService] Installing agents:", {
       repoRoot,
       agentsPath,
       agentCount: formattedAgents.length
     });
-    await fs31.mkdir(agentsPath, { recursive: true });
+    await fs34.mkdir(agentsPath, { recursive: true });
     for (const agent of formattedAgents) {
-      const agentPath = path35.join(agentsPath, agent.filename);
-      await fs31.writeFile(agentPath, agent.content, "utf-8");
+      const agentPath = path38.join(agentsPath, agent.filename);
+      await fs34.writeFile(agentPath, agent.content, "utf-8");
       this.context.logger.info(`Agent '${agent.filename}' installed to ${agentPath}`);
     }
     this.context.logger.info(`Installed ${formattedAgents.length} agents to ${agentsPath}`);
@@ -61334,28 +61819,28 @@ var AgentService = class {
    * Install agents with version checking and overwrite strategy
    */
   async installAgentsWithVersionCheck(agents, options = {}) {
-    const fs31 = await import("fs/promises");
-    const path35 = await import("path");
+    const fs34 = await import("fs/promises");
+    const path38 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const formattedAgents = this.formatAgents(agents, formatter);
     const repoRoot = getRepoRoot();
-    const agentsPath = path35.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
     const result = {
       installed: [],
       skipped: [],
       updated: [],
       errors: []
     };
-    await fs31.mkdir(agentsPath, { recursive: true });
+    await fs34.mkdir(agentsPath, { recursive: true });
     const installedAgents = await this.getInstalledAgents();
     const installedMap = new Map(installedAgents.map((a) => [a.name, a]));
     for (const agent of formattedAgents) {
-      const agentPath = path35.join(agentsPath, agent.filename);
+      const agentPath = path38.join(agentsPath, agent.filename);
       const agentName = agent.filename.replace(".md", "");
       try {
-        const fileExists = await fs31.access(agentPath).then(() => true).catch(() => false);
+        const fileExists = await fs34.access(agentPath).then(() => true).catch(() => false);
         if (!fileExists) {
-          await fs31.writeFile(agentPath, agent.content, "utf-8");
+          await fs34.writeFile(agentPath, agent.content, "utf-8");
           result.installed.push(agentName);
           this.context.logger.info(`Installed new agent: ${agentName}`);
         } else {
@@ -61366,9 +61851,9 @@ var AgentService = class {
           } else if (strategy === "always") {
             if (options.backupExisting) {
               const backupPath = `${agentPath}.backup.${Date.now()}`;
-              await fs31.copyFile(agentPath, backupPath);
+              await fs34.copyFile(agentPath, backupPath);
             }
-            await fs31.writeFile(agentPath, agent.content, "utf-8");
+            await fs34.writeFile(agentPath, agent.content, "utf-8");
             result.updated.push(agentName);
             this.context.logger.info(`Updated agent (forced): ${agentName}`);
           } else {
@@ -61378,9 +61863,9 @@ var AgentService = class {
             if (semver.gt(newVersion, installedVersion)) {
               if (options.backupExisting) {
                 const backupPath = `${agentPath}.backup.${Date.now()}`;
-                await fs31.copyFile(agentPath, backupPath);
+                await fs34.copyFile(agentPath, backupPath);
               }
-              await fs31.writeFile(agentPath, agent.content, "utf-8");
+              await fs34.writeFile(agentPath, agent.content, "utf-8");
               result.updated.push(agentName);
               this.context.logger.info(`Updated agent: ${agentName} (${installedVersion} -> ${newVersion})`);
             } else {
@@ -61405,21 +61890,21 @@ var AgentService = class {
     if (!this.installationService && "platformInfo" in this.context) {
       this.installationService = new AgentInstallationService(this.context);
     }
-    const fs31 = await import("fs/promises");
-    const path35 = await import("path");
+    const fs34 = await import("fs/promises");
+    const path38 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path35.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
     for (const agentName of agentNames) {
       try {
-        const agentFile = path35.join(agentsPath, `${agentName}.md`);
+        const agentFile = path38.join(agentsPath, `${agentName}.md`);
         try {
-          await fs31.access(agentFile);
+          await fs34.access(agentFile);
         } catch {
           result.errors.push(`Agent ${agentName} not found`);
           continue;
         }
-        await fs31.unlink(agentFile);
+        await fs34.unlink(agentFile);
         result.removed.push(agentName);
         this.context.logger.info(`Removed agent: ${agentName}`);
       } catch (error2) {
@@ -61440,17 +61925,17 @@ var AgentService = class {
     if (this.installationService) {
       return await this.installationService.getInstalledAgents();
     }
-    const fs31 = await import("fs/promises");
-    const path35 = await import("path");
+    const fs34 = await import("fs/promises");
+    const path38 = await import("path");
     const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
     const repoRoot = getRepoRoot();
-    const agentsPath = path35.join(repoRoot, formatter.getAgentInstallPath());
+    const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
     try {
-      const files = await fs31.readdir(agentsPath);
+      const files = await fs34.readdir(agentsPath);
       const agentFiles = files.filter((f) => f.endsWith(".md"));
       const agents = [];
       for (const file of agentFiles) {
-        const content = await fs31.readFile(path35.join(agentsPath, file), "utf-8");
+        const content = await fs34.readFile(path38.join(agentsPath, file), "utf-8");
         const name = file.replace(".md", "");
         const version2 = this.extractVersion(content);
         agents.push({ name, version: version2, lastUpdated: (/* @__PURE__ */ new Date()).toISOString() });
@@ -62080,18 +62565,18 @@ init_zod();
 // packages/tiny-brain-mcp/src/services/analyse-service.ts
 init_src();
 import { fileURLToPath as fileURLToPath7 } from "url";
-import { dirname as dirname11, join as join23 } from "path";
+import { dirname as dirname11, join as join24 } from "path";
 import { existsSync as existsSync10 } from "fs";
 import { readFile as readFile12, readdir as readdir9, writeFile as writeFile5 } from "fs/promises";
 
 // packages/tiny-brain-mcp/src/utils/package-version.ts
 import { readFileSync as readFileSync2 } from "fs";
-import { join as join22, dirname as dirname10 } from "path";
+import { join as join23, dirname as dirname10 } from "path";
 import { fileURLToPath as fileURLToPath6 } from "url";
 function getPackageVersion() {
   const __filename = fileURLToPath6(import.meta.url);
   const __dirname = dirname10(__filename);
-  const packagePath = join22(__dirname, "..", "..", "package.json");
+  const packagePath = join23(__dirname, "..", "..", "package.json");
   try {
     const packageJson = JSON.parse(readFileSync2(packagePath, "utf-8"));
     return packageJson.version;
@@ -62295,7 +62780,7 @@ var AnalyseService = class {
   async generateAgentsMd(analysis) {
     const repoRoot = process.cwd();
     const agentsMdService = new AgentsMdService(repoRoot);
-    const agentsMdPath = join23(repoRoot, "AGENTS.md");
+    const agentsMdPath = join24(repoRoot, "AGENTS.md");
     let existingContent;
     try {
       existingContent = await readFile12(agentsMdPath, "utf-8");
@@ -62335,8 +62820,8 @@ var AnalyseService = class {
   async collectPackageDescriptions(repoRoot, packages) {
     const descriptions = [];
     for (const pkgPath of packages) {
-      const fullPath = join23(repoRoot, pkgPath);
-      const pkgJsonPath = join23(fullPath, "package.json");
+      const fullPath = join24(repoRoot, pkgPath);
+      const pkgJsonPath = join24(fullPath, "package.json");
       try {
         const raw = await readFile12(pkgJsonPath, "utf-8");
         const pkgJson = JSON.parse(raw);
@@ -62357,8 +62842,8 @@ var AnalyseService = class {
   async generatePerPackageAgentsMd(repoRoot, analysis, agentsMdService) {
     const packages = analysis.monorepo?.packages ?? [];
     for (const pkgPath of packages) {
-      const fullPkgPath = join23(repoRoot, pkgPath);
-      const pkgAgentsMdPath = join23(fullPkgPath, "AGENTS.md");
+      const fullPkgPath = join24(repoRoot, pkgPath);
+      const pkgAgentsMdPath = join24(fullPkgPath, "AGENTS.md");
       let existingPkgContent;
       try {
         existingPkgContent = await readFile12(pkgAgentsMdPath, "utf-8");
@@ -62400,7 +62885,7 @@ var AnalyseService = class {
    */
   async countPrdsInRepo(repoPath) {
     try {
-      const prdDir = join23(repoPath, "docs", "prd");
+      const prdDir = join24(repoPath, "docs", "prd");
       if (!existsSync10(prdDir)) {
         return 0;
       }
@@ -62444,9 +62929,9 @@ var AnalyseService = class {
     try {
       const __filename = fileURLToPath7(import.meta.url);
       const __dirname = dirname11(__filename);
-      const coreHooksDir = join23(__dirname, "..", "..", "..", "tiny-brain-core", "templates", "hooks");
+      const coreHooksDir = join24(__dirname, "..", "..", "..", "tiny-brain-core", "templates", "hooks");
       if (existsSync10(coreHooksDir)) return coreHooksDir;
-      const mcpHooksDir = join23(__dirname, "..", "..", "templates", "hooks");
+      const mcpHooksDir = join24(__dirname, "..", "..", "templates", "hooks");
       if (existsSync10(mcpHooksDir)) return mcpHooksDir;
       return void 0;
     } catch {
@@ -62813,8 +63298,8 @@ var AnalyseTool = class _AnalyseTool {
 
 // packages/tiny-brain-mcp/src/tools/quality/quality.tool.ts
 init_zod();
-import { promises as fs30 } from "fs";
-import path33 from "path";
+import { promises as fs33 } from "fs";
+import path36 from "path";
 init_src();
 var QualityArgsSchema = external_exports.object({
   operation: external_exports.enum([
@@ -63281,9 +63766,9 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
       return createErrorResult("planId is required for plan-details operation");
     }
     try {
-      const plansDir = path33.join(repositoryRoot, ".tiny-brain", "quality", "plans");
-      const filePath = path33.join(plansDir, `${args.planId}.md`);
-      const content = await fs30.readFile(filePath, "utf-8");
+      const plansDir = path36.join(repositoryRoot, ".tiny-brain", "quality", "plans");
+      const filePath = path36.join(plansDir, `${args.planId}.md`);
+      const content = await fs33.readFile(filePath, "utf-8");
       const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
       if (!jsonMatch) {
         return createErrorResult(`Could not parse plan data from: ${args.planId}`);
@@ -63349,9 +63834,9 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
   }
   static async handleRunAnalyzers(args, repositoryRoot) {
     const runId = args.runId ?? generateRunId();
-    const runDir = path33.join(repositoryRoot, ".tiny-brain", "quality", "runs", runIdToPath(runId));
-    const outputPath = path33.join(runDir, "analysis.json");
-    const outputDir = path33.join(runDir, "analysers");
+    const runDir = path36.join(repositoryRoot, ".tiny-brain", "quality", "runs", runIdToPath(runId));
+    const outputPath = path36.join(runDir, "analysis.json");
+    const outputDir = path36.join(runDir, "analysers");
     const cached2 = await readCachedAnalyzers(repositoryRoot);
     const analyzers = cached2 ?? await new AnalyzerDetectionService(repositoryRoot).detectAnalyzers();
     const emptyResults = {
@@ -63361,8 +63846,8 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
       summary: { total: 0, succeeded: 0, failed: 0, timedOut: 0, skipped: 0 }
     };
     if (analyzers.length === 0) {
-      await fs30.mkdir(runDir, { recursive: true });
-      await fs30.writeFile(outputPath, JSON.stringify(emptyResults, null, 2), "utf-8");
+      await fs33.mkdir(runDir, { recursive: true });
+      await fs33.writeFile(outputPath, JSON.stringify(emptyResults, null, 2), "utf-8");
       return createSuccessResult(
         `\u{1F527} No analyzers detected. Empty results written to file.
   Run ID: ${runId}
@@ -63371,8 +63856,8 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
     }
     const executorService = new AnalyzerExecutorService(repositoryRoot);
     const results = await executorService.executeAnalyzers(analyzers, outputDir);
-    await fs30.mkdir(runDir, { recursive: true });
-    await fs30.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
+    await fs33.mkdir(runDir, { recursive: true });
+    await fs33.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
     const lines = [
       `\u{1F527} Executed ${results.summary.total} analyzer(s):`,
       `  Succeeded: ${results.summary.succeeded}`,
@@ -65633,7 +66118,7 @@ var MCPServer = class {
     }
     const logFileName = isDev ? "dev-debug.log" : "debug.log";
     this.logger = new FileLogger({
-      logFilePath: path34.join(resolvedDataDir, logFileName),
+      logFilePath: path37.join(resolvedDataDir, logFileName),
       logLevel,
       enabled: true
     });
@@ -65790,7 +66275,7 @@ var MCPServer = class {
   async initializeRepository() {
     try {
       const cwd = process.cwd();
-      const gitDir = path34.join(cwd, ".git");
+      const gitDir = path37.join(cwd, ".git");
       const { existsSync: existsSync13 } = await import("fs");
       if (!existsSync13(gitDir)) {
         this.logger.debug("Not in a git repository, skipping repo registration");
@@ -65907,7 +66392,7 @@ var MCPServer = class {
       this.logger.debug("CLAUDE_PLUGIN_ROOT not set, skipping bundled personas");
       return;
     }
-    const bundledPersonasDir = path34.join(pluginRoot, "personas");
+    const bundledPersonasDir = path37.join(pluginRoot, "personas");
     if (!existsSync11(bundledPersonasDir)) {
       this.logger.debug("No bundled personas directory found");
       return;
@@ -65917,9 +66402,9 @@ var MCPServer = class {
       const bundledPersonas = readdirSync2(bundledPersonasDir);
       for (const personaName of bundledPersonas) {
         if (personaName.startsWith(".")) continue;
-        const bundledPath = path34.join(bundledPersonasDir, personaName);
+        const bundledPath = path37.join(bundledPersonasDir, personaName);
         const localStorage = this.storage;
-        const localPath = path34.join(localStorage.personasDir, personaName);
+        const localPath = path37.join(localStorage.personasDir, personaName);
         if (existsSync11(bundledPath) && !existsSync11(localPath)) {
           this.logger.info(`Copying bundled persona '${personaName}' to local storage`);
           try {
@@ -66198,7 +66683,7 @@ var MCPServer = class {
     }
     try {
       const basePath = process.cwd();
-      const sessionsPath = path34.join(basePath, ".tiny-brain", "sessions.json");
+      const sessionsPath = path37.join(basePath, ".tiny-brain", "sessions.json");
       let sessions = {};
       try {
         const content = readFileSync3(sessionsPath, "utf-8");
@@ -66213,7 +66698,7 @@ var MCPServer = class {
         activePersona: personaId,
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       };
-      mkdirSync2(path34.dirname(sessionsPath), { recursive: true });
+      mkdirSync2(path37.dirname(sessionsPath), { recursive: true });
       writeFileSync(sessionsPath, JSON.stringify(sessions, null, 2), "utf-8");
       this.logger.debug(`Updated persona session: ${personaId} for TTY ${tty}`);
     } catch (err) {
@@ -66448,9 +66933,9 @@ function startupLog(message, data) {
   try {
     let dataDir = process.env.DATADIR || process.env.TINY_BRAIN_DATA_DIR || "~/.tiny-brain";
     if (dataDir.startsWith("~")) {
-      dataDir = join25(homedir4(), dataDir.slice(1));
+      dataDir = join26(homedir4(), dataDir.slice(1));
     }
-    const logPath = join25(dataDir, "debug.log");
+    const logPath = join26(dataDir, "debug.log");
     if (!existsSync12(dataDir)) {
       mkdirSync3(dataDir, { recursive: true });
     }
@@ -66465,7 +66950,7 @@ async function main() {
   startupLog("main() function called");
   const __filename = fileURLToPath8(import.meta.url);
   const __dirname = dirname13(__filename);
-  const envPath = join25(__dirname, "../.env.local");
+  const envPath = join26(__dirname, "../.env.local");
   if (existsSync12(envPath)) {
     try {
       const { config: config2 } = await Promise.resolve().then(() => __toESM(require_main(), 1));
@@ -66481,7 +66966,7 @@ async function main() {
   }
   try {
     startupLog("Fetching package.json version...");
-    const packageJson = JSON.parse(readFileSync4(join25(__dirname, "../package.json"), "utf-8"));
+    const packageJson = JSON.parse(readFileSync4(join26(__dirname, "../package.json"), "utf-8"));
     const VERSION2 = packageJson.version;
     startupLog("Starting server", {
       pid: process.pid,

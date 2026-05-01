@@ -24,11 +24,10 @@ AI-powered development workflows with TDD enforcement, planning, and quality tra
 | ADR | `/adr` | Create Architecture Decision Records |
 | Quality | `/quality` | Run comprehensive code quality analysis |
 
-### Agents (8)
+### Agents (7)
 
 | Agent | Description |
 |-------|-------------|
-| `tiny-brain:developer` | TDD workflow specialist for phased development |
 | `tiny-brain:planner` | PRD and feature planning specialist |
 | `tiny-brain:reviewer` | Code review and quality feedback (read-only) |
 | `tiny-brain:architect` | System design, ADRs, and technical decisions |
