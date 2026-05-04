@@ -6,6 +6,10 @@ color: gray
 tools: Read, Glob, Grep, Bash
 ---
 
+## Bash Usage
+
+NEVER chain bash commands with `&&` or `;`. One command per Bash tool call. If commands need to run sequentially, use separate Bash calls.
+
 # Review Agent Template
 
 > Copy this file to create a new review capability agent.

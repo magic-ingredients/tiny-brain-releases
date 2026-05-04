@@ -462,15 +462,15 @@ var init_parseUtil = __esm({
           message: issueData.message
         };
       }
-      let errorMessage = "";
+      let errorMessage7 = "";
       const maps = errorMaps.filter((m) => !!m).slice().reverse();
       for (const map2 of maps) {
-        errorMessage = map2(fullIssue, { data, defaultError: errorMessage }).message;
+        errorMessage7 = map2(fullIssue, { data, defaultError: errorMessage7 }).message;
       }
       return {
         ...issueData,
         path: fullPath,
-        message: errorMessage
+        message: errorMessage7
       };
     };
     EMPTY_PATH = [];
@@ -17530,6 +17530,886 @@ var init_logger_interface = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/logger/console-logger.ts
+function createConsoleLogger(minLevel) {
+  const envLogLevel = process.env.LOG_LEVEL?.toLowerCase();
+  const validLogLevels = [
+    "debug",
+    "info",
+    "notice",
+    "warning",
+    "error",
+    "critical",
+    "alert",
+    "emergency"
+  ];
+  const effectiveLevel = envLogLevel && validLogLevels.includes(envLogLevel) ? envLogLevel : minLevel || "info";
+  return new ConsoleLogger(effectiveLevel);
+}
+var ConsoleLogger;
+var init_console_logger = __esm({
+  "packages/tiny-brain-core/src/logger/console-logger.ts"() {
+    "use strict";
+    ConsoleLogger = class _ConsoleLogger {
+      minLevel;
+      context;
+      mcpNotificationHandler;
+      constructor(minLevel = "info", context) {
+        this.minLevel = minLevel;
+        this.context = context;
+      }
+      setLogLevel(level) {
+        this.minLevel = level;
+      }
+      getLogLevel() {
+        return this.minLevel;
+      }
+      setMcpNotificationHandler(handler) {
+        this.mcpNotificationHandler = handler;
+      }
+      shouldLog(level) {
+        const priorities = {
+          debug: 0,
+          info: 1,
+          notice: 2,
+          warning: 3,
+          error: 4,
+          critical: 5,
+          alert: 6,
+          emergency: 7
+        };
+        return priorities[level] >= priorities[this.minLevel];
+      }
+      log(level, message, data) {
+        if (!this.shouldLog(level)) return;
+        if (this.mcpNotificationHandler) {
+          this.mcpNotificationHandler({
+            jsonrpc: "2.0",
+            method: "notifications/message",
+            params: {
+              level,
+              logger: this.context,
+              data: { message, ...data }
+            }
+          });
+        }
+      }
+      debug(message, data) {
+        this.log("debug", message, data);
+      }
+      info(message, data) {
+        this.log("info", message, data);
+      }
+      notice(message, data) {
+        this.log("notice", message, data);
+      }
+      warn(message, data) {
+        this.log("warning", message, data);
+      }
+      warning(message, data) {
+        this.log("warning", message, data);
+      }
+      error(message, error2) {
+        this.log("error", message, error2);
+      }
+      critical(message, data) {
+        this.log("critical", message, data);
+      }
+      alert(message, data) {
+        this.log("alert", message, data);
+      }
+      emergency(message, data) {
+        this.log("emergency", message, data);
+      }
+      child(context) {
+        const childContext = this.context ? `${this.context}:${context}` : context;
+        const childLogger = new _ConsoleLogger(this.minLevel, childContext);
+        if (this.mcpNotificationHandler) {
+          childLogger.setMcpNotificationHandler(this.mcpNotificationHandler);
+        }
+        return childLogger;
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/logger/file-logger.ts
+import * as fs from "fs";
+import * as path from "path";
+var LOG_LEVELS, FileLogger, ContextualFileLogger;
+var init_file_logger = __esm({
+  "packages/tiny-brain-core/src/logger/file-logger.ts"() {
+    "use strict";
+    LOG_LEVELS = {
+      debug: 0,
+      info: 1,
+      notice: 2,
+      warning: 3,
+      error: 4,
+      critical: 5,
+      alert: 6,
+      emergency: 7
+    };
+    FileLogger = class {
+      config;
+      fileStream;
+      currentFileSize = 0;
+      constructor(config2 = {}) {
+        const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+        const defaultLogPath = path.join(homeDir, ".tiny-brain", "debug.log");
+        this.config = {
+          logFilePath: config2.logFilePath || defaultLogPath,
+          maxFileSize: config2.maxFileSize || 10 * 1024 * 1024,
+          maxRotatedFiles: config2.maxRotatedFiles || 3,
+          appendMode: config2.appendMode !== false,
+          logLevel: config2.logLevel || "debug",
+          enabled: config2.enabled !== false
+        };
+        if (this.config.enabled) {
+          this.initialize();
+        }
+      }
+      setLogLevel(level) {
+        this.config.logLevel = level;
+      }
+      getLogLevel() {
+        return this.config.logLevel;
+      }
+      setMcpNotificationHandler(_handler) {
+      }
+      initialize() {
+        try {
+          const logDir = path.dirname(this.config.logFilePath);
+          if (!fs.existsSync(logDir)) {
+            fs.mkdirSync(logDir, { recursive: true });
+          }
+          if (fs.existsSync(this.config.logFilePath)) {
+            const stats = fs.statSync(this.config.logFilePath);
+            this.currentFileSize = stats.size;
+            if (this.currentFileSize >= this.config.maxFileSize) {
+              this.rotateLogFile();
+              this.currentFileSize = 0;
+            }
+          }
+          this.fileStream = fs.createWriteStream(this.config.logFilePath, {
+            flags: this.config.appendMode ? "a" : "w"
+          });
+          this.writeLog("info", "FileLogger initialized", {
+            logFilePath: this.config.logFilePath,
+            pid: process.pid
+          });
+        } catch {
+        }
+      }
+      rotateLogFile() {
+        try {
+          for (let i = this.config.maxRotatedFiles - 1; i >= 0; i--) {
+            const oldPath = i === 0 ? this.config.logFilePath : `${this.config.logFilePath}.${i}`;
+            const newPath = `${this.config.logFilePath}.${i + 1}`;
+            if (fs.existsSync(oldPath)) {
+              if (i === this.config.maxRotatedFiles - 1) {
+                fs.unlinkSync(oldPath);
+              } else {
+                fs.renameSync(oldPath, newPath);
+              }
+            }
+          }
+        } catch {
+        }
+      }
+      shouldLog(level) {
+        if (!this.config.enabled || !this.fileStream) {
+          return false;
+        }
+        return LOG_LEVELS[level] >= LOG_LEVELS[this.config.logLevel];
+      }
+      writeLog(level, message, data) {
+        if (!this.shouldLog(level)) return;
+        try {
+          const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
+          const logEntry = {
+            timestamp: timestamp2,
+            level: level.toUpperCase(),
+            pid: process.pid,
+            message,
+            ...data && { data }
+          };
+          const logLine = JSON.stringify(logEntry) + "\n";
+          const bytes = Buffer.byteLength(logLine);
+          if (this.currentFileSize + bytes > this.config.maxFileSize) {
+            this.fileStream?.end();
+            this.rotateLogFile();
+            this.currentFileSize = 0;
+            this.fileStream = fs.createWriteStream(this.config.logFilePath, {
+              flags: "a"
+            });
+          }
+          this.fileStream?.write(logLine);
+          this.currentFileSize += bytes;
+        } catch {
+        }
+      }
+      debug(message, data) {
+        this.writeLog("debug", message, data);
+      }
+      info(message, data) {
+        this.writeLog("info", message, data);
+      }
+      notice(message, data) {
+        this.writeLog("notice", message, data);
+      }
+      warn(message, data) {
+        this.writeLog("warning", message, data);
+      }
+      warning(message, data) {
+        this.writeLog("warning", message, data);
+      }
+      error(message, error2) {
+        const errorData = error2 instanceof Error ? {
+          message: error2.message,
+          stack: error2.stack,
+          name: error2.name
+        } : error2;
+        this.writeLog("error", message, errorData);
+      }
+      critical(message, data) {
+        this.writeLog("critical", message, data);
+      }
+      alert(message, data) {
+        this.writeLog("alert", message, data);
+      }
+      emergency(message, data) {
+        this.writeLog("emergency", message, data);
+      }
+      child(context) {
+        return new ContextualFileLogger(this, context);
+      }
+      async close() {
+        return new Promise((resolve3) => {
+          if (this.fileStream) {
+            this.fileStream.end(() => {
+              this.fileStream = void 0;
+              resolve3();
+            });
+          } else {
+            resolve3();
+          }
+        });
+      }
+    };
+    ContextualFileLogger = class {
+      constructor(parent, context) {
+        this.parent = parent;
+        this.context = context;
+      }
+      setLogLevel(level) {
+        this.parent.setLogLevel(level);
+      }
+      getLogLevel() {
+        return this.parent.getLogLevel();
+      }
+      setMcpNotificationHandler(handler) {
+        this.parent.setMcpNotificationHandler(handler);
+      }
+      debug(message, data) {
+        this.parent.debug(`[${this.context}] ${message}`, data);
+      }
+      info(message, data) {
+        this.parent.info(`[${this.context}] ${message}`, data);
+      }
+      notice(message, data) {
+        this.parent.notice(`[${this.context}] ${message}`, data);
+      }
+      warn(message, data) {
+        this.parent.warn(`[${this.context}] ${message}`, data);
+      }
+      warning(message, data) {
+        this.parent.warning(`[${this.context}] ${message}`, data);
+      }
+      error(message, error2) {
+        this.parent.error(`[${this.context}] ${message}`, error2);
+      }
+      critical(message, data) {
+        this.parent.critical(`[${this.context}] ${message}`, data);
+      }
+      alert(message, data) {
+        this.parent.alert(`[${this.context}] ${message}`, data);
+      }
+      emergency(message, data) {
+        this.parent.emergency(`[${this.context}] ${message}`, data);
+      }
+      child(context) {
+        return this.parent.child(`${this.context}:${context}`);
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/storage/storage-path-builder.ts
+import { join as join2 } from "path";
+var LocalStoragePathBuilder;
+var init_storage_path_builder = __esm({
+  "packages/tiny-brain-core/src/storage/storage-path-builder.ts"() {
+    "use strict";
+    LocalStoragePathBuilder = class {
+      basePath;
+      constructor(basePath = "~/.tiny-brain") {
+        this.basePath = basePath.startsWith("~") ? join2(process.env.HOME || process.env.USERPROFILE || "", basePath.slice(1)) : basePath;
+      }
+      buildPersonaPath(personaId, fileName, _userId) {
+        return join2(this.basePath, "personas", personaId, fileName);
+      }
+      buildPersonaDirectoryPath(personaId, _userId) {
+        return join2(this.basePath, "personas", personaId);
+      }
+      buildUserDataPath(key, _userId) {
+        return join2(this.basePath, key);
+      }
+      buildUserBasePath(_userId) {
+        return this.basePath;
+      }
+      extractPersonaId(path38) {
+        const parts = path38.split(/[/\\]/);
+        const personasIndex = parts.findIndex((part) => part === "personas");
+        return personasIndex !== -1 && personasIndex + 1 < parts.length ? parts[personasIndex + 1] : null;
+      }
+      extractUserId(_path) {
+        return null;
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/storage/local-filesystem-adapter.ts
+import { promises as fs2 } from "fs";
+import { dirname as dirname2, join as join3 } from "path";
+var LocalFilesystemStorageAdapter;
+var init_local_filesystem_adapter = __esm({
+  "packages/tiny-brain-core/src/storage/local-filesystem-adapter.ts"() {
+    "use strict";
+    init_storage_path_builder();
+    LocalFilesystemStorageAdapter = class {
+      pathBuilder;
+      autoCreate;
+      personasDir;
+      constructor(config2) {
+        this.pathBuilder = new LocalStoragePathBuilder(config2.baseDir);
+        this.autoCreate = config2.autoCreate ?? true;
+        this.personasDir = this.pathBuilder.buildUserBasePath() + "/personas";
+      }
+      async initializeUserStorage(_userId) {
+        if (!this.autoCreate) return;
+        const basePath = this.pathBuilder.buildUserBasePath();
+        const personasPath = join3(basePath, "personas");
+        await this.ensureDirectoryExists(basePath);
+        await this.ensureDirectoryExists(personasPath);
+      }
+      async storePersonaFile(personaId, fileName, content, _userId) {
+        const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
+        const directory = dirname2(filePath);
+        if (this.autoCreate) {
+          await this.ensureDirectoryExists(directory);
+        }
+        await fs2.writeFile(filePath, content, "utf8");
+      }
+      async getPersonaFile(personaId, fileName, _userId) {
+        const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
+        try {
+          return await fs2.readFile(filePath, "utf8");
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return null;
+          }
+          throw error2;
+        }
+      }
+      async deletePersonaFile(personaId, fileName, _userId) {
+        const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
+        try {
+          await fs2.unlink(filePath);
+        } catch (error2) {
+          if (error2.code !== "ENOENT") {
+            throw error2;
+          }
+        }
+      }
+      async listPersonaFiles(personaId, _userId) {
+        const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
+        try {
+          const getAllFiles = async (dir, basePath = "") => {
+            const entries = await fs2.readdir(dir, { withFileTypes: true });
+            const files = [];
+            for (const entry of entries) {
+              const fullPath = join3(dir, entry.name);
+              const relativePath = basePath ? join3(basePath, entry.name) : entry.name;
+              if (entry.isDirectory()) {
+                const subFiles = await getAllFiles(fullPath, relativePath);
+                files.push(...subFiles);
+              } else if (entry.isFile()) {
+                files.push(relativePath);
+              }
+            }
+            return files;
+          };
+          const allFiles = await getAllFiles(personaDir);
+          return allFiles;
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return [];
+          }
+          throw error2;
+        }
+      }
+      async listPersonas(_userId) {
+        const personasDir = join3(this.pathBuilder.buildUserBasePath(), "personas");
+        try {
+          const directories = await fs2.readdir(personasDir);
+          const dirStats = await Promise.all(
+            directories.map(async (dir) => {
+              const dirPath = join3(personasDir, dir);
+              const stat3 = await fs2.stat(dirPath);
+              return { name: dir, isDirectory: stat3.isDirectory() };
+            })
+          );
+          return dirStats.filter(({ isDirectory }) => isDirectory).map(({ name }) => name);
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return [];
+          }
+          throw error2;
+        }
+      }
+      async deletePersona(personaId, _userId) {
+        const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
+        try {
+          await fs2.rm(personaDir, { recursive: true, force: true });
+        } catch (error2) {
+          if (error2.code !== "ENOENT") {
+            throw error2;
+          }
+        }
+      }
+      async createPersonaDirectories(personaId, _userId) {
+        if (!this.autoCreate) {
+          return;
+        }
+        const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
+        await this.ensureDirectoryExists(personaDir);
+      }
+      async storeUserData(key, content, _userId) {
+        const filePath = this.pathBuilder.buildUserDataPath(key);
+        const directory = dirname2(filePath);
+        if (this.autoCreate) {
+          await this.ensureDirectoryExists(directory);
+        }
+        await fs2.writeFile(filePath, content, "utf8");
+      }
+      async getUserData(key, _userId) {
+        const filePath = this.pathBuilder.buildUserDataPath(key);
+        try {
+          return await fs2.readFile(filePath, "utf8");
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return null;
+          }
+          throw error2;
+        }
+      }
+      async deleteUserData(key, _userId) {
+        const filePath = this.pathBuilder.buildUserDataPath(key);
+        try {
+          await fs2.unlink(filePath);
+        } catch (error2) {
+          if (error2.code !== "ENOENT") {
+            throw error2;
+          }
+        }
+      }
+      async isAvailable() {
+        try {
+          const basePath = this.pathBuilder.buildUserBasePath();
+          if (this.autoCreate) {
+            await this.ensureDirectoryExists(basePath);
+          }
+          await fs2.access(basePath, fs2.constants.R_OK | fs2.constants.W_OK);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      async renamePersona(oldPersonaId, newPersonaId, _userId) {
+        const oldPath = dirname2(this.pathBuilder.buildPersonaPath(oldPersonaId, ""));
+        const newPath = dirname2(this.pathBuilder.buildPersonaPath(newPersonaId, ""));
+        try {
+          await fs2.access(oldPath);
+        } catch {
+          throw new Error(`Persona '${oldPersonaId}' does not exist`);
+        }
+        try {
+          await fs2.access(newPath);
+          throw new Error(`Persona '${newPersonaId}' already exists`);
+        } catch {
+        }
+        await fs2.rename(oldPath, newPath);
+        const profilePath = join3(newPath, "profile.md");
+        try {
+          const profileContent = await fs2.readFile(profilePath, "utf-8");
+          const lines = profileContent.split("\n");
+          if (lines[0].startsWith("#")) {
+            lines[0] = `# ${newPersonaId}`;
+            await fs2.writeFile(profilePath, lines.join("\n"), "utf-8");
+          }
+        } catch {
+        }
+        const metadataPath = join3(newPath, "metadata.json");
+        try {
+          const metadataContent = await fs2.readFile(metadataPath, "utf-8");
+          const metadata = JSON.parse(metadataContent);
+          metadata.name = newPersonaId;
+          metadata.lastRenamed = (/* @__PURE__ */ new Date()).toISOString();
+          await fs2.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
+        } catch {
+        }
+      }
+      getDeploymentInfo() {
+        return {
+          mode: "local",
+          supportsMultiUser: false,
+          basePath: this.pathBuilder.buildUserBasePath()
+        };
+      }
+      /**
+       * Ensure directory exists, creating it if necessary
+       */
+      async ensureDirectoryExists(dirPath) {
+        try {
+          await fs2.mkdir(dirPath, { recursive: true });
+        } catch (error2) {
+          if (error2.code !== "EEXIST") {
+            throw error2;
+          }
+        }
+      }
+      /**
+       * Get the base path for debugging/info purposes
+       */
+      getBasePath() {
+        return this.pathBuilder.buildUserBasePath();
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/storage/platform-path-builder.ts
+import * as os from "os";
+import * as path2 from "path";
+var PlatformPathBuilder;
+var init_platform_path_builder = __esm({
+  "packages/tiny-brain-core/src/storage/platform-path-builder.ts"() {
+    "use strict";
+    PlatformPathBuilder = class {
+      /**
+       * Get Claude Code MCP configuration file path
+       */
+      getClaudeCodeConfig(scope = "local") {
+        switch (scope) {
+          case "project":
+            return ".mcp.json";
+          case "user":
+            return path2.join(os.homedir(), ".config", "claude", "mcp.json");
+          case "local":
+          default:
+            return ".mcp.json";
+        }
+      }
+      /**
+       * Get Claude Desktop configuration file path (OS-specific)
+       */
+      getClaudeDesktopConfig() {
+        const platform2 = os.platform();
+        switch (platform2) {
+          case "darwin":
+            return path2.join(
+              os.homedir(),
+              "Library",
+              "Application Support",
+              "Claude",
+              "claude_desktop_config.json"
+            );
+          case "win32": {
+            const appData = process.env.APPDATA || path2.join(os.homedir(), "AppData", "Roaming");
+            return path2.join(appData, "Claude", "claude_desktop_config.json");
+          }
+          default:
+            return path2.join(os.homedir(), ".config", "Claude", "claude_desktop_config.json");
+        }
+      }
+      /**
+       * Get Cursor IDE configuration file path
+       */
+      getCursorConfig() {
+        return path2.join(os.homedir(), ".cursor", "mcp", "config.json");
+      }
+      /**
+       * Get ChatGPT Desktop configuration file path
+       */
+      getChatGPTConfig() {
+        const platform2 = os.platform();
+        switch (platform2) {
+          case "darwin":
+            return path2.join(os.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
+          case "win32": {
+            const appData = process.env.APPDATA || path2.join(os.homedir(), "AppData", "Roaming");
+            return path2.join(appData, "ChatGPT", "config.json");
+          }
+          default:
+            return path2.join(os.homedir(), ".config", "ChatGPT", "config.json");
+        }
+      }
+      /**
+       * Get platform-specific configuration path
+       */
+      getConfigPath(platform2, scope) {
+        switch (platform2.toLowerCase()) {
+          case "claude-code":
+            return this.getClaudeCodeConfig(scope);
+          case "claude-desktop":
+            return this.getClaudeDesktopConfig();
+          case "cursor":
+            return this.getCursorConfig();
+          case "chatgpt":
+            return this.getChatGPTConfig();
+          default:
+            throw new Error(`Unknown platform: ${platform2}`);
+        }
+      }
+      /**
+       * Normalize path for the current platform
+       */
+      normalizePathForPlatform(filePath) {
+        if (os.platform() === "win32") {
+          return filePath.replace(/\//g, "\\");
+        }
+        return filePath;
+      }
+      /**
+       * Get backup directory for platform configs
+       */
+      getBackupDirectory() {
+        return path2.join(os.homedir(), ".tiny-brain", "backups");
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/utils/repo-utils.ts
+import { execSync } from "child_process";
+import { existsSync as existsSync2 } from "fs";
+import { join as join5, dirname as dirname3 } from "path";
+import { fileURLToPath } from "url";
+function findRepoRoot(startPath) {
+  const cwd = startPath || process.cwd();
+  try {
+    const gitRoot = execSync("git rev-parse --show-toplevel", {
+      cwd,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "ignore"]
+      // Ignore stderr
+    }).trim();
+    if (gitRoot && existsSync2(gitRoot)) {
+      return gitRoot;
+    }
+  } catch {
+  }
+  let currentPath = cwd;
+  while (currentPath !== dirname3(currentPath)) {
+    if (existsSync2(join5(currentPath, ".git"))) {
+      return currentPath;
+    }
+    currentPath = dirname3(currentPath);
+  }
+  console.warn("No git repository found, using current directory:", cwd);
+  return cwd;
+}
+function getRepoRoot() {
+  if (!cachedRepoRoot) {
+    const thisFileDir = dirname3(fileURLToPath(import.meta.url));
+    cachedRepoRoot = findRepoRoot(thisFileDir);
+  }
+  return cachedRepoRoot;
+}
+var cachedRepoRoot;
+var init_repo_utils = __esm({
+  "packages/tiny-brain-core/src/utils/repo-utils.ts"() {
+    "use strict";
+    cachedRepoRoot = null;
+  }
+});
+
+// packages/tiny-brain-core/src/storage/platform-config-adapter.ts
+import { promises as fs3, existsSync as existsSync3 } from "fs";
+import * as path3 from "path";
+var PlatformConfigAdapter;
+var init_platform_config_adapter = __esm({
+  "packages/tiny-brain-core/src/storage/platform-config-adapter.ts"() {
+    "use strict";
+    init_local_filesystem_adapter();
+    init_platform_path_builder();
+    init_repo_utils();
+    PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystemStorageAdapter {
+      platformPathBuilder;
+      constructor(config2) {
+        super(config2);
+        this.platformPathBuilder = new PlatformPathBuilder();
+      }
+      /**
+       * Read platform-specific configuration file
+       */
+      async readPlatformConfig(platform2, scope) {
+        try {
+          const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
+          const content = await fs3.readFile(configPath, "utf-8");
+          return JSON.parse(content);
+        } catch (error2) {
+          const err = error2;
+          if (err.code === "ENOENT") {
+            return {};
+          }
+          throw error2;
+        }
+      }
+      /**
+       * Write platform-specific configuration file
+       */
+      async writePlatformConfig(platform2, config2, scope) {
+        const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
+        const directory = path3.dirname(configPath);
+        await fs3.mkdir(directory, { recursive: true });
+        await fs3.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
+      }
+      /**
+       * Backup platform configuration
+       */
+      async backupPlatformConfig(platform2, scope) {
+        try {
+          const config2 = await this.readPlatformConfig(platform2, scope);
+          if (Object.keys(config2).length === 0) {
+            return null;
+          }
+          const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/:/g, "-").replace(/\./g, "-");
+          const backupDir = this.platformPathBuilder.getBackupDirectory();
+          const backupFile = `${platform2}-${timestamp2}.backup`;
+          const backupPath = path3.join(backupDir, backupFile);
+          await fs3.mkdir(backupDir, { recursive: true });
+          await fs3.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
+          return timestamp2;
+        } catch (error2) {
+          const err = error2;
+          if (err.code === "ENOENT") {
+            return null;
+          }
+          throw error2;
+        }
+      }
+      /**
+       * Restore platform configuration from backup
+       */
+      async restorePlatformConfig(platform2, backupId, scope) {
+        const backupDir = this.platformPathBuilder.getBackupDirectory();
+        const backupFile = `${platform2}-${backupId}.backup`;
+        const backupPath = path3.join(backupDir, backupFile);
+        const backupContent = await fs3.readFile(backupPath, "utf-8");
+        const config2 = JSON.parse(backupContent);
+        await this.writePlatformConfig(platform2, config2, scope);
+      }
+      /**
+       * Add or update an MCP server in platform configuration
+       */
+      async addMCPServer(platform2, serverName, serverConfig, scope) {
+        const config2 = await this.readPlatformConfig(platform2, scope);
+        if (platform2 === "claude-desktop") {
+          config2.mcpServers = config2.mcpServers || {};
+          config2.mcpServers[serverName] = serverConfig;
+        } else if (platform2 === "claude-code") {
+          config2.servers = config2.servers || {};
+          config2.servers[serverName] = serverConfig;
+        } else {
+          config2.servers = config2.servers || {};
+          config2.servers[serverName] = serverConfig;
+        }
+        await this.writePlatformConfig(platform2, config2, scope);
+      }
+      /**
+       * Remove an MCP server from platform configuration
+       */
+      async removeMCPServer(platform2, serverName, scope) {
+        const config2 = await this.readPlatformConfig(platform2, scope);
+        if (platform2 === "claude-desktop" && config2.mcpServers) {
+          delete config2.mcpServers[serverName];
+        } else if (config2.servers) {
+          delete config2.servers[serverName];
+        }
+        await this.writePlatformConfig(platform2, config2, scope);
+      }
+      /**
+       * Check if an MCP server is configured
+       */
+      async isMCPServerConfigured(platform2, serverName, scope) {
+        const config2 = await this.readPlatformConfig(platform2, scope);
+        if (platform2 === "claude-desktop") {
+          return !!(config2.mcpServers && config2.mcpServers[serverName]);
+        }
+        return !!(config2.servers && config2.servers[serverName]);
+      }
+      /**
+       * Get the repository context file path for the current platform
+       * This is where repo-specific information is stored (tech stack, conventions, etc.)
+       */
+      static getRepoContextFile() {
+        const platform2 = _PlatformConfigAdapter.detectPlatform();
+        const repoRoot = getRepoRoot();
+        switch (platform2) {
+          case "claude-code":
+            return path3.join(repoRoot, "CLAUDE.md");
+          case "cursor":
+            return path3.join(repoRoot, ".cursorrules");
+          case "vscode":
+            return path3.join(repoRoot, ".vscode", "context.md");
+          case "windsurf":
+            return path3.join(repoRoot, ".windsurfrules");
+          default:
+            return path3.join(repoRoot, ".claude", "CLAUDE.md");
+        }
+      }
+      /**
+       * Detect the current platform based on environment variables
+       */
+      static detectPlatform() {
+        if (process.env.CLAUDE_CODE || process.env.MCP_SERVER) {
+          return "claude-code";
+        }
+        if (process.env.CURSOR_IDE) {
+          return "cursor";
+        }
+        if (process.env.VSCODE) {
+          return "vscode";
+        }
+        if (process.env.WINDSURF) {
+          return "windsurf";
+        }
+        const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+        if (existsSync3(path3.join(homeDir, ".claude-code"))) {
+          return "claude-code";
+        }
+        if (existsSync3(path3.join(homeDir, "Library", "Application Support", "Claude"))) {
+          return "claude-desktop";
+        }
+        return "unknown";
+      }
+    };
+  }
+});
+
 // packages/tiny-brain-core/src/services/base-service.ts
 var BaseService;
 var init_base_service = __esm({
@@ -18557,6 +19437,301 @@ ${libraryPersona.profile}
           this.userId
         );
         return localName;
+      }
+      /**
+       * Add a USER block to a persona-like object whose `systemBlock` is
+       * the raw library profile. Used by the `library:` import flow before
+       * `create()` writes the profile to storage.
+       *
+       * The USER block is inserted after `<!-- SYSTEM-BLOCK-END -->` if the
+       * library profile contains the marker; otherwise it's appended.
+       * Mutates nothing — returns a new object.
+       */
+      addUserBlock(persona, localName) {
+        if (!persona.systemBlock) {
+          throw new Error("systemBlock is required but was undefined");
+        }
+        return {
+          ...persona,
+          systemBlock: this.addUserBlockToProfile(persona.systemBlock, localName)
+        };
+      }
+      /**
+       * Inject a USER block into raw profile markdown, immediately after
+       * `<!-- SYSTEM-BLOCK-END -->` if present, otherwise appended.
+       */
+      addUserBlockToProfile(profileContent, personaName) {
+        if (!profileContent) {
+          throw new Error("profileContent is required but was undefined");
+        }
+        const systemBlockEnd = "<!-- SYSTEM-BLOCK-END -->";
+        const systemEndIndex = profileContent.indexOf(systemBlockEnd);
+        const now = (/* @__PURE__ */ new Date()).toISOString();
+        const userBlock = `
+
+<!-- USER-BLOCK-START -->
+## User Metadata
+- Created: ${now}
+- Modified: ${now}
+- Source: Library (${personaName})
+
+## User Rules
+<!-- User can add custom rules here -->
+
+## User Details
+<!-- User can add custom details here -->
+<!-- USER-BLOCK-END -->`;
+        if (systemEndIndex === -1) {
+          return profileContent + userBlock;
+        }
+        const insertPoint = systemEndIndex + systemBlockEnd.length;
+        return profileContent.substring(0, insertPoint) + userBlock + profileContent.substring(insertPoint);
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/persona/persona-enhancer.ts
+var PersonaEnhancer;
+var init_persona_enhancer = __esm({
+  "packages/tiny-brain-core/src/services/persona/persona-enhancer.ts"() {
+    "use strict";
+    PersonaEnhancer = class {
+      /**
+       * Enhance a persona profile with agent usage instructions
+       */
+      static enhanceProfile(baseProfile, options) {
+        const { installedAgents } = options;
+        if (installedAgents.length === 0) {
+          return baseProfile;
+        }
+        const instructions = this.generateAgentInstructions(options);
+        if (baseProfile.includes("## Agent Usage") || baseProfile.includes("## User Agent Instructions")) {
+          return baseProfile;
+        }
+        const userBlockStart = "<!-- USER-BLOCK-START -->";
+        const userRulesPattern = /## User Rules[\s\S]*?(?=##|<!-- USER-BLOCK-END -->)/;
+        const userBlockIndex = baseProfile.indexOf(userBlockStart);
+        if (userBlockIndex !== -1) {
+          const afterUserBlock = baseProfile.substring(userBlockIndex);
+          const userRulesMatch = afterUserBlock.match(userRulesPattern);
+          if (userRulesMatch) {
+            const insertPoint = userBlockIndex + (userRulesMatch.index ?? 0) + userRulesMatch[0].length;
+            const before = baseProfile.substring(0, insertPoint);
+            const after = baseProfile.substring(insertPoint);
+            return `${before}
+${instructions}
+${after}`;
+          } else {
+            const insertPoint = userBlockIndex + userBlockStart.length;
+            const before = baseProfile.substring(0, insertPoint);
+            const after = baseProfile.substring(insertPoint);
+            return `${before}
+
+${instructions}${after}`;
+          }
+        } else {
+          const systemBlockEnd = "<!-- SYSTEM-BLOCK-END -->";
+          const systemEndIndex = baseProfile.indexOf(systemBlockEnd);
+          if (systemEndIndex !== -1) {
+            const insertPoint = systemEndIndex + systemBlockEnd.length;
+            const before = baseProfile.substring(0, insertPoint);
+            const after = baseProfile.substring(insertPoint);
+            const newUserBlock = `
+
+<!-- USER-BLOCK-START -->
+${instructions}
+<!-- USER-BLOCK-END -->`;
+            return `${before}${newUserBlock}${after}`;
+          } else {
+            return `${baseProfile}
+
+<!-- USER-BLOCK-START -->
+${instructions}
+<!-- USER-BLOCK-END -->`;
+          }
+        }
+      }
+      /**
+       * Generate agent usage instructions based on persona type and installed agents
+       */
+      static generateAgentInstructions(options) {
+        const { installedAgents, personaName, personaType } = options;
+        let instructions = `## User Agent Instructions
+
+You have specialized agents available for this repository. Use them as follows:
+
+`;
+        const agentsByCategory = this.groupAgentsByCategory(installedAgents);
+        if (personaType === "tester" || personaName.toLowerCase().includes("test") || personaName.toLowerCase() === "qa") {
+          instructions += this.generateTesterInstructions(agentsByCategory);
+        } else if (personaType === "developer" || personaName.toLowerCase().includes("dev")) {
+          instructions += this.generateDeveloperInstructions(agentsByCategory);
+        } else {
+          instructions += this.generateGenericInstructions(agentsByCategory);
+        }
+        instructions += `
+### Installed Agents for this Repository
+`;
+        installedAgents.forEach((agent) => {
+          instructions += `- ${agent.id} (${agent.description})
+`;
+        });
+        return instructions;
+      }
+      /**
+       * Group agents by their category/purpose
+       */
+      static groupAgentsByCategory(agents) {
+        const groups = /* @__PURE__ */ new Map();
+        agents.forEach((agent) => {
+          let category = "general";
+          if (agent.id.includes("test") || agent.description.toLowerCase().includes("test")) {
+            category = "testing";
+          } else if (agent.id.includes("analys") || agent.id.includes("analyze")) {
+            category = "analysis";
+          } else if (agent.id.includes("refactor")) {
+            category = "refactoring";
+          } else if (agent.id.includes("review")) {
+            category = "review";
+          } else if (agent.id.includes("strateg")) {
+            category = "planning";
+          }
+          if (!groups.has(category)) {
+            groups.set(category, []);
+          }
+          const categoryAgents = groups.get(category);
+          if (categoryAgents) {
+            categoryAgents.push(agent);
+          }
+        });
+        return groups;
+      }
+      /**
+       * Generate instructions for tester personas
+       */
+      static generateTesterInstructions(agentsByCategory) {
+        let instructions = "";
+        const testingAgents = agentsByCategory.get("testing") || [];
+        testingAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, this.getTestingUseCases(agent));
+        });
+        const analysisAgents = agentsByCategory.get("analysis") || [];
+        analysisAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, [
+            "Understanding code structure before testing",
+            "Identifying test requirements",
+            "Finding edge cases and dependencies"
+          ]);
+        });
+        const planningAgents = agentsByCategory.get("planning") || [];
+        planningAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, [
+            "Creating comprehensive test plans",
+            "Prioritizing test scenarios",
+            "Defining coverage goals"
+          ]);
+        });
+        instructions += `
+### Testing Workflow
+1. **Analyze**: Use analysis agents to understand the code
+2. **Plan**: Use strategy agents to plan comprehensive coverage  
+3. **Execute**: Use testing agents to write and run tests
+4. **Iterate**: Refine tests based on results
+
+`;
+        return instructions;
+      }
+      /**
+       * Generate instructions for developer personas
+       */
+      static generateDeveloperInstructions(agentsByCategory) {
+        let instructions = "";
+        const analysisAgents = agentsByCategory.get("analysis") || [];
+        analysisAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, [
+            "Understanding existing code before changes",
+            "Finding dependencies and impacts",
+            "Identifying refactoring opportunities"
+          ]);
+        });
+        const refactoringAgents = agentsByCategory.get("refactoring") || [];
+        refactoringAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, [
+            "Improving code structure",
+            "Extracting reusable components",
+            "Optimizing performance"
+          ]);
+        });
+        const testingAgents = agentsByCategory.get("testing") || [];
+        if (testingAgents.length > 0) {
+          instructions += `
+### Testing Your Code
+`;
+          testingAgents.forEach((agent) => {
+            instructions += this.formatAgentSection(agent, [
+              "Writing tests for new features",
+              "Ensuring code quality"
+            ]);
+          });
+        }
+        return instructions;
+      }
+      /**
+       * Generate generic instructions for other personas
+       */
+      static generateGenericInstructions(agentsByCategory) {
+        let instructions = "";
+        agentsByCategory.forEach((agents) => {
+          agents.forEach((agent) => {
+            instructions += this.formatAgentSection(agent);
+          });
+        });
+        return instructions;
+      }
+      /**
+       * Format a single agent section
+       */
+      static formatAgentSection(agent, useCases) {
+        let section = `### ${agent.name || agent.id}
+`;
+        section += `${agent.description}
+`;
+        section += "```json\n";
+        section += JSON.stringify({
+          subagent_type: agent.id,
+          prompt: "[specific task description]",
+          description: agent.id.split("-").slice(0, 2).join(" ")
+        }, null, 2);
+        section += "\n```\n";
+        if (useCases && useCases.length > 0) {
+          section += `Best for: ${useCases.join(", ")}
+`;
+        }
+        if (agent.capabilities && agent.capabilities.length > 0) {
+          section += `Capabilities: ${agent.capabilities.slice(0, 3).join(", ")}
+`;
+        }
+        section += "\n";
+        return section;
+      }
+      /**
+       * Get testing-specific use cases based on agent ID
+       */
+      static getTestingUseCases(agent) {
+        const id = agent.id.toLowerCase();
+        if (id.includes("react")) {
+          return ["Component testing", "User interactions", "State management", "Hooks testing"];
+        } else if (id.includes("jest")) {
+          return ["Unit tests", "Mocking", "Snapshot tests", "Async testing"];
+        } else if (id.includes("typescript")) {
+          return ["Type safety", "Interface testing", "Generic testing"];
+        } else if (id.includes("e2e") || id.includes("cypress") || id.includes("playwright")) {
+          return ["End-to-end flows", "User journeys", "Cross-browser testing"];
+        } else if (id.includes("api")) {
+          return ["API endpoints", "Request/response validation", "Error handling"];
+        }
+        return ["General testing"];
       }
     };
   }
@@ -20234,7 +21409,7 @@ var init_user_preferences_schema = __esm({
 
 // packages/tiny-brain-core/src/services/config/config-service.ts
 import { readFile } from "fs/promises";
-import { join } from "path";
+import { join as join7 } from "path";
 var CONFIG_VERSION, PREFERENCES_CONFIG_PATH, REPO_CONFIG_PATH, PIPELINE_KEYS, PREFERENCE_KEYS, ConfigService;
 var init_config_service = __esm({
   "packages/tiny-brain-core/src/services/config/config-service.ts"() {
@@ -20620,7 +21795,7 @@ var init_config_service = __esm({
         const errors = [];
         if (this.context.repositoryRoot) {
           try {
-            const configPath = join(this.context.repositoryRoot, REPO_CONFIG_PATH);
+            const configPath = join7(this.context.repositoryRoot, REPO_CONFIG_PATH);
             const data = await readFile(configPath, "utf-8");
             let parsed;
             try {
@@ -20703,7 +21878,7 @@ var init_config_service = __esm({
           return {};
         }
         try {
-          const configPath = join(this.context.repositoryRoot, REPO_CONFIG_PATH);
+          const configPath = join7(this.context.repositoryRoot, REPO_CONFIG_PATH);
           const data = await readFile(configPath, "utf-8");
           const parsed = JSON.parse(data);
           const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
@@ -20774,8 +21949,8 @@ var init_config_service = __esm({
           throw new Error("Cannot save repo config: not in a repository");
         }
         const { writeFile: writeFile6, mkdir: mkdir4 } = await import("fs/promises");
-        const configPath = join(this.context.repositoryRoot, REPO_CONFIG_PATH);
-        const configDir = join(this.context.repositoryRoot, ".tiny-brain");
+        const configPath = join7(this.context.repositoryRoot, REPO_CONFIG_PATH);
+        const configDir = join7(this.context.repositoryRoot, ".tiny-brain");
         const existing = await this.loadRepoConfig();
         const merged = {
           ...existing,
@@ -21846,7 +23021,7 @@ var init_escape = __esm({
 });
 
 // node_modules/minimatch/dist/esm/index.js
-var minimatch, starDotExtRE, starDotExtTest, starDotExtTestDot, starDotExtTestNocase, starDotExtTestNocaseDot, starDotStarRE, starDotStarTest, starDotStarTestDot, dotStarRE, dotStarTest, starRE, starTest, starTestDot, qmarksRE, qmarksTestNocase, qmarksTestNocaseDot, qmarksTestDot, qmarksTest, qmarksTestNoExt, qmarksTestNoExtDot, defaultPlatform, path, sep, GLOBSTAR, qmark2, star2, twoStarDot, twoStarNoDot, filter, ext, defaults, braceExpand, makeRe, match, globMagic, regExpEscape2, Minimatch;
+var minimatch, starDotExtRE, starDotExtTest, starDotExtTestDot, starDotExtTestNocase, starDotExtTestNocaseDot, starDotStarRE, starDotStarTest, starDotStarTestDot, dotStarRE, dotStarTest, starRE, starTest, starTestDot, qmarksRE, qmarksTestNocase, qmarksTestNocaseDot, qmarksTestDot, qmarksTest, qmarksTestNoExt, qmarksTestNoExtDot, defaultPlatform, path4, sep, GLOBSTAR, qmark2, star2, twoStarDot, twoStarNoDot, filter, ext, defaults, braceExpand, makeRe, match, globMagic, regExpEscape2, Minimatch;
 var init_esm3 = __esm({
   "node_modules/minimatch/dist/esm/index.js"() {
     init_esm2();
@@ -21915,11 +23090,11 @@ var init_esm3 = __esm({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    path = {
+    path4 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    sep = defaultPlatform === "win32" ? path.win32.sep : path.posix.sep;
+    sep = defaultPlatform === "win32" ? path4.win32.sep : path4.posix.sep;
     minimatch.sep = sep;
     GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     minimatch.GLOBSTAR = GLOBSTAR;
@@ -24930,7 +26105,7 @@ var init_esm5 = __esm({
 
 // node_modules/path-scurry/dist/esm/index.js
 import { posix, win32 } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 import { lstatSync, readdir as readdirCB, readdirSync, readlinkSync, realpathSync as rps } from "fs";
 import * as actualFS from "node:fs";
 import { lstat, readdir, readlink, realpath } from "node:fs/promises";
@@ -26058,7 +27233,7 @@ var init_esm6 = __esm({
       constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs34 = defaultFS } = {}) {
         this.#fs = fsFromOption(fs34);
         if (cwd instanceof URL || cwd.startsWith("file://")) {
-          cwd = fileURLToPath(cwd);
+          cwd = fileURLToPath2(cwd);
         }
         const cwdPath = pathImpl.resolve(cwd);
         this.roots = /* @__PURE__ */ Object.create(null);
@@ -27492,7 +28667,7 @@ var init_walker = __esm({
 });
 
 // node_modules/glob/dist/esm/glob.js
-import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
 var defaultPlatform3, Glob;
 var init_glob = __esm({
   "node_modules/glob/dist/esm/glob.js"() {
@@ -27560,7 +28735,7 @@ var init_glob = __esm({
         if (!opts.cwd) {
           this.cwd = "";
         } else if (opts.cwd instanceof URL || opts.cwd.startsWith("file://")) {
-          opts.cwd = fileURLToPath2(opts.cwd);
+          opts.cwd = fileURLToPath3(opts.cwd);
         }
         this.cwd = opts.cwd || "";
         this.root = opts.root;
@@ -30429,8 +31604,8 @@ var init_status_derivation = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/planning-service.ts
-import { promises as fs } from "fs";
-import path2 from "path";
+import { promises as fs4 } from "fs";
+import path5 from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 function formatTitle(planName) {
@@ -30706,11 +31881,11 @@ var init_planning_service = __esm({
             this.log("debug", `Found ${prdDirs.length} PRD directories in repo`);
             const repoRoot = repoPathOverride || await this.findRepositoryRoot();
             for (const prdDir of prdDirs) {
-              const prdId = path2.basename(prdDir);
-              const progressPath = path2.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
+              const prdId = path5.basename(prdDir);
+              const progressPath = path5.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
               try {
-                await fs.access(progressPath);
-                const content = await fs.readFile(progressPath, "utf-8");
+                await fs4.access(progressPath);
+                const content = await fs4.readFile(progressPath, "utf-8");
                 const plan = JSON.parse(content);
                 if (type2 && plan.type !== type2) {
                   continue;
@@ -30854,7 +32029,7 @@ var init_planning_service = __esm({
        * Legacy location: docs/prd/{prdId}/progress.json
        */
       getProgressPath(repoRoot, prdId) {
-        return path2.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
+        return path5.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
       }
       /**
        * Save plan to repository storage only (repo-scoped plans)
@@ -30866,9 +32041,9 @@ var init_planning_service = __esm({
         try {
           const repoRoot = await this.findRepositoryRoot();
           const progressPath = this.getProgressPath(repoRoot, plan.prdId);
-          const progressDir = path2.dirname(progressPath);
-          await fs.mkdir(progressDir, { recursive: true });
-          await fs.writeFile(progressPath, JSON.stringify(plan, null, 2), "utf-8");
+          const progressDir = path5.dirname(progressPath);
+          await fs4.mkdir(progressDir, { recursive: true });
+          await fs4.writeFile(progressPath, JSON.stringify(plan, null, 2), "utf-8");
           this.log("debug", `Saved plan: ${plan.id} to ${progressPath}`);
           const event = {
             eventType: "prd:created",
@@ -30892,8 +32067,8 @@ var init_planning_service = __esm({
           const repoRoot = await this.findRepositoryRoot();
           const newProgressPath = this.getProgressPath(repoRoot, planId);
           try {
-            await fs.access(newProgressPath);
-            const content = await fs.readFile(newProgressPath, "utf-8");
+            await fs4.access(newProgressPath);
+            const content = await fs4.readFile(newProgressPath, "utf-8");
             const plan = JSON.parse(content);
             this.log("debug", `Successfully loaded plan: ${planId} from ${newProgressPath}`);
             return plan;
@@ -30901,16 +32076,16 @@ var init_planning_service = __esm({
           }
           const prdDirs = await this.getPRDDirectories();
           for (const prdDir of prdDirs) {
-            const legacyPath = path2.join(prdDir, "progress.json");
+            const legacyPath = path5.join(prdDir, "progress.json");
             try {
-              await fs.access(legacyPath);
-              const content = await fs.readFile(legacyPath, "utf-8");
+              await fs4.access(legacyPath);
+              const content = await fs4.readFile(legacyPath, "utf-8");
               const plan = JSON.parse(content);
               if (plan.id === planId) {
                 this.log("info", `Found plan in legacy location, migrating to ${newProgressPath}`);
-                const progressDir = path2.dirname(newProgressPath);
-                await fs.mkdir(progressDir, { recursive: true });
-                await fs.writeFile(newProgressPath, JSON.stringify(plan, null, 2), "utf-8");
+                const progressDir = path5.dirname(newProgressPath);
+                await fs4.mkdir(progressDir, { recursive: true });
+                await fs4.writeFile(newProgressPath, JSON.stringify(plan, null, 2), "utf-8");
                 this.log("debug", `Successfully migrated and loaded plan: ${planId}`);
                 return plan;
               }
@@ -30957,17 +32132,17 @@ var init_planning_service = __esm({
       async createPRDMarkdown(prdPath, frontmatter, content) {
         try {
           const repoRoot = process.cwd();
-          const fullPrdPath = path2.join(repoRoot, prdPath);
-          await fs.mkdir(fullPrdPath, { recursive: true });
-          await fs.mkdir(path2.join(fullPrdPath, "features"), { recursive: true });
+          const fullPrdPath = path5.join(repoRoot, prdPath);
+          await fs4.mkdir(fullPrdPath, { recursive: true });
+          await fs4.mkdir(path5.join(fullPrdPath, "features"), { recursive: true });
           const prdMarkdown = generatePRD({
             frontmatter,
             ...content,
             features: []
             // Initially empty
           });
-          const prdFilePath = path2.join(fullPrdPath, "prd.md");
-          await fs.writeFile(prdFilePath, prdMarkdown, "utf-8");
+          const prdFilePath = path5.join(fullPrdPath, "prd.md");
+          await fs4.writeFile(prdFilePath, prdMarkdown, "utf-8");
           this.log("info", `Created PRD markdown at ${prdFilePath}`);
           return prdFilePath;
         } catch (error2) {
@@ -30983,12 +32158,12 @@ var init_planning_service = __esm({
        */
       async createPRDStructure(planName) {
         const repoRoot = process.cwd();
-        const prdPath = path2.join("docs", "prd", planName);
-        const fullPrdPath = path2.join(repoRoot, prdPath);
-        const featuresPath = path2.join(fullPrdPath, "features");
+        const prdPath = path5.join("docs", "prd", planName);
+        const fullPrdPath = path5.join(repoRoot, prdPath);
+        const featuresPath = path5.join(fullPrdPath, "features");
         try {
-          await fs.mkdir(fullPrdPath, { recursive: true });
-          await fs.mkdir(featuresPath, { recursive: true });
+          await fs4.mkdir(fullPrdPath, { recursive: true });
+          await fs4.mkdir(featuresPath, { recursive: true });
           this.log("info", `Created PRD structure at ${prdPath}`);
           return prdPath;
         } catch (error2) {
@@ -31010,10 +32185,10 @@ var init_planning_service = __esm({
        */
       async writePRDFile(planName, planDetails) {
         const repoRoot = process.cwd();
-        const prdFilePath = path2.join(repoRoot, "docs", "prd", planName, "prd.md");
+        const prdFilePath = path5.join(repoRoot, "docs", "prd", planName, "prd.md");
         try {
-          const prdDir = path2.dirname(prdFilePath);
-          await fs.mkdir(prdDir, { recursive: true });
+          const prdDir = path5.dirname(prdFilePath);
+          await fs4.mkdir(prdDir, { recursive: true });
           const title = formatTitle(planName);
           const createdDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
           const frontmatter = [
@@ -31028,7 +32203,7 @@ var init_planning_service = __esm({
             // This creates the double newline after ---
           ].join("\n");
           const content = frontmatter + planDetails;
-          await fs.writeFile(prdFilePath, content, "utf-8");
+          await fs4.writeFile(prdFilePath, content, "utf-8");
           this.log("info", `Created PRD file at ${prdFilePath}`);
           return prdFilePath;
         } catch (error2) {
@@ -31045,10 +32220,10 @@ var init_planning_service = __esm({
       async writeProgressFile(prdPath, plan) {
         try {
           const repoRoot = process.cwd();
-          const planName = path2.basename(prdPath);
-          const progressDir = path2.join(repoRoot, ".tiny-brain", "progress");
-          await fs.mkdir(progressDir, { recursive: true });
-          const progressFilePath = path2.join(progressDir, `${planName}.json`);
+          const planName = path5.basename(prdPath);
+          const progressDir = path5.join(repoRoot, ".tiny-brain", "progress");
+          await fs4.mkdir(progressDir, { recursive: true });
+          const progressFilePath = path5.join(progressDir, `${planName}.json`);
           const isTaskDone = (status) => status === "completed" || status === "superseded";
           const isFeatureDone = (status) => status === "completed" || status === "superseded";
           const features = plan.features || [];
@@ -31105,7 +32280,7 @@ var init_planning_service = __esm({
               }))
             }))
           };
-          await fs.writeFile(progressFilePath, JSON.stringify(progressData, null, 2), "utf-8");
+          await fs4.writeFile(progressFilePath, JSON.stringify(progressData, null, 2), "utf-8");
           this.log("info", `Created progress.json at ${progressFilePath}`);
           return progressFilePath;
         } catch (error2) {
@@ -31126,10 +32301,10 @@ var init_planning_service = __esm({
             return false;
           }
           const repoRoot = process.cwd();
-          const prdDir = path2.join(repoRoot, "docs", "prd", planName);
-          const prdFile = path2.join(prdDir, "prd.md");
+          const prdDir = path5.join(repoRoot, "docs", "prd", planName);
+          const prdFile = path5.join(prdDir, "prd.md");
           try {
-            const dirStat = await fs.stat(prdDir);
+            const dirStat = await fs4.stat(prdDir);
             if (!dirStat.isDirectory()) {
               return false;
             }
@@ -31137,7 +32312,7 @@ var init_planning_service = __esm({
             return false;
           }
           try {
-            const fileStat = await fs.stat(prdFile);
+            const fileStat = await fs4.stat(prdFile);
             if (!fileStat.isFile()) {
               return false;
             }
@@ -31158,17 +32333,17 @@ var init_planning_service = __esm({
       async createFeatureMarkdown(prdPath, frontmatter, content) {
         try {
           const repoRoot = process.cwd();
-          const fullPrdPath = path2.join(repoRoot, prdPath);
-          const featuresDir = path2.join(fullPrdPath, "features");
-          await fs.mkdir(featuresDir, { recursive: true });
+          const fullPrdPath = path5.join(repoRoot, prdPath);
+          const featuresDir = path5.join(fullPrdPath, "features");
+          await fs4.mkdir(featuresDir, { recursive: true });
           const featureMarkdown = generateFeature({
             frontmatter,
             ...content,
             tasks: content?.tasks || []
             // Use provided tasks or empty array
           });
-          const featureFilePath = path2.join(featuresDir, `${frontmatter.id}.md`);
-          await fs.writeFile(featureFilePath, featureMarkdown, "utf-8");
+          const featureFilePath = path5.join(featuresDir, `${frontmatter.id}.md`);
+          await fs4.writeFile(featureFilePath, featureMarkdown, "utf-8");
           this.log("info", `Created feature markdown at ${featureFilePath}`);
           return featureFilePath;
         } catch (error2) {
@@ -31229,10 +32404,10 @@ var init_planning_service = __esm({
             throw new Error("No PRD found in repository. Use plan accept to create a PRD first.");
           }
           const prdDir = prdDirs[0];
-          const prdId = path2.basename(prdDir);
+          const prdId = path5.basename(prdDir);
           const repoRoot = await this.findRepositoryRoot();
-          const progressPath = path2.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
-          const progressContent = await fs.readFile(progressPath, "utf-8");
+          const progressPath = path5.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
+          const progressContent = await fs4.readFile(progressPath, "utf-8");
           const plan = JSON.parse(progressContent);
           if (!plan.prdId || !plan.prdDirPath) {
             throw new Error("Plan does not have a PRD reference. This plan may be corrupted.");
@@ -31494,7 +32669,7 @@ var init_planning_service = __esm({
       async hasUserCommits(prdDir, userEmail) {
         try {
           const repoRoot = await this.findRepositoryRoot();
-          const relativePath = path2.relative(repoRoot, prdDir);
+          const relativePath = path5.relative(repoRoot, prdDir);
           const options = this.repositoryRoot ? { cwd: this.repositoryRoot } : {};
           const { stdout } = await execAsync(
             `git log --all --author="${userEmail}" --pretty=format:"%H" -- ${relativePath}`,
@@ -31538,19 +32713,19 @@ var init_planning_service = __esm({
        * @returns Array of absolute paths to PRD directories
        */
       async getPRDDirectoriesForPath(repoPath) {
-        const prdBaseDir = path2.join(repoPath, "docs/prd");
+        const prdBaseDir = path5.join(repoPath, "docs/prd");
         try {
-          await fs.access(prdBaseDir);
+          await fs4.access(prdBaseDir);
         } catch {
           return [];
         }
-        const entries = await fs.readdir(prdBaseDir);
+        const entries = await fs4.readdir(prdBaseDir);
         const prdDirs = [];
         for (const entry of entries) {
-          const entryPath = path2.join(prdBaseDir, entry);
-          const prdMdPath = path2.join(entryPath, "prd.md");
+          const entryPath = path5.join(prdBaseDir, entry);
+          const prdMdPath = path5.join(entryPath, "prd.md");
           try {
-            await fs.access(prdMdPath);
+            await fs4.access(prdMdPath);
             prdDirs.push(entryPath);
           } catch {
             continue;
@@ -31566,19 +32741,19 @@ var init_planning_service = __esm({
       async getPRDDirectories() {
         try {
           const repoRoot = await this.findRepositoryRoot();
-          const prdBaseDir = path2.join(repoRoot, "docs/prd");
+          const prdBaseDir = path5.join(repoRoot, "docs/prd");
           try {
-            await fs.access(prdBaseDir);
+            await fs4.access(prdBaseDir);
           } catch {
             return [];
           }
-          const entries = await fs.readdir(prdBaseDir);
+          const entries = await fs4.readdir(prdBaseDir);
           const prdDirs = [];
           for (const entry of entries) {
-            const entryPath = path2.join(prdBaseDir, entry);
-            const prdMdPath = path2.join(entryPath, "prd.md");
+            const entryPath = path5.join(prdBaseDir, entry);
+            const prdMdPath = path5.join(entryPath, "prd.md");
             try {
-              await fs.access(prdMdPath);
+              await fs4.access(prdMdPath);
               prdDirs.push(entryPath);
             } catch {
               continue;
@@ -31632,8 +32807,8 @@ var init_planning_service = __esm({
        * Read PRD markdown file and parse frontmatter
        */
       async readPRDMarkdown(prdPath) {
-        const prdMdPath = path2.join(prdPath, "prd.md");
-        const content = await fs.readFile(prdMdPath, "utf-8");
+        const prdMdPath = path5.join(prdPath, "prd.md");
+        const content = await fs4.readFile(prdMdPath, "utf-8");
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         const frontmatter = {
           id: "",
@@ -31669,13 +32844,13 @@ var init_planning_service = __esm({
        * Read all feature markdown files from a PRD directory
        */
       async readFeatureMarkdowns(prdPath) {
-        const featuresPath = path2.join(prdPath, "features");
+        const featuresPath = path5.join(prdPath, "features");
         try {
-          const files = await fs.readdir(featuresPath);
+          const files = await fs4.readdir(featuresPath);
           const features = [];
           for (const file of files) {
             if (!file.endsWith(".md")) continue;
-            const content = await fs.readFile(path2.join(featuresPath, file), "utf-8");
+            const content = await fs4.readFile(path5.join(featuresPath, file), "utf-8");
             const parsed = await this.parseFeatureMarkdown(content);
             const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
             let prdId = "";
@@ -31700,11 +32875,11 @@ var init_planning_service = __esm({
        * Load existing progress.json if it exists
        */
       async loadExistingProgressJson(prdPath) {
-        const prdId = path2.basename(prdPath);
+        const prdId = path5.basename(prdPath);
         try {
           const repoRoot = await this.findRepositoryRoot();
-          const progressPath = path2.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
-          const content = await fs.readFile(progressPath, "utf-8");
+          const progressPath = path5.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
+          const content = await fs4.readFile(progressPath, "utf-8");
           return JSON.parse(content);
         } catch {
           return null;
@@ -31830,10 +33005,10 @@ var init_planning_service = __esm({
           }
         };
         const repoRoot = await this.findRepoRootForPath(prdPath);
-        const progressDir = path2.join(repoRoot, ".tiny-brain", "progress");
-        await fs.mkdir(progressDir, { recursive: true });
-        const progressPath = path2.join(progressDir, `${frontmatter.id}.json`);
-        await fs.writeFile(progressPath, JSON.stringify(plan, null, 2));
+        const progressDir = path5.join(repoRoot, ".tiny-brain", "progress");
+        await fs4.mkdir(progressDir, { recursive: true });
+        const progressPath = path5.join(progressDir, `${frontmatter.id}.json`);
+        await fs4.writeFile(progressPath, JSON.stringify(plan, null, 2));
         let currentPrdContent = prdContent;
         let prdNeedsWrite = false;
         if (plan.status !== frontmatter.status) {
@@ -31861,8 +33036,8 @@ var init_planning_service = __esm({
           }
         }
         if (prdNeedsWrite) {
-          const prdMdPath = path2.join(prdPath, "prd.md");
-          await fs.writeFile(prdMdPath, currentPrdContent, "utf-8");
+          const prdMdPath = path5.join(prdPath, "prd.md");
+          await fs4.writeFile(prdMdPath, currentPrdContent, "utf-8");
         }
         if (currentFeature) {
           const syncEvent = {
@@ -31895,9 +33070,9 @@ var init_planning_service = __esm({
        * @returns FixesProgress object, or empty if file doesn't exist
        */
       async getFixesProgress(repoPath) {
-        const progressPath = path2.join(repoPath, ".tiny-brain", "fixes", "progress.json");
+        const progressPath = path5.join(repoPath, ".tiny-brain", "fixes", "progress.json");
         try {
-          const content = await fs.readFile(progressPath, "utf-8");
+          const content = await fs4.readFile(progressPath, "utf-8");
           const parsed = JSON.parse(content);
           if (parsed && Array.isArray(parsed.fixes)) {
             return parsed;
@@ -31915,14 +33090,14 @@ var init_planning_service = __esm({
        * @returns FixesProgress object with all fixes and their tasks
        */
       async syncFixes(repoPath) {
-        const fixesDir = path2.join(repoPath, ".tiny-brain", "fixes");
-        const progressPath = path2.join(fixesDir, "progress.json");
+        const fixesDir = path5.join(repoPath, ".tiny-brain", "fixes");
+        const progressPath = path5.join(fixesDir, "progress.json");
         const fixFiles = await glob("*.md", { cwd: fixesDir, absolute: true });
         const mdFiles = fixFiles.filter((f) => f.endsWith(".md") && !f.endsWith("progress.json"));
         let existingProgress = null;
         try {
-          await fs.access(progressPath);
-          const content = await fs.readFile(progressPath, "utf-8");
+          await fs4.access(progressPath);
+          const content = await fs4.readFile(progressPath, "utf-8");
           existingProgress = JSON.parse(content);
         } catch {
         }
@@ -31931,7 +33106,7 @@ var init_planning_service = __esm({
         const fixes = [];
         for (const filePath of mdFiles) {
           try {
-            const content = await fs.readFile(filePath, "utf-8");
+            const content = await fs4.readFile(filePath, "utf-8");
             const result2 = this.parseFixMarkdown(content, filePath, repoPath, existingProgress);
             switch (result2.kind) {
               case "ok": {
@@ -31944,7 +33119,7 @@ var init_planning_service = __esm({
                 break;
               }
               case "parse-error": {
-                const relativePath = path2.relative(repoPath, filePath);
+                const relativePath = path5.relative(repoPath, filePath);
                 const existing = existingProgress?.fixes.find(
                   (f) => f.filePath === relativePath
                 );
@@ -31969,8 +33144,8 @@ var init_planning_service = __esm({
           fixes,
           lastSynced: (/* @__PURE__ */ new Date()).toISOString()
         };
-        await fs.mkdir(fixesDir, { recursive: true });
-        await fs.writeFile(progressPath, JSON.stringify(result, null, 2), "utf-8");
+        await fs4.mkdir(fixesDir, { recursive: true });
+        await fs4.writeFile(progressPath, JSON.stringify(result, null, 2), "utf-8");
         return result;
       }
       /**
@@ -31978,11 +33153,11 @@ var init_planning_service = __esm({
        * Use after modifying task state in-memory (e.g. pipeline advancement).
        */
       async saveFixProgress(repoPath, fixesProgress) {
-        const fixesDir = path2.join(repoPath, ".tiny-brain", "fixes");
-        const progressPath = path2.join(fixesDir, "progress.json");
+        const fixesDir = path5.join(repoPath, ".tiny-brain", "fixes");
+        const progressPath = path5.join(fixesDir, "progress.json");
         fixesProgress.lastSynced = (/* @__PURE__ */ new Date()).toISOString();
-        await fs.mkdir(fixesDir, { recursive: true });
-        await fs.writeFile(progressPath, JSON.stringify(fixesProgress, null, 2), "utf-8");
+        await fs4.mkdir(fixesDir, { recursive: true });
+        await fs4.writeFile(progressPath, JSON.stringify(fixesProgress, null, 2), "utf-8");
       }
       /**
        * Parse a fix markdown file into a FixProgress object
@@ -31992,7 +33167,7 @@ var init_planning_service = __esm({
         if (!match2) return;
         const block = match2[2];
         const updated = /^archived:\s*.+$/m.test(block) ? block.replace(/^archived:\s*.+$/m, "archived: true") : block + "\narchived: true";
-        await fs.writeFile(filePath, match2[1] + updated + match2[3] + content.slice(match2[0].length), "utf-8");
+        await fs4.writeFile(filePath, match2[1] + updated + match2[3] + content.slice(match2[0].length), "utf-8");
       }
       parseFixMarkdown(content, filePath, repoPath, existingProgress) {
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
@@ -32004,7 +33179,7 @@ var init_planning_service = __esm({
         if (!parseResult.ok) {
           this.log(
             "warn",
-            `Frontmatter parse failed in ${path2.relative(repoPath, filePath)}: ${parseResult.error.message}. Preserving existing progress entry if any.`
+            `Frontmatter parse failed in ${path5.relative(repoPath, filePath)}: ${parseResult.error.message}. Preserving existing progress entry if any.`
           );
           return { kind: "parse-error", error: parseResult.error };
         }
@@ -32027,7 +33202,7 @@ var init_planning_service = __esm({
           if (!severity) missing.push("severity");
           this.log(
             "warn",
-            `Required frontmatter fields missing in ${path2.relative(repoPath, filePath)}: ${missing.join(", ")}. Skipping.`
+            `Required frontmatter fields missing in ${path5.relative(repoPath, filePath)}: ${missing.join(", ")}. Skipping.`
           );
           return { kind: "missing-fields", missing };
         }
@@ -32065,7 +33240,7 @@ var init_planning_service = __esm({
           }
           return task;
         });
-        const relativePath = path2.relative(repoPath, filePath);
+        const relativePath = path5.relative(repoPath, filePath);
         const resolution = parsed.resolution;
         const terminalStatuses = ["completed", "superseded"];
         const isTerminal2 = terminalStatuses.includes(frontmatter.status) || frontmatter.archived;
@@ -36455,7 +37630,7 @@ var init_strategy_service = __esm({
 // packages/tiny-brain-core/src/services/repo-config/repo-config-service.ts
 import { createHash } from "crypto";
 import { readFile as readFile2, readdir as readdir2, access } from "fs/promises";
-import { join as join2 } from "path";
+import { join as join8 } from "path";
 var CONFIG_VERSION2, REPOS_CONFIG_PATH, RepoConfigService;
 var init_repo_config_service = __esm({
   "packages/tiny-brain-core/src/services/repo-config/repo-config-service.ts"() {
@@ -36563,13 +37738,13 @@ var init_repo_config_service = __esm({
           complete: 0
         };
         try {
-          const prdDir = join2(repoPath, "docs", "prd");
+          const prdDir = join8(repoPath, "docs", "prd");
           await access(prdDir);
           const entries = await readdir2(prdDir, { withFileTypes: true });
           const prdDirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith("_"));
           for (const dir of prdDirs) {
             try {
-              const progressPath = join2(prdDir, dir.name, "progress.json");
+              const progressPath = join8(prdDir, dir.name, "progress.json");
               const content = await readFile2(progressPath, "utf-8");
               const progress = JSON.parse(content);
               const status = progress.status?.toLowerCase();
@@ -36693,7 +37868,7 @@ var init_repo_config_service = __esm({
       async extractContextFileData(repoPath) {
         const result = {};
         try {
-          const analysisPath = join2(repoPath, ".tiny-brain", "analysis.json");
+          const analysisPath = join8(repoPath, ".tiny-brain", "analysis.json");
           const analysisContent = await readFile2(analysisPath, "utf-8");
           const analysisData = JSON.parse(analysisContent);
           if (analysisData.detectedAt) {
@@ -36701,7 +37876,7 @@ var init_repo_config_service = __esm({
           }
         } catch {
           try {
-            const contextFilePath = join2(repoPath, "CLAUDE.md");
+            const contextFilePath = join8(repoPath, "CLAUDE.md");
             const content = await readFile2(contextFilePath, "utf-8");
             const yamlData = this.parseRepositoryContextYAML(content);
             if (yamlData?.analysisDate) {
@@ -36712,7 +37887,7 @@ var init_repo_config_service = __esm({
         }
         try {
           const contextFileName = "CLAUDE.md";
-          const contextFilePath = join2(repoPath, contextFileName);
+          const contextFilePath = join8(repoPath, contextFileName);
           const content = await readFile2(contextFilePath, "utf-8");
           result.contextFile = contextFileName;
           result.installedAgentCount = this.countInstalledAgents(content);
@@ -36760,8 +37935,8 @@ var init_repo_config_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/fix/fix-service.ts
-import { promises as fs2 } from "fs";
-import path3 from "path";
+import { promises as fs5 } from "fs";
+import path6 from "path";
 var FixService;
 var init_fix_service = __esm({
   "packages/tiny-brain-core/src/services/fix/fix-service.ts"() {
@@ -36770,19 +37945,19 @@ var init_fix_service = __esm({
     FixService = class {
       constructor(context) {
         this.context = context;
-        this.fixesDir = path3.join(context.repositoryRoot || "", ".tiny-brain", "fixes");
+        this.fixesDir = path6.join(context.repositoryRoot || "", ".tiny-brain", "fixes");
       }
       fixesDir;
       /**
        * Create a new fix document from template
        */
       async createFix(fixId, details) {
-        await fs2.mkdir(this.fixesDir, { recursive: true });
+        await fs5.mkdir(this.fixesDir, { recursive: true });
         const template = this.getDefaultTemplate();
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const content = template.replace(/\{\{fix-id\}\}/g, fixId).replace(/\{\{title\}\}/g, details.title).replace(/\{\{date\}\}/g, now).replace(/\{\{problem\}\}/g, details.problem);
-        const fixPath = path3.join(this.fixesDir, `${fixId}.md`);
-        await fs2.writeFile(fixPath, content, "utf-8");
+        const fixPath = path6.join(this.fixesDir, `${fixId}.md`);
+        await fs5.writeFile(fixPath, content, "utf-8");
         return {
           id: fixId,
           title: details.title,
@@ -36796,9 +37971,9 @@ var init_fix_service = __esm({
        * Load an existing fix document
        */
       async loadFix(fixId) {
-        const fixPath = path3.join(this.fixesDir, `${fixId}.md`);
+        const fixPath = path6.join(this.fixesDir, `${fixId}.md`);
         try {
-          const content = await fs2.readFile(fixPath, "utf-8");
+          const content = await fs5.readFile(fixPath, "utf-8");
           return this.parseFix(fixId, content);
         } catch {
           return null;
@@ -36825,7 +38000,7 @@ var init_fix_service = __esm({
        */
       async listFixes(status) {
         try {
-          const files = await fs2.readdir(this.fixesDir);
+          const files = await fs5.readdir(this.fixesDir);
           const fixes = [];
           for (const file of files) {
             if (!file.endsWith(".md") || file.startsWith(".")) continue;
@@ -36925,10 +38100,10 @@ var init_fix_service = __esm({
        * Save a fix document to markdown
        */
       async saveFix(fix) {
-        const fixPath = path3.join(this.fixesDir, `${fix.id}.md`);
+        const fixPath = path6.join(this.fixesDir, `${fix.id}.md`);
         let existingContent = "";
         try {
-          existingContent = await fs2.readFile(fixPath, "utf-8");
+          existingContent = await fs5.readFile(fixPath, "utf-8");
         } catch {
           existingContent = this.getDefaultTemplate().replace(/\{\{fix-id\}\}/g, fix.id).replace(/\{\{title\}\}/g, fix.title).replace(/\{\{date\}\}/g, fix.created).replace(/\{\{problem\}\}/g, fix.problem || "");
         }
@@ -36961,7 +38136,7 @@ ${commitLines}
 `
           );
         }
-        await fs2.writeFile(fixPath, content, "utf-8");
+        await fs5.writeFile(fixPath, content, "utf-8");
       }
       /**
        * Get default template content
@@ -37221,8 +38396,8 @@ var init_adr_suggestion_generator = __esm({
 });
 
 // packages/tiny-brain-core/src/services/adr/adr-service.ts
-import { promises as fs3 } from "fs";
-import path4 from "path";
+import { promises as fs6 } from "fs";
+import path7 from "path";
 import { exec as exec2 } from "child_process";
 import { promisify as promisify2 } from "util";
 var execAsync2, DEFAULT_ADR_TEMPLATE, ADRService;
@@ -37450,10 +38625,10 @@ decision_makers: []  # People involved in the decision
         if (!this.context.repositoryRoot) {
           throw new Error("Not in a git repository");
         }
-        const adrDir = path4.join(this.context.repositoryRoot, this.adrDirectory);
+        const adrDir = path7.join(this.context.repositoryRoot, this.adrDirectory);
         try {
-          await fs3.access(adrDir);
-          const files = await fs3.readdir(adrDir);
+          await fs6.access(adrDir);
+          const files = await fs6.readdir(adrDir);
           const adrFiles = files.filter(
             (file) => /^\d{3,4}-.*\.md$/.test(file)
           );
@@ -37537,12 +38712,12 @@ ${suggestion.context}`;
         }
         try {
           const adrNumber = await this.getNextADRNumber();
-          const adrDir = path4.join(this.context.repositoryRoot, this.adrDirectory);
-          await fs3.mkdir(adrDir, { recursive: true });
+          const adrDir = path7.join(this.context.repositoryRoot, this.adrDirectory);
+          await fs6.mkdir(adrDir, { recursive: true });
           let template = this.template;
           const paddedNumber = adrNumber.toString().padStart(4, "0");
           const filename = `${paddedNumber}-${suggestion.suggestedFileName}`;
-          const filePath = path4.join(adrDir, filename);
+          const filePath = path7.join(adrDir, filename);
           const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
           template = template.replace(/adr_number: 0/g, `adr_number: ${adrNumber}`);
           template = template.replace(/title: "Decision Title Here"/g, `title: "${suggestion.title}"`);
@@ -37565,10 +38740,10 @@ ${suggestion.context}`;
               techList
             );
           }
-          await fs3.writeFile(filePath, template, "utf-8");
+          await fs6.writeFile(filePath, template, "utf-8");
           return {
             success: true,
-            filePath: path4.relative(this.context.repositoryRoot, filePath),
+            filePath: path7.relative(this.context.repositoryRoot, filePath),
             adrNumber
           };
         } catch (error2) {
@@ -37591,9 +38766,9 @@ var init_types9 = __esm({
 
 // packages/tiny-brain-core/src/services/plugin/plugin-discovery.service.ts
 import { readdir as readdir3, readFile as readFile3 } from "fs/promises";
-import { join as join3 } from "path";
-import { homedir } from "os";
-import { existsSync } from "fs";
+import { join as join9 } from "path";
+import { homedir as homedir2 } from "os";
+import { existsSync as existsSync4 } from "fs";
 var PluginDiscoveryService;
 var init_plugin_discovery_service = __esm({
   "packages/tiny-brain-core/src/services/plugin/plugin-discovery.service.ts"() {
@@ -37602,7 +38777,7 @@ var init_plugin_discovery_service = __esm({
       claudePluginsDir;
       knownRepos;
       constructor(knownRepos = []) {
-        this.claudePluginsDir = join3(homedir(), ".claude", "plugins");
+        this.claudePluginsDir = join9(homedir2(), ".claude", "plugins");
         this.knownRepos = knownRepos;
       }
       /**
@@ -37636,8 +38811,8 @@ var init_plugin_discovery_service = __esm({
        * Read installed_plugins.json
        */
       async readInstalledPlugins() {
-        const filePath = join3(this.claudePluginsDir, "installed_plugins.json");
-        if (!existsSync(filePath)) {
+        const filePath = join9(this.claudePluginsDir, "installed_plugins.json");
+        if (!existsSync4(filePath)) {
           return { version: 2, plugins: {} };
         }
         try {
@@ -37652,8 +38827,8 @@ var init_plugin_discovery_service = __esm({
        * Discover registered marketplaces
        */
       async discoverMarketplaces() {
-        const filePath = join3(this.claudePluginsDir, "known_marketplaces.json");
-        if (!existsSync(filePath)) {
+        const filePath = join9(this.claudePluginsDir, "known_marketplaces.json");
+        if (!existsSync4(filePath)) {
           return [];
         }
         try {
@@ -37677,12 +38852,12 @@ var init_plugin_discovery_service = __esm({
        */
       async parsePluginFromEntry(pluginName, marketplaceName, entry) {
         const pluginPath = entry.installPath;
-        if (!existsSync(pluginPath)) {
+        if (!existsSync4(pluginPath)) {
           console.warn(`Plugin path does not exist: ${pluginPath}`);
           return null;
         }
-        const manifestPath = join3(pluginPath, ".claude-plugin", "plugin.json");
-        if (!existsSync(manifestPath)) {
+        const manifestPath = join9(pluginPath, ".claude-plugin", "plugin.json");
+        if (!existsSync4(manifestPath)) {
           console.warn(`No plugin.json found at: ${manifestPath}`);
           return null;
         }
@@ -37745,7 +38920,7 @@ var init_plugin_discovery_service = __esm({
        * Scan a plugins directory for installed plugins
        */
       async scanPluginDirectory(dir, scope, repoPath) {
-        if (!existsSync(dir)) {
+        if (!existsSync4(dir)) {
           return [];
         }
         const plugins = [];
@@ -37753,7 +38928,7 @@ var init_plugin_discovery_service = __esm({
           const entries = await readdir3(dir, { withFileTypes: true });
           for (const entry of entries) {
             if (!entry.isDirectory()) continue;
-            const pluginPath = join3(dir, entry.name);
+            const pluginPath = join9(dir, entry.name);
             const plugin = await this.parsePlugin(pluginPath, scope, repoPath);
             if (plugin) {
               plugins.push(plugin);
@@ -37768,8 +38943,8 @@ var init_plugin_discovery_service = __esm({
        * Parse a single plugin directory
        */
       async parsePlugin(pluginPath, scope, repoPath) {
-        const manifestPath = join3(pluginPath, ".claude-plugin", "plugin.json");
-        if (!existsSync(manifestPath)) {
+        const manifestPath = join9(pluginPath, ".claude-plugin", "plugin.json");
+        if (!existsSync4(manifestPath)) {
           return null;
         }
         try {
@@ -37799,14 +38974,14 @@ var init_plugin_discovery_service = __esm({
         const agents = [];
         let hasHooks = false;
         let hasMcp = false;
-        const skillsDir = manifest.skills ? join3(pluginPath, manifest.skills) : join3(pluginPath, "skills");
-        if (existsSync(skillsDir)) {
+        const skillsDir = manifest.skills ? join9(pluginPath, manifest.skills) : join9(pluginPath, "skills");
+        if (existsSync4(skillsDir)) {
           try {
             const entries = await readdir3(skillsDir, { withFileTypes: true });
             for (const entry of entries) {
               if (entry.isDirectory()) {
-                const skillMd = join3(skillsDir, entry.name, "SKILL.md");
-                if (existsSync(skillMd)) {
+                const skillMd = join9(skillsDir, entry.name, "SKILL.md");
+                if (existsSync4(skillMd)) {
                   skills.push(entry.name);
                 }
               }
@@ -37816,8 +38991,8 @@ var init_plugin_discovery_service = __esm({
         }
         if (Array.isArray(manifest.agents)) {
           for (const agentPath of manifest.agents) {
-            const fullPath = join3(pluginPath, agentPath);
-            if (existsSync(fullPath)) {
+            const fullPath = join9(pluginPath, agentPath);
+            if (existsSync4(fullPath)) {
               const agentName = agentPath.split("/").pop()?.replace(".md", "") || "";
               if (agentName) {
                 agents.push(agentName);
@@ -37825,8 +39000,8 @@ var init_plugin_discovery_service = __esm({
             }
           }
         } else {
-          const agentsDir = manifest.agents ? join3(pluginPath, manifest.agents) : join3(pluginPath, "agents");
-          if (existsSync(agentsDir)) {
+          const agentsDir = manifest.agents ? join9(pluginPath, manifest.agents) : join9(pluginPath, "agents");
+          if (existsSync4(agentsDir)) {
             try {
               const entries = await readdir3(agentsDir, { withFileTypes: true });
               for (const entry of entries) {
@@ -37838,10 +39013,10 @@ var init_plugin_discovery_service = __esm({
             }
           }
         }
-        const hooksPath = manifest.hooks ? join3(pluginPath, manifest.hooks) : join3(pluginPath, "hooks", "hooks.json");
-        hasHooks = existsSync(hooksPath);
-        const mcpPath = manifest.mcpServers ? join3(pluginPath, manifest.mcpServers) : join3(pluginPath, ".mcp.json");
-        hasMcp = existsSync(mcpPath);
+        const hooksPath = manifest.hooks ? join9(pluginPath, manifest.hooks) : join9(pluginPath, "hooks", "hooks.json");
+        hasHooks = existsSync4(hooksPath);
+        const mcpPath = manifest.mcpServers ? join9(pluginPath, manifest.mcpServers) : join9(pluginPath, ".mcp.json");
+        hasMcp = existsSync4(mcpPath);
         return { skills, agents, hasHooks, hasMcp };
       }
       /**
@@ -37860,7 +39035,7 @@ var init_plugin_discovery_service = __esm({
         const result = [];
         const seen = /* @__PURE__ */ new Set();
         this.addRepo(repoPath);
-        const localDir = join3(repoPath, ".claude", "local", "plugins");
+        const localDir = join9(repoPath, ".claude", "local", "plugins");
         const localPlugins = await this.scanPluginDirectory(localDir, "local", repoPath);
         for (const plugin of localPlugins) {
           if (!seen.has(plugin.name)) {
@@ -37868,7 +39043,7 @@ var init_plugin_discovery_service = __esm({
             seen.add(plugin.name);
           }
         }
-        const projectDir = join3(repoPath, ".claude", "plugins");
+        const projectDir = join9(repoPath, ".claude", "plugins");
         const projectPlugins = await this.scanPluginDirectory(projectDir, "project", repoPath);
         for (const plugin of projectPlugins) {
           if (!seen.has(plugin.name)) {
@@ -38016,8 +39191,8 @@ var init_fingerprint_matcher_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/quality-service.ts
-import { promises as fs4 } from "fs";
-import path5 from "path";
+import { promises as fs7 } from "fs";
+import path8 from "path";
 function generateRunId(date3) {
   const d = date3 ?? /* @__PURE__ */ new Date();
   const year = d.getUTCFullYear();
@@ -38067,7 +39242,7 @@ var init_quality_service = __esm({
        * Get the runs directory path
        */
       get runsDir() {
-        return path5.join(this.repoPath, ".tiny-brain", "quality", "runs");
+        return path8.join(this.repoPath, ".tiny-brain", "quality", "runs");
       }
       /**
        * Delete a quality run and its associated plan.
@@ -38080,29 +39255,29 @@ var init_quality_service = __esm({
       async deleteRun(runId) {
         const isNested = runId.includes("T");
         if (isNested) {
-          const runDir = path5.join(this.runsDir, runIdToPath(runId));
-          await fs4.rm(runDir, { recursive: true, force: true });
-          const dateDir = path5.dirname(runDir);
+          const runDir = path8.join(this.runsDir, runIdToPath(runId));
+          await fs7.rm(runDir, { recursive: true, force: true });
+          const dateDir = path8.dirname(runDir);
           try {
-            const remaining = await fs4.readdir(dateDir);
+            const remaining = await fs7.readdir(dateDir);
             if (remaining.length === 0) {
-              await fs4.rmdir(dateDir);
+              await fs7.rmdir(dateDir);
             }
           } catch {
           }
         } else {
           try {
-            const files = await fs4.readdir(this.runsDir);
+            const files = await fs7.readdir(this.runsDir);
             for (const file of files) {
               if (file.startsWith(runId)) {
-                await fs4.rm(path5.join(this.runsDir, file), { force: true });
+                await fs7.rm(path8.join(this.runsDir, file), { force: true });
               }
             }
           } catch {
           }
         }
-        const planPath = path5.join(this.plansDir, `${runId}-plan.md`);
-        await fs4.rm(planPath, { force: true });
+        const planPath = path8.join(this.plansDir, `${runId}-plan.md`);
+        await fs7.rm(planPath, { force: true });
       }
       /**
        * Calculate quality score based on issues found
@@ -38283,8 +39458,8 @@ var init_quality_service = __esm({
         const runId = input.runId ?? generateRunId();
         const date3 = runId.includes("T") ? runId.split("T")[0] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
         const runPath = runIdToPath(runId);
-        const runDir = path5.join(this.runsDir, runPath);
-        await fs4.mkdir(runDir, { recursive: true });
+        const runDir = path8.join(this.runsDir, runPath);
+        await fs7.mkdir(runDir, { recursive: true });
         const issuesByCategory = _QualityService.getIssuesByCategory(input.issues);
         const content = this.formatRunMarkdown({
           runId,
@@ -38303,8 +39478,8 @@ var init_quality_service = __esm({
           investigationCoverage: input.investigationCoverage,
           agentFindings: input.agentFindings
         });
-        const filePath = path5.join(runDir, "quality.md");
-        await fs4.writeFile(filePath, content, "utf-8");
+        const filePath = path8.join(runDir, "quality.md");
+        await fs7.writeFile(filePath, content, "utf-8");
         return {
           runId,
           success: true,
@@ -38504,17 +39679,17 @@ var init_quality_service = __esm({
       async getPreviousRuns(limit) {
         const runs = [];
         try {
-          const entries = await fs4.readdir(this.runsDir, { withFileTypes: true });
+          const entries = await fs7.readdir(this.runsDir, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)) {
-              const dateDir = path5.join(this.runsDir, entry.name);
+              const dateDir = path8.join(this.runsDir, entry.name);
               try {
-                const timeEntries = await fs4.readdir(dateDir, { withFileTypes: true });
+                const timeEntries = await fs7.readdir(dateDir, { withFileTypes: true });
                 for (const timeEntry of timeEntries) {
                   if (timeEntry.isDirectory() && /^\d{2}-\d{2}$/.test(timeEntry.name)) {
-                    const qualityFile = path5.join(dateDir, timeEntry.name, "quality.md");
+                    const qualityFile = path8.join(dateDir, timeEntry.name, "quality.md");
                     try {
-                      const content = await fs4.readFile(qualityFile, "utf-8");
+                      const content = await fs7.readFile(qualityFile, "utf-8");
                       const runId = pathToRunId(`${entry.name}/${timeEntry.name}`);
                       const summary = this.parseRunSummary(runId, content);
                       if (summary) {
@@ -38527,8 +39702,8 @@ var init_quality_service = __esm({
               } catch {
               }
             } else if (entry.isFile() && entry.name.endsWith("-quality.md")) {
-              const filePath = path5.join(this.runsDir, entry.name);
-              const content = await fs4.readFile(filePath, "utf-8");
+              const filePath = path8.join(this.runsDir, entry.name);
+              const content = await fs7.readFile(filePath, "utf-8");
               const runId = entry.name.replace(".md", "");
               const summary = this.parseRunSummary(runId, content);
               if (summary) {
@@ -38577,8 +39752,8 @@ var init_quality_service = __esm({
        */
       async getRunDetails(runId) {
         try {
-          const filePath = isNestedRunId(runId) ? path5.join(this.runsDir, runIdToPath(runId), "quality.md") : path5.join(this.runsDir, `${runId}.md`);
-          const content = await fs4.readFile(filePath, "utf-8");
+          const filePath = isNestedRunId(runId) ? path8.join(this.runsDir, runIdToPath(runId), "quality.md") : path8.join(this.runsDir, `${runId}.md`);
+          const content = await fs7.readFile(filePath, "utf-8");
           const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
           if (!jsonMatch) {
             return null;
@@ -38678,7 +39853,7 @@ var init_quality_service = __esm({
        * Get the plans directory path
        */
       get plansDir() {
-        return path5.join(this.repoPath, ".tiny-brain", "quality", "plans");
+        return path8.join(this.repoPath, ".tiny-brain", "quality", "plans");
       }
       /**
        * Group quality issues into themed improvement initiatives.
@@ -38987,10 +40162,10 @@ var init_quality_service = __esm({
        * @returns The parsed QualityImprovementPlan, or null if not found/invalid
        */
       async loadImprovementPlan(planId) {
-        const filePath = path5.join(this.plansDir, `${planId}.md`);
+        const filePath = path8.join(this.plansDir, `${planId}.md`);
         let content;
         try {
-          content = await fs4.readFile(filePath, "utf-8");
+          content = await fs7.readFile(filePath, "utf-8");
         } catch {
           return null;
         }
@@ -39013,10 +40188,10 @@ var init_quality_service = __esm({
        * @returns Result with planId and file path
        */
       async saveImprovementPlan(plan) {
-        await fs4.mkdir(this.plansDir, { recursive: true });
+        await fs7.mkdir(this.plansDir, { recursive: true });
         const markdown = _QualityService.formatPlanMarkdown(plan);
-        const filePath = path5.join(this.plansDir, `${plan.planId}.md`);
-        await fs4.writeFile(filePath, markdown, "utf-8");
+        const filePath = path8.join(this.plansDir, `${plan.planId}.md`);
+        await fs7.writeFile(filePath, markdown, "utf-8");
         return {
           planId: plan.planId,
           filePath
@@ -39131,8 +40306,8 @@ var init_quality_service = __esm({
        * @returns Array of created fix IDs
        */
       async generateFixesFromPlan(plan, issues) {
-        const fixesDir = path5.join(this.repoPath, ".tiny-brain", "fixes");
-        await fs4.mkdir(fixesDir, { recursive: true });
+        const fixesDir = path8.join(this.repoPath, ".tiny-brain", "fixes");
+        await fs7.mkdir(fixesDir, { recursive: true });
         const fixIds = [];
         for (const phase of plan.phases) {
           for (const initiative of phase.initiatives) {
@@ -39140,8 +40315,8 @@ var init_quality_service = __esm({
             const dateMatch = plan.planId.match(/^(\d{4}-\d{2}-\d{2})/);
             const planDate = dateMatch ? dateMatch[1] : plan.planId;
             const fixId = `qip-${planDate}-${initiative.id}`;
-            const filePath = path5.join(fixesDir, `${fixId}.md`);
-            await fs4.writeFile(filePath, markdown, "utf-8");
+            const filePath = path8.join(fixesDir, `${fixId}.md`);
+            await fs7.writeFile(filePath, markdown, "utf-8");
             fixIds.push(fixId);
           }
         }
@@ -39283,7 +40458,7 @@ var init_analyzer_registry = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/analyzer-detection.service.ts
-import path6 from "path";
+import path9 from "path";
 var IGNORE_PATTERNS, AnalyzerDetectionService;
 var init_analyzer_detection_service = __esm({
   "packages/tiny-brain-core/src/services/quality/analyzer-detection.service.ts"() {
@@ -39364,7 +40539,7 @@ var init_analyzer_detection_service = __esm({
         return [...new Set(allMatches)].sort();
       }
       resolveCommand(template, configPath) {
-        const dir = path6.dirname(configPath);
+        const dir = path9.dirname(configPath);
         return template.replace("{config}", configPath).replace("{dir}", dir);
       }
     };
@@ -39801,7 +40976,7 @@ var init_parsers = __esm({
 
 // packages/tiny-brain-core/src/services/quality/analyzer-executor.service.ts
 import { exec as exec3 } from "child_process";
-import { promises as fs5 } from "fs";
+import { promises as fs8 } from "fs";
 import { promisify as promisify3 } from "util";
 function lookupDefinition(analyzerId) {
   return ANALYZER_REGISTRY.find((d) => d.id === analyzerId);
@@ -39842,7 +41017,7 @@ var init_analyzer_executor_service = __esm({
       }
       async executeAnalyzers(analyzers, outputDir) {
         if (outputDir) {
-          await fs5.mkdir(outputDir, { recursive: true });
+          await fs8.mkdir(outputDir, { recursive: true });
         }
         const startTime = Date.now();
         const allIssues = [];
@@ -39932,9 +41107,9 @@ var init_analyzer_executor_service = __esm({
             }
           }
           try {
-            const fileContent = await fs5.readFile(readPath, "utf-8");
+            const fileContent = await fs8.readFile(readPath, "utf-8");
             if (!fileContent.trim()) {
-              await fs5.unlink(readPath);
+              await fs8.unlink(readPath);
               continue;
             }
             const issues = parser(fileContent, this.repoPath);
@@ -40069,8 +41244,8 @@ var init_analyzer_executor_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/analyzer-cache.ts
-import { promises as fs6 } from "fs";
-import path7 from "path";
+import { promises as fs9 } from "fs";
+import path10 from "path";
 function isValidEntry(entry) {
   if (!entry || typeof entry !== "object") return false;
   const e = entry;
@@ -40080,9 +41255,9 @@ async function readCachedAnalyzers(repoPath, options) {
   if (options?.changed && !/^[0-9a-f]+$/i.test(options.changed)) {
     throw new Error(`Invalid SHA: ${options.changed}`);
   }
-  const analysisPath = path7.join(repoPath, ".tiny-brain", "analysis.json");
+  const analysisPath = path10.join(repoPath, ".tiny-brain", "analysis.json");
   try {
-    const content = await fs6.readFile(analysisPath, "utf-8");
+    const content = await fs9.readFile(analysisPath, "utf-8");
     const parsed = JSON.parse(content);
     if (!parsed.analyzers || !Array.isArray(parsed.analyzers) || parsed.analyzers.length === 0) {
       return null;
@@ -40115,15 +41290,15 @@ var init_analyzer_cache = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/run-single-analyser.ts
-import { promises as fs7 } from "fs";
+import { promises as fs10 } from "fs";
 import { tmpdir } from "os";
-import path8 from "path";
+import path11 from "path";
 async function runSingleAnalyser(repoPath, analyserId, options) {
   const cacheOptions = options?.changed ? { changed: options.changed } : void 0;
   const allAnalysers = await readCachedAnalyzers(repoPath, cacheOptions) ?? await new AnalyzerDetectionService(repoPath).detectAnalyzers(cacheOptions);
   const target = allAnalysers.find((a) => a.analyzerId === analyserId);
   if (!target) return null;
-  const outputDir = options?.outputDir ?? await fs7.mkdtemp(path8.join(tmpdir(), `tiny-brain-analyser-${analyserId}-`));
+  const outputDir = options?.outputDir ?? await fs10.mkdtemp(path11.join(tmpdir(), `tiny-brain-analyser-${analyserId}-`));
   const executor = new AnalyzerExecutorService(repoPath);
   return executor.executeAnalyzers([target], outputDir);
 }
@@ -40717,8 +41892,8 @@ var init_investigation_response_parser = __esm({
 
 // packages/tiny-brain-core/src/services/quality/file-investigator.service.ts
 import { createHash as createHash2 } from "crypto";
-import { promises as fs8 } from "fs";
-import path9 from "path";
+import { promises as fs11 } from "fs";
+import path12 from "path";
 var FileInvestigatorService;
 var init_file_investigator_service = __esm({
   "packages/tiny-brain-core/src/services/quality/file-investigator.service.ts"() {
@@ -40776,7 +41951,7 @@ var init_file_investigator_service = __esm({
         };
       }
       async readFileContent(filePath) {
-        return fs8.readFile(path9.join(this.repoPath, filePath), "utf-8");
+        return fs11.readFile(path12.join(this.repoPath, filePath), "utf-8");
       }
     };
   }
@@ -40895,8 +42070,8 @@ var init_investigation_orchestrator_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/investigation-progress.service.ts
-import { promises as fs9 } from "fs";
-import path10 from "path";
+import { promises as fs12 } from "fs";
+import path13 from "path";
 var init_investigation_progress_service = __esm({
   "packages/tiny-brain-core/src/services/quality/investigation-progress.service.ts"() {
     "use strict";
@@ -40979,8 +42154,8 @@ var init_result_merger_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/assembly.service.ts
-import { promises as fs10 } from "fs";
-import path11 from "path";
+import { promises as fs13 } from "fs";
+import path14 from "path";
 var AssemblyService;
 var init_assembly_service = __esm({
   "packages/tiny-brain-core/src/services/quality/assembly.service.ts"() {
@@ -40993,7 +42168,7 @@ var init_assembly_service = __esm({
         this.repoPath = repoPath;
       }
       get runsDir() {
-        return path11.join(this.repoPath, ".tiny-brain", "quality", "runs");
+        return path14.join(this.repoPath, ".tiny-brain", "quality", "runs");
       }
       /**
        * Assemble a quality run from intermediate files.
@@ -41003,7 +42178,7 @@ var init_assembly_service = __esm({
        */
       async assembleRun(runId, _baseRunId) {
         const runDir = this.resolveRunDir(runId);
-        const analysisPath = path11.join(runDir, "analysis.json");
+        const analysisPath = path14.join(runDir, "analysis.json");
         const analyzerData = await this.readAnalyzerData(analysisPath);
         const analyzerCount = analyzerData.totalIssues;
         const analyzersRun = analyzerData.executions;
@@ -41017,8 +42192,8 @@ var init_assembly_service = __esm({
         const score = QualityService.calculateScore(allIssues);
         const grade = QualityService.getGrade(score);
         const categoryBreakdown = QualityService.getIssuesByCategory(allIssues);
-        await fs10.mkdir(runDir, { recursive: true });
-        const reportPath = path11.join(runDir, "quality.md");
+        await fs13.mkdir(runDir, { recursive: true });
+        const reportPath = path14.join(runDir, "quality.md");
         await this.writeSummaryReport(reportPath, runId, totalIssues, analyzerCount, agentFindings, allIssues, analyzersRun);
         return {
           runId,
@@ -41046,7 +42221,7 @@ var init_assembly_service = __esm({
        */
       resolveRunDir(runId) {
         if (runId.includes("T")) {
-          return path11.join(this.runsDir, runIdToPath(runId));
+          return path14.join(this.runsDir, runIdToPath(runId));
         }
         return this.runsDir;
       }
@@ -41058,7 +42233,7 @@ var init_assembly_service = __esm({
        */
       async readAnalyzerData(analysisPath) {
         try {
-          const content = await fs10.readFile(analysisPath, "utf-8");
+          const content = await fs13.readFile(analysisPath, "utf-8");
           const parsed = JSON.parse(content);
           const isFlat = Array.isArray(parsed.issues) || Array.isArray(parsed.executions);
           if (isFlat) {
@@ -41103,13 +42278,13 @@ var init_assembly_service = __esm({
        */
       async collectAgentFindings(runDir) {
         const findings = {};
-        const agentsDir = path11.join(runDir, "agents");
+        const agentsDir = path14.join(runDir, "agents");
         try {
-          const files = await fs10.readdir(agentsDir);
+          const files = await fs13.readdir(agentsDir);
           for (const file of files) {
             if (!file.endsWith(".json")) continue;
             const stepType = file.replace(/\.json$/, "");
-            const issues = await this.readIssuesFromFile(path11.join(agentsDir, file));
+            const issues = await this.readIssuesFromFile(path14.join(agentsDir, file));
             findings[stepType] = { issueCount: issues.length, issues };
           }
         } catch {
@@ -41122,7 +42297,7 @@ var init_assembly_service = __esm({
        */
       async readIssuesFromFile(filePath) {
         try {
-          const content = await fs10.readFile(filePath, "utf-8");
+          const content = await fs13.readFile(filePath, "utf-8");
           const parsed = JSON.parse(content);
           if (Array.isArray(parsed)) return this.validateIssues(parsed);
           if (parsed && typeof parsed === "object") {
@@ -41191,7 +42366,7 @@ var init_assembly_service = __esm({
           "```",
           ""
         ];
-        await fs10.writeFile(reportPath, lines.join("\n"), "utf-8");
+        await fs13.writeFile(reportPath, lines.join("\n"), "utf-8");
       }
     };
   }
@@ -41217,36 +42392,36 @@ var init_quality_scoring = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/quality-run-finder.ts
-import { promises as fs11 } from "fs";
-import path12 from "path";
+import { promises as fs14 } from "fs";
+import path15 from "path";
 async function findLatestQualityRunDir(repoRoot) {
-  const runsDir = path12.join(repoRoot, ".tiny-brain", "quality", "runs");
+  const runsDir = path15.join(repoRoot, ".tiny-brain", "quality", "runs");
   let dateDirs;
   try {
-    dateDirs = await fs11.readdir(runsDir);
+    dateDirs = await fs14.readdir(runsDir);
   } catch {
     return null;
   }
   dateDirs.sort((a, b) => b.localeCompare(a));
   for (const dateDir of dateDirs) {
-    const datePath = path12.join(runsDir, dateDir);
-    const stat3 = await fs11.stat(datePath).catch(() => null);
+    const datePath = path15.join(runsDir, dateDir);
+    const stat3 = await fs14.stat(datePath).catch(() => null);
     if (!stat3?.isDirectory()) continue;
     let timeDirs;
     try {
-      timeDirs = await fs11.readdir(datePath);
+      timeDirs = await fs14.readdir(datePath);
     } catch {
       continue;
     }
     timeDirs.sort((a, b) => b.localeCompare(a));
     for (const timeDir of timeDirs) {
-      const timePath = path12.join(datePath, timeDir);
-      const timeStat = await fs11.stat(timePath).catch(() => null);
+      const timePath = path15.join(datePath, timeDir);
+      const timeStat = await fs14.stat(timePath).catch(() => null);
       if (!timeStat?.isDirectory()) continue;
-      const qualityMd = path12.join(timePath, "quality.md");
-      const hasQualityMd = await fs11.access(qualityMd).then(() => true, () => false);
+      const qualityMd = path15.join(timePath, "quality.md");
+      const hasQualityMd = await fs14.access(qualityMd).then(() => true, () => false);
       if (!hasQualityMd) continue;
-      return path12.join(".tiny-brain", "quality", "runs", dateDir, timeDir);
+      return path15.join(".tiny-brain", "quality", "runs", dateDir, timeDir);
     }
   }
   return null;
@@ -41301,8 +42476,8 @@ var init_json_repair = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/quality-step-scores.ts
-import { promises as fs12 } from "fs";
-import { join as join4 } from "path";
+import { promises as fs15 } from "fs";
+import { join as join10 } from "path";
 function buildQualityScores(steps, findings) {
   const scored = steps.map((s) => {
     const stepFindings = findings[s.type] ?? [];
@@ -41339,9 +42514,9 @@ function buildQualityScores(steps, findings) {
   };
 }
 async function loadFindingsFromQualityRun(repoRoot, runDirRelative, stepType) {
-  const agentsDir = join4(repoRoot, runDirRelative, "agents");
+  const agentsDir = join10(repoRoot, runDirRelative, "agents");
   try {
-    const content = await fs12.readFile(join4(agentsDir, `${stepType}.json`), "utf-8");
+    const content = await fs15.readFile(join10(agentsDir, `${stepType}.json`), "utf-8");
     const parsed = parseJsonWithRepair(content);
     if (Array.isArray(parsed)) return parsed;
     if (parsed !== null && typeof parsed === "object") {
@@ -41524,9 +42699,9 @@ var init_quality2 = __esm({
 });
 
 // packages/tiny-brain-core/src/services/hooks/hooks-service.ts
-import { existsSync as existsSync2 } from "fs";
+import { existsSync as existsSync5 } from "fs";
 import { readFile as readFile4, readdir as readdir4 } from "fs/promises";
-import { join as join5 } from "path";
+import { join as join11 } from "path";
 var HooksService;
 var init_hooks_service = __esm({
   "packages/tiny-brain-core/src/services/hooks/hooks-service.ts"() {
@@ -41541,7 +42716,7 @@ var init_hooks_service = __esm({
        */
       async getPluginHooks() {
         const hooksJsonPath = this.getPluginHooksPath();
-        if (!existsSync2(hooksJsonPath)) {
+        if (!existsSync5(hooksJsonPath)) {
           return [];
         }
         try {
@@ -41567,8 +42742,8 @@ var init_hooks_service = __esm({
        * Get all git hooks from .git/hooks/
        */
       async getGitHooks() {
-        const gitHooksDir = join5(this.repoRoot, ".git", "hooks");
-        if (!existsSync2(gitHooksDir)) {
+        const gitHooksDir = join11(this.repoRoot, ".git", "hooks");
+        if (!existsSync5(gitHooksDir)) {
           return [];
         }
         try {
@@ -41582,7 +42757,7 @@ var init_hooks_service = __esm({
               name: entry.name,
               event: entry.name,
               type: "git",
-              path: join5(gitHooksDir, entry.name)
+              path: join11(gitHooksDir, entry.name)
             });
           }
           return hooks;
@@ -41594,8 +42769,8 @@ var init_hooks_service = __esm({
        * Get all repo hooks from .claude/hooks/hooks.json
        */
       async getRepoHooks() {
-        const hooksJsonPath = join5(this.repoRoot, ".claude", "hooks", "hooks.json");
-        if (!existsSync2(hooksJsonPath)) {
+        const hooksJsonPath = join11(this.repoRoot, ".claude", "hooks", "hooks.json");
+        if (!existsSync5(hooksJsonPath)) {
           return [];
         }
         try {
@@ -41641,8 +42816,8 @@ var init_hooks_service = __esm({
         }
       }
       async getGitHookContent(hookName) {
-        const hookPath = join5(this.repoRoot, ".git", "hooks", hookName);
-        if (!existsSync2(hookPath)) {
+        const hookPath = join11(this.repoRoot, ".git", "hooks", hookName);
+        if (!existsSync5(hookPath)) {
           return null;
         }
         try {
@@ -41653,7 +42828,7 @@ var init_hooks_service = __esm({
       }
       async getPluginHookContent(hookName) {
         const hooksJsonPath = this.getPluginHooksPath();
-        if (!existsSync2(hooksJsonPath)) {
+        if (!existsSync5(hooksJsonPath)) {
           return null;
         }
         try {
@@ -41685,8 +42860,8 @@ var init_hooks_service = __esm({
         }
       }
       async getRepoHookContent(hookName) {
-        const hooksJsonPath = join5(this.repoRoot, ".claude", "hooks", "hooks.json");
-        if (!existsSync2(hooksJsonPath)) {
+        const hooksJsonPath = join11(this.repoRoot, ".claude", "hooks", "hooks.json");
+        if (!existsSync5(hooksJsonPath)) {
           return null;
         }
         try {
@@ -41719,11 +42894,11 @@ var init_hooks_service = __esm({
       }
       getPluginHooksPath() {
         const possiblePaths = [
-          join5(this.repoRoot, ".claude-plugin", "hooks", "hooks.json"),
-          join5(this.repoRoot, "hooks", "hooks.json")
+          join11(this.repoRoot, ".claude-plugin", "hooks", "hooks.json"),
+          join11(this.repoRoot, "hooks", "hooks.json")
         ];
         for (const p of possiblePaths) {
-          if (existsSync2(p)) {
+          if (existsSync5(p)) {
             return p;
           }
         }
@@ -41742,9 +42917,9 @@ var init_hooks = __esm({
 });
 
 // packages/tiny-brain-core/src/services/auth/credential-storage.service.ts
-import * as fs13 from "fs/promises";
-import * as path13 from "path";
-import * as os from "os";
+import * as fs16 from "fs/promises";
+import * as path16 from "path";
+import * as os2 from "os";
 import * as crypto from "crypto";
 var CredentialStorageService;
 var init_credential_storage_service = __esm({
@@ -41756,8 +42931,8 @@ var init_credential_storage_service = __esm({
       iterations = 1e5;
       keyLength = 32;
       constructor() {
-        const homeDir = os.homedir();
-        this.credentialsPath = path13.join(homeDir, ".tiny-brain", "config", "credentials.json");
+        const homeDir = os2.homedir();
+        this.credentialsPath = path16.join(homeDir, ".tiny-brain", "config", "credentials.json");
       }
       async setCredential(key, value) {
         const validKeys = ["clientId", "clientSecret"];
@@ -41811,7 +42986,7 @@ var init_credential_storage_service = __esm({
       }
       async clearCredentials() {
         try {
-          await fs13.unlink(this.credentialsPath);
+          await fs16.unlink(this.credentialsPath);
         } catch (error2) {
           if (error2.code !== "ENOENT") {
             throw error2;
@@ -41861,7 +43036,7 @@ var init_credential_storage_service = __esm({
         return decrypted.toString("utf8");
       }
       deriveKey(salt) {
-        const passphrase = os.homedir();
+        const passphrase = os2.homedir();
         return crypto.pbkdf2Sync(
           passphrase,
           salt,
@@ -41872,7 +43047,7 @@ var init_credential_storage_service = __esm({
       }
       async loadStoredCredentials() {
         try {
-          const data = await fs13.readFile(this.credentialsPath, "utf8");
+          const data = await fs16.readFile(this.credentialsPath, "utf8");
           return JSON.parse(data);
         } catch (error2) {
           if (error2.code === "ENOENT") {
@@ -41882,14 +43057,14 @@ var init_credential_storage_service = __esm({
         }
       }
       async saveStoredCredentials(credentials) {
-        const dir = path13.dirname(this.credentialsPath);
-        await fs13.mkdir(dir, { recursive: true });
-        await fs13.writeFile(
+        const dir = path16.dirname(this.credentialsPath);
+        await fs16.mkdir(dir, { recursive: true });
+        await fs16.writeFile(
           this.credentialsPath,
           JSON.stringify(credentials, null, 2),
           "utf8"
         );
-        await fs13.chmod(this.credentialsPath, 384);
+        await fs16.chmod(this.credentialsPath, 384);
       }
     };
   }
@@ -42064,8 +43239,8 @@ var init_auth_token_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/tech-context-service.ts
-import { promises as fs14 } from "fs";
-import path14 from "path";
+import { promises as fs17 } from "fs";
+import path17 from "path";
 import crypto2 from "crypto";
 var TechContextService;
 var init_tech_context_service = __esm({
@@ -42077,9 +43252,9 @@ var init_tech_context_service = __esm({
       techDir;
       agentsDir;
       constructor(repoPath) {
-        this.tinyBrainDir = path14.join(repoPath, ".tiny-brain");
-        this.techDir = path14.join(this.tinyBrainDir, "tech");
-        this.agentsDir = path14.join(repoPath, ".claude", "agents");
+        this.tinyBrainDir = path17.join(repoPath, ".tiny-brain");
+        this.techDir = path17.join(this.tinyBrainDir, "tech");
+        this.agentsDir = path17.join(repoPath, ".claude", "agents");
       }
       /** Get the .tiny-brain directory path */
       getTinyBrainDir() {
@@ -42095,8 +43270,8 @@ var init_tech_context_service = __esm({
       }
       /** Ensure required directories exist */
       async ensureDirectories() {
-        await fs14.mkdir(this.tinyBrainDir, { recursive: true });
-        await fs14.mkdir(this.techDir, { recursive: true });
+        await fs17.mkdir(this.tinyBrainDir, { recursive: true });
+        await fs17.mkdir(this.techDir, { recursive: true });
       }
       /**
        * Write analysis data to .tiny-brain/analysis.json
@@ -42143,8 +43318,8 @@ var init_tech_context_service = __esm({
         if (analysis.envFiles && analysis.envFiles.length > 0) file.envFiles = analysis.envFiles;
         if (analysis.ci) file.ci = analysis.ci;
         if (analysis.analyzers && analysis.analyzers.length > 0) file.analyzers = analysis.analyzers;
-        const filePath = path14.join(this.tinyBrainDir, "analysis.json");
-        await fs14.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
+        const filePath = path17.join(this.tinyBrainDir, "analysis.json");
+        await fs17.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
       }
       /**
        * Write a tech expertise file with YAML frontmatter
@@ -42164,8 +43339,8 @@ var init_tech_context_service = __esm({
         const fileContent = `${yamlFrontmatter}
 
 ${content}`;
-        const filePath = path14.join(this.techDir, `${name}.md`);
-        await fs14.writeFile(filePath, fileContent, "utf-8");
+        const filePath = path17.join(this.techDir, `${name}.md`);
+        await fs17.writeFile(filePath, fileContent, "utf-8");
       }
       /**
        * Write raw markdown content to a tech file
@@ -42173,16 +43348,16 @@ ${content}`;
        */
       async writeTechFileRaw(name, content) {
         await this.ensureDirectories();
-        const filePath = path14.join(this.techDir, `${name}.md`);
-        await fs14.writeFile(filePath, content, "utf-8");
+        const filePath = path17.join(this.techDir, `${name}.md`);
+        await fs17.writeFile(filePath, content, "utf-8");
       }
       /**
        * Read analysis data from .tiny-brain/analysis.json
        */
       async readAnalysis() {
-        const filePath = path14.join(this.tinyBrainDir, "analysis.json");
+        const filePath = path17.join(this.tinyBrainDir, "analysis.json");
         try {
-          const content = await fs14.readFile(filePath, "utf-8");
+          const content = await fs17.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return null;
@@ -42193,12 +43368,12 @@ ${content}`;
        */
       async readTechFiles() {
         try {
-          const files = await fs14.readdir(this.techDir);
+          const files = await fs17.readdir(this.techDir);
           const techFiles = [];
           for (const file of files) {
             if (!file.endsWith(".md")) continue;
-            const filePath = path14.join(this.techDir, file);
-            const content = await fs14.readFile(filePath, "utf-8");
+            const filePath = path17.join(this.techDir, file);
+            const content = await fs17.readFile(filePath, "utf-8");
             const parsed = this.parseFrontmatter(content);
             if (parsed) {
               techFiles.push({
@@ -42218,7 +43393,7 @@ ${content}`;
       async getTechForFile(filePath) {
         const techFiles = await this.readTechFiles();
         const matches = [];
-        const basename2 = path14.basename(filePath);
+        const basename2 = path17.basename(filePath);
         for (const techFile of techFiles) {
           for (const pattern of techFile.frontmatter.filePatterns) {
             if (minimatch(filePath, pattern) || minimatch(basename2, pattern) || minimatch(filePath, `**/${pattern}`) || filePath.includes(pattern.replace(/\/$/, ""))) {
@@ -42263,16 +43438,16 @@ ${content}`;
           ...config2,
           lastSynced: (/* @__PURE__ */ new Date()).toISOString()
         };
-        const filePath = path14.join(this.techDir, "config.json");
-        await fs14.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
+        const filePath = path17.join(this.techDir, "config.json");
+        await fs17.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
       }
       /**
        * Read config from .tiny-brain/tech/config.json
        */
       async readConfig() {
-        const filePath = path14.join(this.techDir, "config.json");
+        const filePath = path17.join(this.techDir, "config.json");
         try {
-          const content = await fs14.readFile(filePath, "utf-8");
+          const content = await fs17.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return { useAgents: false };
@@ -42286,12 +43461,12 @@ ${content}`;
        * - Sub-agent invocation context
        */
       async installTechAgents() {
-        await fs14.mkdir(this.agentsDir, { recursive: true });
+        await fs17.mkdir(this.agentsDir, { recursive: true });
         const techFiles = await this.readTechFiles();
         for (const techFile of techFiles) {
           const name = techFile.frontmatter.name;
           const agentFileName = `tech-${name}.md`;
-          const agentPath = path14.join(this.agentsDir, agentFileName);
+          const agentPath = path17.join(this.agentsDir, agentFileName);
           const description = techFile.frontmatter.description || `${name} development specialist. Use for ${techFile.frontmatter.domain} tasks involving ${name}.`;
           const agentContent = `---
 name: tech-${name}
@@ -42307,7 +43482,7 @@ You are a specialized ${name} development agent invoked by the developer agent. 
 ## Tech Expertise
 
 ${techFile.content}`;
-          await fs14.writeFile(agentPath, agentContent, "utf-8");
+          await fs17.writeFile(agentPath, agentContent, "utf-8");
         }
       }
       /**
@@ -42315,10 +43490,10 @@ ${techFile.content}`;
        */
       async removeTechAgents() {
         try {
-          const files = await fs14.readdir(this.agentsDir);
+          const files = await fs17.readdir(this.agentsDir);
           for (const file of files) {
             if (file.startsWith("tech-") && file.endsWith(".md")) {
-              await fs14.unlink(path14.join(this.agentsDir, file));
+              await fs17.unlink(path17.join(this.agentsDir, file));
             }
           }
         } catch {
@@ -42413,8 +43588,8 @@ ${techFile.content}`;
 });
 
 // packages/tiny-brain-core/src/analyser/detectors/base-detector.ts
-import * as fs15 from "fs/promises";
-import * as path15 from "path";
+import * as fs18 from "fs/promises";
+import * as path18 from "path";
 var BaseDetector;
 var init_base_detector = __esm({
   "packages/tiny-brain-core/src/analyser/detectors/base-detector.ts"() {
@@ -42425,7 +43600,7 @@ var init_base_detector = __esm({
       }
       async fileExists(filePath) {
         try {
-          await fs15.access(path15.join(this.dirPath, filePath));
+          await fs18.access(path18.join(this.dirPath, filePath));
           return true;
         } catch {
           return false;
@@ -42433,7 +43608,7 @@ var init_base_detector = __esm({
       }
       async readFile(filePath) {
         try {
-          return await fs15.readFile(path15.join(this.dirPath, filePath), "utf8");
+          return await fs18.readFile(path18.join(this.dirPath, filePath), "utf8");
         } catch {
           return "";
         }
@@ -42448,7 +43623,7 @@ var init_base_detector = __esm({
       }
       async findFiles(pattern) {
         try {
-          const files = await fs15.readdir(this.dirPath);
+          const files = await fs18.readdir(this.dirPath);
           return files.filter((file) => {
             if (pattern.includes("*")) {
               const regex = new RegExp(pattern.replace("*", ".*"));
@@ -42864,20 +44039,20 @@ var init_script_analyzer = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/utils.ts
-import * as path16 from "path";
-import * as fs16 from "fs/promises";
+import * as path19 from "path";
+import * as fs19 from "fs/promises";
 async function findProjectRoot(startPath) {
-  let currentPath = path16.resolve(startPath);
+  let currentPath = path19.resolve(startPath);
   while (currentPath !== "/") {
     try {
-      const gitPath = path16.join(currentPath, ".git");
-      const stats = await fs16.stat(gitPath);
+      const gitPath = path19.join(currentPath, ".git");
+      const stats = await fs19.stat(gitPath);
       if (stats.isDirectory()) {
         return currentPath;
       }
     } catch {
     }
-    currentPath = path16.dirname(currentPath);
+    currentPath = path19.dirname(currentPath);
   }
   return startPath;
 }
@@ -42888,8 +44063,8 @@ var init_utils = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/index.ts
-import * as fs17 from "fs/promises";
-import * as path17 from "path";
+import * as fs20 from "fs/promises";
+import * as path20 from "path";
 async function analyseRepository(rootPath = process.cwd(), options) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const languages = /* @__PURE__ */ new Set();
@@ -42966,7 +44141,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     if (stack.database?.vendor) databases.add(stack.database.vendor);
   }
   function detectFileType(fileName) {
-    const ext2 = path17.extname(fileName).toLowerCase();
+    const ext2 = path20.extname(fileName).toLowerCase();
     if ([".js", ".mjs", ".cjs", ".jsx"].includes(ext2)) {
       languages.add("javascript");
       languageFileCounts.javascript = (languageFileCounts.javascript || 0) + 1;
@@ -43004,7 +44179,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     for (const pattern of TEST_PATTERNS) {
       if (fileName.includes(pattern)) {
         testFiles.push(fileName);
-        const ext2 = path17.extname(fileName);
+        const ext2 = path20.extname(fileName);
         if (ext2) {
           testPatterns.add(pattern + ext2.substring(1));
         }
@@ -43015,10 +44190,10 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   async function detectOtherLanguages(dirPath, files) {
     try {
       for (const file of files) {
-        const filePath = path17.join(dirPath, file);
+        const filePath = path20.join(dirPath, file);
         if (file === "requirements.txt" || file === "setup.py" || file === "pyproject.toml") {
           languages.add("python");
-          const content = await fs17.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs20.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("django")) frameworks.add("django");
           if (content.includes("flask")) frameworks.add("flask");
           if (content.includes("fastapi")) frameworks.add("fastapi");
@@ -43027,14 +44202,14 @@ async function analyseRepository(rootPath = process.cwd(), options) {
         }
         if (file === "go.mod" || file === "go.sum") {
           languages.add("go");
-          const content = await fs17.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs20.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("testify")) testingTools.add("testify");
           if (content.includes("gin-gonic")) frameworks.add("gin");
           if (content.includes("echo")) frameworks.add("echo");
         }
         if (file === "Gemfile" || file === "Rakefile") {
           languages.add("ruby");
-          const content = await fs17.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs20.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("rails")) frameworks.add("rails");
           if (content.includes("sinatra")) frameworks.add("sinatra");
           if (content.includes("rspec")) testingTools.add("rspec");
@@ -43061,7 +44236,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   });
   const documentationLocations = [];
   let documentationPattern;
-  const rootFiles = await fs17.readdir(rootPath).catch(() => []);
+  const rootFiles = await fs20.readdir(rootPath).catch(() => []);
   const rootFileNames = rootFiles.map((f) => typeof f === "string" ? f : f.name);
   const hasRootReadme = rootFileNames.some((f) => f.toLowerCase() === "readme.md");
   const hasDocsFolder = rootFileNames.some((f) => f.toLowerCase() === "docs");
@@ -43083,8 +44258,8 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   let scripts;
   let monorepo;
   let runtimeVersion;
-  const rootPkgPath = path17.join(rootPath, "package.json");
-  const rootPkgContent = await fs17.readFile(rootPkgPath, "utf8").catch(() => "");
+  const rootPkgPath = path20.join(rootPath, "package.json");
+  const rootPkgContent = await fs20.readFile(rootPkgPath, "utf8").catch(() => "");
   if (rootPkgContent) {
     try {
       const rootPkg = JSON.parse(rootPkgContent);
@@ -43114,16 +44289,16 @@ async function analyseRepository(rootPath = process.cwd(), options) {
         for (const glob2 of workspaceGlobs) {
           if (glob2.endsWith("*")) {
             const baseDir = glob2.replace(/\/?\*$/, "");
-            const basePath = path17.join(rootPath, baseDir);
-            const entries = await fs17.readdir(basePath, { withFileTypes: true }).catch(() => []);
+            const basePath = path20.join(rootPath, baseDir);
+            const entries = await fs20.readdir(basePath, { withFileTypes: true }).catch(() => []);
             for (const entry of entries) {
               if (entry.isDirectory()) {
-                resolvedPackages.push(path17.join(baseDir, entry.name));
+                resolvedPackages.push(path20.join(baseDir, entry.name));
               }
             }
           } else {
-            const fullPath = path17.join(rootPath, glob2);
-            const stat3 = await fs17.stat(fullPath).catch(() => null);
+            const fullPath = path20.join(rootPath, glob2);
+            const stat3 = await fs20.stat(fullPath).catch(() => null);
             if (stat3?.isDirectory()) {
               resolvedPackages.push(glob2);
             }
@@ -43144,19 +44319,19 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     } catch {
     }
   }
-  const nvmrcPath = path17.join(rootPath, ".nvmrc");
-  const nvmrcContent = await fs17.readFile(nvmrcPath, "utf8").catch(() => "");
+  const nvmrcPath = path20.join(rootPath, ".nvmrc");
+  const nvmrcContent = await fs20.readFile(nvmrcPath, "utf8").catch(() => "");
   if (nvmrcContent.trim()) {
     runtimeVersion = { source: ".nvmrc", version: nvmrcContent.trim() };
   } else {
-    const nodeVersionPath = path17.join(rootPath, ".node-version");
-    const nodeVersionContent = await fs17.readFile(nodeVersionPath, "utf8").catch(() => "");
+    const nodeVersionPath = path20.join(rootPath, ".node-version");
+    const nodeVersionContent = await fs20.readFile(nodeVersionPath, "utf8").catch(() => "");
     if (nodeVersionContent.trim()) {
       runtimeVersion = { source: ".node-version", version: nodeVersionContent.trim() };
     }
   }
   const SOURCE_DIR_CANDIDATES = ["src", "lib", "app", "packages", "server", "client"];
-  const rootEntries = await fs17.readdir(rootPath, { withFileTypes: true }).catch(() => []);
+  const rootEntries = await fs20.readdir(rootPath, { withFileTypes: true }).catch(() => []);
   const sourceDirectories = [];
   for (const entry of rootEntries) {
     if (entry.isDirectory() && SOURCE_DIR_CANDIDATES.includes(entry.name)) {
@@ -43172,8 +44347,8 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   }
   let ci;
   if (rootFileNames.includes(".github") || rootEntries.some((e) => e.isDirectory() && e.name === ".github")) {
-    const githubPath = path17.join(rootPath, ".github", "workflows");
-    const workflowEntries = await fs17.readdir(githubPath).catch(() => []);
+    const githubPath = path20.join(rootPath, ".github", "workflows");
+    const workflowEntries = await fs20.readdir(githubPath).catch(() => []);
     if (workflowEntries.length > 0) {
       ci = { platform: "github-actions", configPath: ".github/workflows/" };
     }
@@ -43238,8 +44413,8 @@ function parseTsconfig(content) {
   }
 }
 async function resolveTsconfigStrict(rootPath) {
-  const tsconfigPath = path17.join(rootPath, "tsconfig.json");
-  const content = await fs17.readFile(tsconfigPath, "utf8").catch(() => "");
+  const tsconfigPath = path20.join(rootPath, "tsconfig.json");
+  const content = await fs20.readFile(tsconfigPath, "utf8").catch(() => "");
   if (!content) return void 0;
   const tsconfig = parseTsconfig(content);
   if (!tsconfig) return void 0;
@@ -43252,8 +44427,8 @@ async function resolveTsconfigStrict(rootPath) {
     }
   }
   if (tsconfig.extends) {
-    const extPath = path17.resolve(rootPath, tsconfig.extends);
-    const extContent = await fs17.readFile(extPath, "utf8").catch(() => "");
+    const extPath = path20.resolve(rootPath, tsconfig.extends);
+    const extContent = await fs20.readFile(extPath, "utf8").catch(() => "");
     if (extContent) {
       const ext2 = parseTsconfig(extContent);
       if (ext2?.compilerOptions) {
@@ -43266,8 +44441,8 @@ async function resolveTsconfigStrict(rootPath) {
   }
   if (tsconfig.references?.length) {
     for (const ref of tsconfig.references) {
-      const refPath = path17.join(rootPath, ref.path, "tsconfig.json");
-      const refContent = await fs17.readFile(refPath, "utf8").catch(() => "");
+      const refPath = path20.join(rootPath, ref.path, "tsconfig.json");
+      const refContent = await fs20.readFile(refPath, "utf8").catch(() => "");
       if (refContent) {
         const refConfig = parseTsconfig(refContent);
         if (refConfig?.compilerOptions?.strict !== void 0) {
@@ -43286,7 +44461,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     return;
   }
   try {
-    const entries = await fs17.readdir(dir, { withFileTypes: true });
+    const entries = await fs20.readdir(dir, { withFileTypes: true });
     const files = [];
     const dirs = [];
     for (const entry of entries) {
@@ -43298,7 +44473,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     }
     await callback(dir, files);
     for (const subdir of dirs) {
-      const fullPath = path17.join(dir, subdir);
+      const fullPath = path20.join(dir, subdir);
       await walkDirectory(fullPath, callback, options, currentDepth + 1);
     }
   } catch {
@@ -43758,9 +44933,9 @@ var init_library_client = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/agents-md-service.ts
-import { promises as fs18 } from "fs";
+import { promises as fs21 } from "fs";
 import { createHash as createHash3 } from "crypto";
-import path18 from "path";
+import path21 from "path";
 var MARKER_START, MARKER_END, AgentsMdService;
 var init_agents_md_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/agents-md-service.ts"() {
@@ -43859,10 +45034,10 @@ ${MARKER_END}`;
         };
       }
       async extractReadmeExcerpt() {
-        const readmePath = path18.join(this.repoPath, "README.md");
+        const readmePath = path21.join(this.repoPath, "README.md");
         let content;
         try {
-          content = await fs18.readFile(readmePath, "utf8");
+          content = await fs21.readFile(readmePath, "utf8");
         } catch {
           return void 0;
         }
@@ -44096,7 +45271,7 @@ ${MARKER_END}`;
         lines.push("## Packages");
         lines.push("");
         for (const pkg of packageDescriptions) {
-          const name = pkg.name || path18.basename(pkg.path);
+          const name = pkg.name || path21.basename(pkg.path);
           const desc = pkg.description ? ` - ${pkg.description}` : "";
           lines.push(`- **\`${name}\`** (\`${pkg.path}\`)${desc}`);
         }
@@ -44109,12 +45284,12 @@ ${MARKER_END}`;
        */
       async generatePackageContent(packagePath, rootAnalysis, existingContent) {
         const scriptAnalyzer = new ScriptAnalyzer();
-        let pkgName = path18.basename(packagePath);
+        let pkgName = path21.basename(packagePath);
         let pkgDescription;
         let scripts = {};
         try {
-          const pkgJsonPath = path18.join(packagePath, "package.json");
-          const raw = await fs18.readFile(pkgJsonPath, "utf-8");
+          const pkgJsonPath = path21.join(packagePath, "package.json");
+          const raw = await fs21.readFile(pkgJsonPath, "utf-8");
           const pkgJson = JSON.parse(raw);
           pkgName = pkgJson.name || pkgName;
           pkgDescription = pkgJson.description;
@@ -44246,9 +45421,9 @@ ${MARKER_END}`;
 });
 
 // packages/tiny-brain-core/src/services/analysis/config-setup-service.ts
-import { promises as fs19 } from "node:fs";
-import { existsSync as existsSync3 } from "node:fs";
-import * as path19 from "node:path";
+import { promises as fs22 } from "node:fs";
+import { existsSync as existsSync6 } from "node:fs";
+import * as path22 from "node:path";
 var HOOK_SIGNATURE, EXEC_HELPER_CONTENT, HOOK_NAMES, SKILL_PERMISSIONS, CONTEXT_START_MARKER, CONTEXT_END_MARKER, SILENT_LOGGER, ConfigSetupService;
 var init_config_setup_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/config-setup-service.ts"() {
@@ -44334,10 +45509,10 @@ esac
        * Creates directories that do not yet exist.
        */
       async initializeDirectories(flags) {
-        const prdInitialized = flags.enableSDD ? await this.createDirectoryIfMissing(path19.join("docs", "prd")) : false;
-        const adrInitialized = flags.enableADR ? await this.createDirectoryIfMissing(path19.join("docs", "adr")) : false;
-        const qualityInitialized = flags.enableQuality ? await this.createDirectoryIfMissing(path19.join(".tiny-brain", "quality")) : false;
-        const fixesInitialized = flags.enableSDD ? await this.createDirectoryWithProgress(path19.join(".tiny-brain", "fixes"), "progress.json") : false;
+        const prdInitialized = flags.enableSDD ? await this.createDirectoryIfMissing(path22.join("docs", "prd")) : false;
+        const adrInitialized = flags.enableADR ? await this.createDirectoryIfMissing(path22.join("docs", "adr")) : false;
+        const qualityInitialized = flags.enableQuality ? await this.createDirectoryIfMissing(path22.join(".tiny-brain", "quality")) : false;
+        const fixesInitialized = flags.enableSDD ? await this.createDirectoryWithProgress(path22.join(".tiny-brain", "fixes"), "progress.json") : false;
         return { prdInitialized, adrInitialized, qualityInitialized, fixesInitialized };
       }
       /**
@@ -44345,10 +45520,10 @@ esac
        * Idempotent — skips entries that already exist.
        */
       async ensureGitignoreEntries() {
-        const gitignorePath = path19.join(this.repoPath, ".gitignore");
+        const gitignorePath = path22.join(this.repoPath, ".gitignore");
         let content = "";
         try {
-          content = await fs19.readFile(gitignorePath, "utf-8");
+          content = await fs22.readFile(gitignorePath, "utf-8");
         } catch {
         }
         const entries = [
@@ -44363,7 +45538,7 @@ esac
           "# tiny-brain operational data (auto-added by analyse)",
           ...missing
         ].join("\n") + "\n";
-        await fs19.appendFile(gitignorePath, block, "utf-8");
+        await fs22.appendFile(gitignorePath, block, "utf-8");
         this.logger.info(`Added ${missing.length} entries to .gitignore`);
       }
       /**
@@ -44375,33 +45550,33 @@ esac
           this.logger.debug("No hooksSourceDir provided, skipping git hooks installation");
           return false;
         }
-        const gitDir = path19.join(this.repoPath, ".git");
-        if (!existsSync3(gitDir)) {
+        const gitDir = path22.join(this.repoPath, ".git");
+        if (!existsSync6(gitDir)) {
           this.logger.debug("Not a git repository, skipping git hooks initialization");
           return false;
         }
-        if (!existsSync3(this.hooksSourceDir)) {
+        if (!existsSync6(this.hooksSourceDir)) {
           this.logger.debug(`Hook templates not found at ${this.hooksSourceDir}, skipping`);
           return false;
         }
-        const gitHooksDir = path19.join(gitDir, "hooks");
-        await fs19.mkdir(gitHooksDir, { recursive: true });
+        const gitHooksDir = path22.join(gitDir, "hooks");
+        await fs22.mkdir(gitHooksDir, { recursive: true });
         let anyInstalled = false;
         for (const hookName of HOOK_NAMES) {
-          const srcHook = path19.join(this.hooksSourceDir, hookName);
-          const destHook = path19.join(gitHooksDir, hookName);
-          if (!existsSync3(srcHook)) {
+          const srcHook = path22.join(this.hooksSourceDir, hookName);
+          const destHook = path22.join(gitHooksDir, hookName);
+          if (!existsSync6(srcHook)) {
             continue;
           }
-          if (existsSync3(destHook)) {
+          if (existsSync6(destHook)) {
             try {
-              const existingContent = await fs19.readFile(destHook, "utf-8");
+              const existingContent = await fs22.readFile(destHook, "utf-8");
               if (!existingContent.includes(HOOK_SIGNATURE)) {
                 this.logger.debug(`Skipping ${hookName} - custom hook already exists`);
                 continue;
               }
-              const srcStat = await fs19.stat(srcHook);
-              const destStat = await fs19.stat(destHook);
+              const srcStat = await fs22.stat(srcHook);
+              const destStat = await fs22.stat(destHook);
               if (srcStat.mtime <= destStat.mtime) {
                 continue;
               }
@@ -44409,8 +45584,8 @@ esac
               continue;
             }
           }
-          await fs19.copyFile(srcHook, destHook);
-          await fs19.chmod(destHook, 493);
+          await fs22.copyFile(srcHook, destHook);
+          await fs22.chmod(destHook, 493);
           anyInstalled = true;
           this.logger.info(`Installed git hook: ${hookName}`);
         }
@@ -44426,9 +45601,9 @@ esac
        * and outputs the correct exec command (pnpm exec, npx, yarn exec, bunx).
        */
       async installExecHelper(gitHooksDir) {
-        const helperPath = path19.join(gitHooksDir, "tiny-brain-exec");
-        await fs19.writeFile(helperPath, EXEC_HELPER_CONTENT, "utf-8");
-        await fs19.chmod(helperPath, 493);
+        const helperPath = path22.join(gitHooksDir, "tiny-brain-exec");
+        await fs22.writeFile(helperPath, EXEC_HELPER_CONTENT, "utf-8");
+        await fs22.chmod(helperPath, 493);
         this.logger.debug("Installed tiny-brain-exec helper");
       }
       /**
@@ -44437,13 +45612,13 @@ esac
        */
       async injectSkillPermissions() {
         try {
-          const settingsDir = path19.join(this.repoPath, ".claude");
-          const settingsPath = path19.join(settingsDir, "settings.json");
-          await fs19.mkdir(settingsDir, { recursive: true });
+          const settingsDir = path22.join(this.repoPath, ".claude");
+          const settingsPath = path22.join(settingsDir, "settings.json");
+          await fs22.mkdir(settingsDir, { recursive: true });
           let settings = {};
-          if (existsSync3(settingsPath)) {
+          if (existsSync6(settingsPath)) {
             try {
-              const content = await fs19.readFile(settingsPath, "utf-8");
+              const content = await fs22.readFile(settingsPath, "utf-8");
               settings = JSON.parse(content);
             } catch {
               this.logger.warn("Failed to parse existing settings.json, will create new one");
@@ -44466,7 +45641,7 @@ esac
             }
           }
           if (addedPermissions.length > 0) {
-            await fs19.writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+            await fs22.writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
             this.logger.info(`Added ${addedPermissions.length} skill permissions to .claude/settings.json`);
           }
           return addedPermissions;
@@ -44508,10 +45683,10 @@ version: ${this.version}
 
 ${workflowContent}${CONTEXT_END_MARKER}
 `;
-        const claudeMdPath = path19.join(this.repoPath, "CLAUDE.md");
+        const claudeMdPath = path22.join(this.repoPath, "CLAUDE.md");
         let existingContent = "";
         try {
-          existingContent = await fs19.readFile(claudeMdPath, "utf-8");
+          existingContent = await fs22.readFile(claudeMdPath, "utf-8");
         } catch {
         }
         if (existingContent.includes(CONTEXT_START_MARKER)) {
@@ -44531,8 +45706,8 @@ ${workflowContent}${CONTEXT_END_MARKER}
         } else {
           existingContent = existingContent.trimEnd() + "\n\n" + repoBlock;
         }
-        await fs19.mkdir(path19.dirname(claudeMdPath), { recursive: true });
-        await fs19.writeFile(claudeMdPath, existingContent, "utf-8");
+        await fs22.mkdir(path22.dirname(claudeMdPath), { recursive: true });
+        await fs22.writeFile(claudeMdPath, existingContent, "utf-8");
         this.logger.info("Updated workflow sections in CLAUDE.md");
         return true;
       }
@@ -44541,8 +45716,8 @@ ${workflowContent}${CONTEXT_END_MARKER}
        */
       async readConfigFlags() {
         try {
-          const configPath = path19.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs19.readFile(configPath, "utf-8");
+          const configPath = path22.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs22.readFile(configPath, "utf-8");
           const config2 = JSON.parse(content);
           return {
             enableSDD: config2.preferences?.repo?.enableSDD ?? true,
@@ -44564,8 +45739,8 @@ ${workflowContent}${CONTEXT_END_MARKER}
        */
       async isAgenticCodingEnabled() {
         try {
-          const configPath = path19.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs19.readFile(configPath, "utf-8");
+          const configPath = path22.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs22.readFile(configPath, "utf-8");
           const config2 = JSON.parse(content);
           return config2.preferences?.repo?.enableAgenticCoding ?? false;
         } catch {
@@ -44577,8 +45752,8 @@ ${workflowContent}${CONTEXT_END_MARKER}
        */
       async detectMonorepo() {
         try {
-          const analysisPath = path19.join(this.repoPath, ".tiny-brain", "analysis.json");
-          const content = await fs19.readFile(analysisPath, "utf-8");
+          const analysisPath = path22.join(this.repoPath, ".tiny-brain", "analysis.json");
+          const content = await fs22.readFile(analysisPath, "utf-8");
           const analysis = JSON.parse(content);
           return !!analysis.monorepo;
         } catch {
@@ -44590,12 +45765,12 @@ ${workflowContent}${CONTEXT_END_MARKER}
        * Returns true if the directory was created, false if it already existed.
        */
       async createDirectoryIfMissing(relativePath) {
-        const fullPath = path19.join(this.repoPath, relativePath);
-        if (existsSync3(fullPath)) {
+        const fullPath = path22.join(this.repoPath, relativePath);
+        if (existsSync6(fullPath)) {
           return false;
         }
         try {
-          await fs19.mkdir(fullPath, { recursive: true });
+          await fs22.mkdir(fullPath, { recursive: true });
           this.logger.info(`Created ${relativePath}/ directory`);
           return true;
         } catch (error2) {
@@ -44610,10 +45785,10 @@ ${workflowContent}${CONTEXT_END_MARKER}
        */
       async createDirectoryWithProgress(relativePath, progressFile) {
         const dirCreated = await this.createDirectoryIfMissing(relativePath);
-        const progressPath = path19.join(this.repoPath, relativePath, progressFile);
-        if (!existsSync3(progressPath)) {
+        const progressPath = path22.join(this.repoPath, relativePath, progressFile);
+        if (!existsSync6(progressPath)) {
           try {
-            await fs19.writeFile(progressPath, JSON.stringify({ fixes: [], lastSynced: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), "utf-8");
+            await fs22.writeFile(progressPath, JSON.stringify({ fixes: [], lastSynced: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), "utf-8");
             this.logger.info(`Created ${relativePath}/${progressFile}`);
           } catch (error2) {
             this.logger.warn(
@@ -45043,9 +46218,9 @@ Write tests and production code directly in the main session. Follow the RED/GRE
 
 // packages/tiny-brain-core/src/services/analysis/analysis-service.ts
 import { readFile as readFile8, writeFile as writeFile2 } from "fs/promises";
-import { existsSync as existsSync4 } from "fs";
-import { fileURLToPath as fileURLToPath3 } from "url";
-import { dirname as dirname4, join as join11 } from "path";
+import { existsSync as existsSync7 } from "fs";
+import { fileURLToPath as fileURLToPath4 } from "url";
+import { dirname as dirname8, join as join17 } from "path";
 var AnalysisService;
 var init_analysis_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/analysis-service.ts"() {
@@ -45082,7 +46257,7 @@ var init_analysis_service = __esm({
        */
       async isAgenticCodingEnabled() {
         try {
-          const configPath = join11(this.repoPath, ".tiny-brain", "config.json");
+          const configPath = join17(this.repoPath, ".tiny-brain", "config.json");
           const content = await readFile8(configPath, "utf-8");
           const config2 = JSON.parse(content);
           return config2.preferences?.repo?.enableAgenticCoding ?? false;
@@ -45095,7 +46270,7 @@ var init_analysis_service = __esm({
        */
       async isManageAgentsMdEnabled() {
         try {
-          const configPath = join11(this.repoPath, ".tiny-brain", "config.json");
+          const configPath = join17(this.repoPath, ".tiny-brain", "config.json");
           const content = await readFile8(configPath, "utf-8");
           const config2 = JSON.parse(content);
           return config2.preferences?.repo?.manageAgentsMd ?? true;
@@ -45283,7 +46458,7 @@ var init_analysis_service = __esm({
        */
       async generateAgentsMd(analysis) {
         const agentsMdService = new AgentsMdService(this.repoPath);
-        const agentsMdPath = join11(this.repoPath, "AGENTS.md");
+        const agentsMdPath = join17(this.repoPath, "AGENTS.md");
         let existingContent;
         try {
           existingContent = await readFile8(agentsMdPath, "utf-8");
@@ -45314,12 +46489,12 @@ var init_analysis_service = __esm({
        */
       resolveHooksDir() {
         try {
-          const currentFile = fileURLToPath3(import.meta.url);
-          const currentDir = dirname4(currentFile);
-          const hooksDir = join11(currentDir, "..", "..", "..", "templates", "hooks");
-          const srcHooksDir = join11(currentDir, "..", "..", "..", "..", "templates", "hooks");
-          if (existsSync4(hooksDir)) return hooksDir;
-          if (existsSync4(srcHooksDir)) return srcHooksDir;
+          const currentFile = fileURLToPath4(import.meta.url);
+          const currentDir = dirname8(currentFile);
+          const hooksDir = join17(currentDir, "..", "..", "..", "templates", "hooks");
+          const srcHooksDir = join17(currentDir, "..", "..", "..", "..", "templates", "hooks");
+          if (existsSync7(hooksDir)) return hooksDir;
+          if (existsSync7(srcHooksDir)) return srcHooksDir;
           return void 0;
         } catch {
           return void 0;
@@ -45349,11 +46524,11 @@ var init_analysis_service = __esm({
        */
       async getPackageVersion() {
         try {
-          const currentFile = fileURLToPath3(import.meta.url);
-          const currentDir = dirname4(currentFile);
+          const currentFile = fileURLToPath4(import.meta.url);
+          const currentDir = dirname8(currentFile);
           const paths = [
-            join11(currentDir, "..", "..", "..", "package.json"),
-            join11(currentDir, "..", "..", "..", "..", "package.json")
+            join17(currentDir, "..", "..", "..", "package.json"),
+            join17(currentDir, "..", "..", "..", "..", "package.json")
           ];
           for (const p of paths) {
             try {
@@ -45374,8 +46549,8 @@ var init_analysis_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/config-health-service.ts
-import { promises as fs20 } from "fs";
-import path20 from "path";
+import { promises as fs23 } from "fs";
+import path23 from "path";
 var HOOK_SIGNATURE2, REQUIRED_PERMISSIONS, CONTEXT_START_MARKER2, CONTEXT_END_MARKER2, ConfigHealthService;
 var init_config_health_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/config-health-service.ts"() {
@@ -45395,10 +46570,10 @@ var init_config_health_service = __esm({
       settingsPath;
       constructor(repoPath) {
         this.repoPath = repoPath;
-        this.gitDir = path20.join(repoPath, ".git");
-        this.hooksDir = path20.join(this.gitDir, "hooks");
-        this.claudeMdPath = path20.join(repoPath, "CLAUDE.md");
-        this.settingsPath = path20.join(repoPath, ".claude", "settings.json");
+        this.gitDir = path23.join(repoPath, ".git");
+        this.hooksDir = path23.join(this.gitDir, "hooks");
+        this.claudeMdPath = path23.join(repoPath, "CLAUDE.md");
+        this.settingsPath = path23.join(repoPath, ".claude", "settings.json");
       }
       _hooksResolved = false;
       /**
@@ -45410,20 +46585,20 @@ var init_config_health_service = __esm({
         if (this._hooksResolved) return;
         this._hooksResolved = true;
         try {
-          const stats = await fs20.stat(this.gitDir);
+          const stats = await fs23.stat(this.gitDir);
           if (stats.isFile()) {
-            const localHooksDir = path20.join(this.repoPath, ".claude", "hooks");
+            const localHooksDir = path23.join(this.repoPath, ".claude", "hooks");
             try {
-              await fs20.stat(localHooksDir);
+              await fs23.stat(localHooksDir);
               this.hooksDir = localHooksDir;
               return;
             } catch {
             }
-            const content = await fs20.readFile(this.gitDir, "utf-8");
+            const content = await fs23.readFile(this.gitDir, "utf-8");
             const match2 = content.match(/^gitdir:\s*(.+)$/m);
             if (match2) {
-              const resolvedGitDir = path20.resolve(this.repoPath, match2[1].trim());
-              this.hooksDir = path20.join(resolvedGitDir, "hooks");
+              const resolvedGitDir = path23.resolve(this.repoPath, match2[1].trim());
+              this.hooksDir = path23.join(resolvedGitDir, "hooks");
             }
           }
         } catch {
@@ -45433,11 +46608,11 @@ var init_config_health_service = __esm({
        * Check status of a single git hook
        */
       async checkHook(hookName) {
-        const hookPath = path20.join(this.hooksDir, hookName);
+        const hookPath = path23.join(this.hooksDir, hookName);
         try {
-          const stats = await fs20.stat(hookPath);
+          const stats = await fs23.stat(hookPath);
           const isExecutable = (stats.mode & 64) !== 0;
-          const content = await fs20.readFile(hookPath, "utf-8");
+          const content = await fs23.readFile(hookPath, "utf-8");
           const isSigned = content.includes(HOOK_SIGNATURE2);
           return {
             name: hookName,
@@ -45480,7 +46655,7 @@ var init_config_health_service = __esm({
        */
       async checkContextBlock() {
         try {
-          const content = await fs20.readFile(this.claudeMdPath, "utf-8");
+          const content = await fs23.readFile(this.claudeMdPath, "utf-8");
           const hasStartMarker = content.includes(CONTEXT_START_MARKER2);
           const hasEndMarker = content.includes(CONTEXT_END_MARKER2);
           const present = hasStartMarker && hasEndMarker;
@@ -45531,7 +46706,7 @@ var init_config_health_service = __esm({
        */
       async checkSkillPermissions() {
         try {
-          const content = await fs20.readFile(this.settingsPath, "utf-8");
+          const content = await fs23.readFile(this.settingsPath, "utf-8");
           const settings = JSON.parse(content);
           const allowedPermissions = settings.permissions?.allow || [];
           const missing = REQUIRED_PERMISSIONS.filter(
@@ -45604,7 +46779,7 @@ var init_config_health_service = __esm({
        */
       async directoryExists(relativePath) {
         try {
-          const stats = await fs20.stat(path20.join(this.repoPath, relativePath));
+          const stats = await fs23.stat(path23.join(this.repoPath, relativePath));
           return stats.isDirectory();
         } catch {
           return false;
@@ -45615,7 +46790,7 @@ var init_config_health_service = __esm({
        */
       async checkIsGitRepo() {
         try {
-          const stats = await fs20.stat(this.gitDir);
+          const stats = await fs23.stat(this.gitDir);
           return stats.isDirectory() || stats.isFile();
         } catch {
           return false;
@@ -45638,8 +46813,8 @@ var init_config_health_service = __esm({
           manageAgentsMd: true
         };
         try {
-          const configPath = path20.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs20.readFile(configPath, "utf-8");
+          const configPath = path23.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs23.readFile(configPath, "utf-8");
           const config2 = JSON.parse(content);
           const repo = config2.repo ?? {};
           const flag = (key) => {
@@ -45736,8 +46911,8 @@ var init_capability_engine = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/recommendation-service.ts
-import path21 from "path";
-import fs21 from "fs/promises";
+import path24 from "path";
+import fs24 from "fs/promises";
 import childProcess from "child_process";
 var RecommendationService;
 var init_recommendation_service = __esm({
@@ -45750,11 +46925,11 @@ var init_recommendation_service = __esm({
       capabilityDeps;
       constructor(repoPath, capabilityDeps) {
         this.repoPath = repoPath;
-        this.recommendationsDir = path21.join(repoPath, ".tiny-brain", "recommendations");
+        this.recommendationsDir = path24.join(repoPath, ".tiny-brain", "recommendations");
         this.capabilityDeps = capabilityDeps;
       }
       async ensureDirectory() {
-        await fs21.mkdir(this.recommendationsDir, { recursive: true });
+        await fs24.mkdir(this.recommendationsDir, { recursive: true });
       }
       async writeRecommendations(recs, fetchedAt) {
         await this.ensureDirectory();
@@ -45763,13 +46938,13 @@ var init_recommendation_service = __esm({
           lastFetchedAt: fetchedAt,
           recommendations: recs
         };
-        const filePath = path21.join(this.recommendationsDir, "recommendations.json");
-        await fs21.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
+        const filePath = path24.join(this.recommendationsDir, "recommendations.json");
+        await fs24.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
       }
       async readRecommendations() {
-        const filePath = path21.join(this.recommendationsDir, "recommendations.json");
+        const filePath = path24.join(this.recommendationsDir, "recommendations.json");
         try {
-          const content = await fs21.readFile(filePath, "utf-8");
+          const content = await fs24.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return null;
@@ -45823,9 +46998,9 @@ var init_recommendation_service = __esm({
         return installed;
       }
       async readInstalledRecommendations() {
-        const filePath = path21.join(this.recommendationsDir, "installed.json");
+        const filePath = path24.join(this.recommendationsDir, "installed.json");
         try {
-          const content = await fs21.readFile(filePath, "utf-8");
+          const content = await fs24.readFile(filePath, "utf-8");
           const file = JSON.parse(content);
           return [...file.installed];
         } catch {
@@ -45863,15 +47038,15 @@ var init_recommendation_service = __esm({
         return `.claude/skills/${skillName}/SKILL.md`;
       }
       async installAgent(rec) {
-        const agentsDir = path21.join(this.repoPath, ".claude", "agents");
-        await fs21.mkdir(agentsDir, { recursive: true });
-        await fs21.writeFile(path21.join(agentsDir, `${rec.id}.md`), rec.source, "utf-8");
+        const agentsDir = path24.join(this.repoPath, ".claude", "agents");
+        await fs24.mkdir(agentsDir, { recursive: true });
+        await fs24.writeFile(path24.join(agentsDir, `${rec.id}.md`), rec.source, "utf-8");
         return `.claude/agents/${rec.id}.md`;
       }
       async installHook(rec) {
-        const hooksDir = path21.join(this.repoPath, ".claude", "hooks");
-        await fs21.mkdir(hooksDir, { recursive: true });
-        await fs21.writeFile(path21.join(hooksDir, `${rec.id}.json`), rec.source, "utf-8");
+        const hooksDir = path24.join(this.repoPath, ".claude", "hooks");
+        await fs24.mkdir(hooksDir, { recursive: true });
+        await fs24.writeFile(path24.join(hooksDir, `${rec.id}.json`), rec.source, "utf-8");
         return `.claude/hooks/${rec.id}.json`;
       }
       async mergeRecommendations(incoming, fetchedAt) {
@@ -45904,8 +47079,8 @@ var init_recommendation_service = __esm({
           version: "1.0",
           dismissed: [...existing, dismissed]
         };
-        const filePath = path21.join(this.recommendationsDir, "dismissed.json");
-        await fs21.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
+        const filePath = path24.join(this.recommendationsDir, "dismissed.json");
+        await fs24.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
       }
       async restoreRecommendation(recommendationId) {
         await this.ensureDirectory();
@@ -45915,13 +47090,13 @@ var init_recommendation_service = __esm({
           version: "1.0",
           dismissed: filtered
         };
-        const filePath = path21.join(this.recommendationsDir, "dismissed.json");
-        await fs21.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
+        const filePath = path24.join(this.recommendationsDir, "dismissed.json");
+        await fs24.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
       }
       async readDismissedRecommendations() {
-        const filePath = path21.join(this.recommendationsDir, "dismissed.json");
+        const filePath = path24.join(this.recommendationsDir, "dismissed.json");
         try {
-          const content = await fs21.readFile(filePath, "utf-8");
+          const content = await fs24.readFile(filePath, "utf-8");
           const file = JSON.parse(content);
           return [...file.dismissed];
         } catch {
@@ -45948,17 +47123,17 @@ var init_recommendation_service = __esm({
           version: "1.0",
           installed: [...existing, installed]
         };
-        const filePath = path21.join(this.recommendationsDir, "installed.json");
-        await fs21.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
+        const filePath = path24.join(this.recommendationsDir, "installed.json");
+        await fs24.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
       }
     };
   }
 });
 
 // packages/tiny-brain-core/src/services/analysis/capability-step-helpers.ts
-import fs22 from "fs/promises";
+import fs25 from "fs/promises";
 import childProcess2 from "child_process";
-import path22 from "path";
+import path25 from "path";
 function execFileAsync(cmd, args, opts) {
   return new Promise((resolve3, reject) => {
     childProcess2.execFile(cmd, [...args], { ...opts, encoding: "utf-8" }, (err, stdout, stderr) => {
@@ -45970,8 +47145,8 @@ function execFileAsync(cmd, args, opts) {
 async function npmInstall(packages, opts) {
   const description = `Install npm packages: ${packages.join(", ")}`;
   try {
-    const pkgJsonPath = path22.join(opts.repoPath, "package.json");
-    const pkgJson = JSON.parse(await fs22.readFile(pkgJsonPath, "utf-8"));
+    const pkgJsonPath = path25.join(opts.repoPath, "package.json");
+    const pkgJson = JSON.parse(await fs25.readFile(pkgJsonPath, "utf-8"));
     const allDeps = {
       ...pkgJson.dependencies,
       ...pkgJson.devDependencies
@@ -45990,20 +47165,20 @@ async function npmInstall(packages, opts) {
   }
 }
 async function writeConfigFile(filePath, content, opts) {
-  const relativePath = path22.relative(opts.repoPath, filePath);
+  const relativePath = path25.relative(opts.repoPath, filePath);
   const description = `Write config file: ${relativePath}`;
   try {
     let exists = true;
     try {
-      await fs22.access(filePath);
+      await fs25.access(filePath);
     } catch {
       exists = false;
     }
     if (exists && opts.overwrite !== true) {
       return { stepIndex: 0, description, status: "skipped" };
     }
-    await fs22.mkdir(path22.dirname(filePath), { recursive: true });
-    await fs22.writeFile(filePath, content, "utf-8");
+    await fs25.mkdir(path25.dirname(filePath), { recursive: true });
+    await fs25.writeFile(filePath, content, "utf-8");
     return { stepIndex: 0, description, status: "completed", installedPath: relativePath };
   } catch (err) {
     const error2 = err instanceof Error ? err.message : String(err);
@@ -46011,19 +47186,19 @@ async function writeConfigFile(filePath, content, opts) {
   }
 }
 async function appendToFile(filePath, content, opts) {
-  const relativePath = path22.relative(opts.repoPath, filePath);
+  const relativePath = path25.relative(opts.repoPath, filePath);
   const description = `Append to file: ${relativePath}`;
   try {
     let existing = "";
     try {
-      existing = await fs22.readFile(filePath, "utf-8");
+      existing = await fs25.readFile(filePath, "utf-8");
     } catch {
     }
     if (existing.includes(content.trim())) {
       return { stepIndex: 0, description, status: "skipped" };
     }
-    await fs22.mkdir(path22.dirname(filePath), { recursive: true });
-    await fs22.appendFile(filePath, content, "utf-8");
+    await fs25.mkdir(path25.dirname(filePath), { recursive: true });
+    await fs25.appendFile(filePath, content, "utf-8");
     return { stepIndex: 0, description, status: "completed", installedPath: relativePath };
   } catch (err) {
     const error2 = err instanceof Error ? err.message : String(err);
@@ -46054,11 +47229,11 @@ var init_capability_step_helpers = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/capabilities/mutation-testing.ts
-import { existsSync as existsSync5 } from "fs";
-import path23 from "path";
+import { existsSync as existsSync8 } from "fs";
+import path26 from "path";
 function detectSourceDirs(packagePath) {
   const candidates = ["src", "server", "lib"];
-  return candidates.filter((dir) => existsSync5(path23.join(packagePath, dir)));
+  return candidates.filter((dir) => existsSync8(path26.join(packagePath, dir)));
 }
 function buildMutatePaths(sourceDirs) {
   const dirs = sourceDirs.length > 0 ? sourceDirs : ["src"];
@@ -46129,11 +47304,11 @@ npx stryker run --mutate "src/path/to/file.ts"
         if (packages.length > 0) {
           for (const pkg of packages) {
             onProgress({ stepIndex, description: `Write stryker config for ${pkg}`, status: "running" });
-            const packagePath = path23.join(repoPath, pkg);
+            const packagePath = path26.join(repoPath, pkg);
             const sourceDirs = detectSourceDirs(packagePath);
             const mutatePaths = buildMutatePaths(sourceDirs);
             const configContent = generateStrykerConfig(testRunner, mutatePaths);
-            const configPath = path23.join(packagePath, "stryker.config.mjs");
+            const configPath = path26.join(packagePath, "stryker.config.mjs");
             const writeResult = await writeConfigFile(configPath, configContent, { repoPath });
             results.push({ ...writeResult, stepIndex });
             onProgress({ stepIndex, description: `Write stryker config for ${pkg}`, status: writeResult.status === "failed" ? "failed" : "completed" });
@@ -46144,14 +47319,14 @@ npx stryker run --mutate "src/path/to/file.ts"
           const sourceDirs = detectSourceDirs(repoPath);
           const mutatePaths = buildMutatePaths(sourceDirs);
           const configContent = generateStrykerConfig(testRunner, mutatePaths);
-          const configPath = path23.join(repoPath, "stryker.config.mjs");
+          const configPath = path26.join(repoPath, "stryker.config.mjs");
           const writeResult = await writeConfigFile(configPath, configContent, { repoPath });
           results.push({ ...writeResult, stepIndex });
           onProgress({ stepIndex, description: "Write stryker config", status: writeResult.status === "failed" ? "failed" : "completed" });
           stepIndex++;
         }
         onProgress({ stepIndex, description: "Write mutant-tester agent", status: "running" });
-        const agentPath = path23.join(repoPath, ".claude", "agents", "mutant-tester.md");
+        const agentPath = path26.join(repoPath, ".claude", "agents", "mutant-tester.md");
         const agentResult = await writeConfigFile(agentPath, MUTANT_TESTER_AGENT, { repoPath });
         results.push({ ...agentResult, stepIndex });
         onProgress({ stepIndex, description: "Write mutant-tester agent", status: agentResult.status === "failed" ? "failed" : "completed" });
@@ -46162,7 +47337,7 @@ npx stryker run --mutate "src/path/to/file.ts"
         onProgress({ stepIndex, description: "Enable mutation testing", status: configResult.status === "failed" ? "failed" : "completed" });
         stepIndex++;
         onProgress({ stepIndex, description: "Add .stryker-tmp to .gitignore", status: "running" });
-        const gitignorePath = path23.join(repoPath, ".gitignore");
+        const gitignorePath = path26.join(repoPath, ".gitignore");
         const gitignoreContent = "\n# Stryker mutation testing sandbox\n.stryker-tmp/\n";
         const gitignoreResult = await appendToFile(gitignorePath, gitignoreContent, { repoPath });
         results.push({ ...gitignoreResult, stepIndex });
@@ -46174,7 +47349,7 @@ npx stryker run --mutate "src/path/to/file.ts"
 });
 
 // packages/tiny-brain-core/src/services/analysis/capabilities/security-scanning.ts
-import path24 from "path";
+import path27 from "path";
 var NPM_AUDIT_HOOK, dependencyAuditInstaller;
 var init_security_scanning = __esm({
   "packages/tiny-brain-core/src/services/analysis/capabilities/security-scanning.ts"() {
@@ -46198,7 +47373,7 @@ fi
         const results = [];
         let stepIndex = 0;
         onProgress({ stepIndex, description: "Write npm audit pre-push hook", status: "running" });
-        const hookPath = path24.join(repoPath, ".husky", "pre-push");
+        const hookPath = path27.join(repoPath, ".husky", "pre-push");
         const writeResult = await writeConfigFile(hookPath, NPM_AUDIT_HOOK, { repoPath });
         results.push({ ...writeResult, stepIndex });
         onProgress({ stepIndex, description: "Write npm audit pre-push hook", status: writeResult.status === "failed" ? "failed" : "completed" });
@@ -46231,8 +47406,8 @@ var init_registry = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/skill-validation-service.ts
-import { promises as fs23 } from "node:fs";
-import * as path25 from "node:path";
+import { promises as fs26 } from "node:fs";
+import * as path28 from "node:path";
 function parseFrontmatter(content) {
   if (!content.startsWith("---")) {
     return { metadata: null, body: content };
@@ -46274,10 +47449,10 @@ function hasUsageContext(description) {
 async function countFilesRecursive(dirPath) {
   let count = 0;
   try {
-    const entries = await fs23.readdir(dirPath, { withFileTypes: true });
+    const entries = await fs26.readdir(dirPath, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        count += await countFilesRecursive(path25.join(dirPath, entry.name));
+        count += await countFilesRecursive(path28.join(dirPath, entry.name));
       } else if (entry.isFile()) {
         count += 1;
       }
@@ -46288,16 +47463,16 @@ async function countFilesRecursive(dirPath) {
 }
 async function containsSecrets(dirPath) {
   try {
-    const entries = await fs23.readdir(dirPath, { withFileTypes: true });
+    const entries = await fs26.readdir(dirPath, { withFileTypes: true });
     for (const entry of entries) {
-      const entryPath = path25.join(dirPath, entry.name);
+      const entryPath = path28.join(dirPath, entry.name);
       if (entry.isDirectory()) {
         if (await containsSecrets(entryPath)) {
           return true;
         }
       } else if (entry.isFile()) {
         try {
-          const content = await fs23.readFile(entryPath, "utf-8");
+          const content = await fs26.readFile(entryPath, "utf-8");
           for (const pattern of SECRET_PATTERNS) {
             if (pattern.test(content)) {
               return true;
@@ -46378,7 +47553,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                await fs23.access(path25.join(skillPath, "SKILL.md"));
+                await fs26.access(path28.join(skillPath, "SKILL.md"));
                 return {
                   id: "skill-md-exists",
                   name: "SKILL.md exists",
@@ -46404,7 +47579,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -46440,7 +47615,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -46495,7 +47670,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -46541,7 +47716,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -46585,9 +47760,9 @@ var init_skill_validation_service = __esm({
             description: "Check that the directory name matches the name field and is kebab-case",
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
-              const dirName = path25.basename(skillPath);
+              const dirName = path28.basename(skillPath);
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null || typeof metadata["name"] !== "string") {
                   return {
@@ -46635,7 +47810,7 @@ var init_skill_validation_service = __esm({
               const found = [];
               for (const dirName of OPTIONAL_DIRS) {
                 try {
-                  const stat3 = await fs23.stat(path25.join(skillPath, dirName));
+                  const stat3 = await fs26.stat(path28.join(skillPath, dirName));
                   if (stat3.isDirectory()) {
                     found.push(dirName);
                   }
@@ -46676,7 +47851,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -46731,7 +47906,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -46796,7 +47971,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { body } = parseFrontmatter(content);
                 if (body.trim() === "") {
                   return {
@@ -46907,7 +48082,7 @@ var init_skill_validation_service = __esm({
        * @returns Validation result with all checks, score, and grade
        */
       async validateSkill(skillPath) {
-        const skillName = path25.basename(skillPath);
+        const skillName = path28.basename(skillPath);
         const structuralRules = this.buildStructuralRules();
         const contentRules = this.buildContentRules();
         const allRules = [...structuralRules, ...contentRules];
@@ -46927,6 +48102,1286 @@ var init_skill_validation_service = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/modules/analysis/analysis-diff.ts
+function compareAnalysis(oldAnalysis, newAnalysis) {
+  const techStackChanges = detectTechStackChanges(
+    {
+      languages: oldAnalysis.languages,
+      frameworks: oldAnalysis.frameworks,
+      buildTools: oldAnalysis.buildTools,
+      testingTools: oldAnalysis.testingTools
+    },
+    {
+      languages: newAnalysis.languages,
+      frameworks: newAnalysis.frameworks,
+      buildTools: newAnalysis.buildTools,
+      testingTools: newAnalysis.testingTools
+    }
+  );
+  const hasChanges = techStackChanges.added.length > 0 || techStackChanges.removed.length > 0;
+  return {
+    hasChanges,
+    techStackChanges
+  };
+}
+function detectTechStackChanges(oldStack, newStack) {
+  const oldItems = /* @__PURE__ */ new Set([
+    ...oldStack.languages,
+    ...oldStack.frameworks,
+    ...oldStack.buildTools,
+    ...oldStack.testingTools
+  ]);
+  const newItems = /* @__PURE__ */ new Set([
+    ...newStack.languages,
+    ...newStack.frameworks,
+    ...newStack.buildTools,
+    ...newStack.testingTools
+  ]);
+  const added = [];
+  const removed = [];
+  for (const item of newItems) {
+    if (!oldItems.has(item)) {
+      added.push(item);
+    }
+  }
+  for (const item of oldItems) {
+    if (!newItems.has(item)) {
+      removed.push(item);
+    }
+  }
+  return { added, removed };
+}
+function formatTechStackChanges(diff) {
+  if (diff.added.length === 0 && diff.removed.length === 0) {
+    return "";
+  }
+  const lines = ["\u{1F4CA} Tech stack changes detected:"];
+  for (const item of diff.added) {
+    lines.push(`  \u2728 ${item} (new)`);
+  }
+  for (const item of diff.removed) {
+    lines.push(`  \u274C ${item} (removed)`);
+  }
+  return lines.join("\n");
+}
+function formatAgentChanges(updates) {
+  if (updates.length === 0) {
+    return "\u{1F916} Agents up to date";
+  }
+  const lines = ["\u{1F916} Agent updates applied:"];
+  for (const update of updates) {
+    if (update.type === "update") {
+      const description = update.description ? ` (${update.description})` : "";
+      lines.push(`  \u2705 ${update.name} v${update.fromVersion} \u2192 v${update.toVersion}${description}`);
+    } else if (update.type === "new") {
+      lines.push(`  \u2728 ${update.name} v${update.toVersion} (new)`);
+    } else if (update.type === "remove") {
+      const description = update.description ? ` (${update.description})` : "";
+      lines.push(`  \u{1F5D1}\uFE0F ${update.name}${description}`);
+    }
+  }
+  return lines.join("\n");
+}
+var init_analysis_diff = __esm({
+  "packages/tiny-brain-core/src/modules/analysis/analysis-diff.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/utils/package-version.ts
+import { readFileSync } from "fs";
+import { join as join19, dirname as dirname9 } from "path";
+import { fileURLToPath as fileURLToPath5 } from "url";
+function getPackageVersion() {
+  const __filename = fileURLToPath5(import.meta.url);
+  const __dirname = dirname9(__filename);
+  const packagePath = join19(__dirname, "..", "..", "package.json");
+  try {
+    const packageJson = JSON.parse(readFileSync(packagePath, "utf-8"));
+    return packageJson.version;
+  } catch (error2) {
+    throw new Error(`Failed to read package version: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
+  }
+}
+var init_package_version = __esm({
+  "packages/tiny-brain-core/src/utils/package-version.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/repo/repo-service.ts
+import * as fs27 from "fs/promises";
+import { existsSync as existsSync9, readFileSync as readFileSync2 } from "fs";
+import * as path29 from "path";
+import { fileURLToPath as fileURLToPath6 } from "url";
+var RepoService;
+var init_repo_service = __esm({
+  "packages/tiny-brain-core/src/services/repo/repo-service.ts"() {
+    "use strict";
+    init_repo_utils();
+    init_config_service();
+    RepoService = class _RepoService {
+      constructor(context) {
+        this.context = context;
+        const contextWithRepo = {
+          ...context,
+          repositoryRoot: context.repositoryRoot || this.getRepositoryRoot()
+        };
+        this.configService = new ConfigService(contextWithRepo);
+      }
+      static REPO_BLOCK_START = "## tiny-brain - start";
+      static REPO_BLOCK_END = "## tiny-brain - end";
+      configService;
+      /**
+       * Get repository root using the repo-utils helper
+       * This is used as fallback when context.repositoryRoot is not set
+       */
+      getRepositoryRoot() {
+        try {
+          return getRepoRoot();
+        } catch {
+          return void 0;
+        }
+      }
+      /**
+       * Read the repository block from context file (for legacy migration)
+       */
+      async readRepoBlockFromContextFile(contextFilePath = "CLAUDE.md") {
+        try {
+          const repoRoot = getRepoRoot();
+          const fullPath = path29.join(repoRoot, contextFilePath);
+          const content = await fs27.readFile(fullPath, "utf-8");
+          const startMarker = _RepoService.REPO_BLOCK_START;
+          const endMarker = _RepoService.REPO_BLOCK_END;
+          const startIndex = content.indexOf(startMarker);
+          if (startIndex === -1) {
+            return null;
+          }
+          const endIndex = content.indexOf(endMarker, startIndex);
+          if (endIndex === -1) {
+            const nextSectionIndex = content.indexOf("\n## ", startIndex + 1);
+            if (nextSectionIndex > -1) {
+              return content.substring(startIndex, nextSectionIndex).trimEnd();
+            }
+            return content.substring(startIndex).trimEnd();
+          }
+          return content.substring(startIndex, endIndex + endMarker.length).trimEnd();
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return null;
+          }
+          throw error2;
+        }
+      }
+      /**
+       * Extract version from tiny-brain block frontmatter
+       * @param content - The content containing the tiny-brain block
+       * @returns Version string or null if not found/invalid
+       */
+      extractTinyBrainVersion(content) {
+        const versionRegex = /## tiny-brain - start\n---\nversion: ([0-9]+\.[0-9]+\.[0-9]+)/;
+        const match2 = content.match(versionRegex);
+        return match2 ? match2[1] : null;
+      }
+      /**
+       * Check if we're in a repository context
+       */
+      isInRepository() {
+        try {
+          getRepoRoot();
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      /**
+       * Check if repository is initialized (has .tiny-brain/analysis.json)
+       * This is the new initialization check - no longer checks CLAUDE.md
+       */
+      async isRepositoryInitialized() {
+        if (!this.isInRepository()) {
+          return false;
+        }
+        try {
+          const repoRoot = getRepoRoot();
+          const analysisPath = path29.join(repoRoot, ".tiny-brain", "analysis.json");
+          return existsSync9(analysisPath);
+        } catch {
+          return false;
+        }
+      }
+      /**
+       * Get the analysis version from package.json
+       */
+      getAnalysisVersion() {
+        try {
+          const currentFilePath = fileURLToPath6(import.meta.url);
+          const packageJsonPath = path29.join(path29.dirname(currentFilePath), "../../../package.json");
+          const packageJson = JSON.parse(readFileSync2(packageJsonPath, "utf-8"));
+          return packageJson.version || "0.0.0";
+        } catch (error2) {
+          this.context.logger.warn("Failed to read package version:", error2);
+          return "0.0.0";
+        }
+      }
+      /**
+       * Write workflow sections to CLAUDE.md based on config flags
+       *
+       * Writes the following sections when their respective flags are enabled:
+       * - Commit Message Format (when SDD enabled)
+       * - TDD Workflow (when TDD enabled)
+       * - Progress Tracking Auto-Commit Configuration (when SDD enabled)
+       * - Operational Tracking Directory (when SDD enabled)
+       */
+      async writeWorkflowSections(options = {}) {
+        const { contextPath = "CLAUDE.md" } = options;
+        const enableSDD = await this.configService.isSDDEnabled();
+        const enableTDD = await this.configService.isTDDEnabled();
+        const enableAgentic = await this.configService.isAgenticCodingEnabled();
+        if (!enableSDD && !enableTDD) {
+          return;
+        }
+        let workflowContent = "";
+        workflowContent += this.formatRepoContextSection(enableAgentic, options.isMonorepo);
+        if (enableSDD) {
+          workflowContent += this.formatCommitMessageSection();
+        }
+        if (enableTDD) {
+          workflowContent += this.formatTDDWorkflowSection();
+        }
+        if (enableSDD) {
+          workflowContent += this.formatProgressTrackingSection();
+        }
+        if (enableSDD) {
+          workflowContent += this.formatWorktreeMergeSection();
+        }
+        if (enableSDD) {
+          workflowContent += this.formatOperationalTrackingSection();
+        }
+        const version2 = this.getAnalysisVersion();
+        const repoBlock = `${_RepoService.REPO_BLOCK_START}
+---
+version: ${version2}
+---
+
+${workflowContent}${_RepoService.REPO_BLOCK_END}
+`;
+        const repoRoot = getRepoRoot();
+        const fullPath = path29.join(repoRoot, contextPath);
+        let existingContent = "";
+        try {
+          existingContent = await fs27.readFile(fullPath, "utf-8");
+        } catch {
+        }
+        const startMarker = _RepoService.REPO_BLOCK_START;
+        const endMarker = _RepoService.REPO_BLOCK_END;
+        if (existingContent.includes(startMarker)) {
+          const startIndex = existingContent.indexOf(startMarker);
+          const endIndex = existingContent.indexOf(endMarker, startIndex);
+          if (endIndex > -1) {
+            const afterEnd = existingContent.substring(endIndex + endMarker.length);
+            existingContent = existingContent.substring(0, startIndex) + repoBlock + afterEnd;
+          } else {
+            const nextSectionIndex = existingContent.indexOf("\n## ", startIndex + 1);
+            if (nextSectionIndex > -1) {
+              existingContent = existingContent.substring(0, startIndex) + repoBlock + existingContent.substring(nextSectionIndex);
+            } else {
+              existingContent = existingContent.substring(0, startIndex) + repoBlock;
+            }
+          }
+        } else {
+          existingContent = existingContent.trimEnd() + "\n\n" + repoBlock;
+        }
+        await fs27.mkdir(path29.dirname(fullPath), { recursive: true });
+        await fs27.writeFile(fullPath, existingContent, "utf-8");
+        this.context.logger.info(`Updated workflow sections in ${contextPath}`);
+      }
+      /**
+       * Format the Repository Context section
+       * When agentic coding is enabled, includes a mandatory agent delegation section
+       */
+      formatRepoContextSection(enableAgenticCoding, isMonorepo) {
+        let content = `## Repository Context
+
+`;
+        if (isMonorepo) {
+          content += `Before starting work, read the root \`AGENTS.md\` for comprehensive project context (tech stack, commands, structure).
+When working in a specific package, also read that package's \`AGENTS.md\` for package-specific details.
+`;
+        } else {
+          content += `Before starting work, read \`AGENTS.md\` for comprehensive project context (tech stack, commands, structure).
+`;
+        }
+        content += `Also read \`.tiny-brain/analysis.json\` for detailed detection data and test patterns.
+
+`;
+        if (enableAgenticCoding) {
+          content += `## TDD Implementation
+
+Write tests and production code directly in the main session. Follow the RED/GREEN/REFACTOR cycle:
+
+1. **RED**: Write failing tests, commit with \`test:\` prefix
+2. **GREEN**: Write minimum implementation to pass tests, commit with \`feat:\` prefix
+   - The review pipeline triggers automatically after feat: commits (via pipeline command)
+   - Handle refactoring from review as \`refactor:\` commits
+3. Run \`npx tiny-brain commit progress\` when the TDD cycle is complete
+
+`;
+        }
+        return content;
+      }
+      /**
+       * Format the Commit Message Format section
+       */
+      formatCommitMessageSection() {
+        return `## Commit Message Format
+
+### CRITICAL: Commit Header Requirements
+
+**BEFORE EVERY COMMIT**, check if you're working on tracked work:
+
+1. **Active PRDs?** Check \`.tiny-brain/progress/\` for \`in_progress\` status
+2. **Open Fixes?** Check \`.tiny-brain/fixes/progress.json\` for \`not_started\` or \`in_progress\` status
+
+**If YES, you MUST include tracking headers or the commit will be REJECTED.**
+
+### For PRD-tracked work:
+\`\`\`
+feat(scope): description
+
+PRD: {prd-id}
+Feature: {feature-id}
+Task: {exact task description from progress.json}
+
+Description of changes...
+\`\`\`
+
+### For Fix-tracked work:
+\`\`\`
+feat(scope): description
+
+Fix: {fix-id}
+Task: {exact task description from fix document}
+
+Description of changes...
+\`\`\`
+
+### Commit Types
+| Type | When | Headers Required? |
+|------|------|-------------------|
+| \`test:\` | Writing failing tests (TDD RED) | Yes |
+| \`feat:\` | Implementation (TDD GREEN) | Yes |
+| \`fix:\` | Bug fixes | Yes |
+| \`refactor:\` | Code improvement | Yes |
+| \`chore:\` | Maintenance (untracked) | No |
+| \`untracked:\` | Work not related to any PRD or Fix | No |
+
+**WARNING:** The commit-msg hook will reject commits missing required headers.
+
+### Fix Status Workflow
+
+Fix documents have four statuses: \`not_started\` \u2192 \`in_progress\` \u2192 \`completed\` | \`superseded\`
+
+**When starting work on a fix:**
+1. Open the fix file: \`.tiny-brain/fixes/{fix-id}.md\`
+2. Update frontmatter: \`status: in_progress\`
+3. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
+
+**After each commit:**
+1. Update the completed task(s) in the markdown:
+   \`\`\`markdown
+   ### 1. Task description
+   status: completed
+   commitSha: abc1234
+   \`\`\`
+2. If one commit addresses multiple tasks, use the same commitSha for all of them
+3. If a task is no longer needed (work done elsewhere or obsolete), mark it superseded:
+   \`\`\`markdown
+   ### 3. Obsolete task
+   status: superseded
+   commitSha: null
+   \`\`\`
+4. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
+
+**When all tasks are complete:**
+1. **ONLY set \`status: completed\`** when ALL tasks are accounted for:
+   - 100% of tasks must have either \`status: completed\` (with commitSha) or \`status: superseded\`
+   - Example: A fix with 5 tasks could be: 3 completed + 2 superseded = completed
+   - A fix with incomplete tasks stays \`in_progress\`
+2. Update YAML frontmatter:
+   - Set \`status: completed\`
+   - Set \`resolved: YYYY-MM-DDTHH:mm:ss.sssZ\` (ISO timestamp)
+   - Add \`resolution\` object:
+     \`\`\`yaml
+     resolution:
+       rootCause: Brief description of what caused the issue
+       fix:
+         - First fix action taken
+         - Second fix action taken
+       filesModified:
+         - path/to/file1.ts
+         - path/to/file2.ts
+     \`\`\`
+3. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
+
+**Note:** The markdown file is the source of truth. The \`sync-progress\` command updates \`progress.json\` from the markdown.
+
+`;
+      }
+      /**
+       * Format the TDD Workflow section
+       */
+      formatTDDWorkflowSection() {
+        return `## TDD Workflow
+
+IMPORTANT: This repository follows strict Test-Driven Development (TDD) with a 3-phase commit workflow.
+
+**Red \u2192 Green \u2192 Refactor Cycle:**
+
+1. **Red Phase** (\`test:\` or \`test(scope):\` commits):
+   - **CRITICAL \u2014 you MUST run before writing tests:**
+     \`npx tiny-brain task-start --task '...' [--fix ID | --prd ID --feature ID]\`
+   - For tasks that don't need tests (config, shell scripts, docs, templates), skip RED:
+     \`npx tiny-brain task-start --task '...' [--fix ID | --prd ID --feature ID] --phase green\`
+     This sets \`testCommitSha: 'skipped'\` and goes straight to Green phase.
+   - Write failing tests first
+   - Tests SHOULD fail (that's the point!)
+   - Use: \`git commit -m "test: ..."\` or \`git commit -m "test(api): ..."\`
+   - Git hook automatically runs typecheck + lint but SKIPS tests
+   - Tracked in: \`testCommitSha\` field
+
+2. **Green Phase** (\`feat:\` or \`feat(scope):\` commits):
+   - Phase is derived automatically from commit SHAs (no manual step needed)
+   - Implement minimum code to make tests pass
+   - Use: \`git commit -m "feat: ..."\` or \`git commit -m "feat(auth): ..."\`
+   - Git hook automatically runs full checks (typecheck + lint + test)
+   - Tracked in: \`commitSha\` field
+   - **After commit:** adversarial review starts automatically
+
+3. **Refactor Phase** (\`refactor:\` or \`refactor(scope):\` commits - optional):
+   - Triggered by adversarial review suggestions
+   - Improve code quality without changing behavior
+   - Use: \`git commit -m "refactor: ..."\` or \`git commit -m "refactor(plan): ..."\`
+   - Git hook automatically runs full checks (typecheck + lint + test)
+   - **After commit:** post-commit hook automatically records refactor completion
+
+4. **Progress Commit** (end of cycle):
+   - After the full RED\u2192GREEN\u2192REFACTOR cycle is complete
+   - Run: \`npx tiny-brain commit-progress\`
+
+**What you must do manually:** Only \`task-start\` before writing tests. Everything else is automated by hooks.
+
+**What you must NOT do:** Do not manually manage phase transitions \u2014 they are derived from commit SHAs.
+
+`;
+      }
+      /**
+       * Format the Progress Tracking Auto-Commit Configuration section
+       */
+      formatProgressTrackingSection() {
+        return `## Progress Tracking Auto-Commit Configuration
+
+By default, tiny-brain uses **manual mode** for progress.json commits. This means after tracking a task commit, you must manually stage and commit the progress.json updates. This keeps your working tree clean and gives you full control over what gets committed.
+
+### Default Behavior (Manual Mode)
+
+When you complete a task with a \`feat:\` or \`test:\` commit:
+1. The post-commit hook updates progress.json automatically
+2. You'll see a friendly message with instructions
+3. Commit the progress.json changes by running:
+   \`\`\`bash
+   npx tiny-brain commit-progress
+   \`\`\`
+
+### Enabling Auto-Commit
+
+Auto-commit automatically creates a second commit containing progress.json updates after each tracked task commit.
+
+**Enable globally (all repos):**
+\`\`\`bash
+npx tiny-brain config preferences set autoCommitProgress true
+\`\`\`
+
+**Enable for current repo only:**
+\`\`\`bash
+npx tiny-brain config preferences set autoCommitProgress true --repo
+\`\`\`
+
+**Disable auto-commit:**
+\`\`\`bash
+npx tiny-brain config preferences set autoCommitProgress false
+\`\`\`
+
+**Check current setting:**
+\`\`\`bash
+npx tiny-brain config preferences get autoCommitProgress
+\`\`\`
+
+### When to Use Each Mode
+
+**Use Manual Mode (default) when:**
+- Working in a team - keeps progress updates separate from feature commits
+- You want full control over what gets committed
+- You prefer to batch progress updates
+- You're concerned about commit history noise
+
+**Use Auto-Commit Mode when:**
+- Working solo or in small teams where commit noise is acceptable
+- You want progress always synced with remote
+- You frequently switch machines and need up-to-date progress
+- You forget to commit progress.json regularly
+
+### Configuration Hierarchy
+
+Settings follow this precedence (highest to lowest):
+1. Per-repository config (\`.git/tiny-brain/preferences.json\`)
+2. Global config (\`~/.tiny-brain/config/preferences.json\`)
+3. Default values (manual mode)
+
+This allows you to set a global preference but override it per repository as needed.
+
+`;
+      }
+      /**
+       * Format the Worktree Merge Workflow section
+       */
+      formatWorktreeMergeSection() {
+        return `## Worktree Merge Workflow
+
+When merging a worktree branch back into the main branch, \`progress.json\` files may conflict because both branches tracked different task completions. The \`post-merge\` git hook handles this automatically.
+
+### How It Works
+
+1. After a merge, the hook detects if any \`.tiny-brain/progress/*.json\` or \`.tiny-brain/fixes/progress.json\` files changed
+2. If so, it re-runs \`npx tiny-brain sync-progress\` on all markdown sources to regenerate progress.json
+3. The regenerated files are staged and committed as \`chore: re-sync progress after merge\`
+
+### Handling Merge Conflicts in progress.json
+
+If you encounter a merge conflict in progress.json:
+1. Accept either version (it doesn't matter which)
+2. Complete the merge
+3. The post-merge hook will regenerate progress.json from the markdown sources automatically
+
+### Manual Re-sync
+
+If the hook doesn't run or you need to re-sync manually:
+\`\`\`bash
+npx tiny-brain sync-progress docs/prd/*/features/*.md
+npx tiny-brain sync-progress .tiny-brain/fixes/*.md
+\`\`\`
+
+`;
+      }
+      /**
+       * Format the Operational Tracking Directory section
+       */
+      formatOperationalTrackingSection() {
+        return `## Operational Tracking Directory (.tiny-brain/)
+
+The \`.tiny-brain/\` directory stores operational tracking data separate from documentation:
+
+\`\`\`
+.tiny-brain/
+\u251C\u2500\u2500 analysis.json       # Detected tech stack and repo analysis
+\u251C\u2500\u2500 tech/               # Technology-specific context files
+\u2502   \u251C\u2500\u2500 config.json     # Tech context mode configuration
+\u2502   \u2514\u2500\u2500 {name}.md       # One file per detected technology
+\u251C\u2500\u2500 progress/           # PRD progress tracking
+\u2502   \u2514\u2500\u2500 {prd-id}.json   # One file per PRD
+\u2514\u2500\u2500 fixes/              # Fix progress tracking
+    \u2514\u2500\u2500 progress.json   # Aggregated fix tracking
+\`\`\`
+
+**Key distinction:**
+- **Documentation** (in \`docs/\`) - PRD markdown, feature specs, fix analysis - permanent, reviewed
+- **Operational tracking** (in \`.tiny-brain/\`) - progress.json files - transient, auto-generated
+
+### Gitignore Options
+
+Teams can choose whether to track progress files in git:
+
+**Option 1: Track progress (default)** - Keep \`.tiny-brain/\` in git for visibility across team members.
+
+**Option 2: Ignore progress** - Add to \`.gitignore\` to reduce PR noise:
+\`\`\`gitignore
+# Ignore operational tracking (optional)
+.tiny-brain/progress/
+.tiny-brain/fixes/progress.json
+\`\`\`
+
+**Option 3: Ignore all** - Ignore entire directory:
+\`\`\`gitignore
+.tiny-brain/
+\`\`\`
+
+`;
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/analysis/analyse-service.ts
+import { fileURLToPath as fileURLToPath7 } from "url";
+import { dirname as dirname11, join as join21 } from "path";
+import { existsSync as existsSync10 } from "fs";
+import { readFile as readFile10, readdir as readdir7, writeFile as writeFile4 } from "fs/promises";
+var AnalyseService;
+var init_analyse_service = __esm({
+  "packages/tiny-brain-core/src/services/analysis/analyse-service.ts"() {
+    "use strict";
+    init_analyser();
+    init_analysis_diff();
+    init_config_service();
+    init_config_setup_service();
+    init_repo_config_service();
+    init_library_client();
+    init_tech_context_service();
+    init_agents_md_service();
+    init_recommendation_service();
+    init_analyzer_detection_service();
+    init_analyzer_registry();
+    init_package_version();
+    init_repo_service();
+    AnalyseService = class {
+      constructor(context, deps) {
+        this.context = context;
+        this.deps = deps ?? {
+          analyseRepository,
+          configService: new ConfigService(context),
+          repoService: new RepoService(context),
+          libraryClient: new LibraryClient(),
+          recommendationService: new RecommendationService(process.cwd()),
+          techContextService: new TechContextService(process.cwd()),
+          createRepoConfigService: (c) => new RepoConfigService(c),
+          createConfigSetupService: (opts) => new ConfigSetupService(opts)
+        };
+      }
+      deps;
+      /**
+       * Perform repository analysis with unified behavior for initialized/uninitialized repos
+       */
+      async performAnalysis(options = {}) {
+        const { dryRun = false, contextPath = "CLAUDE.md" } = options;
+        const currentAnalysis = await this.deps.analyseRepository(process.cwd());
+        this.context.logger.info(`Repository analysis complete: ${currentAnalysis.languages.join(", ")}`);
+        await this.registerRepository();
+        const configSetupResult = await this.performConfigSetup();
+        const prdInitialized = configSetupResult?.prdInitialized ?? false;
+        const adrInitialized = configSetupResult?.adrInitialized ?? false;
+        const qualityInitialized = configSetupResult?.qualityInitialized ?? false;
+        const fixesInitialized = configSetupResult?.fixesInitialized ?? false;
+        const gitHooksInstalled = configSetupResult?.gitHooksInstalled ?? false;
+        const skillPermissionsAdded = configSetupResult?.skillPermissionsAdded ?? [];
+        const analysisInput = {
+          languages: currentAnalysis.languages,
+          frameworks: currentAnalysis.frameworks,
+          testingTools: currentAnalysis.testingTools,
+          buildTools: currentAnalysis.buildTools,
+          hasTests: currentAnalysis.hasTests,
+          testFileCount: currentAnalysis.testFileCount,
+          testPatterns: currentAnalysis.testPatterns,
+          isPolyglot: currentAnalysis.isPolyglot,
+          primaryLanguage: currentAnalysis.primaryLanguage,
+          documentationPattern: currentAnalysis.documentationPattern,
+          documentationLocations: currentAnalysis.documentationLocations,
+          // Rich metadata
+          packageManager: currentAnalysis.packageManager,
+          scripts: currentAnalysis.scripts,
+          linting: currentAnalysis.linting,
+          monorepo: currentAnalysis.monorepo,
+          projectName: currentAnalysis.projectName,
+          sourceDirectories: currentAnalysis.sourceDirectories
+        };
+        const detectionService = new AnalyzerDetectionService(process.cwd());
+        const detectedAnalyzers = await detectionService.detectAnalyzers();
+        if (detectedAnalyzers.length > 0) {
+          analysisInput.analyzers = detectedAnalyzers.map((a) => {
+            const def = ANALYZER_REGISTRY.find((d) => d.id === a.analyzerId);
+            let pipelineCommand = null;
+            if (def?.variants) {
+              for (const variant of def.variants) {
+                if (variant.changedTemplate) {
+                  pipelineCommand = variant.changedTemplate;
+                  break;
+                }
+              }
+            }
+            return {
+              id: a.analyzerId,
+              name: a.name,
+              variant: null,
+              configPaths: [...a.configPaths],
+              commands: {
+                quality: a.commands[0],
+                pipeline: pipelineCommand
+              },
+              categories: [...a.categories],
+              emoji: def?.emoji,
+              color: def?.color
+            };
+          });
+        }
+        const stackChanged = await this.deps.techContextService.hasStackChanged(analysisInput);
+        const existingAnalysis = await this.deps.techContextService.readAnalysis();
+        const isFirstAnalysis = existingAnalysis === null;
+        if (!dryRun) {
+          await this.deps.techContextService.writeAnalysis(analysisInput);
+        }
+        let writtenTechContexts = [];
+        if (!dryRun) {
+          writtenTechContexts = await this.fetchAndWriteTechContexts(currentAnalysis);
+        }
+        let recommendations = [];
+        if (!dryRun) {
+          recommendations = await this.fetchAndWriteRecommendations(currentAnalysis);
+        }
+        const enableAgentic = await this.deps.configService.isAgenticCodingEnabled();
+        if (!dryRun) {
+          await this.deps.techContextService.syncAgents(enableAgentic);
+        }
+        let agentsMdStatus;
+        const manageAgentsMd = await this.deps.configService.isManageAgentsMdEnabled();
+        if (!dryRun && manageAgentsMd) {
+          agentsMdStatus = await this.generateAgentsMd(currentAnalysis);
+        }
+        const currentVersion = getPackageVersion();
+        const existingContent = await this.deps.repoService.readRepoBlockFromContextFile(contextPath);
+        const contextBlockVersion = existingContent ? this.deps.repoService.extractTinyBrainVersion(existingContent) ?? void 0 : void 0;
+        const contextBlockUpdated = existingContent ? this.needsTinyBrainUpdate(existingContent, currentVersion) : false;
+        if (isFirstAnalysis) {
+          this.context.logger.info("First analysis - no previous repository context found");
+          return {
+            analysis: currentAnalysis,
+            isFirstAnalysis: true,
+            dryRun,
+            contextPath,
+            enableAgenticCoding: enableAgentic,
+            prdInitialized,
+            adrInitialized,
+            qualityInitialized,
+            fixesInitialized,
+            gitHooksInstalled,
+            contextBlockVersion,
+            contextBlockUpdated,
+            skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
+            writtenTechContexts,
+            agentsMdStatus,
+            recommendations
+          };
+        }
+        if (!stackChanged) {
+          this.context.logger.info("No tech stack changes detected");
+          return {
+            analysis: currentAnalysis,
+            isFirstAnalysis: false,
+            dryRun,
+            contextPath,
+            enableAgenticCoding: enableAgentic,
+            prdInitialized,
+            adrInitialized,
+            qualityInitialized,
+            fixesInitialized,
+            gitHooksInstalled,
+            contextBlockVersion,
+            contextBlockUpdated,
+            skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
+            writtenTechContexts,
+            agentsMdStatus,
+            recommendations
+          };
+        }
+        const previousStack = existingAnalysis?.stack;
+        const techStackDiff = previousStack ? {
+          added: [
+            ...currentAnalysis.languages.filter((l) => !previousStack.languages.includes(l)),
+            ...currentAnalysis.frameworks.filter((f) => !previousStack.frameworks.includes(f)),
+            ...currentAnalysis.buildTools.filter((b) => !previousStack.build.includes(b)),
+            ...currentAnalysis.testingTools.filter((t) => !previousStack.testing.includes(t))
+          ],
+          removed: [
+            ...previousStack.languages.filter((l) => !currentAnalysis.languages.includes(l)),
+            ...previousStack.frameworks.filter((f) => !currentAnalysis.frameworks.includes(f)),
+            ...previousStack.build.filter((b) => !currentAnalysis.buildTools.includes(b)),
+            ...previousStack.testing.filter((t) => !currentAnalysis.testingTools.includes(t))
+          ]
+        } : { added: [], removed: [] };
+        this.context.logger.info(`Tech stack changes detected: +${techStackDiff.added.length} -${techStackDiff.removed.length}`);
+        return {
+          analysis: currentAnalysis,
+          isFirstAnalysis: false,
+          dryRun,
+          contextPath,
+          enableAgenticCoding: enableAgentic,
+          prdInitialized,
+          adrInitialized,
+          qualityInitialized,
+          fixesInitialized,
+          gitHooksInstalled,
+          contextBlockVersion,
+          contextBlockUpdated,
+          changes: {
+            techStackAdded: techStackDiff.added,
+            techStackRemoved: techStackDiff.removed
+          },
+          skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
+          writtenTechContexts,
+          agentsMdStatus,
+          recommendations
+        };
+      }
+      /**
+       * Generate AGENTS.md file in the repository root.
+       * For monorepos, also generates per-package AGENTS.md files.
+       */
+      async generateAgentsMd(analysis) {
+        const repoRoot = process.cwd();
+        const agentsMdService = new AgentsMdService(repoRoot);
+        const agentsMdPath = join21(repoRoot, "AGENTS.md");
+        let existingContent;
+        try {
+          existingContent = await readFile10(agentsMdPath, "utf-8");
+        } catch {
+        }
+        const readmeExcerpt = await agentsMdService.extractReadmeExcerpt();
+        let packageDescriptions;
+        if (analysis.monorepo?.packages && analysis.monorepo.packages.length > 0) {
+          packageDescriptions = await this.collectPackageDescriptions(repoRoot, analysis.monorepo.packages);
+        }
+        const result = await agentsMdService.generateContent({
+          analysis,
+          readmeExcerpt,
+          repoPath: repoRoot,
+          existingContent,
+          packageDescriptions
+        });
+        if (!existingContent) {
+          await writeFile4(agentsMdPath, result.content, "utf-8");
+          this.context.logger.info("Created AGENTS.md");
+        } else if (!result.contentChanged) {
+          this.context.logger.info("AGENTS.md is up to date");
+        } else {
+          await writeFile4(agentsMdPath, result.content, "utf-8");
+          this.context.logger.info("Updated AGENTS.md");
+        }
+        if (analysis.monorepo?.packages && analysis.monorepo.packages.length > 0) {
+          await this.generatePerPackageAgentsMd(repoRoot, analysis, agentsMdService);
+        }
+        if (!existingContent) return "created";
+        if (!result.contentChanged) return "up-to-date";
+        return "updated";
+      }
+      /**
+       * Read package.json from each workspace directory to collect names and descriptions
+       */
+      async collectPackageDescriptions(repoRoot, packages) {
+        const descriptions = [];
+        for (const pkgPath of packages) {
+          const fullPath = join21(repoRoot, pkgPath);
+          const pkgJsonPath = join21(fullPath, "package.json");
+          try {
+            const raw = await readFile10(pkgJsonPath, "utf-8");
+            const pkgJson = JSON.parse(raw);
+            descriptions.push({
+              name: pkgJson.name,
+              path: pkgPath,
+              description: pkgJson.description
+            });
+          } catch {
+            descriptions.push({ path: pkgPath });
+          }
+        }
+        return descriptions;
+      }
+      /**
+       * Generate AGENTS.md for each workspace package in a monorepo
+       */
+      async generatePerPackageAgentsMd(repoRoot, analysis, agentsMdService) {
+        const packages = analysis.monorepo?.packages ?? [];
+        for (const pkgPath of packages) {
+          const fullPkgPath = join21(repoRoot, pkgPath);
+          const pkgAgentsMdPath = join21(fullPkgPath, "AGENTS.md");
+          let existingPkgContent;
+          try {
+            existingPkgContent = await readFile10(pkgAgentsMdPath, "utf-8");
+          } catch {
+          }
+          const pkgResult = await agentsMdService.generatePackageContent(
+            fullPkgPath,
+            analysis,
+            existingPkgContent
+          );
+          if (!existingPkgContent || pkgResult.contentChanged) {
+            await writeFile4(pkgAgentsMdPath, pkgResult.content, "utf-8");
+            this.context.logger.debug(`Wrote AGENTS.md for ${pkgPath}`);
+          }
+        }
+      }
+      /**
+       * Register repository in dashboard for visibility
+       * Called after successful analysis regardless of invocation method
+       */
+      async registerRepository() {
+        try {
+          const repoRoot = process.cwd();
+          const repoConfigService = this.deps.createRepoConfigService(this.context);
+          const repoName = repoRoot.split("/").pop() || "unknown";
+          const prdCount = await this.countPrdsInRepo(repoRoot);
+          await repoConfigService.registerRepo({
+            name: repoName,
+            path: repoRoot,
+            prdCount
+          });
+          this.context.logger.debug(`Registered repository: ${repoName}`);
+        } catch (error2) {
+          this.context.logger.warn(`Failed to register repository: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
+        }
+      }
+      /**
+       * Count PRD directories in a repository
+       */
+      async countPrdsInRepo(repoPath) {
+        try {
+          const prdDir = join21(repoPath, "docs", "prd");
+          if (!existsSync10(prdDir)) {
+            return 0;
+          }
+          const entries = await readdir7(prdDir, { withFileTypes: true });
+          return entries.filter((e) => e.isDirectory() && !e.name.startsWith("_")).length;
+        } catch {
+          return 0;
+        }
+      }
+      /**
+       * Perform config setup using core ConfigSetupService.
+       * Delegates directory initialization, git hooks, skill permissions, and CLAUDE.md
+       * context block writing to the shared service.
+       */
+      async performConfigSetup() {
+        try {
+          const hooksSourceDir = this.resolveHooksDir();
+          const version2 = getPackageVersion();
+          const configSetup = this.deps.createConfigSetupService({
+            repoPath: process.cwd(),
+            version: version2,
+            hooksSourceDir,
+            logger: {
+              info: (msg) => this.context.logger.info(msg),
+              debug: (msg) => this.context.logger.debug(msg),
+              warn: (msg) => this.context.logger.warn(msg)
+            }
+          });
+          return await configSetup.performSetup();
+        } catch (error2) {
+          this.context.logger.warn(`Config setup failed: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
+          return void 0;
+        }
+      }
+      /**
+       * Resolve hooks template directory.
+       *
+       * Templates ship with this package under `templates/hooks/`. The
+       * walk works for both compiled and source layouts:
+       *   - compiled: <pkg>/dist/services/analysis/analyse-service.js → ../../.. = <pkg>
+       *   - tests:    <pkg>/src/services/analysis/analyse-service.ts  → ../../.. = <pkg>
+       *
+       * If the directory isn't found, the caller (`performConfigSetup`)
+       * still completes — but git hooks won't be installed. We emit a
+       * `warn` so the silent-failure mode that produced the original
+       * post-relocation regression is loud the next time something
+       * shifts the dist layout.
+       */
+      resolveHooksDir() {
+        const __filename = fileURLToPath7(import.meta.url);
+        const __dirname = dirname11(__filename);
+        const hooksDir = join21(__dirname, "..", "..", "..", "templates", "hooks");
+        if (existsSync10(hooksDir)) return hooksDir;
+        this.context.logger.warn(
+          `Hooks template directory not found at ${hooksDir}; git hooks will not be installed`
+        );
+        return void 0;
+      }
+      /**
+       * Fetch tech contexts from TBR and write them to .tiny-brain/tech/
+       * Only called when enableAgenticCoding=false
+       */
+      async fetchAndWriteTechContexts(analysis) {
+        try {
+          if (!this.context.authToken?.token) {
+            this.context.logger.debug("No auth token available for TBR API call");
+            return [];
+          }
+          const response = await this.deps.libraryClient.getTechContexts(analysis, this.context.authToken.token);
+          if (!response?.techContexts || response.techContexts.length === 0) {
+            this.context.logger.debug("No tech contexts returned from TBR");
+            return [];
+          }
+          const writtenContexts = [];
+          for (const techContext of response.techContexts) {
+            const name = techContext.frontmatter.name;
+            await this.deps.techContextService.writeTechFileRaw(name, techContext.raw);
+            writtenContexts.push(name);
+            this.context.logger.debug(`Wrote tech context: ${name}`);
+          }
+          this.context.logger.info(`Wrote ${writtenContexts.length} tech context(s) to .tiny-brain/tech/`);
+          return writtenContexts;
+        } catch (error2) {
+          this.context.logger.warn(`Failed to fetch tech contexts from TBR: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
+          return [];
+        }
+      }
+      /**
+       * Fetch recommendations from TBR and write them via RecommendationService
+       */
+      async fetchAndWriteRecommendations(analysis) {
+        try {
+          if (!this.context.authToken?.token) {
+            this.context.logger.debug("No auth token available for recommendations API call");
+            return [];
+          }
+          const response = await this.deps.libraryClient.getRecommendations(analysis, this.context.authToken.token);
+          if (!response?.recommendations || response.recommendations.length === 0) {
+            this.context.logger.debug("No recommendations returned from TBR");
+            return [];
+          }
+          await this.deps.recommendationService.writeRecommendations(response.recommendations, response.fetchedAt);
+          this.context.logger.info(`Fetched ${response.recommendations.length} recommendation(s) from TBR`);
+          return response.recommendations;
+        } catch (error2) {
+          this.context.logger.warn(`Failed to fetch recommendations from TBR: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
+          return [];
+        }
+      }
+      /**
+       * Format analysis output for display
+       */
+      formatAnalysisOutput(result) {
+        const lines = [];
+        if (result.dryRun) {
+          lines.push("[DRY RUN - No changes applied]\n");
+          if (result.changes) {
+            lines.push("Would apply the following changes:\n");
+          }
+        }
+        const currentVersion = getPackageVersion();
+        if (result.contextBlockUpdated) {
+          lines.push(`\u{1F4DD} Context block updated to v${currentVersion}`);
+          if (result.contextBlockVersion) {
+            lines.push(`  (was v${result.contextBlockVersion})
+`);
+          } else {
+            lines.push(`  (was not versioned)
+`);
+          }
+        } else if (result.contextBlockVersion) {
+          lines.push(`\u2705 Context block current (v${currentVersion})
+`);
+        } else if (!result.isFirstAnalysis) {
+          lines.push(`\u{1F4DD} Context block will be initialised with v${currentVersion}
+`);
+        }
+        if (result.isFirstAnalysis) {
+          lines.push(`\u{1F4C2} Repository: ${process.cwd()}`);
+          lines.push("\n\u{1F4CA} Tech stack:");
+          lines.push(`  Languages: ${result.analysis.languages.join(", ")}`);
+          lines.push(`  Frameworks: ${result.analysis.frameworks.join(", ")}`);
+          lines.push(`  Build Tools: ${result.analysis.buildTools.join(", ")}`);
+          lines.push(`  Testing Tools: ${result.analysis.testingTools.join(", ")}`);
+          if (result.analysis.packageManager) {
+            lines.push(`  Package Manager: ${result.analysis.packageManager}`);
+          }
+          if (result.analysis.documentationPattern) {
+            lines.push(`
+\u{1F4DA} Documentation: ${result.analysis.documentationPattern}`);
+            if (result.analysis.documentationLocations) {
+              lines.push(`  Locations: ${result.analysis.documentationLocations.join(", ")}`);
+            }
+          }
+          if (result.prdInitialized) {
+            lines.push("\n\u{1F4CB} PRD Structure: Initialized");
+            lines.push("  Created docs/prd/ directory");
+          }
+          if (result.adrInitialized) {
+            lines.push("\n\u{1F4D0} ADR Structure: Initialized");
+            lines.push("  Created docs/adr/ directory");
+          }
+          if (result.qualityInitialized) {
+            lines.push("\n\u{1F4CA} Quality Analysis: Initialized");
+            lines.push("  Created .tiny-brain/quality/ directory");
+          }
+          if (result.fixesInitialized) {
+            lines.push("\n\u{1F527} Fixes Tracking: Initialized");
+            lines.push("  Created .tiny-brain/fixes/ directory");
+          }
+          if (result.gitHooksInstalled) {
+            lines.push("\n\u{1FA9D} Git Hooks: Installed");
+            lines.push("  TDD workflow hooks in .git/hooks/");
+          }
+          if (result.skillPermissionsAdded && result.skillPermissionsAdded.length > 0) {
+            lines.push("\n\u{1F510} Skill Permissions: Added to .claude/settings.json");
+            lines.push(`  ${result.skillPermissionsAdded.length} permissions added for skill file operations`);
+          }
+          lines.push("\n\u{1F4DD} Tech Contexts Written:");
+          if (result.writtenTechContexts && result.writtenTechContexts.length > 0) {
+            lines.push(`  ${result.writtenTechContexts.join(", ")}`);
+          } else {
+            lines.push("  None");
+          }
+        } else if (result.changes) {
+          const techDiff = {
+            added: result.changes.techStackAdded,
+            removed: result.changes.techStackRemoved
+          };
+          const techChanges = formatTechStackChanges(techDiff);
+          if (techChanges) {
+            lines.push(techChanges);
+          }
+          lines.push("\n\u{1F4DD} Tech Contexts Written:");
+          if (result.writtenTechContexts && result.writtenTechContexts.length > 0) {
+            lines.push(`  ${result.writtenTechContexts.join(", ")}`);
+          } else {
+            lines.push("  None");
+          }
+        } else {
+          lines.push("\u{1F4CA} Repository analysis complete - no changes detected");
+          lines.push("\n\u{1F4DD} Tech Contexts Written:");
+          if (result.writtenTechContexts && result.writtenTechContexts.length > 0) {
+            lines.push(`  ${result.writtenTechContexts.join(", ")}`);
+          } else {
+            lines.push("  None");
+          }
+        }
+        this.appendRichMetadataOutput(lines, result.analysis);
+        if (result.agentsMdStatus) {
+          const statusLabel = result.agentsMdStatus === "created" ? "Created" : result.agentsMdStatus === "updated" ? "Updated" : "Up to date";
+          lines.push(`
+AGENTS.md: ${statusLabel}`);
+        }
+        if (result.recommendations && result.recommendations.length > 0) {
+          lines.push("\n\u{1F3AF} Recommendations:");
+          const groupLabels = { skill: "Skills", agent: "Agents", hook: "Hooks" };
+          const grouped = /* @__PURE__ */ new Map();
+          for (const rec of result.recommendations) {
+            const existing = grouped.get(rec.type) ?? [];
+            grouped.set(rec.type, [...existing, rec]);
+          }
+          for (const [type2, label] of Object.entries(groupLabels)) {
+            const recs = grouped.get(type2);
+            if (recs && recs.length > 0) {
+              lines.push(`
+  ${label}:`);
+              for (const rec of recs) {
+                lines.push(`    \u2022 ${rec.name} \u2014 ${rec.description}`);
+                lines.push(`      Reason: ${rec.reason}`);
+              }
+            }
+          }
+          lines.push("\n  Use `recommendations operation=accept` to install");
+        }
+        return lines.join("\n");
+      }
+      /**
+       * Append rich metadata sections to output lines
+       */
+      appendRichMetadataOutput(lines, analysis) {
+        if (analysis.packageManager) {
+          lines.push(`
+  Package Manager: ${analysis.packageManager}`);
+        }
+        const scripts = analysis.scripts;
+        if (scripts && (scripts.test?.command || scripts.build?.command || scripts.dev?.command || scripts.lint?.command || scripts.e2e?.command)) {
+          lines.push("\n\u{1F4CB} Commands:");
+          if (scripts.test?.command) lines.push(`  Test: ${scripts.test.command}`);
+          if (scripts.build?.command) lines.push(`  Build: ${scripts.build.command}`);
+          if (scripts.dev?.command) lines.push(`  Dev: ${scripts.dev.command}`);
+          if (scripts.lint?.command) lines.push(`  Lint: ${scripts.lint.command}`);
+          if (scripts.e2e?.command) lines.push(`  E2E: ${scripts.e2e.command}`);
+        }
+        if (analysis.linting) {
+          lines.push("\n\u{1F50D} Linting:");
+          if (analysis.linting.tool) {
+            lines.push(`  Tool: ${analysis.linting.tool}`);
+          }
+          if (analysis.linting.plugins && analysis.linting.plugins.length > 0) {
+            lines.push(`  Plugins: ${analysis.linting.plugins.join(", ")}`);
+          }
+        }
+        if (analysis.monorepo) {
+          lines.push("\n\u{1F4E6} Monorepo:");
+          if (analysis.monorepo.tool) {
+            lines.push(`  Tool: ${analysis.monorepo.tool}`);
+          }
+          if (analysis.monorepo.packages && analysis.monorepo.packages.length > 0) {
+            lines.push("  Packages:");
+            for (const pkg of analysis.monorepo.packages) {
+              lines.push(`    - ${pkg}`);
+            }
+          }
+        }
+      }
+      /**
+       * Compare two tech stacks and return differences
+       * Handles null previous analysis (first run)
+       */
+      compareTechStacks(previousAnalysis, currentAnalysis) {
+        if (!previousAnalysis) {
+          return {
+            added: [
+              ...currentAnalysis.languages,
+              ...currentAnalysis.frameworks,
+              ...currentAnalysis.buildTools,
+              ...currentAnalysis.testingTools
+            ],
+            removed: []
+          };
+        }
+        return detectTechStackChanges(
+          {
+            languages: previousAnalysis.languages || [],
+            frameworks: previousAnalysis.frameworks || [],
+            buildTools: previousAnalysis.buildTools || [],
+            testingTools: previousAnalysis.testingTools || []
+          },
+          {
+            languages: currentAnalysis.languages || [],
+            frameworks: currentAnalysis.frameworks || [],
+            buildTools: currentAnalysis.buildTools || [],
+            testingTools: currentAnalysis.testingTools || []
+          }
+        );
+      }
+      /**
+       * Check if tiny-brain block needs updating based on version
+       * @param existingContent - Content containing existing tiny-brain block
+       * @param currentVersion - Current package version
+       * @returns true if update needed (version mismatch or missing)
+       */
+      needsTinyBrainUpdate(existingContent, currentVersion) {
+        const existingVersion = this.deps.repoService.extractTinyBrainVersion(existingContent);
+        if (!existingVersion) {
+          return true;
+        }
+        return this.compareVersions(existingVersion, currentVersion) < 0;
+      }
+      /**
+       * Compare semantic versions (e.g., "0.11.0" vs "0.12.0")
+       * @param v1 - First version string
+       * @param v2 - Second version string
+       * @returns -1 if v1 < v2, 0 if equal, 1 if v1 > v2
+       */
+      compareVersions(v1, v2) {
+        const parts1 = v1.split(".").map(Number);
+        const parts2 = v2.split(".").map(Number);
+        for (let i = 0; i < 3; i++) {
+          if (parts1[i] < parts2[i]) return -1;
+          if (parts1[i] > parts2[i]) return 1;
+        }
+        return 0;
+      }
+    };
+  }
+});
+
 // packages/tiny-brain-core/src/services/analysis/index.ts
 var init_analysis = __esm({
   "packages/tiny-brain-core/src/services/analysis/index.ts"() {
@@ -46940,6 +49395,7 @@ var init_analysis = __esm({
     init_capability_engine();
     init_registry();
     init_skill_validation_service();
+    init_analyse_service();
   }
 });
 
@@ -47201,14 +49657,14 @@ var init_pipeline = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/pipeline-telemetry.ts
-import fs24 from "node:fs";
-import path26 from "node:path";
+import fs28 from "node:fs";
+import path30 from "node:path";
 function writePipelineTelemetry(repoPath, entry) {
   try {
-    const dir = path26.join(repoPath, ".tiny-brain", "telemetry");
-    const file = path26.join(dir, "pipeline-advancement.jsonl");
-    fs24.mkdirSync(dir, { recursive: true });
-    fs24.appendFileSync(file, JSON.stringify(entry) + "\n");
+    const dir = path30.join(repoPath, ".tiny-brain", "telemetry");
+    const file = path30.join(dir, "pipeline-advancement.jsonl");
+    fs28.mkdirSync(dir, { recursive: true });
+    fs28.appendFileSync(file, JSON.stringify(entry) + "\n");
   } catch {
   }
 }
@@ -47236,14 +49692,14 @@ var init_event_types = __esm({
 });
 
 // packages/tiny-brain-core/src/services/telemetry/event-store.ts
-import fs25 from "node:fs";
-import path27 from "node:path";
+import fs29 from "node:fs";
+import path31 from "node:path";
 import readline from "node:readline";
 function eventsPath(repoPath) {
-  return path27.join(repoPath, TELEMETRY_DIR, EVENTS_FILE);
+  return path31.join(repoPath, TELEMETRY_DIR, EVENTS_FILE);
 }
 function ensureDir(repoPath) {
-  fs25.mkdirSync(path27.join(repoPath, TELEMETRY_DIR), { recursive: true });
+  fs29.mkdirSync(path31.join(repoPath, TELEMETRY_DIR), { recursive: true });
 }
 function hasTaskRef(obj) {
   const ref = obj["taskRef"];
@@ -47271,19 +49727,19 @@ function appendEvent(repoPath, event) {
   ensureDir(repoPath);
   const filePath = eventsPath(repoPath);
   const line = JSON.stringify(event) + "\n";
-  const fd = fs25.openSync(filePath, "a");
+  const fd = fs29.openSync(filePath, "a");
   try {
-    fs25.writeSync(fd, line);
-    fs25.fsyncSync(fd);
+    fs29.writeSync(fd, line);
+    fs29.fsyncSync(fd);
   } finally {
-    fs25.closeSync(fd);
+    fs29.closeSync(fd);
   }
 }
 async function readEventsForTask(repoPath, taskRef) {
   const filePath = eventsPath(repoPath);
-  if (!fs25.existsSync(filePath)) return [];
+  if (!fs29.existsSync(filePath)) return [];
   const events = [];
-  const stream2 = fs25.createReadStream(filePath, { encoding: "utf-8" });
+  const stream2 = fs29.createReadStream(filePath, { encoding: "utf-8" });
   const rl = readline.createInterface({ input: stream2, crlfDelay: Infinity });
   for await (const line of rl) {
     const event = parseLine(line);
@@ -47296,8 +49752,8 @@ async function readEventsForTask(repoPath, taskRef) {
 }
 async function* readAllEvents(repoPath, opts) {
   const filePath = eventsPath(repoPath);
-  if (!fs25.existsSync(filePath)) return;
-  const stream2 = fs25.createReadStream(filePath, { encoding: "utf-8" });
+  if (!fs29.existsSync(filePath)) return;
+  const stream2 = fs29.createReadStream(filePath, { encoding: "utf-8" });
   const rl = readline.createInterface({ input: stream2, crlfDelay: Infinity });
   for await (const line of rl) {
     const event = parseLine(line);
@@ -47312,7 +49768,7 @@ var init_event_store = __esm({
     "use strict";
     init_event_types();
     init_event_types();
-    TELEMETRY_DIR = path27.join(".tiny-brain", "telemetry");
+    TELEMETRY_DIR = path31.join(".tiny-brain", "telemetry");
     EVENTS_FILE = "events.jsonl";
   }
 });
@@ -47660,8 +50116,8 @@ var init_review_watcher = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/reminder-inbox.ts
-import * as fs26 from "fs";
-import * as path28 from "path";
+import * as fs30 from "fs";
+import * as path32 from "path";
 import { randomBytes as randomBytes2 } from "crypto";
 var ReminderInbox;
 var init_reminder_inbox = __esm({
@@ -47674,14 +50130,14 @@ var init_reminder_inbox = __esm({
       }
       telemetry;
       async write(reminder) {
-        await fs26.promises.mkdir(this.inboxDir, { recursive: true });
+        await fs30.promises.mkdir(this.inboxDir, { recursive: true });
         const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
         const random = randomBytes2(4).toString("hex");
         const basename2 = `${timestamp2}-${random}`;
-        const tmpPath = path28.join(this.inboxDir, `${basename2}.tmp`);
-        const finalPath = path28.join(this.inboxDir, `${basename2}.reminder`);
-        await fs26.promises.writeFile(tmpPath, reminder, "utf-8");
-        await fs26.promises.rename(tmpPath, finalPath);
+        const tmpPath = path32.join(this.inboxDir, `${basename2}.tmp`);
+        const finalPath = path32.join(this.inboxDir, `${basename2}.reminder`);
+        await fs30.promises.writeFile(tmpPath, reminder, "utf-8");
+        await fs30.promises.rename(tmpPath, finalPath);
         try {
           await Promise.resolve(this.telemetry.onReminderWritten?.({ reminderId: basename2 }));
         } catch {
@@ -47691,7 +50147,7 @@ var init_reminder_inbox = __esm({
       async drain() {
         let entries;
         try {
-          entries = await fs26.promises.readdir(this.inboxDir);
+          entries = await fs30.promises.readdir(this.inboxDir);
         } catch (err) {
           if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
             return [];
@@ -47701,10 +50157,10 @@ var init_reminder_inbox = __esm({
         const reminderFiles = entries.filter((f) => f.endsWith(".reminder")).sort();
         const results = [];
         for (const file of reminderFiles) {
-          const filePath = path28.join(this.inboxDir, file);
+          const filePath = path32.join(this.inboxDir, file);
           try {
-            const content = await fs26.promises.readFile(filePath, "utf-8");
-            await fs26.promises.unlink(filePath);
+            const content = await fs30.promises.readFile(filePath, "utf-8");
+            await fs30.promises.unlink(filePath);
             results.push(content);
             try {
               const reminderId = file.slice(0, -".reminder".length);
@@ -47739,8 +50195,8 @@ var init_repo_config = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
-import * as fs27 from "fs/promises";
-import * as path29 from "path";
+import * as fs31 from "fs/promises";
+import * as path33 from "path";
 var SkillLoader;
 var init_skill_loader = __esm({
   "packages/tiny-brain-core/src/services/api/skill-loader.ts"() {
@@ -47757,9 +50213,9 @@ var init_skill_loader = __esm({
         if (cached2) {
           return cached2;
         }
-        const skillPath = path29.join(this.skillsPath, skillName);
-        const skillFile = path29.join(skillPath, "SKILL.md");
-        const content = await fs27.readFile(skillFile, "utf-8");
+        const skillPath = path33.join(this.skillsPath, skillName);
+        const skillFile = path33.join(skillPath, "SKILL.md");
+        const content = await fs31.readFile(skillFile, "utf-8");
         const { metadata, body } = this.parseFrontmatter(content);
         const templates = await this.loadTemplates(skillPath);
         const skill = {
@@ -47799,14 +50255,14 @@ var init_skill_loader = __esm({
         return { metadata, body };
       }
       async loadTemplates(skillPath) {
-        const templatesPath = path29.join(skillPath, "templates");
+        const templatesPath = path33.join(skillPath, "templates");
         const templates = {};
         try {
-          const entries = await fs27.readdir(templatesPath, { withFileTypes: true });
+          const entries = await fs31.readdir(templatesPath, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isFile() && entry.name.endsWith(".md")) {
-              const templatePath = path29.join(templatesPath, entry.name);
-              const content = await fs27.readFile(templatePath, "utf-8");
+              const templatePath = path33.join(templatesPath, entry.name);
+              const content = await fs31.readFile(templatePath, "utf-8");
               templates[entry.name] = content;
             }
           }
@@ -48565,92 +51021,6 @@ var init_persona3 = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/modules/analysis/analysis-diff.ts
-function compareAnalysis(oldAnalysis, newAnalysis) {
-  const techStackChanges = detectTechStackChanges(
-    {
-      languages: oldAnalysis.languages,
-      frameworks: oldAnalysis.frameworks,
-      buildTools: oldAnalysis.buildTools,
-      testingTools: oldAnalysis.testingTools
-    },
-    {
-      languages: newAnalysis.languages,
-      frameworks: newAnalysis.frameworks,
-      buildTools: newAnalysis.buildTools,
-      testingTools: newAnalysis.testingTools
-    }
-  );
-  const hasChanges = techStackChanges.added.length > 0 || techStackChanges.removed.length > 0;
-  return {
-    hasChanges,
-    techStackChanges
-  };
-}
-function detectTechStackChanges(oldStack, newStack) {
-  const oldItems = /* @__PURE__ */ new Set([
-    ...oldStack.languages,
-    ...oldStack.frameworks,
-    ...oldStack.buildTools,
-    ...oldStack.testingTools
-  ]);
-  const newItems = /* @__PURE__ */ new Set([
-    ...newStack.languages,
-    ...newStack.frameworks,
-    ...newStack.buildTools,
-    ...newStack.testingTools
-  ]);
-  const added = [];
-  const removed = [];
-  for (const item of newItems) {
-    if (!oldItems.has(item)) {
-      added.push(item);
-    }
-  }
-  for (const item of oldItems) {
-    if (!newItems.has(item)) {
-      removed.push(item);
-    }
-  }
-  return { added, removed };
-}
-function formatTechStackChanges(diff) {
-  if (diff.added.length === 0 && diff.removed.length === 0) {
-    return "";
-  }
-  const lines = ["\u{1F4CA} Tech stack changes detected:"];
-  for (const item of diff.added) {
-    lines.push(`  \u2728 ${item} (new)`);
-  }
-  for (const item of diff.removed) {
-    lines.push(`  \u274C ${item} (removed)`);
-  }
-  return lines.join("\n");
-}
-function formatAgentChanges(updates) {
-  if (updates.length === 0) {
-    return "\u{1F916} Agents up to date";
-  }
-  const lines = ["\u{1F916} Agent updates applied:"];
-  for (const update of updates) {
-    if (update.type === "update") {
-      const description = update.description ? ` (${update.description})` : "";
-      lines.push(`  \u2705 ${update.name} v${update.fromVersion} \u2192 v${update.toVersion}${description}`);
-    } else if (update.type === "new") {
-      lines.push(`  \u2728 ${update.name} v${update.toVersion} (new)`);
-    } else if (update.type === "remove") {
-      const description = update.description ? ` (${update.description})` : "";
-      lines.push(`  \u{1F5D1}\uFE0F ${update.name}${description}`);
-    }
-  }
-  return lines.join("\n");
-}
-var init_analysis_diff = __esm({
-  "packages/tiny-brain-core/src/modules/analysis/analysis-diff.ts"() {
-    "use strict";
-  }
-});
-
 // packages/tiny-brain-core/src/modules/memory/types.ts
 var init_types14 = __esm({
   "packages/tiny-brain-core/src/modules/memory/types.ts"() {
@@ -49085,17 +51455,17 @@ var init_parallel_executor = __esm({
 });
 
 // packages/tiny-brain-core/src/utils/git.ts
-import { exec as exec4, execSync } from "child_process";
-import path30 from "path";
+import { exec as exec4, execSync as execSync2 } from "child_process";
+import path34 from "path";
 import { promisify as promisify4 } from "util";
 function buildWorktreeInfo(commonDirOut, toplevelOut, branchOut) {
   const worktreePath = String(toplevelOut).trim();
   const branch = String(branchOut).trim();
   const commonDirTrimmed = String(commonDirOut).trim();
-  const resolvedCommonDir = path30.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path30.resolve(worktreePath, commonDirTrimmed);
-  const mainRepoPath = path30.dirname(resolvedCommonDir);
+  const resolvedCommonDir = path34.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path34.resolve(worktreePath, commonDirTrimmed);
+  const mainRepoPath = path34.dirname(resolvedCommonDir);
   const isWorktree = mainRepoPath !== worktreePath;
-  const worktreeName = isWorktree ? path30.basename(worktreePath) : "";
+  const worktreeName = isWorktree ? path34.basename(worktreePath) : "";
   return { isWorktree, worktreePath, mainRepoPath, branch, worktreeName };
 }
 async function detectRepositoryRoot() {
@@ -49108,7 +51478,7 @@ async function detectRepositoryRoot() {
 }
 function detectRepositoryRootSync() {
   try {
-    const result = execSync("git rev-parse --show-toplevel", SYNC_EXEC_DEFAULTS);
+    const result = execSync2("git rev-parse --show-toplevel", SYNC_EXEC_DEFAULTS);
     return result.trim();
   } catch {
     return void 0;
@@ -49128,9 +51498,9 @@ async function detectWorktreeInfo(cwd) {
 function detectWorktreeInfoSync(cwd) {
   try {
     const execOpts = { ...SYNC_EXEC_DEFAULTS, cwd };
-    const commonDirOut = execSync("git rev-parse --git-common-dir", execOpts);
-    const toplevelOut = execSync("git rev-parse --show-toplevel", execOpts);
-    const branchOut = execSync("git branch --show-current", execOpts);
+    const commonDirOut = execSync2("git rev-parse --git-common-dir", execOpts);
+    const toplevelOut = execSync2("git rev-parse --show-toplevel", execOpts);
+    const branchOut = execSync2("git branch --show-current", execOpts);
     return buildWorktreeInfo(commonDirOut, toplevelOut, branchOut);
   } catch {
     return null;
@@ -49161,6 +51531,7 @@ var init_utils2 = __esm({
     init_object();
     init_parallel_executor();
     init_git();
+    init_repo_utils();
     init_commit_parser();
     init_json_repair();
     init_adr_pattern_detector();
@@ -49196,619 +51567,2228 @@ var init_constants = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/index.ts
-var src_exports = {};
-__export(src_exports, {
-  ADRService: () => ADRService,
-  ADVERSARIAL_STEP: () => ADVERSARIAL_STEP,
-  ANALYZER_REGISTRY: () => ANALYZER_REGISTRY,
-  AgentFindingsSchema: () => AgentFindingsSchema,
-  AgentsMdService: () => AgentsMdService,
-  AnalysisService: () => AnalysisService,
-  AnalyzerDefinitionSchema: () => AnalyzerDefinitionSchema,
-  AnalyzerDetectionService: () => AnalyzerDetectionService,
-  AnalyzerExecutionResultSchema: () => AnalyzerExecutionResultSchema,
-  AnalyzerExecutionStatus: () => AnalyzerExecutionStatus,
-  AnalyzerExecutorService: () => AnalyzerExecutorService,
-  AnalyzerOutputFormat: () => AnalyzerOutputFormat,
-  AnalyzerResultsSchema: () => AnalyzerResultsSchema,
-  AnalyzerRunSummarySchema: () => AnalyzerRunSummarySchema,
-  AssemblyResultSchema: () => AssemblyResultSchema,
-  AssemblyService: () => AssemblyService,
-  AuthTokenService: () => AuthTokenService,
-  BaseDetector: () => BaseDetector,
-  BaseService: () => BaseService,
-  CAPABILITY_INSTALLERS: () => CAPABILITY_INSTALLERS,
-  CATEGORY_MAX_DEDUCTION: () => CATEGORY_MAX_DEDUCTION,
-  CATEGORY_WEIGHTS: () => CATEGORY_WEIGHTS,
-  CODE_COVERAGE_STEP: () => CODE_COVERAGE_STEP,
-  CategoryInvestigationSchema: () => CategoryInvestigationSchema,
-  CategoryProgressSchema: () => CategoryProgressSchema,
-  CategoryProgressSummarySchema: () => CategoryProgressSummarySchema,
-  CategoryScoreSchema: () => CategoryScoreSchema,
-  ChatAnalysisService: () => ChatAnalysisService,
-  CheckDefinitionSchema: () => CheckDefinitionSchema,
-  ClaudeCliClient: () => ClaudeCliClient,
-  ConfigHealthService: () => ConfigHealthService,
-  ConfigService: () => ConfigService,
-  ConfigSetupService: () => ConfigSetupService,
-  CredentialStorageService: () => CredentialStorageService,
-  DEFAULT_EFFORT_HOURS: () => DEFAULT_EFFORT_HOURS,
-  DEFAULT_PREFERENCES: () => DEFAULT_PREFERENCES,
-  DefaultModuleRegistry: () => DefaultModuleRegistry,
-  DetectedAnalyzerSchema: () => DetectedAnalyzerSchema,
-  ESLINT_HOOK_STEP: () => ESLINT_HOOK_STEP,
-  EXEC_HELPER_CONTENT: () => EXEC_HELPER_CONTENT,
-  EffortLevel: () => EffortLevel,
-  FileInvestigationResultSchema: () => FileInvestigationResultSchema,
-  FileInvestigationSchema: () => FileInvestigationSchema,
-  FileListingService: () => FileListingService,
-  FileTaskProgressSchema: () => FileTaskProgressSchema,
-  FingerprintMatchSchema: () => FingerprintMatchSchema,
-  FixService: () => FixService,
-  GRADE_THRESHOLDS: () => GRADE_THRESHOLDS,
-  HooksService: () => HooksService,
-  ImpactLevel: () => ImpactLevel,
-  ImprovementInitiativeSchema: () => ImprovementInitiativeSchema,
-  ImprovementPhaseSchema: () => ImprovementPhaseSchema,
-  InvestigationChecklistSchema: () => InvestigationChecklistSchema,
-  InvestigationCoverageSchema: () => InvestigationCoverageSchema,
-  InvestigationFileStatus: () => InvestigationFileStatus,
-  InvestigationFindingSchema: () => InvestigationFindingSchema,
-  InvestigationOrchestratorService: () => InvestigationOrchestratorService,
-  InvestigationProgressSummarySchema: () => InvestigationProgressSummarySchema,
-  InvestigationSummarySchema: () => InvestigationSummarySchema,
-  IssueFingerprintSchema: () => IssueFingerprintSchema,
-  IssueSeverity: () => IssueSeverity,
-  JavaScriptDetector: () => JavaScriptDetector,
-  KeyedAnalyzerSectionSchema: () => KeyedAnalyzerSectionSchema,
-  LOG_LEVEL_PRIORITY: () => LOG_LEVEL_PRIORITY,
-  LibraryClient: () => LibraryClient,
-  MatchResultSchema: () => MatchResultSchema,
-  MemoryService: () => MemoryService,
-  MessageDomain: () => MessageDomain,
-  MessageIntent: () => MessageIntent,
-  PROGRESS_SCHEMA_VERSION: () => PROGRESS_SCHEMA_VERSION,
-  PersonaLearningService: () => PersonaLearningService,
-  PersonaService: () => PersonaService,
-  PipelineService: () => PipelineService,
-  PlanningService: () => PlanningService,
-  PluginDiscoveryService: () => PluginDiscoveryService,
-  QualityCategory: () => QualityCategory,
-  QualityGrade: () => QualityGrade,
-  QualityImprovementPlanSchema: () => QualityImprovementPlanSchema,
-  QualityIssueSchema: () => QualityIssueSchema,
-  QualityRunResultSchema: () => QualityRunResultSchema,
-  QualityRunSummarySchema: () => QualityRunSummarySchema,
-  QualityService: () => QualityService,
-  RecommendationService: () => RecommendationService,
-  ReminderInbox: () => ReminderInbox,
-  RepoConfigService: () => RepoConfigService,
-  ResponseValidationService: () => ResponseValidationService,
-  Result: () => ResultHelpers,
-  ReviewWatcher: () => ReviewWatcher,
-  RulesService: () => RulesService,
-  RunComparisonSchema: () => RunComparisonSchema,
-  SEVERITY_DEFAULT_HOURS: () => SEVERITY_DEFAULT_HOURS,
-  SEVERITY_MULTIPLIERS: () => SEVERITY_MULTIPLIERS,
-  SaveQualityRunInputSchema: () => SaveQualityRunInputSchema,
-  ScriptAnalyzer: () => ScriptAnalyzer,
-  SkillLoader: () => SkillLoader,
-  SkillValidationGrade: () => SkillValidationGrade,
-  SkillValidationService: () => SkillValidationService,
-  SkillValidationSeverity: () => SkillValidationSeverity,
-  SourceBreakdownSchema: () => SourceBreakdownSchema,
-  StrategyService: () => StrategyService,
-  StructuredRecommendationSchema: () => StructuredRecommendationSchema,
-  TEST_PLAN_EMOJIS: () => TEST_PLAN_EMOJIS,
-  TYPESCRIPT_HOOK_STEP: () => TYPESCRIPT_HOOK_STEP,
-  TechContextService: () => TechContextService,
-  TechnicalDebtSummarySchema: () => TechnicalDebtSummarySchema,
-  ThinkingService: () => ThinkingService,
-  advancePipeline: () => advancePipeline,
-  analyseForCLI: () => analyseForCLI,
-  analyseRepository: () => analyseRepository,
-  analyzeComplexity: () => analyzeComplexity,
-  analyzeContextDrift: () => analyzeContextDrift,
-  analyzeEmotionalTone: () => analyzeEmotionalTone,
-  analyzeThoughtHistory: () => analyzeThoughtHistory,
-  appendEvent: () => appendEvent,
-  applyBulkUpdates: () => applyBulkUpdates,
-  applyEvent: () => applyEvent,
-  autoCorrect: () => autoCorrect,
-  batchExecute: () => batchExecute,
-  bootstrapPersona: () => bootstrapPersona,
-  buildPersonaContext: () => buildPersonaContext,
-  buildQualityScores: () => buildQualityScores,
-  calculateComplexityScore: () => calculateComplexityScore,
-  calculateStructuralComplexity: () => calculateStructuralComplexity,
-  checkConsistency: () => checkConsistency,
-  checkGoalAlignment: () => checkGoalAlignment,
-  checkRequiresCodeSamples: () => checkRequiresCodeSamples,
-  checkRequiresExamples: () => checkRequiresExamples,
-  checkRequiresFactChecking: () => checkRequiresFactChecking,
-  checkRequiresStepByStep: () => checkRequiresStepByStep,
-  checkRequiresVisualization: () => checkRequiresVisualization,
-  chunk: () => chunk,
-  classifyIntent: () => classifyIntent,
-  classifyMemory: () => classifyMemory,
-  cleanString: () => cleanString,
-  clearCliStatusCache: () => clearCliStatusCache,
-  compact: () => compact,
-  compareAnalysis: () => compareAnalysis,
-  computeOverallScore: () => computeOverallScore,
-  createDefaultProfile: () => createDefaultProfile,
-  createError: () => createError,
-  createMemoryModule: () => createMemoryModule,
-  createModuleContext: () => createModuleContext,
-  createModuleRegistry: () => createModuleRegistry,
-  createParallelExecutor: () => createParallelExecutor,
-  createPersonaModule: () => createPersonaModule,
-  deepClone: () => deepClone,
-  deepMerge: () => deepMerge,
-  deriveContainerStatus: () => deriveContainerStatus,
-  derivePhase: () => derivePhase,
-  detectADRPatterns: () => detectADRPatterns,
-  detectClaudeCliStatus: () => detectClaudeCliStatus,
-  detectRepositoryRoot: () => detectRepositoryRoot,
-  detectRepositoryRootSync: () => detectRepositoryRootSync,
-  detectTechStackChanges: () => detectTechStackChanges,
-  detectWorktreeInfo: () => detectWorktreeInfo,
-  detectWorktreeInfoSync: () => detectWorktreeInfoSync,
-  evaluateStrategy: () => evaluateStrategy,
-  executeParallel: () => executeParallel,
-  executeParallelMap: () => executeParallelMap,
-  extractConceptualIndicators: () => extractConceptualIndicators,
-  extractDetailsFromProfile: () => extractDetailsFromProfile,
-  extractDirective: () => extractDirective,
-  extractEntities: () => extractEntities,
-  extractFact: () => extractFact,
-  extractFeaturesFromText: () => extractFeaturesFromText,
-  extractInsights: () => extractInsights,
-  extractIntentSignals: () => extractIntentSignals,
-  extractKeyValuePairs: () => extractKeyValuePairs,
-  extractLearningInsights: () => extractLearningInsights,
-  extractPhasesFromText: () => extractPhasesFromText,
-  extractRelationships: () => extractRelationships,
-  extractRulesFromProfile: () => extractRulesFromProfile,
-  extractTechnicalIndicators: () => extractTechnicalIndicators,
-  extractTechnicalTerms: () => extractTechnicalTerms,
-  findLatestQualityRunDir: () => findLatestQualityRunDir,
-  findProjectRoot: () => findProjectRoot,
-  first: () => first,
-  formatActivationMessage: () => formatActivationMessage,
-  formatAgentChanges: () => formatAgentChanges,
-  formatPersona: () => formatPersona,
-  formatPersonaContext: () => formatPersonaContext,
-  formatPersonaList: () => formatPersonaList,
-  formatPlan: () => formatPlan,
-  formatPlanStructure: () => formatPlanStructure,
-  formatSystemReminder: () => formatSystemReminder,
-  formatTechStackChanges: () => formatTechStackChanges,
-  formatThoughtOutput: () => formatThoughtOutput,
-  formatTimestamp: () => formatTimestamp,
-  generateADRSuggestion: () => generateADRSuggestion,
-  generateComplexityReasoning: () => generateComplexityReasoning,
-  generateConsistencyReport: () => generateConsistencyReport,
-  generateHash: () => generateHash,
-  generateId: () => generateId,
-  generateMarkdown: () => generateMarkdown,
-  generatePersonaMarkdown: () => generatePersonaMarkdown,
-  generateQipMarkdown: () => generateQipMarkdown,
-  generateResponseStrategy: () => generateResponseStrategy,
-  generateRunId: () => generateRunId,
-  generateStatusReport: () => generateStatusReport,
-  generateThinkingReport: () => generateThinkingReport,
-  getActivePipeline: () => getActivePipeline,
-  getBootstrapInfo: () => getBootstrapInfo,
-  getCurrentTimestamp: () => getCurrentTimestamp,
-  getErrorMessage: () => getErrorMessage,
-  getHookSteps: () => getHookSteps,
-  getISOTimestamp: () => getISOTimestamp,
-  getIntentConfidence: () => getIntentConfidence,
-  getPhaseDuration: () => getPhaseDuration,
-  getQualityStepScores: () => getQualityStepScores,
-  getRelativeTime: () => getRelativeTime,
-  getServiceUrls: () => getServiceUrls,
-  getTBRUrl: () => getTBRUrl,
-  getTBSUrl: () => getTBSUrl,
-  groupBy: () => groupBy,
-  identifyContextualNeeds: () => identifyContextualNeeds,
-  identifyDomain: () => identifyDomain,
-  identifyDomainKeywords: () => identifyDomainKeywords,
-  identifyImplicitNeeds: () => identifyImplicitNeeds,
-  isArray: () => isArray,
-  isAtomicRecommendation: () => isAtomicRecommendation,
-  isBoolean: () => isBoolean2,
-  isBootstrappedPersona: () => isBootstrappedPersona,
-  isCapabilityRecommendation: () => isCapabilityRecommendation,
-  isDefined: () => isDefined,
-  isDevelopment: () => isDevelopment,
-  isEmpty: () => isEmpty,
-  isError: () => isError,
-  isNonEmptyString: () => isNonEmptyString,
-  isNullOrUndefined: () => isNullOrUndefined,
-  isNumber: () => isNumber,
-  isObject: () => isObject3,
-  isPhaseComplete: () => isPhaseComplete,
-  isPhaseInProgress: () => isPhaseInProgress,
-  isPipelineStep: () => isPipelineStep,
-  isString: () => isString,
-  isTaskComplete: () => isTaskComplete,
-  last: () => last,
-  loadFindingsFromQualityRun: () => loadFindingsFromQualityRun,
-  logServiceConfig: () => logServiceConfig,
-  markReviewStarted: () => markReviewStarted,
-  mergePersonaBlocks: () => mergePersonaBlocks,
-  mergeResults: () => mergeResults,
-  mergeSimilarFacts: () => mergeSimilarFacts,
-  mergeUpdates: () => mergeUpdates,
-  normalizePipeline: () => normalizePipeline,
-  normalizeStepType: () => normalizeStepType,
-  omit: () => omit2,
-  parseCommitMessage: () => parseCommitMessage,
-  parseFactsFromText: () => parseFactsFromText,
-  parseJsonWithRepair: () => parseJsonWithRepair,
-  parsePersistedReview: () => parsePersistedReview,
-  parsePersonaMarkdown: () => parsePersonaMarkdown,
-  parseProfile: () => parseProfile,
-  parseTestPlan: () => parseTestPlan,
-  parseTestPlanTable: () => parseTestPlanTable,
-  pathToRunId: () => pathToRunId,
-  phaseToAction: () => phaseToAction,
-  pick: () => pick2,
-  planContentStrategy: () => planContentStrategy,
-  planResponseStructure: () => planResponseStructure,
-  processThought: () => processThought,
-  readAllEvents: () => readAllEvents,
-  readCachedAnalyzers: () => readCachedAnalyzers,
-  readEventsForTask: () => readEventsForTask,
-  repairJsonEscapes: () => repairJsonEscapes,
-  resolveFeatureFlags: () => resolveFeatureFlags,
-  resolvePersistPath: () => resolvePersistPath,
-  resolveQualityPersistPath: () => resolveQualityPersistPath,
-  resolveStep: () => resolveStep,
-  runIdToPath: () => runIdToPath,
-  runSingleAnalyser: () => runSingleAnalyser,
-  scoreMemoryRelevance: () => scoreMemoryRelevance,
-  selectEnhancementTechniques: () => selectEnhancementTechniques,
-  serializeTestPlan: () => serializeTestPlan,
-  simpleHash: () => simpleHash,
-  stepForPhase: () => stepForPhase,
-  stringToStep: () => stringToStep,
-  taskRefsMatch: () => taskRefsMatch,
-  toCamelCase: () => toCamelCase,
-  toKebabCase: () => toKebabCase,
-  trimAll: () => trimAll,
-  truncate: () => truncate,
-  unique: () => unique,
-  updateQipMarkdown: () => updateQipMarkdown,
-  updateSystemBlock: () => updateSystemBlock,
-  updateUserBlock: () => updateUserBlock,
-  validateResponse: () => validateResponse,
-  validateThought: () => validateThought,
-  wrapError: () => wrapError
-});
-var init_src = __esm({
-  "packages/tiny-brain-core/src/index.ts"() {
+// packages/tiny-brain-core/src/handlers/types.ts
+var init_types15 = __esm({
+  "packages/tiny-brain-core/src/handlers/types.ts"() {
     "use strict";
-    init_types2();
-    init_config();
-    init_logger_interface();
-    init_base_service();
-    init_persona_service();
-    init_persona_learning_service();
-    init_persona_context();
-    init_memory_service();
-    init_rules_service();
-    init_planning_service();
-    init_chat_analysis_service();
-    init_thinking_service();
-    init_response_validation_service();
-    init_strategy_service();
-    init_repo_config_service();
-    init_config_service();
-    init_fix_service();
-    init_types8();
-    init_adr_service();
-    init_types9();
-    init_plugin_discovery_service();
-    init_quality2();
-    init_hooks();
-    init_credential_storage_service();
-    init_auth_token_service();
-    init_analysis();
-    init_types10();
-    init_types11();
-    init_phase_derivation();
-    init_pipeline_normalizer();
-    init_pipeline_service();
-    init_pipeline();
-    init_persist();
-    init_quality_run_finder();
-    init_status_derivation();
-    init_review_watcher();
-    init_reminder_inbox();
-    init_event_store();
-    init_event_types();
-    init_types12();
-    init_repo_config();
-    init_user_preferences();
-    init_library_client();
-    init_skill_loader();
-    init_claude_cli_detection();
-    init_claude_cli_client();
-    init_registry2();
-    init_persona3();
-    init_persona2();
-    init_types13();
-    init_persona_markdown();
-    init_persona3();
-    init_analysis_diff();
-    init_analyser();
-    init_memory();
-    init_memory_classifier();
-    init_fact_extractor();
-    init_types14();
-    init_chat_analysis();
-    init_planning();
-    init_thinking();
-    init_response_validation();
-    init_strategy();
-    init_result();
-    init_context();
-    init_utils2();
-    init_constants();
   }
 });
 
-// packages/tiny-brain-mcp/src/services/persona-enhancer.ts
-var persona_enhancer_exports = {};
-__export(persona_enhancer_exports, {
-  PersonaEnhancer: () => PersonaEnhancer
-});
-var PersonaEnhancer;
-var init_persona_enhancer = __esm({
-  "packages/tiny-brain-mcp/src/services/persona-enhancer.ts"() {
+// packages/tiny-brain-core/src/handlers/personas.types.ts
+var init_personas_types = __esm({
+  "packages/tiny-brain-core/src/handlers/personas.types.ts"() {
     "use strict";
-    PersonaEnhancer = class {
-      /**
-       * Enhance a persona profile with agent usage instructions
-       */
-      static enhanceProfile(baseProfile, options) {
-        const { installedAgents } = options;
-        if (!installedAgents || installedAgents.length === 0) {
-          return baseProfile;
-        }
-        const instructions = this.generateAgentInstructions(options);
-        if (baseProfile.includes("## Agent Usage") || baseProfile.includes("## User Agent Instructions")) {
-          return baseProfile;
-        }
-        const userBlockStart = "<!-- USER-BLOCK-START -->";
-        const userRulesPattern = /## User Rules[\s\S]*?(?=##|<!-- USER-BLOCK-END -->)/;
-        const userBlockIndex = baseProfile.indexOf(userBlockStart);
-        if (userBlockIndex !== -1) {
-          const afterUserBlock = baseProfile.substring(userBlockIndex);
-          const userRulesMatch = afterUserBlock.match(userRulesPattern);
-          if (userRulesMatch) {
-            const insertPoint = userBlockIndex + (userRulesMatch.index ?? 0) + userRulesMatch[0].length;
-            const before = baseProfile.substring(0, insertPoint);
-            const after = baseProfile.substring(insertPoint);
-            return `${before}
-${instructions}
-${after}`;
-          } else {
-            const insertPoint = userBlockIndex + userBlockStart.length;
-            const before = baseProfile.substring(0, insertPoint);
-            const after = baseProfile.substring(insertPoint);
-            return `${before}
+  }
+});
 
-${instructions}${after}`;
-          }
-        } else {
-          const systemBlockEnd = "<!-- SYSTEM-BLOCK-END -->";
-          const systemEndIndex = baseProfile.indexOf(systemBlockEnd);
-          if (systemEndIndex !== -1) {
-            const insertPoint = systemEndIndex + systemBlockEnd.length;
-            const before = baseProfile.substring(0, insertPoint);
-            const after = baseProfile.substring(insertPoint);
-            const newUserBlock = `
+// packages/tiny-brain-core/src/handlers/personas.handlers.ts
+async function personasList(input, ctx) {
+  const service = new PersonaService(ctx);
+  const activePersona = ctx.activePersona?.id;
+  try {
+    if (input.includeArchived !== void 0) {
+      const personas2 = await service.listPersonas({ includeArchived: input.includeArchived });
+      return {
+        ok: true,
+        data: {
+          personas: personas2.map((name) => ({
+            name,
+            source: "local",
+            isActive: name === activePersona
+          })),
+          activePersona
+        }
+      };
+    }
+    const mode = input.mode ?? "all";
+    const personas = await service.listPersonasWithMode(mode);
+    return { ok: true, data: { personas, activePersona } };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to list personas"), cause);
+  }
+}
+async function personasCreate(input, ctx) {
+  const service = new PersonaService(ctx);
+  try {
+    const existing = await service.loadPersona({ personaName: input.personaName });
+    if (existing) {
+      return failure(`Persona "${input.personaName}" already exists`);
+    }
+    const profile = createDefaultProfile(
+      input.personaName,
+      (/* @__PURE__ */ new Date()).toISOString(),
+      input.description,
+      input.style
+    );
+    await service.createPersona({ personaName: input.personaName, profile });
+    return { ok: true, data: { personaName: input.personaName } };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to create persona"), cause);
+  }
+}
+async function personasUpdate(input, ctx) {
+  const service = new PersonaService(ctx);
+  const { personaName, data } = input;
+  try {
+    if (typeof data.name === "string" && data.name !== personaName) {
+      await service.renamePersona({ personaName, newPersonaName: data.name });
+      return { ok: true, data: { renamed: true, from: personaName, to: data.name } };
+    }
+    const learningEvaluation = PersonaLearningService.evaluateUpdateForLearning(data, ctx);
+    let insightsUpdated = false;
+    let learningType;
+    let learningConfidence;
+    if (learningEvaluation.hasLearning && learningEvaluation.extractedLearning) {
+      ctx.logger.info(`Learning opportunity detected for persona "${personaName}"`, {
+        learningType: learningEvaluation.learningType,
+        confidence: learningEvaluation.confidence,
+        extractedLearning: learningEvaluation.extractedLearning
+      });
+      await service.updateInsights({
+        personaName,
+        insights: learningEvaluation.extractedLearning
+      });
+      insightsUpdated = true;
+      learningType = learningEvaluation.learningType;
+      learningConfidence = learningEvaluation.confidence;
+    }
+    let profileUpdated = false;
+    if (typeof data.profile === "string") {
+      await service.savePersona({ personaName, profile: data.profile });
+      profileUpdated = true;
+    }
+    if (insightsUpdated || profileUpdated) {
+      return {
+        ok: true,
+        data: {
+          renamed: false,
+          insightsUpdated,
+          profileUpdated,
+          fallbackAppend: false,
+          learningType,
+          learningConfidence
+        }
+      };
+    }
+    const existingPersona = await service.loadPersona({ personaName });
+    if (!existingPersona) {
+      return failure(`Persona "${personaName}" not found`);
+    }
+    const profileString = await ctx.storage.getPersonaFile(personaName, "profile.md", ctx.userId);
+    const updates = JSON.stringify(data, null, 2);
+    const updatedProfile = `${profileString ?? ""}
 
-<!-- USER-BLOCK-START -->
-${instructions}
-<!-- USER-BLOCK-END -->`;
-            return `${before}${newUserBlock}${after}`;
-          } else {
-            return `${baseProfile}
-
-<!-- USER-BLOCK-START -->
-${instructions}
-<!-- USER-BLOCK-END -->`;
-          }
-        }
-      }
-      /**
-       * Generate agent usage instructions based on persona type and installed agents
-       */
-      static generateAgentInstructions(options) {
-        const { installedAgents, personaName, personaType } = options;
-        let instructions = `## User Agent Instructions
-
-You have specialized agents available for this repository. Use them as follows:
-
-`;
-        const agentsByCategory = this.groupAgentsByCategory(installedAgents);
-        if (personaType === "tester" || personaName.toLowerCase().includes("test") || personaName.toLowerCase() === "qa") {
-          instructions += this.generateTesterInstructions(agentsByCategory);
-        } else if (personaType === "developer" || personaName.toLowerCase().includes("dev")) {
-          instructions += this.generateDeveloperInstructions(agentsByCategory);
-        } else {
-          instructions += this.generateGenericInstructions(agentsByCategory);
-        }
-        instructions += `
-### Installed Agents for this Repository
-`;
-        installedAgents.forEach((agent) => {
-          instructions += `- ${agent.id} (${agent.description})
-`;
-        });
-        return instructions;
-      }
-      /**
-       * Group agents by their category/purpose
-       */
-      static groupAgentsByCategory(agents) {
-        const groups = /* @__PURE__ */ new Map();
-        agents.forEach((agent) => {
-          let category = "general";
-          if (agent.id.includes("test") || agent.description.toLowerCase().includes("test")) {
-            category = "testing";
-          } else if (agent.id.includes("analys") || agent.id.includes("analyze")) {
-            category = "analysis";
-          } else if (agent.id.includes("refactor")) {
-            category = "refactoring";
-          } else if (agent.id.includes("review")) {
-            category = "review";
-          } else if (agent.id.includes("strateg")) {
-            category = "planning";
-          }
-          if (!groups.has(category)) {
-            groups.set(category, []);
-          }
-          const categoryAgents = groups.get(category);
-          if (categoryAgents) {
-            categoryAgents.push(agent);
-          }
-        });
-        return groups;
-      }
-      /**
-       * Generate instructions for tester personas
-       */
-      static generateTesterInstructions(agentsByCategory) {
-        let instructions = "";
-        const testingAgents = agentsByCategory.get("testing") || [];
-        testingAgents.forEach((agent) => {
-          instructions += this.formatAgentSection(agent, this.getTestingUseCases(agent));
-        });
-        const analysisAgents = agentsByCategory.get("analysis") || [];
-        analysisAgents.forEach((agent) => {
-          instructions += this.formatAgentSection(agent, [
-            "Understanding code structure before testing",
-            "Identifying test requirements",
-            "Finding edge cases and dependencies"
-          ]);
-        });
-        const planningAgents = agentsByCategory.get("planning") || [];
-        planningAgents.forEach((agent) => {
-          instructions += this.formatAgentSection(agent, [
-            "Creating comprehensive test plans",
-            "Prioritizing test scenarios",
-            "Defining coverage goals"
-          ]);
-        });
-        instructions += `
-### Testing Workflow
-1. **Analyze**: Use analysis agents to understand the code
-2. **Plan**: Use strategy agents to plan comprehensive coverage  
-3. **Execute**: Use testing agents to write and run tests
-4. **Iterate**: Refine tests based on results
-
-`;
-        return instructions;
-      }
-      /**
-       * Generate instructions for developer personas
-       */
-      static generateDeveloperInstructions(agentsByCategory) {
-        let instructions = "";
-        const analysisAgents = agentsByCategory.get("analysis") || [];
-        analysisAgents.forEach((agent) => {
-          instructions += this.formatAgentSection(agent, [
-            "Understanding existing code before changes",
-            "Finding dependencies and impacts",
-            "Identifying refactoring opportunities"
-          ]);
-        });
-        const refactoringAgents = agentsByCategory.get("refactoring") || [];
-        refactoringAgents.forEach((agent) => {
-          instructions += this.formatAgentSection(agent, [
-            "Improving code structure",
-            "Extracting reusable components",
-            "Optimizing performance"
-          ]);
-        });
-        const testingAgents = agentsByCategory.get("testing") || [];
-        if (testingAgents.length > 0) {
-          instructions += `
-### Testing Your Code
-`;
-          testingAgents.forEach((agent) => {
-            instructions += this.formatAgentSection(agent, [
-              "Writing tests for new features",
-              "Ensuring code quality"
-            ]);
-          });
-        }
-        return instructions;
-      }
-      /**
-       * Generate generic instructions for other personas
-       */
-      static generateGenericInstructions(agentsByCategory) {
-        let instructions = "";
-        agentsByCategory.forEach((agents) => {
-          agents.forEach((agent) => {
-            instructions += this.formatAgentSection(agent);
-          });
-        });
-        return instructions;
-      }
-      /**
-       * Format a single agent section
-       */
-      static formatAgentSection(agent, useCases) {
-        let section = `### ${agent.name || agent.id}
-`;
-        section += `${agent.description}
-`;
-        section += "```json\n";
-        section += JSON.stringify({
-          subagent_type: agent.id,
-          prompt: "[specific task description]",
-          description: agent.id.split("-").slice(0, 2).join(" ")
-        }, null, 2);
-        section += "\n```\n";
-        if (useCases && useCases.length > 0) {
-          section += `Best for: ${useCases.join(", ")}
-`;
-        }
-        if (agent.capabilities && agent.capabilities.length > 0) {
-          section += `Capabilities: ${agent.capabilities.slice(0, 3).join(", ")}
-`;
-        }
-        section += "\n";
-        return section;
-      }
-      /**
-       * Get testing-specific use cases based on agent ID
-       */
-      static getTestingUseCases(agent) {
-        const id = agent.id.toLowerCase();
-        if (id.includes("react")) {
-          return ["Component testing", "User interactions", "State management", "Hooks testing"];
-        } else if (id.includes("jest")) {
-          return ["Unit tests", "Mocking", "Snapshot tests", "Async testing"];
-        } else if (id.includes("typescript")) {
-          return ["Type safety", "Interface testing", "Generic testing"];
-        } else if (id.includes("e2e") || id.includes("cypress") || id.includes("playwright")) {
-          return ["End-to-end flows", "User journeys", "Cross-browser testing"];
-        } else if (id.includes("api")) {
-          return ["API endpoints", "Request/response validation", "Error handling"];
-        }
-        return ["General testing"];
+## Updates
+${updates}`;
+    await service.savePersona({ personaName, profile: updatedProfile });
+    return {
+      ok: true,
+      data: {
+        renamed: false,
+        insightsUpdated: false,
+        profileUpdated: false,
+        fallbackAppend: true
       }
     };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to update persona"), cause);
+  }
+}
+async function personasArchive(input, ctx) {
+  const service = new PersonaService(ctx);
+  try {
+    const existing = await service.loadPersona({ personaName: input.personaName });
+    if (!existing) {
+      return failure(`Persona "${input.personaName}" not found`);
+    }
+    await service.archivePersona({ personaName: input.personaName, reason: input.reason });
+    return { ok: true, data: { personaName: input.personaName } };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to archive persona"), cause);
+  }
+}
+async function personasShow(input, ctx) {
+  const service = new PersonaService(ctx);
+  try {
+    const result = await service.loadPersona({ personaName: input.personaName });
+    if (!result) {
+      return failure(`Persona "${input.personaName}" not found`);
+    }
+    const files = await service.listPersonaFiles({ personaName: input.personaName });
+    const profileContent = await ctx.storage.getPersonaFile(
+      input.personaName,
+      "profile.md",
+      ctx.userId
+    );
+    return {
+      ok: true,
+      data: {
+        personaName: input.personaName,
+        persona: result.persona,
+        profileContent,
+        files
+      }
+    };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to show persona"), cause);
+  }
+}
+var failure, errorMessage;
+var init_personas_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/personas.handlers.ts"() {
+    "use strict";
+    init_persona_service();
+    init_persona_learning_service();
+    init_persona2();
+    failure = (error2, cause) => ({
+      ok: false,
+      error: error2,
+      cause
+    });
+    errorMessage = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/rules.types.ts
+var init_rules_types = __esm({
+  "packages/tiny-brain-core/src/handlers/rules.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/rules.handlers.ts
+function requireUserId(ctx) {
+  if (!ctx.userId) return failure2("User ID is required");
+  return ctx.userId;
+}
+async function rulesAdd(input, ctx) {
+  if (!input.content) return failure2("content is required for add operation");
+  const userId = requireUserId(ctx);
+  if (typeof userId !== "string") return userId;
+  try {
+    const service = new RulesService(ctx);
+    const result = await service.addRule(input.content, userId);
+    if (!result.success) return failure2(result.message);
+    if (result.rule === void 0 || result.totalRules === void 0) {
+      return failure2("RulesService.addRule returned success without rule data");
+    }
+    return { ok: true, data: { rule: result.rule, totalRules: result.totalRules } };
+  } catch (cause) {
+    return failure2(errorMessage2(cause, "Failed to add rule"), cause);
+  }
+}
+async function rulesList(input, ctx) {
+  const userId = requireUserId(ctx);
+  if (typeof userId !== "string") return userId;
+  try {
+    const service = new RulesService(ctx);
+    const result = await service.listRules(input.query, userId);
+    return { ok: true, data: { rules: result.rules, totalRules: result.totalRules } };
+  } catch (cause) {
+    return failure2(errorMessage2(cause, "Failed to list rules"), cause);
+  }
+}
+async function rulesShow(ctx) {
+  const userId = requireUserId(ctx);
+  if (typeof userId !== "string") return userId;
+  try {
+    const service = new RulesService(ctx);
+    const data = await service.getAllRules(userId);
+    return {
+      ok: true,
+      data: {
+        rules: data.rules,
+        metadata: {
+          createdAt: data.metadata.createdAt,
+          updatedAt: data.metadata.updatedAt
+        }
+      }
+    };
+  } catch (cause) {
+    return failure2(errorMessage2(cause, "Failed to show rules"), cause);
+  }
+}
+async function rulesRemove(input, ctx) {
+  if (!input.query) return failure2("query is required for remove operation");
+  const userId = requireUserId(ctx);
+  if (typeof userId !== "string") return userId;
+  try {
+    const service = new RulesService(ctx);
+    const result = await service.removeRule(input.query, userId);
+    if (!result.success) return failure2(result.message);
+    if (result.removedRule === void 0 || result.remainingRules === void 0) {
+      return failure2("RulesService.removeRule returned success without rule data");
+    }
+    return {
+      ok: true,
+      data: { removedRule: result.removedRule, remainingRules: result.remainingRules }
+    };
+  } catch (cause) {
+    return failure2(errorMessage2(cause, "Failed to remove rule"), cause);
+  }
+}
+var failure2, errorMessage2;
+var init_rules_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/rules.handlers.ts"() {
+    "use strict";
+    init_rules_service();
+    failure2 = (error2, cause) => ({
+      ok: false,
+      error: error2,
+      cause
+    });
+    errorMessage2 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/rules.formatters.ts
+function numberedList(rules) {
+  return rules.map((rule, i) => `${i + 1}. ${rule}`).join("\n");
+}
+function formatRulesList(data, query) {
+  if (data.rules.length === 0) {
+    return query ? `No rules found matching "${query}"` : "No rules found";
+  }
+  return `Found ${data.totalRules} rule(s):
+
+${numberedList(data.rules)}`;
+}
+function formatRulesShow(data) {
+  if (data.rules.length === 0) {
+    return "No rules defined yet.";
+  }
+  return [
+    "# Golden Rules",
+    "",
+    numberedList(data.rules),
+    "",
+    "---",
+    `Created: ${data.metadata.createdAt}`,
+    `Last updated: ${data.metadata.updatedAt}`,
+    `Total rules: ${data.rules.length}`
+  ].join("\n");
+}
+var init_rules_formatters = __esm({
+  "packages/tiny-brain-core/src/handlers/rules.formatters.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/recommendations.types.ts
+var init_recommendations_types = __esm({
+  "packages/tiny-brain-core/src/handlers/recommendations.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/recommendations.handlers.ts
+function requireRepoRoot(ctx) {
+  if (!ctx.repositoryRoot) {
+    return failure3("Repository root is required for recommendations");
+  }
+  return ctx.repositoryRoot;
+}
+async function recommendationsList(ctx) {
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const pending = await service.getPendingRecommendations();
+    const grouped = /* @__PURE__ */ new Map();
+    for (const rec of pending) {
+      const list = grouped.get(rec.type) ?? [];
+      list.push(rec);
+      grouped.set(rec.type, list);
+    }
+    const groups = Array.from(grouped.entries()).map(([type2, recommendations]) => ({
+      type: type2,
+      label: TYPE_LABELS[type2] ?? type2,
+      recommendations
+    }));
+    return { ok: true, data: { groups, totalPending: pending.length } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to list recommendations"), cause);
+  }
+}
+async function processItems(service, items, action) {
+  const file = await service.readRecommendations();
+  if (!file) {
+    throw new Error("No recommendations file found. Run `analyse` first.");
+  }
+  const results = [];
+  for (const name of items) {
+    const match2 = file.recommendations.find(
+      (r) => r.name.toLowerCase() === name.toLowerCase()
+    );
+    if (!match2) {
+      results.push({ name, status: "not_found" });
+      continue;
+    }
+    results.push(await action(match2));
+  }
+  return results;
+}
+async function recommendationsAccept(input, ctx) {
+  if (!input.items || input.items.length === 0) {
+    return failure3("items is required for accept operation");
+  }
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const results = await processItems(service, input.items, async (rec) => {
+      try {
+        await service.acceptRecommendation(rec);
+        return { name: rec.name, status: "accepted" };
+      } catch (err) {
+        return {
+          name: rec.name,
+          status: "failed",
+          error: err instanceof Error ? err.message : "Unknown error"
+        };
+      }
+    });
+    return { ok: true, data: { results } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to accept recommendations"), cause);
+  }
+}
+async function recommendationsDismiss(input, ctx) {
+  if (!input.items || input.items.length === 0) {
+    return failure3("items is required for dismiss operation");
+  }
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const results = await processItems(service, input.items, async (rec) => {
+      await service.dismissRecommendation(rec.id);
+      return { name: rec.name, status: "dismissed" };
+    });
+    return { ok: true, data: { results } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to dismiss recommendations"), cause);
+  }
+}
+async function recommendationsRestore(input, ctx) {
+  if (!input.items || input.items.length === 0) {
+    return failure3("items is required for restore operation");
+  }
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const dismissed = await service.readDismissedRecommendations();
+    const dismissedIds = new Set(dismissed.map((d) => d.recommendationId));
+    const results = await processItems(service, input.items, async (rec) => {
+      if (!dismissedIds.has(rec.id)) {
+        return { name: rec.name, status: "not_dismissed" };
+      }
+      await service.restoreRecommendation(rec.id);
+      return { name: rec.name, status: "restored" };
+    });
+    return { ok: true, data: { results } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to restore recommendations"), cause);
+  }
+}
+async function recommendationsGraduated(ctx) {
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const installed = await service.readInstalledRecommendations();
+    return { ok: true, data: { installed } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to read graduated recommendations"), cause);
+  }
+}
+var failure3, errorMessage3, TYPE_LABELS;
+var init_recommendations_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/recommendations.handlers.ts"() {
+    "use strict";
+    init_recommendation_service();
+    failure3 = (error2, cause) => ({
+      ok: false,
+      error: error2,
+      cause
+    });
+    errorMessage3 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+    TYPE_LABELS = {
+      skill: "Skills",
+      agent: "Agents",
+      capability: "Capabilities",
+      hook: "Hooks"
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/recommendations.formatters.ts
+function formatRecommendationsList(data) {
+  if (data.totalPending === 0) {
+    return "No pending recommendations. Run `analyse` to fetch new recommendations.";
+  }
+  const lines = ["# Pending Recommendations", ""];
+  for (const group of data.groups) {
+    lines.push(`## ${group.label}`, "");
+    for (const rec of group.recommendations) {
+      lines.push(`- **${rec.name}**: ${rec.description}`);
+      lines.push(`  _Reason: ${rec.reason}_`);
+    }
+    lines.push("");
+  }
+  lines.push("---", "", "Use `accept` with item names to install recommendations.");
+  return lines.join("\n");
+}
+function formatActionResults(title, results) {
+  const lines = [`# ${title}`, ""];
+  for (const r of results) {
+    switch (r.status) {
+      case "accepted":
+        lines.push(`- **${r.name}**: Accepted`);
+        break;
+      case "dismissed":
+        lines.push(`- **${r.name}**: Dismissed`);
+        break;
+      case "restored":
+        lines.push(`- **${r.name}**: Restored`);
+        break;
+      case "not_found":
+        lines.push(`- **${r.name}**: Not found (unrecognized name)`);
+        break;
+      case "not_dismissed":
+        lines.push(`- **${r.name}**: Not dismissed (nothing to restore)`);
+        break;
+      case "failed":
+        lines.push(`- **${r.name}**: Failed - ${r.error ?? "unknown"}`);
+        break;
+    }
+  }
+  return lines.join("\n");
+}
+function formatGraduated(data) {
+  if (data.installed.length === 0) {
+    return "No graduated recommendations yet. Use `accept` to install recommendations.";
+  }
+  const lines = ["# Graduated Recommendations", ""];
+  for (const item of data.installed) {
+    const { origin } = item;
+    lines.push(`- **${origin.recommendationName}** (${origin.type})`);
+    lines.push(`  Source: ${origin.source}`);
+    lines.push(`  Accepted: ${origin.acceptedAt}`);
+    if (item.installedVersion) {
+      lines.push(`  Version: v${item.installedVersion}`);
+    }
+    if (item.stepResults && item.stepResults.length > 0) {
+      lines.push("  Steps:");
+      for (const step of item.stepResults) {
+        const pathInfo = step.installedPath ? ` \u2192 ${step.installedPath}` : "";
+        lines.push(`    - ${step.description} (${step.status})${pathInfo}`);
+      }
+    }
+  }
+  return lines.join("\n");
+}
+var init_recommendations_formatters = __esm({
+  "packages/tiny-brain-core/src/handlers/recommendations.formatters.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/quality.types.ts
+var init_quality_types = __esm({
+  "packages/tiny-brain-core/src/handlers/quality.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/quality.handlers.ts
+import { promises as fs32 } from "fs";
+import path35 from "path";
+function requireRepoRoot2(ctx) {
+  if (!ctx.repositoryRoot) {
+    return failure4(
+      "Repository root not found. Quality tool requires a git repository context."
+    );
+  }
+  return ctx.repositoryRoot;
+}
+async function qualitySave(input, ctx) {
+  if (input.score === void 0) return failure4("score is required for save operation");
+  if (!input.grade) return failure4("grade is required for save operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const saveInput = SaveQualityRunInputSchema.parse({
+      score: input.score,
+      grade: input.grade,
+      issues: input.issues ?? [],
+      recommendations: input.recommendations ?? [],
+      context: input.context
+    });
+    const result = await service.saveRunResult(saveInput);
+    return {
+      ok: true,
+      data: {
+        runId: result.runId,
+        filePath: result.filePath,
+        score: input.score,
+        grade: input.grade,
+        issueCount: input.issues?.length ?? 0
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to save quality run"), cause);
+  }
+}
+async function qualityHistory(input, ctx) {
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const runs = await service.getPreviousRuns(input.limit);
+    return { ok: true, data: { runs } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to read quality history"), cause);
+  }
+}
+async function qualityDetails(input, ctx) {
+  if (!input.runId) return failure4("runId is required for details operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const run = await service.getRunDetails(input.runId);
+    if (!run) return failure4(`Quality run not found: ${input.runId}`);
+    return { ok: true, data: { run } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to read run details"), cause);
+  }
+}
+async function qualityCompare(input, ctx) {
+  if (!input.baseRunId) return failure4("baseRunId is required for compare operation");
+  if (!input.targetRunId) return failure4("targetRunId is required for compare operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const comparison = await service.compareRuns(input.baseRunId, input.targetRunId);
+    if (!comparison) {
+      return failure4(
+        `One or both runs not found: ${input.baseRunId}, ${input.targetRunId}`
+      );
+    }
+    return { ok: true, data: { comparison } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to compare runs"), cause);
+  }
+}
+async function qualityPlan(input, ctx) {
+  if (!input.sourceRunId) return failure4("sourceRunId is required for plan operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const run = await service.getRunDetails(input.sourceRunId);
+    if (!run) return failure4(`Quality run not found: ${input.sourceRunId}`);
+    const plan = QualityService.generateImprovementPlan(run, input.targetGrade);
+    const result = await service.saveImprovementPlan(plan);
+    return {
+      ok: true,
+      data: { planId: result.planId, filePath: result.filePath, plan }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to generate improvement plan"), cause);
+  }
+}
+async function qualityPlanDetails(input, ctx) {
+  if (!input.planId) return failure4("planId is required for plan-details operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  const plansDir = path35.join(root, ".tiny-brain", "quality", "plans");
+  const filePath = path35.join(plansDir, `${input.planId}.md`);
+  let content;
+  try {
+    content = await fs32.readFile(filePath, "utf-8");
+  } catch {
+    return failure4(`Improvement plan not found: ${input.planId}`);
+  }
+  const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+  if (!jsonMatch) {
+    return failure4(`Could not parse plan data from: ${input.planId}`);
+  }
+  try {
+    const plan = JSON.parse(jsonMatch[1]);
+    return { ok: true, data: { plan } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to parse plan JSON"), cause);
+  }
+}
+async function qualityImplementPlan(input, ctx) {
+  if (!input.planId) return failure4("planId is required for implement-plan operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const plan = await service.loadImprovementPlan(input.planId);
+    if (!plan) return failure4(`Improvement plan not found: ${input.planId}`);
+    const run = await service.getRunDetails(plan.sourceRunId);
+    if (!run) return failure4(`Source quality run not found: ${plan.sourceRunId}`);
+    const fixIds = await service.generateFixesFromPlan(plan, run.issues);
+    return { ok: true, data: { planId: input.planId, fixIds } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to implement plan"), cause);
+  }
+}
+async function qualityDetectAnalyzers(ctx) {
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new AnalyzerDetectionService(root);
+    const analyzers = await service.detectAnalyzers();
+    return {
+      ok: true,
+      data: {
+        analyzers: analyzers.map((a) => ({
+          name: a.name,
+          analyzerId: a.analyzerId,
+          configPaths: [...a.configPaths],
+          categories: [...a.categories]
+        }))
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to detect analyzers"), cause);
+  }
+}
+async function qualityRunAnalyzers(input, ctx) {
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const runId = input.runId ?? generateRunId();
+    const runDir = path35.join(root, ".tiny-brain", "quality", "runs", runIdToPath(runId));
+    const outputPath = path35.join(runDir, "analysis.json");
+    const outputDir = path35.join(runDir, "analysers");
+    const cached2 = await readCachedAnalyzers(root);
+    const analyzers = cached2 ?? await new AnalyzerDetectionService(root).detectAnalyzers();
+    const results = analyzers.length === 0 ? {
+      issues: [],
+      executions: [],
+      totalDurationMs: 0,
+      summary: { total: 0, succeeded: 0, failed: 0, timedOut: 0, skipped: 0 }
+    } : await new AnalyzerExecutorService(root).executeAnalyzers(analyzers, outputDir);
+    await fs32.mkdir(runDir, { recursive: true });
+    await fs32.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
+    return {
+      ok: true,
+      data: {
+        runId,
+        outputPath,
+        outputDir,
+        summary: results.summary,
+        totalIssues: results.issues.length,
+        totalDurationMs: results.totalDurationMs
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to run analyzers"), cause);
+  }
+}
+function qualityMergeResults(input) {
+  try {
+    const result = mergeResults(input.analyzerIssues ?? [], input.llmIssues ?? []);
+    return {
+      ok: true,
+      data: {
+        issues: result.issues,
+        duplicatesRemoved: result.duplicatesRemoved,
+        sourceBreakdown: result.sourceBreakdown
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to merge results"), cause);
+  }
+}
+async function qualityAssembleRun(input, ctx) {
+  if (!input.runId) {
+    return failure4(
+      "runId is required for assemble-run operation (YYYY-MM-DD date prefix)"
+    );
+  }
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new AssemblyService(root);
+    const result = await service.assembleRun(input.runId, input.baseRunId);
+    return {
+      ok: true,
+      data: {
+        runId: result.runId,
+        score: result.score,
+        grade: result.grade,
+        issueCount: result.issueCount,
+        filePath: result.filePath,
+        planId: result.planId,
+        planFilePath: result.planFilePath,
+        incremental: result.incremental,
+        baseRunId: result.baseRunId,
+        filesAnalyzed: result.filesAnalyzed,
+        filesCarriedForward: result.filesCarriedForward,
+        sourceBreakdown: result.sourceBreakdown,
+        categoryBreakdown: result.categoryBreakdown
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to assemble run"), cause);
+  }
+}
+var failure4, errorMessage4;
+var init_quality_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/quality.handlers.ts"() {
+    "use strict";
+    init_quality2();
+    init_quality();
+    failure4 = (error2, cause) => ({
+      ok: false,
+      error: error2,
+      cause
+    });
+    errorMessage4 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/quality.formatters.ts
+function formatQualitySave(data) {
+  return [
+    "\u2705 Quality run saved successfully!",
+    "",
+    `\u{1F4CA} Run ID: ${data.runId}`,
+    `\u{1F4C1} File: ${data.filePath}`,
+    `\u{1F4C8} Score: ${data.score}/100 (Grade: ${data.grade})`,
+    `\u{1F50D} Issues: ${data.issueCount}`,
+    "",
+    'Use "quality history" to see all runs.'
+  ].join("\n");
+}
+function formatQualityHistory(data) {
+  if (data.runs.length === 0) {
+    return "No quality runs found.\n\nRun a quality analysis first to create history.";
+  }
+  const lines = ["\u{1F4CA} Quality Run History", ""];
+  for (const run of data.runs) {
+    const gradeEmoji = run.grade === "A" ? "\u{1F31F}" : run.grade === "F" ? "\u274C" : "\u{1F4CB}";
+    lines.push(`${gradeEmoji} **${run.date}** - Score: ${run.score}/100 (${run.grade})`);
+    lines.push(`   Run ID: ${run.runId}`);
+    lines.push(`   Issues: ${run.issueCount}`);
+    lines.push("");
+  }
+  lines.push('Use "quality details runId=<id>" to see full details.');
+  return lines.join("\n");
+}
+function formatQualityDetails(data) {
+  const { run } = data;
+  const lines = [
+    `\u{1F4CA} Quality Run Details: ${run.runId}`,
+    "",
+    "## Summary",
+    `**Date:** ${run.date}`,
+    `**Score:** ${run.score}/100`,
+    `**Grade:** ${run.grade}`,
+    `**Issues:** ${run.issues.length}`,
+    ""
+  ];
+  if (run.issues.length > 0) {
+    lines.push("## Issues by Category");
+    for (const [category, count] of Object.entries(run.issuesByCategory)) {
+      if (count > 0) lines.push(`- ${category}: ${count}`);
+    }
+    lines.push("", "## Issue Details");
+    for (const issue2 of run.issues) {
+      const location = issue2.line ? `${issue2.file}:${issue2.line}` : issue2.file;
+      lines.push(`- **[${issue2.severity}]** ${issue2.message}`);
+      lines.push(`  - Category: ${issue2.category}`);
+      lines.push(`  - Location: \`${location}\``);
+      if (issue2.suggestion) lines.push(`  - Suggestion: ${issue2.suggestion}`);
+    }
+    lines.push("");
+  }
+  if (run.recommendations.length > 0) {
+    lines.push("## Recommendations");
+    for (const rec of run.recommendations) lines.push(`- ${rec}`);
+    lines.push("");
+  }
+  if (run.context) {
+    lines.push("## Repository Context");
+    if (run.context.languages?.length) {
+      lines.push(`- Languages: ${run.context.languages.join(", ")}`);
+    }
+    if (run.context.frameworks?.length) {
+      lines.push(`- Frameworks: ${run.context.frameworks.join(", ")}`);
+    }
+    if (run.context.projectType) {
+      lines.push(`- Project Type: ${run.context.projectType}`);
+    }
+  }
+  return lines.join("\n");
+}
+function formatQualityCompare(data) {
+  const { comparison } = data;
+  const deltaSign = comparison.scoreDelta >= 0 ? "+" : "";
+  const lines = [
+    `\u{1F4CA} Run Comparison: ${comparison.baseRunId} \u2192 ${comparison.targetRunId}`,
+    "",
+    "## Summary",
+    `**Score Delta:** ${deltaSign}${comparison.scoreDelta}`,
+    `**Grade Change:** ${comparison.gradeChange.from} \u2192 ${comparison.gradeChange.to}`,
+    `**New Issues:** ${comparison.newIssues.length}`,
+    `**Resolved Issues:** ${comparison.resolvedIssues.length}`,
+    `**Persistent Issues:** ${comparison.persistentIssues.length}`,
+    ""
+  ];
+  const categoryEntries = Object.entries(comparison.categoryChanges);
+  if (categoryEntries.length > 0) {
+    lines.push("## Category Changes", "");
+    lines.push("| Category | Count Delta | Deduction Delta |");
+    lines.push("|----------|-------------|-----------------|");
+    for (const [category, changes] of categoryEntries) {
+      const cs = changes.countDelta >= 0 ? "+" : "";
+      const ds = changes.deductionDelta >= 0 ? "+" : "";
+      lines.push(
+        `| ${category} | ${cs}${changes.countDelta} | ${ds}${changes.deductionDelta.toFixed(1)} |`
+      );
+    }
+    lines.push("");
+  }
+  if (comparison.newIssues.length > 0) {
+    lines.push("## New Issues");
+    for (const issue2 of comparison.newIssues) {
+      lines.push(`- **[${issue2.severity}]** ${issue2.message} (${issue2.file})`);
+    }
+    lines.push("");
+  }
+  if (comparison.resolvedIssues.length > 0) {
+    lines.push("## Resolved Issues");
+    for (const issue2 of comparison.resolvedIssues) {
+      lines.push(`- **[${issue2.severity}]** ${issue2.message} (${issue2.file})`);
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+function formatQualityPlan(data) {
+  const { planId, filePath, plan } = data;
+  const totalInitiatives = plan.phases.reduce(
+    (sum, phase) => sum + phase.initiatives.length,
+    0
+  );
+  return [
+    "\u2705 Quality Improvement Plan generated successfully!",
+    "",
+    `\u{1F4CB} Plan ID: ${planId}`,
+    `\u{1F4C1} File: ${filePath}`,
+    `\u{1F4CA} Current Score: ${plan.currentScore}/100 (Grade ${plan.currentGrade})`,
+    `\u{1F3AF} Phases: ${plan.phases.length}`,
+    `\u{1F4E6} Initiatives: ${totalInitiatives}`,
+    `\u23F1\uFE0F Total Effort: ${plan.totalEffortHours} hours`,
+    "",
+    "## Executive Summary",
+    "",
+    plan.executiveSummary,
+    "",
+    'Use "quality plan-details planId=<id>" to see full plan details.'
+  ].join("\n");
+}
+function formatQualityPlanDetails(data) {
+  const { plan } = data;
+  const lines = [
+    `\u{1F4CB} Quality Improvement Plan: ${plan.planId}`,
+    "",
+    "## Summary",
+    `**Date:** ${plan.date}`,
+    `**Source Run:** ${plan.sourceRunId}`,
+    `**Current Score:** ${plan.currentScore}/100 (Grade ${plan.currentGrade})`,
+    `**Total Effort:** ${plan.totalEffortHours} hours`,
+    "",
+    "## Executive Summary",
+    "",
+    plan.executiveSummary,
+    ""
+  ];
+  if (plan.phases && plan.phases.length > 0) {
+    lines.push("## Phases", "");
+    for (const phase of plan.phases) {
+      lines.push(`### Phase ${phase.phase}: ${phase.name}`);
+      lines.push(
+        `**Projected Score:** ${phase.projectedScore}/100 (Grade ${phase.projectedGrade})`
+      );
+      lines.push(`**Effort:** ${phase.totalEffortHours} hours`);
+      lines.push(`**Initiatives:** ${phase.initiatives.length}`);
+      lines.push("");
+    }
+  }
+  if (plan.roiAnalysis) {
+    lines.push("## ROI Analysis");
+    lines.push(
+      `**Estimated Cost:** ${plan.roiAnalysis.currency} ${plan.roiAnalysis.estimatedCostToFix}`
+    );
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+function formatQualityImplementPlan(data) {
+  if (data.fixIds.length === 0) {
+    return "No initiatives found in plan. No fix documents created.";
+  }
+  const lines = [
+    `Created ${data.fixIds.length} fix document(s) from Quality Improvement Plan ${data.planId}`,
+    "",
+    "## Fixes Created",
+    "",
+    "| Fix ID | File |",
+    "|--------|------|"
+  ];
+  for (const fixId of data.fixIds) {
+    lines.push(`| ${fixId} | .tiny-brain/fixes/${fixId}.md |`);
+  }
+  lines.push("", "## Next Steps", "");
+  for (const fixId of data.fixIds) {
+    lines.push(`1. Run \`npx tiny-brain sync-progress .tiny-brain/fixes/${fixId}.md\``);
+  }
+  lines.push("2. Start working on fixes using the /fix workflow");
+  lines.push("3. Track progress in the dashboard");
+  return lines.join("\n");
+}
+function formatQualityDetectAnalyzers(data) {
+  if (data.analyzers.length === 0) {
+    return "No static analyzers detected in this repository.\n\nSupported analyzers: ESLint, TypeScript, npm audit, RuboCop, ruff.";
+  }
+  const lines = [`\u{1F50D} Detected ${data.analyzers.length} analyzer(s):`, ""];
+  for (const a of data.analyzers) {
+    lines.push(`- **${a.name}** (${a.analyzerId})`);
+    lines.push(`  Configs: ${a.configPaths.join(", ")}`);
+    lines.push(`  Categories: ${a.categories.join(", ")}`);
+  }
+  lines.push("", JSON.stringify(data.analyzers, null, 2));
+  return lines.join("\n");
+}
+function formatQualityRunAnalyzers(data) {
+  if (data.summary.total === 0) {
+    return [
+      "\u{1F527} No analyzers detected. Empty results written to file.",
+      `  Run ID: ${data.runId}`,
+      `  Output: ${data.outputPath}`
+    ].join("\n");
+  }
+  return [
+    `\u{1F527} Executed ${data.summary.total} analyzer(s):`,
+    `  Succeeded: ${data.summary.succeeded}`,
+    `  Failed: ${data.summary.failed}`,
+    `  Total issues: ${data.totalIssues}`,
+    `  Duration: ${data.totalDurationMs}ms`,
+    `  Run ID: ${data.runId}`,
+    `  Output: ${data.outputPath}`,
+    `  Raw files: ${data.outputDir}/`
+  ].join("\n");
+}
+function formatQualityMergeResults(data) {
+  return [
+    "\u{1F500} Merged results:",
+    `  Analyzer issues: ${data.sourceBreakdown.analyzer}`,
+    `  LLM issues: ${data.sourceBreakdown.llm}`,
+    `  Total (deduplicated): ${data.sourceBreakdown.total}`,
+    `  Duplicates removed: ${data.duplicatesRemoved}`,
+    "",
+    JSON.stringify(data, null, 2)
+  ].join("\n");
+}
+function formatQualityAssembleRun(data) {
+  const lines = [
+    "\u2705 Quality run assembled successfully!",
+    "",
+    `\u{1F4CA} Run ID: ${data.runId}`,
+    `\u{1F4C8} Score: ${data.score}/100 (Grade: ${data.grade})`,
+    `\u{1F50D} Issues: ${data.issueCount}`,
+    `\u{1F4C1} File: ${data.filePath}`
+  ];
+  if (data.planId) {
+    lines.push(`\u{1F4CB} Plan: ${data.planId}`);
+    if (data.planFilePath) lines.push(`\u{1F4C1} Plan File: ${data.planFilePath}`);
+  }
+  if (data.incremental) {
+    lines.push("", "### Incremental Analysis");
+    lines.push(`  Base run: ${data.baseRunId}`);
+    lines.push(`  Files analyzed: ${data.filesAnalyzed}`);
+    lines.push(`  Files carried forward: ${data.filesCarriedForward}`);
+  }
+  lines.push("", "### Source Breakdown");
+  lines.push(`  Analyzer: ${data.sourceBreakdown.analyzer}`);
+  lines.push(`  Specialist: ${data.sourceBreakdown.llm}`);
+  lines.push(`  Total: ${data.sourceBreakdown.total}`);
+  const categoryEntries = Object.entries(data.categoryBreakdown);
+  if (categoryEntries.length > 0) {
+    lines.push("", "### Category Breakdown");
+    for (const [category, count] of categoryEntries) {
+      lines.push(`  ${category}: ${count}`);
+    }
+  }
+  return lines.join("\n");
+}
+var init_quality_formatters = __esm({
+  "packages/tiny-brain-core/src/handlers/quality.formatters.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/config.types.ts
+var init_config_types = __esm({
+  "packages/tiny-brain-core/src/handlers/config.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/config.handlers.ts
+async function configList(ctx) {
+  try {
+    const service = new ConfigService(ctx);
+    const preferences = await service.getPreferences();
+    return { ok: true, data: { preferences } };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to list preferences"), cause);
+  }
+}
+async function configGet(input, ctx) {
+  if (!input.key) return failure5("key is required for get operation");
+  try {
+    const service = new ConfigService(ctx);
+    const result = await service.getPreferenceByKey(input.key);
+    if (!result.isValid) return failure5(result.error);
+    return { ok: true, data: { key: input.key, value: result.value } };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to get preference"), cause);
+  }
+}
+async function configShowSources(ctx) {
+  try {
+    const service = new ConfigService(ctx);
+    const sources = await service.getPreferenceSources();
+    return { ok: true, data: sources };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to read preference sources"), cause);
+  }
+}
+async function configSet2(input, ctx) {
+  if (!input.key) return failure5("key is required for set operation");
+  if (input.value === void 0) {
+    return failure5("value is required for set operation");
+  }
+  const scope = input.scope ?? "repo";
+  const value = input.value;
+  try {
+    const service = new ConfigService(ctx);
+    const result = await service.setPreferenceByKey(input.key, value, scope);
+    if (!result.success) return failure5(result.error);
+    let syncedAgenticTech = false;
+    if (input.key === "enableAgenticCoding" && scope === "repo" && ctx.repositoryRoot) {
+      const techContextService = new TechContextService(ctx.repositoryRoot);
+      await techContextService.syncAgents(value === "true");
+      syncedAgenticTech = true;
+    }
+    return {
+      ok: true,
+      data: { key: input.key, value, scope, syncedAgenticTech }
+    };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to set preference"), cause);
+  }
+}
+async function configReset(ctx) {
+  try {
+    const service = new ConfigService(ctx);
+    await service.resetPreferences();
+    return { ok: true, data: { reset: true } };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to reset preferences"), cause);
+  }
+}
+var failure5, errorMessage5;
+var init_config_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/config.handlers.ts"() {
+    "use strict";
+    init_config_service();
+    init_analysis();
+    failure5 = (error2, cause) => ({
+      ok: false,
+      error: error2,
+      cause
+    });
+    errorMessage5 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/config.formatters.ts
+function formatConfigList(data) {
+  const r = data.preferences.repo;
+  return [
+    "# Current Preferences",
+    "",
+    "## Feature Flags",
+    `- **autoCommitProgress**: ${r.autoCommitProgress}`,
+    `- **autoArchive**: ${r.autoArchive}`,
+    `- **enableAgenticCoding**: ${r.enableAgenticCoding}`,
+    `- **enableSDD**: ${r.enableSDD}`,
+    `- **enableTDD**: ${r.enableTDD}`,
+    `- **combineRedGreenCommits**: ${r.combineRedGreenCommits}`,
+    `- **enableAdversarial**: ${r.enableAdversarial}`,
+    `- **enableADR**: ${r.enableADR}`,
+    `- **enableQuality**: ${r.enableQuality}`,
+    `- **manageAgentsMd**: ${r.manageAgentsMd}`,
+    `- **defaultPersona**: ${r.defaultPersona}`,
+    "",
+    "## Directory Paths",
+    `- **docsDirectory**: \`${r.directories.docs}\``,
+    `- **adrDirectory**: \`${r.directories.adr}\``,
+    `- **prdDirectory**: \`${r.directories.prd}\``,
+    "",
+    "## Test Configuration",
+    `- **testPatterns**: ${JSON.stringify(r.testPatterns)}`,
+    "",
+    "---",
+    "",
+    "\u{1F4A1} **To modify preferences**, use the CLI:",
+    "```bash",
+    "npx tiny-brain config preferences set <key> <value>",
+    "npx tiny-brain config preferences reset",
+    "```"
+  ].join("\n");
+}
+function formatConfigGet(data) {
+  const value = typeof data.value === "object" ? JSON.stringify(data.value) : String(data.value);
+  return [
+    `# Preference: ${data.key}`,
+    "",
+    `**Value**: ${value}`,
+    "",
+    "---",
+    "",
+    "\u{1F4A1} **To modify this preference**, use the CLI:",
+    "```bash",
+    `npx tiny-brain config preferences set ${data.key} <value>`,
+    "```"
+  ].join("\n");
+}
+function formatConfigShowSources(data) {
+  const repoPrefs = data.repo.repo ?? {};
+  const globalPrefs = data.global.repo ?? {};
+  const getSource = (key) => {
+    if (key in repoPrefs && repoPrefs[key] !== void 0) return "Repository";
+    if (key in globalPrefs && globalPrefs[key] !== void 0) return "Global";
+    return "Default";
+  };
+  const repoDirs = repoPrefs.directories ?? {};
+  const globalDirs = globalPrefs.directories ?? {};
+  const getDirSource = (dirKey) => {
+    if (dirKey in repoDirs && repoDirs[dirKey] !== void 0) return "Repository";
+    if (dirKey in globalDirs && globalDirs[dirKey] !== void 0) return "Global";
+    return "Default";
+  };
+  const testPatternsSource = repoPrefs.testPatterns ? "Repository" : globalPrefs.testPatterns ? "Global" : "Default";
+  const m = data.merged.repo;
+  return [
+    "# Preference Sources",
+    "",
+    "## Feature Flags",
+    `- **autoCommitProgress**: ${m.autoCommitProgress} _(${getSource("autoCommitProgress")})_`,
+    `- **autoArchive**: ${m.autoArchive} _(${getSource("autoArchive")})_`,
+    `- **enableAgenticCoding**: ${m.enableAgenticCoding} _(${getSource("enableAgenticCoding")})_`,
+    `- **enableSDD**: ${m.enableSDD} _(${getSource("enableSDD")})_`,
+    `- **enableTDD**: ${m.enableTDD} _(${getSource("enableTDD")})_`,
+    `- **combineRedGreenCommits**: ${m.combineRedGreenCommits} _(${getSource("combineRedGreenCommits")})_`,
+    `- **enableAdversarial**: ${m.enableAdversarial} _(${getSource("enableAdversarial")})_`,
+    `- **enableADR**: ${m.enableADR} _(${getSource("enableADR")})_`,
+    `- **enableQuality**: ${m.enableQuality} _(${getSource("enableQuality")})_`,
+    `- **manageAgentsMd**: ${m.manageAgentsMd} _(${getSource("manageAgentsMd")})_`,
+    `- **defaultPersona**: ${m.defaultPersona} _(${getSource("defaultPersona")})_`,
+    "",
+    "## Directory Paths",
+    `- **docsDirectory**: \`${m.directories.docs}\` _(${getDirSource("docs")})_`,
+    `- **adrDirectory**: \`${m.directories.adr}\` _(${getDirSource("adr")})_`,
+    `- **prdDirectory**: \`${m.directories.prd}\` _(${getDirSource("prd")})_`,
+    "",
+    "## Test Configuration",
+    `- **testPatterns**: ${JSON.stringify(m.testPatterns)} _(${testPatternsSource})_`,
+    "",
+    "---",
+    "",
+    "## Config Files",
+    "- **Global**: `~/.tiny-brain/config/preferences.json`",
+    "- **Repository**: `[repo]/.tiny-brain/config.json`"
+  ].join("\n");
+}
+function formatConfigSet(data) {
+  const scopeLabel = data.scope === "global" ? "Global" : "Repository";
+  const lines = [
+    "# Preference Updated",
+    "",
+    `\u2705 **${data.key}** set to \`${data.value}\``,
+    "",
+    `\u{1F4C1} **Scope**: ${scopeLabel}`
+  ];
+  if (data.syncedAgenticTech) {
+    lines.push("", "\u{1F504} Synced tech-agent files based on the new value");
+  }
+  lines.push(
+    "",
+    "---",
+    "",
+    "\u{1F4A1} Use `config operation=show-sources` to see all preference sources."
+  );
+  return lines.join("\n");
+}
+function formatConfigReset(_data) {
+  return [
+    "# Preferences reset",
+    "",
+    "\u2705 All preferences have been reset to their default values.",
+    "",
+    "---",
+    "",
+    "\u{1F4A1} Use `config operation=list` to see current preference values."
+  ].join("\n");
+}
+var init_config_formatters = __esm({
+  "packages/tiny-brain-core/src/handlers/config.formatters.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/as.types.ts
+var init_as_types = __esm({
+  "packages/tiny-brain-core/src/handlers/as.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/_persona-activation.ts
+async function loadPersonaWithName(ctx, personaName) {
+  const profileContent = await ctx.storage.getPersonaFile(
+    personaName,
+    "profile.md",
+    ctx.userId
+  );
+  if (!profileContent) return null;
+  const parsed = parsePersonaMarkdown(profileContent);
+  parsed.name = personaName;
+  return { parsed, rawProfile: profileContent };
+}
+function parsePersonaWithName(rawProfile, personaName) {
+  const parsed = parsePersonaMarkdown(rawProfile);
+  parsed.name = personaName;
+  return parsed;
+}
+async function activatePersona(ctx, personaName, rawProfile) {
+  if (!ctx.updateActivePersona) return ctx;
+  const next = await ctx.updateActivePersona({
+    id: personaName,
+    userContent: { profile: rawProfile }
+  });
+  if (next && typeof next === "object" && "storage" in next && "logger" in next) {
+    return next;
+  }
+  if (next !== void 0) {
+    ctx.logger.warn(
+      `updateActivePersona returned an unrecognised shape (no storage/logger) \u2014 falling back to existing context`
+    );
+  }
+  return ctx;
+}
+var init_persona_activation = __esm({
+  "packages/tiny-brain-core/src/handlers/_persona-activation.ts"() {
+    "use strict";
+    init_persona_markdown();
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/as.handlers.ts
+function validatePersonaName(raw, field) {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return { ok: false, error: `${field} is required` };
+  }
+  if (/\s/.test(trimmed)) {
+    return {
+      ok: false,
+      error: `${field} must not contain whitespace (got "${raw}")`
+    };
+  }
+  if (trimmed.startsWith("library:")) {
+    return {
+      ok: false,
+      error: `${field} must not use the library: prefix (library imports are MCP-only)`
+    };
+  }
+  return { ok: true, value: trimmed };
+}
+async function asShowCurrent(ctx) {
+  try {
+    const service = new PersonaService(ctx);
+    const activeId = ctx.activePersona?.id?.trim() ?? "";
+    if (!activeId) {
+      if (ctx.activePersona?.id && !activeId) {
+        ctx.logger.warn(
+          `[asShowCurrent] activePersona.id was whitespace-only ("${ctx.activePersona.id}") \u2014 treating as no-active`
+        );
+      }
+      const availablePersonas = await service.listPersonas({}) ?? [];
+      return {
+        ok: true,
+        data: { kind: "no-active-persona", availablePersonas }
+      };
+    }
+    const loaded = await loadPersonaWithName(ctx, activeId);
+    if (!loaded) {
+      return failure6(
+        `Active persona '${activeId}' has no profile.md in storage; clear or recreate it`
+      );
+    }
+    const persona = await buildPersonaContext(ctx, loaded.parsed);
+    return {
+      ok: true,
+      data: { kind: "show-current", personaName: activeId, persona }
+    };
+  } catch (cause) {
+    return failure6(errorMessage6(cause, "Failed to show current persona"), cause);
+  }
+}
+async function asSwitchPersona(input, ctx) {
+  const nameCheck = validatePersonaName(input.personaName, "personaName");
+  if (!nameCheck.ok) return failure6(nameCheck.error);
+  const personaName = nameCheck.value;
+  let newName;
+  if (input.newName !== void 0) {
+    const newNameCheck = validatePersonaName(input.newName, "newName");
+    if (!newNameCheck.ok) return failure6(newNameCheck.error);
+    newName = newNameCheck.value;
+  }
+  try {
+    const service = new PersonaService(ctx);
+    const exists = await service.personaExists({ personaName });
+    if (exists) {
+      if (newName) {
+        await service.renamePersona({
+          personaName,
+          newPersonaName: newName
+        });
+        const loaded3 = await loadPersonaWithName(ctx, newName);
+        if (!loaded3) {
+          return failure6(
+            `Persona was renamed from '${personaName}' to '${newName}' but the new profile could not be loaded`
+          );
+        }
+        const updated3 = await activatePersona(ctx, newName, loaded3.rawProfile);
+        const persona3 = await buildPersonaContext(updated3, loaded3.parsed);
+        return {
+          ok: true,
+          data: {
+            kind: "renamed",
+            from: personaName,
+            to: newName,
+            persona: persona3
+          }
+        };
+      }
+      const loaded2 = await loadPersonaWithName(ctx, personaName);
+      if (!loaded2) {
+        return failure6(`Failed to load persona '${personaName}'`);
+      }
+      const updated2 = await activatePersona(ctx, personaName, loaded2.rawProfile);
+      const persona2 = await buildPersonaContext(updated2, loaded2.parsed);
+      return {
+        ok: true,
+        data: { kind: "switched", personaName, persona: persona2 }
+      };
+    }
+    if (!input.confirmCreate) {
+      const availablePersonas = await service.listPersonas({}) ?? [];
+      return {
+        ok: true,
+        data: {
+          kind: "requires-confirmation",
+          personaName,
+          availablePersonas
+        }
+      };
+    }
+    const profileString = createDefaultProfile(
+      personaName,
+      (/* @__PURE__ */ new Date()).toISOString()
+    );
+    await service.createPersona({ personaName, profile: profileString });
+    const loaded = await loadPersonaWithName(ctx, personaName);
+    if (!loaded) {
+      return failure6(
+        `Persona '${personaName}' was created but the new profile could not be loaded`
+      );
+    }
+    const updated = await activatePersona(ctx, personaName, loaded.rawProfile);
+    const persona = await buildPersonaContext(updated, loaded.parsed);
+    return {
+      ok: true,
+      data: { kind: "created-and-switched", personaName, persona }
+    };
+  } catch (cause) {
+    return failure6(errorMessage6(cause, "Failed to switch persona"), cause);
+  }
+}
+var failure6, errorMessage6;
+var init_as_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/as.handlers.ts"() {
+    "use strict";
+    init_persona_service();
+    init_persona_context();
+    init_persona2();
+    init_persona_activation();
+    failure6 = (error2, cause) => cause === void 0 ? { ok: false, error: error2 } : { ok: false, error: error2, cause };
+    errorMessage6 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/as-import-library.handler.ts
+function normaliseLibraryResponse(raw) {
+  if (typeof raw === "string") {
+    return raw ? { systemBlock: raw } : null;
+  }
+  if (!raw || typeof raw !== "object") return null;
+  const outer = raw;
+  const inner = outer.persona && typeof outer.persona === "object" ? outer.persona : {};
+  const systemBlock = pickString(inner.systemBlock, outer.systemBlock);
+  if (!systemBlock) return null;
+  return {
+    systemBlock,
+    id: pickString(inner.id, outer.id),
+    name: pickString(inner.name, outer.name),
+    description: pickString(inner.description, outer.description),
+    version: pickString(inner.version, outer.version)
+  };
+}
+function validateInput(input) {
+  const libraryName = input.libraryName?.trim() ?? "";
+  if (!libraryName) {
+    return failure7("libraryName is required");
+  }
+  const localName = input.localName?.trim() ?? "";
+  if (!localName) {
+    return failure7("localName is required");
+  }
+  if (/\s/.test(localName)) {
+    return failure7(
+      `localName must not contain whitespace (got "${input.localName}")`
+    );
+  }
+  if (localName.startsWith("library:")) {
+    return failure7(
+      "localName must not use the library: prefix (it is the local storage name)"
+    );
+  }
+  const authToken = input.authToken?.trim() ?? "";
+  if (!authToken) {
+    return failure7("authentication required to fetch library personas");
+  }
+  return { ok: true, data: { libraryName, localName, authToken } };
+}
+async function asImportLibraryPersona(input, ctx) {
+  const validation = validateInput(input);
+  if (!validation.ok) return validation;
+  const { libraryName, localName, authToken } = validation.data;
+  let response;
+  try {
+    const libraryClient = new LibraryClient();
+    response = await libraryClient.getPersona(libraryName, authToken, false);
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : "Unknown error";
+    return failure7(`Failed to fetch library persona: ${message}`, cause);
+  }
+  const normalised = normaliseLibraryResponse(response);
+  if (!normalised) {
+    return failure7(
+      "Library persona response is missing a usable systemBlock / profile body"
+    );
+  }
+  try {
+    const personaService = new PersonaService(ctx);
+    const enhanced = personaService.addUserBlock(
+      { systemBlock: normalised.systemBlock },
+      localName
+    );
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const metadata = {
+      id: localName,
+      name: localName,
+      description: normalised.description ?? `${normalised.name ?? libraryName} persona`,
+      created: now,
+      lastUpdated: now,
+      sourceLibrary: {
+        id: normalised.id ?? libraryName,
+        name: libraryName,
+        version: normalised.version ?? "1.0.0",
+        importedAt: now
+      }
+    };
+    await personaService.create(localName, enhanced, metadata);
+    const parsed = parsePersonaWithName(enhanced.systemBlock, localName);
+    const updatedCtx = await activatePersona(
+      ctx,
+      localName,
+      enhanced.systemBlock
+    );
+    const persona = await buildPersonaContext(updatedCtx, parsed);
+    return {
+      ok: true,
+      data: {
+        kind: "created-and-switched",
+        personaName: localName,
+        persona
+      }
+    };
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : "Unknown error";
+    return failure7(`Failed to import library persona: ${message}`, cause);
+  }
+}
+var failure7, pickString;
+var init_as_import_library_handler = __esm({
+  "packages/tiny-brain-core/src/handlers/as-import-library.handler.ts"() {
+    "use strict";
+    init_library_client();
+    init_persona_service();
+    init_persona_context();
+    init_persona_activation();
+    failure7 = (error2, cause) => cause === void 0 ? { ok: false, error: error2 } : { ok: false, error: error2, cause };
+    pickString = (...candidates) => {
+      for (const c of candidates) if (typeof c === "string") return c;
+      return void 0;
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/index.ts
+var init_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/index.ts"() {
+    "use strict";
+    init_types15();
+    init_personas_types();
+    init_personas_handlers();
+    init_rules_types();
+    init_rules_handlers();
+    init_rules_formatters();
+    init_recommendations_types();
+    init_recommendations_handlers();
+    init_recommendations_formatters();
+    init_quality_types();
+    init_quality_handlers();
+    init_quality_formatters();
+    init_config_types();
+    init_config_handlers();
+    init_config_formatters();
+    init_as_types();
+    init_as_handlers();
+    init_as_import_library_handler();
+  }
+});
+
+// packages/tiny-brain-core/src/agents/types.ts
+var AgentFormat;
+var init_types16 = __esm({
+  "packages/tiny-brain-core/src/agents/types.ts"() {
+    "use strict";
+    AgentFormat = /* @__PURE__ */ ((AgentFormat2) => {
+      AgentFormat2["CLAUDE_CODE"] = "claude-code";
+      AgentFormat2["OPENAI"] = "openai";
+      AgentFormat2["LANGCHAIN"] = "langchain";
+      AgentFormat2["MARKDOWN"] = "markdown";
+      AgentFormat2["JSON"] = "json";
+      return AgentFormat2;
+    })(AgentFormat || {});
+  }
+});
+
+// packages/tiny-brain-core/src/agents/formatters/claude-code-formatter.ts
+var ClaudeCodeFormatter;
+var init_claude_code_formatter = __esm({
+  "packages/tiny-brain-core/src/agents/formatters/claude-code-formatter.ts"() {
+    "use strict";
+    init_types16();
+    ClaudeCodeFormatter = class {
+      format = "claude-code" /* CLAUDE_CODE */;
+      getRepoContextFilePath() {
+        return "CLAUDE.md";
+      }
+      getAgentInstallPath() {
+        return ".claude/agents";
+      }
+      /**
+       * Format TBR agent JSON directly to Claude Code format
+       */
+      formatTbrAgent(agentData) {
+        const frontmatter = this.generateTbrFrontmatter(agentData);
+        const content = this.generateTbrContent(agentData);
+        return {
+          format: this.format,
+          filename: `${agentData.name}.md`,
+          content: `---
+${frontmatter}---
+
+${content}`,
+          metadata: {
+            platform: "claude-code",
+            version: agentData.details.version || "1.0.0"
+          }
+        };
+      }
+      generateTbrFrontmatter(agent) {
+        const lines = [];
+        lines.push(`name: ${agent.name}`);
+        lines.push(`description: ${this.escapeYaml(agent.details.description)}`);
+        return lines.join("\n") + "\n";
+      }
+      generateTbrContent(agent) {
+        const sections = [];
+        if (agent.mindset) {
+          sections.push(agent.mindset);
+        }
+        sections.push(`## Your Single Purpose
+${agent.details.description}`);
+        if (agent.boundaries) {
+          if (agent.boundaries.will?.length > 0) {
+            sections.push(`## What You Will Do
+${agent.boundaries.will.map((b) => `- ${b}`).join("\n")}`);
+          }
+          if (agent.boundaries.wont?.length > 0) {
+            sections.push(`## What You Won't Do
+${agent.boundaries.wont.map((b) => `- ${b}`).join("\n")}`);
+          }
+        }
+        if (agent.tasks && agent.tasks.length > 0) {
+          sections.push(`## Your Capabilities
+${agent.tasks.map((t) => `- ${t}`).join("\n")}`);
+        }
+        if (agent.flow) {
+          if (agent.flow.phases && agent.flow.phases.length > 0) {
+            const phaseList = agent.flow.phases.map((p) => {
+              let item = `- ${p.name}`;
+              if (p.tollgate) item += ` (Tollgate: ${p.tollgate})`;
+              return item;
+            }).join("\n");
+            sections.push(`## Your Workflow
+${phaseList}`);
+          }
+          if (agent.flow.priorities && agent.flow.priorities.length > 0) {
+            sections.push(`## Priorities
+${agent.flow.priorities.map((p) => `- ${p}`).join("\n")}`);
+          }
+        }
+        if (agent.output) {
+          let outputSection = `## Output Format
+Format: ${agent.output.format}
+`;
+          if (agent.output.includes && agent.output.includes.length > 0) {
+            outputSection += `
+Should include:
+${agent.output.includes.map((i) => `- ${i}`).join("\n")}`;
+          }
+          sections.push(outputSection);
+        }
+        if (agent.details.notes && agent.details.notes.length > 0) {
+          sections.push(`## Important Notes
+${agent.details.notes.map((n) => `- ${n}`).join("\n")}`);
+        }
+        return sections.join("\n\n");
+      }
+      formatAgent(agent) {
+        const frontmatter = this.generateFrontmatter(agent);
+        const content = this.generateContent(agent);
+        return {
+          format: this.format,
+          filename: `${agent.id}.md`,
+          content: `---
+${frontmatter}---
+
+${content}`,
+          metadata: {
+            platform: "claude-code",
+            version: agent.version || "1.0.0"
+          }
+        };
+      }
+      formatAgents(agents) {
+        return agents.map((agent) => this.formatAgent(agent));
+      }
+      generateFrontmatter(agent) {
+        const lines = [];
+        lines.push(`name: ${agent.id}`);
+        lines.push(`description: ${this.escapeYaml(agent.description)}`);
+        if (agent.tools && agent.tools.length > 0) {
+          lines.push(`tools: ${agent.tools.join(", ")}`);
+        }
+        return lines.join("\n") + "\n";
+      }
+      generateContent(agent) {
+        const sections = [];
+        sections.push(agent.systemPrompt);
+        if (agent.purpose) {
+          sections.push(`## Your Single Purpose
+${agent.purpose}`);
+        }
+        if (agent.capabilities.length > 0) {
+          sections.push(`## Your Capabilities
+${agent.capabilities.map((c) => `- ${c}`).join("\n")}`);
+        }
+        if (agent.examples && agent.examples.length > 0) {
+          sections.push(this.formatExamples(agent.examples));
+        }
+        if (agent.dependencies && agent.dependencies.length > 0) {
+          sections.push(`## Dependencies
+This agent requires: ${agent.dependencies.join(", ")}`);
+        }
+        return sections.join("\n\n");
+      }
+      formatExamples(examples) {
+        const exampleSections = examples.map((ex) => {
+          let section = "### Example";
+          if (ex.description) {
+            section += `: ${ex.description}`;
+          }
+          section += "\n\n**Input:**\n```\n" + ex.input + "\n```\n\n";
+          section += "**Output:**\n```\n" + ex.output + "\n```";
+          return section;
+        });
+        return `## Examples
+
+${exampleSections.join("\n\n")}`;
+      }
+      escapeYaml(str2) {
+        if (str2.includes(":") || str2.includes('"') || str2.includes("'") || str2.includes("\n")) {
+          return `"${str2.replace(/"/g, '\\"')}"`;
+        }
+        return str2;
+      }
+      parseAgent(content) {
+        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        if (!frontmatterMatch) {
+          throw new Error("Invalid Claude Code agent format: missing frontmatter");
+        }
+        const frontmatter = this.parseFrontmatter(frontmatterMatch[1]);
+        const markdown = content.slice(frontmatterMatch[0].length).trim();
+        return {
+          id: frontmatter.name,
+          name: frontmatter.name,
+          description: frontmatter.description,
+          tools: frontmatter.tools ? frontmatter.tools.split(",").map((t) => t.trim()) : [],
+          systemPrompt: markdown,
+          purpose: this.extractSection(markdown, "Your Single Purpose"),
+          capabilities: this.extractListSection(markdown, "Your Capabilities"),
+          examples: this.extractExamples(markdown),
+          dependencies: this.extractListSection(markdown, "Dependencies")
+        };
+      }
+      parseFrontmatter(yaml) {
+        const result = {};
+        const lines = yaml.split("\n");
+        for (const line of lines) {
+          const match2 = line.match(/^(\w+):\s*(.+)$/);
+          if (match2) {
+            result[match2[1]] = match2[2].replace(/^["']|["']$/g, "");
+          }
+        }
+        return result;
+      }
+      extractSection(markdown, heading) {
+        const regex = new RegExp(`## ${heading}\\n([^#]+)`, "i");
+        const match2 = markdown.match(regex);
+        return match2 ? match2[1].trim() : "";
+      }
+      extractListSection(markdown, heading) {
+        const section = this.extractSection(markdown, heading);
+        if (!section) return [];
+        return section.split("\n").filter((line) => line.startsWith("-")).map((line) => line.replace(/^-\s*/, "").trim());
+      }
+      extractExamples(_markdown) {
+        return [];
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/agents/formatters/formatter-factory.ts
+var FormatterFactory;
+var init_formatter_factory = __esm({
+  "packages/tiny-brain-core/src/agents/formatters/formatter-factory.ts"() {
+    "use strict";
+    init_types16();
+    init_claude_code_formatter();
+    init_platform_config_adapter();
+    FormatterFactory = class {
+      static formatters = /* @__PURE__ */ new Map([
+        ["claude-code" /* CLAUDE_CODE */, new ClaudeCodeFormatter()]
+      ]);
+      /**
+       * Get formatter for a specific platform
+       */
+      static getFormatter(format) {
+        const formatter = this.formatters.get(format);
+        if (!formatter) {
+          throw new Error(`No formatter available for format: ${format}`);
+        }
+        return formatter;
+      }
+      /**
+       * Register a custom formatter
+       */
+      static registerFormatter(format, formatter) {
+        this.formatters.set(format, formatter);
+      }
+      /**
+       * Get all available formats
+       */
+      static getAvailableFormats() {
+        return Array.from(this.formatters.keys());
+      }
+      /**
+       * Detect format based on platform or environment
+       */
+      static detectFormat(platform2) {
+        if (platform2) {
+          switch (platform2.toLowerCase()) {
+            case "claude":
+            case "claude-code":
+            case "claude-desktop":
+            case "anthropic":
+              return "claude-code" /* CLAUDE_CODE */;
+            default:
+              throw new Error(`Unsupported platform: ${platform2}. Only Claude Code is currently supported.`);
+          }
+        }
+        const detectedPlatform = PlatformConfigAdapter.detectPlatform();
+        switch (detectedPlatform) {
+          case "claude-code":
+          case "claude-desktop":
+            return "claude-code" /* CLAUDE_CODE */;
+          default:
+            throw new Error(`Unsupported platform: ${detectedPlatform}. Only Claude Code is currently supported.`);
+        }
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/agent/agent-installation-service.ts
+import * as fs33 from "fs/promises";
+import * as path36 from "path";
+import * as crypto3 from "crypto";
+var AgentInstallationService;
+var init_agent_installation_service = __esm({
+  "packages/tiny-brain-core/src/services/agent/agent-installation-service.ts"() {
+    "use strict";
+    init_library_client();
+    init_repo_utils();
+    AgentInstallationService = class {
+      constructor(context) {
+        this.context = context;
+        this.libraryClient = new LibraryClient();
+        void this.libraryClient;
+      }
+      libraryClient;
+      /**
+       * Download agent content from the library
+       * Note: This is a placeholder implementation since getAgentContent doesn't exist in LibraryClient yet
+       */
+      async downloadAgentContent(agentName, version2) {
+        try {
+          const content = this.generateMockAgentContent(agentName, version2);
+          return {
+            content,
+            version: version2,
+            checksum: crypto3.createHash("sha256").update(content).digest("hex")
+          };
+        } catch (error2) {
+          const message = error2 instanceof Error ? error2.message : "Unknown error";
+          this.context.logger.error(`Failed to download agent ${agentName}:`, error2);
+          throw new Error(`Failed to download agent content: ${message}`);
+        }
+      }
+      /**
+       * Generate mock agent content (placeholder until API is available)
+       */
+      generateMockAgentContent(agentName, version2) {
+        const title = agentName.split("-").map(
+          (word) => word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(" ");
+        return `# ${title}
+
+Downloaded agent from library.
+
+## Your Single Purpose
+Specialized ${agentName.replace(/-/g, " ")} functionality
+
+## What You Will Do
+- Implement ${agentName.replace(/-/g, " ")} features
+- Follow best practices
+- Write comprehensive tests
+
+## What You Won't Do
+- Work outside specialization
+- Skip documentation
+- Ignore error handling
+
+<!-- Agent Metadata -->
+<!-- Version: ${version2} -->
+<!-- Generated: ${(/* @__PURE__ */ new Date()).toISOString()} -->
+<!-- Source: tiny-brain-library -->
+`;
+      }
+      /**
+       * Install an agent to .claude/agents/
+       */
+      async installAgent(agentInfo) {
+        try {
+          const repoRoot = getRepoRoot();
+          const agentsDir = path36.join(repoRoot, ".claude", "agents");
+          await fs33.mkdir(agentsDir, { recursive: true });
+          let content = agentInfo.content;
+          if (!content) {
+            const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
+            content = downloaded.content;
+          }
+          const filePath = path36.join(agentsDir, `${agentInfo.name}.md`);
+          await fs33.writeFile(filePath, content, "utf-8");
+          this.context.logger.info(`Successfully installed agent: ${agentInfo.name}`);
+          return { success: true };
+        } catch (error2) {
+          const errorMsg = error2 instanceof Error ? error2.message : "Unknown error";
+          this.context.logger.error(`Failed to install ${agentInfo.name}:`, error2);
+          if (errorMsg.includes("permission denied") || errorMsg.includes("EACCES")) {
+            return {
+              success: false,
+              error: errorMsg,
+              suggestion: "Check directory permissions for .claude/agents/"
+            };
+          }
+          return {
+            success: false,
+            error: errorMsg
+          };
+        }
+      }
+      /**
+       * Update an existing agent, preserving customizations
+       */
+      async updateAgent(agentInfo) {
+        try {
+          const repoRoot = getRepoRoot();
+          const filePath = path36.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
+          const existingContent = await fs33.readFile(filePath, "utf-8");
+          const hasCustomizations = this.detectCustomizations(existingContent);
+          let backupCreated = false;
+          if (hasCustomizations) {
+            const backupPath = `${filePath}.backup.${Date.now()}`;
+            await fs33.writeFile(backupPath, existingContent, "utf-8");
+            backupCreated = true;
+            this.context.logger.info(`Created backup of customized agent: ${backupPath}`);
+          }
+          let newContent = agentInfo.content;
+          if (!newContent) {
+            const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
+            newContent = downloaded.content;
+          }
+          const updatedContent = this.updateAgentMetadata(newContent, agentInfo.version);
+          await fs33.writeFile(filePath, updatedContent, "utf-8");
+          this.context.logger.info(`Successfully updated agent: ${agentInfo.name} to v${agentInfo.version}`);
+          return {
+            updated: true,
+            hadCustomizations: hasCustomizations,
+            backupCreated
+          };
+        } catch (error2) {
+          this.context.logger.error(`Failed to update agent ${agentInfo.name}:`, error2);
+          throw error2;
+        }
+      }
+      /**
+       * Remove an agent safely
+       */
+      async removeAgent(agentName) {
+        try {
+          const repoRoot = getRepoRoot();
+          const filePath = path36.join(repoRoot, ".claude", "agents", `${agentName}.md`);
+          await fs33.access(filePath);
+          await fs33.unlink(filePath);
+          this.context.logger.info(`Successfully removed agent: ${agentName}`);
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            this.context.logger.warn(`Agent file not found: ${agentName}.md`);
+            return;
+          }
+          this.context.logger.error(`Failed to remove agent ${agentName}:`, error2);
+          throw error2;
+        }
+      }
+      /**
+       * Install multiple agents efficiently
+       */
+      async batchInstall(agentsToInstall) {
+        const results = {
+          successful: [],
+          failed: []
+        };
+        const repoRoot = getRepoRoot();
+        const agentsDir = path36.join(repoRoot, ".claude", "agents");
+        await fs33.mkdir(agentsDir, { recursive: true });
+        for (const agent of agentsToInstall) {
+          try {
+            const result = await this.installAgent(agent);
+            if (result.success) {
+              results.successful.push(agent.name);
+            } else {
+              results.failed.push(agent.name);
+              this.context.logger.error(`Batch install failed for ${agent.name}: ${result.error}`);
+            }
+          } catch (error2) {
+            results.failed.push(agent.name);
+            this.context.logger.error(`Batch install error for ${agent.name}:`, error2);
+          }
+        }
+        this.context.logger.info(`Batch install complete: ${results.successful.length} successful, ${results.failed.length} failed`);
+        return results;
+      }
+      /**
+       * Validate agent content integrity
+       */
+      async validateAgentContent(content, expectedChecksum) {
+        const validation = {
+          isValid: false,
+          hasRequiredSections: false,
+          hasMetadata: false,
+          checksumValid: true
+        };
+        const requiredSections = [
+          "## Your Single Purpose",
+          "## What You Will Do",
+          "## What You Won't Do"
+        ];
+        validation.hasRequiredSections = requiredSections.every(
+          (section) => content.includes(section)
+        );
+        validation.hasMetadata = content.includes("<!-- Agent Metadata -->") && content.includes("<!-- Version:") && content.includes("<!-- Generated:");
+        if (expectedChecksum) {
+          const actualChecksum = crypto3.createHash("sha256").update(content).digest("hex");
+          validation.checksumValid = actualChecksum === expectedChecksum;
+        }
+        validation.isValid = validation.hasRequiredSections && validation.hasMetadata && validation.checksumValid;
+        return validation;
+      }
+      /**
+       * Get list of installed agents with metadata
+       */
+      async getInstalledAgents() {
+        try {
+          const repoRoot = getRepoRoot();
+          const agentsDir = path36.join(repoRoot, ".claude", "agents");
+          const files = await fs33.readdir(agentsDir);
+          const agentFiles = files.filter((file) => file.endsWith(".md"));
+          const installedAgents = [];
+          for (const file of agentFiles) {
+            try {
+              const filePath = path36.join(agentsDir, file);
+              const content = await fs33.readFile(filePath, "utf-8");
+              const agentName = file.replace(".md", "");
+              const metadata = this.extractAgentMetadata(content);
+              installedAgents.push({
+                name: agentName,
+                version: metadata.version || "1.0.0",
+                lastUpdated: metadata.generated || (/* @__PURE__ */ new Date()).toISOString()
+              });
+            } catch (error2) {
+              this.context.logger.warn(`Failed to read agent metadata from ${file}:`, error2);
+            }
+          }
+          return installedAgents.sort((a, b) => a.name.localeCompare(b.name));
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return [];
+          }
+          this.context.logger.error("Failed to get installed agents:", error2);
+          throw error2;
+        }
+      }
+      /**
+       * Detect if agent content has customizations
+       */
+      detectCustomizations(content) {
+        if (content.includes("<!-- Customized: true -->")) {
+          return true;
+        }
+        const customizationSignals = [
+          "Custom modifications",
+          "Custom purpose",
+          "Custom functionality",
+          "User-modified",
+          "Local changes"
+        ];
+        return customizationSignals.some(
+          (signal) => content.toLowerCase().includes(signal.toLowerCase())
+        );
+      }
+      /**
+       * Update agent metadata (version and timestamp)
+       */
+      updateAgentMetadata(content, version2) {
+        let updatedContent = content;
+        const versionRegex = /<!-- Version: (.+?) -->/;
+        updatedContent = updatedContent.replace(versionRegex, `<!-- Version: ${version2} -->`);
+        const timestampRegex = /<!-- Generated: (.+?) -->/;
+        updatedContent = updatedContent.replace(timestampRegex, `<!-- Generated: ${(/* @__PURE__ */ new Date()).toISOString()} -->`);
+        return updatedContent;
+      }
+      /**
+       * Extract agent metadata from content
+       */
+      extractAgentMetadata(content) {
+        const metadata = {};
+        const versionMatch = content.match(/<!-- Version: (.+?) -->/);
+        if (versionMatch) {
+          metadata.version = versionMatch[1];
+        }
+        const generatedMatch = content.match(/<!-- Generated: (.+?) -->/);
+        if (generatedMatch) {
+          metadata.generated = generatedMatch[1];
+        }
+        return metadata;
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/repo/repo-registration.ts
+function resolveRepoRegistration(cwd, worktreeInfo) {
+  if (worktreeInfo && worktreeInfo.isWorktree) {
+    const repoName2 = worktreeInfo.mainRepoPath.split("/").pop() || "unknown";
+    return {
+      name: repoName2,
+      path: cwd,
+      worktree: {
+        mainRepoPath: worktreeInfo.mainRepoPath,
+        branch: worktreeInfo.branch,
+        worktreeName: worktreeInfo.worktreeName
+      },
+      mainRepositoryRoot: worktreeInfo.mainRepoPath
+    };
+  }
+  const repoName = cwd.split("/").pop() || "unknown";
+  return { name: repoName, path: cwd };
+}
+var init_repo_registration = __esm({
+  "packages/tiny-brain-core/src/services/repo/repo-registration.ts"() {
+    "use strict";
   }
 });
 
@@ -51742,31 +55722,1521 @@ var require_semver2 = __commonJS({
   }
 });
 
-// packages/tiny-brain-mcp/src/core/repo-registration.ts
-var repo_registration_exports = {};
-__export(repo_registration_exports, {
-  resolveRepoRegistration: () => resolveRepoRegistration
-});
-function resolveRepoRegistration(cwd, worktreeInfo) {
-  if (worktreeInfo && worktreeInfo.isWorktree) {
-    const repoName2 = worktreeInfo.mainRepoPath.split("/").pop() || "unknown";
-    return {
-      name: repoName2,
-      path: cwd,
-      worktree: {
-        mainRepoPath: worktreeInfo.mainRepoPath,
-        branch: worktreeInfo.branch,
-        worktreeName: worktreeInfo.worktreeName
-      },
-      mainRepositoryRoot: worktreeInfo.mainRepoPath
+// packages/tiny-brain-core/src/services/agent/agent-service.ts
+var semver, AgentService;
+var init_agent_service = __esm({
+  "packages/tiny-brain-core/src/services/agent/agent-service.ts"() {
+    "use strict";
+    init_formatter_factory();
+    init_repo_utils();
+    semver = __toESM(require_semver2(), 1);
+    init_agent_installation_service();
+    AgentService = class {
+      constructor(context) {
+        this.context = context;
+      }
+      installationService;
+      /**
+       * Format agents for the current formatter type
+       */
+      formatAgents(agents, formatter) {
+        try {
+          const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+          if (!activeFormatter.formatTbrAgent) {
+            throw new Error(
+              `Formatter ${activeFormatter.constructor?.name || "unknown"} does not implement formatTbrAgent`
+            );
+          }
+          const formatTbr = activeFormatter.formatTbrAgent.bind(activeFormatter);
+          this.context.logger.debug("[AgentService] formatAgents", {
+            agentCount: agents.length,
+            formatter: activeFormatter.constructor?.name || "unknown"
+          });
+          return agents.map((agent) => formatTbr(agent));
+        } catch (error2) {
+          this.context.logger.error("[AgentService] Error formatting agents:", error2);
+          throw error2;
+        }
+      }
+      /**
+       * Install formatted agents to the filesystem
+       */
+      async installAgents(formattedAgents, formatter) {
+        const fs34 = await import("fs/promises");
+        const path38 = await import("path");
+        const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+        const repoRoot = getRepoRoot();
+        const agentsPath = path38.join(repoRoot, activeFormatter.getAgentInstallPath());
+        this.context.logger.debug("[AgentService] Installing agents:", {
+          repoRoot,
+          agentsPath,
+          agentCount: formattedAgents.length
+        });
+        await fs34.mkdir(agentsPath, { recursive: true });
+        for (const agent of formattedAgents) {
+          const agentPath = path38.join(agentsPath, agent.filename);
+          await fs34.writeFile(agentPath, agent.content, "utf-8");
+          this.context.logger.info(`Agent '${agent.filename}' installed to ${agentPath}`);
+        }
+        this.context.logger.info(`Installed ${formattedAgents.length} agents to ${agentsPath}`);
+      }
+      /**
+       * Install agents with version checking and overwrite strategy
+       */
+      async installAgentsWithVersionCheck(agents, options = {}) {
+        const fs34 = await import("fs/promises");
+        const path38 = await import("path");
+        const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+        const formattedAgents = this.formatAgents(agents, formatter);
+        const repoRoot = getRepoRoot();
+        const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
+        const result = {
+          installed: [],
+          skipped: [],
+          updated: [],
+          errors: []
+        };
+        await fs34.mkdir(agentsPath, { recursive: true });
+        const installedAgents = await this.getInstalledAgents();
+        const installedMap = new Map(installedAgents.map((a) => [a.name, a]));
+        for (const agent of formattedAgents) {
+          const agentPath = path38.join(agentsPath, agent.filename);
+          const agentName = agent.filename.replace(".md", "");
+          try {
+            const fileExists = await fs34.access(agentPath).then(() => true).catch(() => false);
+            if (!fileExists) {
+              await fs34.writeFile(agentPath, agent.content, "utf-8");
+              result.installed.push(agentName);
+              this.context.logger.info(`Installed new agent: ${agentName}`);
+            } else {
+              const strategy = options.overwriteStrategy || "version-check";
+              if (strategy === "never") {
+                result.skipped.push(agentName);
+                this.context.logger.debug(`Skipped existing agent: ${agentName}`);
+              } else if (strategy === "always") {
+                if (options.backupExisting) {
+                  const backupPath = `${agentPath}.backup.${Date.now()}`;
+                  await fs34.copyFile(agentPath, backupPath);
+                }
+                await fs34.writeFile(agentPath, agent.content, "utf-8");
+                result.updated.push(agentName);
+                this.context.logger.info(`Updated agent (forced): ${agentName}`);
+              } else {
+                const installed = installedMap.get(agentName);
+                const newVersion = this.extractVersion(agent.content);
+                const installedVersion = installed?.version || "0.0.0";
+                if (semver.gt(newVersion, installedVersion)) {
+                  if (options.backupExisting) {
+                    const backupPath = `${agentPath}.backup.${Date.now()}`;
+                    await fs34.copyFile(agentPath, backupPath);
+                  }
+                  await fs34.writeFile(agentPath, agent.content, "utf-8");
+                  result.updated.push(agentName);
+                  this.context.logger.info(`Updated agent: ${agentName} (${installedVersion} -> ${newVersion})`);
+                } else {
+                  result.skipped.push(agentName);
+                  this.context.logger.debug(`Skipped agent (same or newer version): ${agentName} (current: ${installedVersion})`);
+                }
+              }
+            }
+          } catch (error2) {
+            const errorMsg = error2 instanceof Error ? error2.message : "Unknown error";
+            result.errors.push({ agent: agentName, error: errorMsg });
+            this.context.logger.error(`Failed to install agent ${agentName}:`, error2);
+          }
+        }
+        return result;
+      }
+      /**
+       * Remove agents from disk
+       */
+      async removeAgents(agentNames) {
+        const result = { removed: [], errors: [] };
+        const fs34 = await import("fs/promises");
+        const path38 = await import("path");
+        const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+        const repoRoot = getRepoRoot();
+        const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
+        for (const agentName of agentNames) {
+          try {
+            const agentFile = path38.join(agentsPath, `${agentName}.md`);
+            try {
+              await fs34.access(agentFile);
+            } catch {
+              result.errors.push(`Agent ${agentName} not found`);
+              continue;
+            }
+            await fs34.unlink(agentFile);
+            result.removed.push(agentName);
+            this.context.logger.info(`Removed agent: ${agentName}`);
+          } catch (error2) {
+            const errorMsg = error2 instanceof Error ? error2.message : "Unknown error";
+            result.errors.push(`Failed to remove ${agentName}: ${errorMsg}`);
+            this.context.logger.error(`Failed to remove agent ${agentName}:`, error2);
+          }
+        }
+        return result;
+      }
+      /**
+       * Get installed agents from disk
+       */
+      async getInstalledAgents() {
+        if (!this.installationService) {
+          this.installationService = new AgentInstallationService(this.context);
+        }
+        if (this.installationService) {
+          return await this.installationService.getInstalledAgents();
+        }
+        const fs34 = await import("fs/promises");
+        const path38 = await import("path");
+        const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+        const repoRoot = getRepoRoot();
+        const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
+        try {
+          const files = await fs34.readdir(agentsPath);
+          const agentFiles = files.filter((f) => f.endsWith(".md"));
+          const agents = [];
+          for (const file of agentFiles) {
+            const content = await fs34.readFile(path38.join(agentsPath, file), "utf-8");
+            const name = file.replace(".md", "");
+            const version2 = this.extractVersion(content);
+            agents.push({ name, version: version2, lastUpdated: (/* @__PURE__ */ new Date()).toISOString() });
+          }
+          return agents;
+        } catch (error2) {
+          if (error2.code === "ENOENT") {
+            return [];
+          }
+          throw error2;
+        }
+      }
+      /**
+       * Extract version from agent content
+       */
+      extractVersion(content) {
+        const versionMatch = content.match(/<!-- Version: (.+?) -->/);
+        return versionMatch ? versionMatch[1] : "1.0.0";
+      }
+      /**
+       * Format and install agents in one operation
+       */
+      async formatAndInstallAgents(agents, formatter) {
+        const formattedAgents = this.formatAgents(agents, formatter);
+        await this.installAgents(formattedAgents, formatter);
+        return formattedAgents;
+      }
+      /**
+       * Get the default formatter
+       */
+      getDefaultFormatter() {
+        return FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+      }
+      /**
+       * Detect formatter type from environment
+       */
+      detectFormatterType() {
+        return FormatterFactory.detectFormat();
+      }
     };
   }
-  const repoName = cwd.split("/").pop() || "unknown";
-  return { name: repoName, path: cwd };
-}
-var init_repo_registration = __esm({
-  "packages/tiny-brain-mcp/src/core/repo-registration.ts"() {
+});
+
+// packages/tiny-brain-core/src/services/library/system-persona-service.ts
+var SystemPersonaService;
+var init_system_persona_service = __esm({
+  "packages/tiny-brain-core/src/services/library/system-persona-service.ts"() {
     "use strict";
+    init_base_service();
+    init_config();
+    SystemPersonaService = class extends BaseService {
+      tbrUrl;
+      // tiny-brain-remote for data
+      constructor(context) {
+        super(context);
+        this.tbrUrl = getTBRUrl();
+      }
+      /**
+       * Get auth token from context
+       */
+      getAuthToken() {
+        const token = this.context.authToken?.token || null;
+        this.log("debug", "getAuthToken called", {
+          hasAuthToken: !!this.context.authToken,
+          hasToken: !!token,
+          tokenPreview: token ? token.substring(0, 20) + "..." : "null",
+          contextKeys: Object.keys(this.context)
+        });
+        return token;
+      }
+      /**
+       * Make an MCP call to tiny-brain-remote
+       */
+      async callMCP(method, params) {
+        const token = this.getAuthToken();
+        if (!token) {
+          throw new Error("Not authenticated - no auth token in context");
+        }
+        const request = {
+          jsonrpc: "2.0",
+          method,
+          params,
+          id: Date.now()
+        };
+        const url = `${this.tbrUrl}/api/mcp`;
+        const headers = {
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/event-stream",
+          "Authorization": `Bearer ${token}`
+        };
+        this.log("debug", "Making MCP call to tiny-brain-remote", {
+          method,
+          url,
+          requestBody: request,
+          authHeader: headers.Authorization.substring(0, 30) + "..."
+        });
+        const response = await fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(request)
+        });
+        this.log("debug", "MCP response received", {
+          status: response.status,
+          statusText: response.statusText
+        });
+        if (!response.ok) {
+          throw new Error(`MCP call failed: ${response.status} ${response.statusText}`);
+        }
+        const text = await response.text();
+        this.log("debug", "MCP response text", {
+          length: text.length,
+          preview: text.substring(0, 200)
+        });
+        if (text.startsWith("event:")) {
+          const dataLine = text.split("\n").find((line) => line.startsWith("data: "));
+          if (dataLine) {
+            const jsonStr = dataLine.substring(6);
+            const data2 = JSON.parse(jsonStr);
+            this.log("debug", "Parsed SSE response", {
+              hasResult: !!data2.result,
+              hasError: !!data2.error,
+              resultIsError: data2.result?.isError,
+              fullResult: JSON.stringify(data2.result)
+              // Let's see the full result
+            });
+            if (data2.error) {
+              throw new Error(`MCP error: ${data2.error.message}`);
+            }
+            if (data2.result?.isError && data2.result?.content) {
+              const errorText = data2.result.content.filter((c) => c.type === "text").map((c) => c.text).join(" ");
+              throw new Error(`TBR error: ${errorText}`);
+            }
+            return data2.result;
+          }
+        }
+        const data = JSON.parse(text);
+        this.log("debug", "Parsed JSON response", {
+          hasResult: !!data.result,
+          hasError: !!data.error,
+          resultType: typeof data.result,
+          resultKeys: data.result ? Object.keys(data.result) : [],
+          resultIsError: data.result?.isError
+        });
+        if (data.error) {
+          throw new Error(`MCP error: ${data.error.message}`);
+        }
+        if (data.result?.isError && data.result?.content) {
+          const errorText = data.result.content.filter((c) => c.type === "text").map((c) => c.text).join(" ");
+          throw new Error(`TBR error: ${errorText}`);
+        }
+        return data.result;
+      }
+      /**
+       * Fetch all system personas
+       */
+      async fetchSystemPersonas() {
+        if (!this.getAuthToken()) {
+          this.log("info", "No auth token available, skipping system persona fetch");
+          return [];
+        }
+        try {
+          this.log("info", "Fetching system personas from tiny-brain-remote");
+          const result = await this.callMCP("tools/call", {
+            name: "system_personas",
+            arguments: {
+              operation: "list"
+            }
+          });
+          this.log("debug", "System personas result", {
+            hasResult: !!result,
+            resultType: typeof result,
+            resultKeys: result ? Object.keys(result) : [],
+            isError: result?.isError,
+            hasContent: !!result?.content
+          });
+          let personas = [];
+          if (result?.content && Array.isArray(result.content)) {
+            const textContent = result.content.find((c) => c.type === "text");
+            if (textContent?.text) {
+              try {
+                const parsed = JSON.parse(textContent.text);
+                this.log("debug", "Parsed personas response", {
+                  hasPersonas: !!parsed.personas,
+                  personasCount: parsed.personas?.length,
+                  firstPersona: parsed.personas?.[0]
+                });
+                personas = parsed.personas || [];
+                personas = personas.map((p) => {
+                  const metadata = p.metadata || p;
+                  return {
+                    id: `${metadata.category}-${metadata.subcategory}-${metadata.name}`,
+                    name: metadata.name,
+                    description: metadata.description || "",
+                    profile: p.details || p.profile || "",
+                    background: metadata.background || p.background,
+                    expertise: metadata.expertise || p.expertise || [],
+                    version: metadata.version || "1.0.0",
+                    lastUpdated: metadata.lastUpdated || (/* @__PURE__ */ new Date()).toISOString()
+                  };
+                });
+              } catch (parseError) {
+                this.log("error", "Failed to parse personas JSON", parseError);
+              }
+            }
+          } else if (result?.personas) {
+            personas = result.personas;
+          }
+          this.log("info", `Fetched ${personas.length} system personas`);
+          return personas;
+        } catch (error2) {
+          this.log("error", "Failed to fetch system personas", error2);
+          return [];
+        }
+      }
+      /**
+       * Fetch a specific system persona
+       */
+      async fetchSystemPersona(personaId) {
+        if (!this.getAuthToken()) {
+          this.log("info", "No auth token available, cannot fetch system persona");
+          return null;
+        }
+        try {
+          this.log("info", `Fetching system persona: ${personaId}`);
+          const parts = personaId.split("-");
+          let category;
+          let subcategory;
+          let name;
+          if (parts.length >= 3) {
+            category = parts[0];
+            subcategory = parts[1];
+            name = parts.slice(2).join("-");
+          } else if (parts.length === 2) {
+            category = parts[0];
+            subcategory = void 0;
+            name = parts[1];
+          } else {
+            category = parts[0];
+            subcategory = void 0;
+            name = parts[0];
+          }
+          const args = {
+            operation: "get",
+            category,
+            name
+          };
+          if (subcategory) {
+            args.subcategory = subcategory;
+          }
+          const result = await this.callMCP("tools/call", {
+            name: "system_personas",
+            arguments: args
+          });
+          let persona = null;
+          if (result?.content && Array.isArray(result.content)) {
+            const textContent = result.content.find((c) => c.type === "text");
+            if (textContent?.text) {
+              try {
+                const parsed = JSON.parse(textContent.text);
+                if (parsed) {
+                  persona = {
+                    id: personaId,
+                    name: parsed.name || name,
+                    description: parsed.description || "",
+                    profile: parsed.profile || "",
+                    background: parsed.background,
+                    expertise: parsed.expertise || [],
+                    version: parsed.version || "1.0.0",
+                    lastUpdated: parsed.lastUpdated || (/* @__PURE__ */ new Date()).toISOString()
+                  };
+                }
+              } catch (parseError) {
+                this.log("error", "Failed to parse persona JSON", parseError);
+              }
+            }
+          } else if (result && typeof result === "object" && result.name) {
+            persona = result;
+          }
+          if (!persona) {
+            this.log("warn", `System persona not found: ${personaId}`);
+            return null;
+          }
+          this.log("info", `Fetched system persona: ${personaId} (v${persona.version})`);
+          return persona;
+        } catch (error2) {
+          this.log("error", `Failed to fetch system persona: ${personaId}`, error2);
+          return null;
+        }
+      }
+      /**
+       * Check if authenticated
+       */
+      isAuthenticated() {
+        return !!this.getAuthToken();
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/library/persona-sync-service.ts
+var PersonaSyncService;
+var init_persona_sync_service = __esm({
+  "packages/tiny-brain-core/src/services/library/persona-sync-service.ts"() {
+    "use strict";
+    init_base_service();
+    init_persona_markdown();
+    init_system_persona_service();
+    PersonaSyncService = class extends BaseService {
+      systemPersonaService;
+      userId;
+      constructor(context) {
+        super(context);
+        this.systemPersonaService = new SystemPersonaService(context);
+        this.userId = context.userId || "local-user";
+      }
+      /**
+       * Sync all system personas from the remote service
+       */
+      async syncAllPersonas() {
+        const result = {
+          synced: 0,
+          failed: 0,
+          errors: []
+        };
+        if (!this.systemPersonaService.isAuthenticated()) {
+          this.log("info", "Skipping persona sync - not authenticated");
+          return result;
+        }
+        try {
+          const systemPersonas = await this.systemPersonaService.fetchSystemPersonas();
+          if (systemPersonas.length === 0) {
+            this.log("info", "No system personas available to sync");
+            return result;
+          }
+          this.log("info", `Found ${systemPersonas.length} system personas to sync`);
+          const existingPersonaIds = await this.context.storage.listPersonas();
+          for (const systemPersona of systemPersonas) {
+            try {
+              const synced = await this.syncSinglePersona(systemPersona, existingPersonaIds);
+              if (synced) {
+                result.synced++;
+              }
+            } catch (error2) {
+              result.failed++;
+              const errorMessage7 = `Failed to sync ${systemPersona.id}: ${error2 instanceof Error ? error2.message : "Unknown error"}`;
+              result.errors.push(errorMessage7);
+              this.log("error", `Failed to sync persona: ${systemPersona.id}`, error2);
+            }
+          }
+          await this.recordSyncMetadata(systemPersonas.map((p) => p.id));
+          this.log("info", "Persona sync completed", {
+            synced: result.synced,
+            failed: result.failed
+          });
+          return result;
+        } catch (error2) {
+          this.log("error", "Failed to sync personas", error2);
+          result.errors.push(`Sync failed: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
+          return result;
+        }
+      }
+      /**
+       * Sync a specific persona by ID
+       */
+      async syncPersona(personaId) {
+        if (!this.systemPersonaService.isAuthenticated()) {
+          this.log("info", "Cannot sync persona - not authenticated");
+          return false;
+        }
+        try {
+          const systemPersona = await this.systemPersonaService.fetchSystemPersona(personaId);
+          if (!systemPersona) {
+            this.log("warn", `System persona not found: ${personaId}`);
+            return false;
+          }
+          const existingPersonaIds = await this.context.storage.listPersonas();
+          return await this.syncSinglePersona(systemPersona, existingPersonaIds);
+        } catch (error2) {
+          this.log("error", `Failed to sync persona ${personaId}`, error2);
+          return false;
+        }
+      }
+      /**
+       * Sync a single persona to local storage
+       */
+      async syncSinglePersona(systemPersona, existingPersonaIds) {
+        const personaExists = existingPersonaIds.includes(systemPersona.id);
+        if (personaExists) {
+          const existingProfile = await this.getLocalPersonaProfile(systemPersona.id);
+          if (existingProfile && !existingProfile.isSystemPersona) {
+            this.log("debug", `Skipping user-created persona: ${systemPersona.id}`);
+            return false;
+          }
+          if (existingProfile && existingProfile.version === systemPersona.version) {
+            this.log("debug", `Persona ${systemPersona.id} is up to date`);
+            return false;
+          }
+          this.log("info", `Updating system persona: ${systemPersona.id}`, {
+            oldVersion: existingProfile?.version,
+            newVersion: systemPersona.version
+          });
+        } else {
+          this.log("info", `Creating new system persona: ${systemPersona.id}`);
+        }
+        const personaProfile = {
+          id: systemPersona.id,
+          name: systemPersona.name,
+          description: systemPersona.description,
+          profile: systemPersona.profile,
+          background: systemPersona.background,
+          expertise: systemPersona.expertise,
+          version: systemPersona.version,
+          lastUpdated: systemPersona.lastUpdated,
+          isSystemPersona: true,
+          created: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        await this.context.storage.storePersonaFile(
+          systemPersona.id,
+          "profile.json",
+          JSON.stringify(personaProfile, null, 2),
+          this.userId
+        );
+        return true;
+      }
+      /**
+       * Get local persona profile
+       */
+      async getLocalPersonaProfile(personaId) {
+        try {
+          const profileContent = await this.context.storage.getPersonaFile(
+            personaId,
+            "profile.json",
+            this.userId
+          );
+          if (!profileContent) {
+            return null;
+          }
+          return JSON.parse(profileContent);
+        } catch (error2) {
+          this.log("warn", `Failed to read persona profile: ${personaId}`, error2);
+          return null;
+        }
+      }
+      /**
+       * Record sync metadata
+       */
+      async recordSyncMetadata(syncedPersonaIds) {
+        try {
+          const metadata = {
+            lastSync: (/* @__PURE__ */ new Date()).toISOString(),
+            syncedPersonas: syncedPersonaIds
+          };
+          await this.context.storage.storeUserData(
+            "system-sync.json",
+            JSON.stringify(metadata, null, 2),
+            this.userId
+          );
+        } catch (error2) {
+          this.log("warn", "Failed to record sync metadata", error2);
+        }
+      }
+      /**
+       * Get the last sync time
+       */
+      async getLastSyncTime() {
+        try {
+          const metadataContent = await this.context.storage.getUserData(
+            "system-sync.json",
+            this.userId
+          );
+          if (!metadataContent) {
+            return null;
+          }
+          const metadata = JSON.parse(metadataContent);
+          return new Date(metadata.lastSync);
+        } catch (error2) {
+          this.log("warn", "Failed to parse sync metadata", error2);
+          return null;
+        }
+      }
+      /**
+       * Check if the service is authenticated
+       */
+      isAuthenticated() {
+        return this.systemPersonaService.isAuthenticated();
+      }
+      /**
+       * Get the system persona service (for testing)
+       */
+      getSystemPersonaService() {
+        return this.systemPersonaService;
+      }
+      /**
+       * Clone a system persona with a new name
+       */
+      async cloneSystemPersona(systemPersonaId, newName) {
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const newPersonaId = newName.toLowerCase().replace(/\s+/g, "-");
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(systemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`System persona not found: ${systemPersonaId}`);
+        }
+        const existingPersonas = await this.context.storage.listPersonas();
+        if (existingPersonas.includes(newPersonaId)) {
+          throw new Error(`Persona with name "${newName}" already exists`);
+        }
+        await this.context.storage.createPersonaDirectories(newPersonaId, this.userId);
+        bootstrapPersona(
+          newName,
+          {
+            id: systemPersona.id,
+            name: systemPersona.name,
+            description: systemPersona.description,
+            version: systemPersona.version,
+            rules: [],
+            // Will be extracted from details
+            details: {
+              profile: systemPersona.profile || "",
+              background: systemPersona.background || "",
+              expertise: systemPersona.expertise?.join(", ") || ""
+            }
+          }
+        );
+        await this.context.storage.storePersonaFile(
+          newPersonaId,
+          "profile.json",
+          JSON.stringify({
+            id: newPersonaId,
+            name: newName,
+            description: systemPersona.description,
+            profile: systemPersona.profile,
+            background: systemPersona.background,
+            expertise: systemPersona.expertise,
+            // Fork tracking
+            sourceType: "fork",
+            parentSystemPersonaId: systemPersona.id,
+            parentSystemVersion: systemPersona.version,
+            forkedAt: (/* @__PURE__ */ new Date()).toISOString(),
+            // Preserve original for merging
+            originalSystemData: {
+              profile: systemPersona.profile,
+              background: systemPersona.background,
+              expertise: systemPersona.expertise
+            }
+          }, null, 2),
+          this.userId
+        );
+        return newPersonaId;
+      }
+      /**
+       * Check for updates to a forked persona
+       */
+      async checkForUpdates(personaId) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          return null;
+        }
+        const localPersona = JSON.parse(profileContent);
+        if (localPersona.sourceType !== "fork") {
+          this.log("info", `Persona "${personaId}" is not a fork of a system persona`);
+          return null;
+        }
+        if (!this.systemPersonaService.isAuthenticated()) {
+          return null;
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(localPersona.parentSystemPersonaId);
+        if (!systemPersona) {
+          return null;
+        }
+        const hasUpdate = systemPersona.version !== localPersona.parentSystemVersion;
+        return {
+          hasUpdate,
+          currentVersion: localPersona.parentSystemVersion,
+          latestVersion: systemPersona.version,
+          parentPersonaId: localPersona.parentSystemPersonaId,
+          ...hasUpdate && {
+            changes: {
+              profile: {
+                old: systemPersona.profile,
+                new: systemPersona.profile
+              }
+            }
+          }
+        };
+      }
+      /**
+       * Merge system updates into a forked persona
+       */
+      async mergeSystemUpdates(personaId, options) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          throw new Error(`Persona "${personaId}" not found`);
+        }
+        const localPersona = JSON.parse(profileContent);
+        if (localPersona.sourceType !== "fork") {
+          throw new Error(`Cannot merge: persona "${personaId}" is not a fork of a system persona`);
+        }
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(localPersona.parentSystemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`Parent system persona not found: ${localPersona.parentSystemPersonaId}`);
+        }
+        const merged = {
+          ...localPersona,
+          // Keep user's name and modifications
+          name: localPersona.name,
+          description: localPersona.description,
+          profile: localPersona.profile,
+          // Update non-modified fields
+          background: localPersona.background === localPersona.originalSystemData?.background ? systemPersona.background : localPersona.background,
+          // Merge expertise arrays
+          expertise: [
+            .../* @__PURE__ */ new Set([
+              ...systemPersona.expertise || [],
+              ...localPersona.expertise || []
+            ])
+          ],
+          // Update tracking
+          parentSystemVersion: systemPersona.version,
+          lastMerged: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        await this.context.storage.storePersonaFile(
+          personaId,
+          "profile.json",
+          JSON.stringify(merged, null, 2),
+          this.userId
+        );
+        return {
+          success: true,
+          merged,
+          conflicts: options?.conflictStrategy === "prefer-user" ? ["profile"] : []
+        };
+      }
+      /**
+       * Import a system persona for direct use
+       */
+      async importSystemPersona(systemPersonaId) {
+        if (!this.systemPersonaService.isAuthenticated()) {
+          return false;
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(systemPersonaId);
+        if (!systemPersona) {
+          return false;
+        }
+        const existingPersonas = await this.context.storage.listPersonas();
+        const personaExists = existingPersonas.includes(systemPersonaId);
+        if (personaExists) {
+          const existingContent = await this.context.storage.getPersonaFile(
+            systemPersonaId,
+            "profile.json",
+            this.userId
+          );
+          if (existingContent) {
+            const existing = JSON.parse(existingContent);
+            if (existing.version === systemPersona.version) {
+              return true;
+            }
+            this.log("info", `Updating system persona: ${systemPersonaId}`, {
+              oldVersion: existing.version,
+              newVersion: systemPersona.version
+            });
+          }
+        }
+        await this.context.storage.storePersonaFile(
+          systemPersonaId,
+          "profile.json",
+          JSON.stringify({
+            ...systemPersona,
+            sourceType: "system",
+            isSystemPersona: true
+          }, null, 2),
+          this.userId
+        );
+        return true;
+      }
+      /**
+       * Bootstrap a new persona from a system persona
+       */
+      async bootstrapPersona(options) {
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(options.systemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`System persona not found: ${options.systemPersonaId}`);
+        }
+        const newPersonaId = options.newName.toLowerCase().replace(/\s+/g, "-");
+        const existingPersonas = await this.context.storage.listPersonas();
+        if (existingPersonas.includes(newPersonaId)) {
+          throw new Error(`Persona with name "${options.newName}" already exists`);
+        }
+        await this.context.storage.createPersonaDirectories(newPersonaId, this.userId);
+        const now = (/* @__PURE__ */ new Date()).toISOString();
+        await this.context.storage.storePersonaFile(
+          newPersonaId,
+          "profile.json",
+          JSON.stringify({
+            id: newPersonaId,
+            name: options.newName,
+            description: systemPersona.description,
+            profile: systemPersona.profile,
+            background: options.personalizations?.background || systemPersona.background,
+            preferences: options.personalizations?.preferences,
+            expertise: systemPersona.expertise,
+            sourceType: "bootstrapped",
+            parentSystemPersonaId: systemPersona.id,
+            parentSystemVersion: systemPersona.version,
+            bootstrappedAt: now,
+            userCustomizedFields: Object.keys(options.personalizations || {}),
+            systemSnapshot: {
+              version: systemPersona.version,
+              description: systemPersona.description,
+              profile: systemPersona.profile,
+              background: systemPersona.background,
+              expertise: systemPersona.expertise
+            }
+          }, null, 2),
+          this.userId
+        );
+        return newPersonaId;
+      }
+      /**
+       * Update a bootstrapped persona from its parent system persona
+       */
+      async updateFromSystem(personaId) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          throw new Error(`Persona "${personaId}" not found`);
+        }
+        const existingPersona = JSON.parse(profileContent);
+        if (existingPersona.sourceType !== "bootstrapped") {
+          throw new Error(`Persona "${personaId}" was not bootstrapped from a system persona`);
+        }
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(existingPersona.parentSystemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`Parent system persona not found: ${existingPersona.parentSystemPersonaId}`);
+        }
+        if (systemPersona.version === existingPersona.parentSystemVersion) {
+          return {
+            success: true,
+            message: `Already up to date with system persona version ${systemPersona.version}`
+          };
+        }
+        const changes = {};
+        const skippedFields = [];
+        const updated = { ...existingPersona };
+        if (!existingPersona.userCustomizedFields.includes("description")) {
+          if (updated.description !== systemPersona.description) {
+            changes.description = { from: updated.description, to: systemPersona.description };
+            updated.description = systemPersona.description;
+          }
+        } else {
+          skippedFields.push("description");
+        }
+        if (!existingPersona.userCustomizedFields.includes("profile")) {
+          if (updated.profile !== systemPersona.profile) {
+            changes.profile = { from: updated.profile, to: systemPersona.profile };
+            updated.profile = systemPersona.profile;
+          }
+        } else {
+          skippedFields.push("profile");
+        }
+        if (!existingPersona.userCustomizedFields.includes("expertise")) {
+          if (JSON.stringify(updated.expertise) !== JSON.stringify(systemPersona.expertise)) {
+            changes.expertise = { from: updated.expertise, to: systemPersona.expertise };
+            updated.expertise = systemPersona.expertise;
+          }
+        }
+        updated.parentSystemVersion = systemPersona.version;
+        updated.systemSnapshot = {
+          version: systemPersona.version,
+          description: systemPersona.description,
+          profile: systemPersona.profile,
+          background: systemPersona.background,
+          expertise: systemPersona.expertise
+        };
+        await this.context.storage.storePersonaFile(
+          personaId,
+          "profile.json",
+          JSON.stringify(updated, null, 2),
+          this.userId
+        );
+        return {
+          success: true,
+          changes,
+          skippedFields,
+          ...skippedFields.length > 0 && {
+            message: "Some fields were skipped because they have been customized"
+          }
+        };
+      }
+      /**
+       * Mark a field as customized
+       */
+      async markFieldAsCustomized(personaId, field) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          throw new Error(`Persona "${personaId}" not found`);
+        }
+        const persona = JSON.parse(profileContent);
+        if (!persona.userCustomizedFields) {
+          persona.userCustomizedFields = [];
+        }
+        if (!persona.userCustomizedFields.includes(field)) {
+          persona.userCustomizedFields.push(field);
+        }
+        await this.context.storage.storePersonaFile(
+          personaId,
+          "profile.json",
+          JSON.stringify(persona, null, 2),
+          this.userId
+        );
+      }
+      /**
+       * Reset fields to system values
+       */
+      async resetToSystem(personaId, fields) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          throw new Error(`Persona "${personaId}" not found`);
+        }
+        const persona = JSON.parse(profileContent);
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(persona.parentSystemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`Parent system persona not found`);
+        }
+        for (const field of fields) {
+          if (field === "profile") {
+            persona.profile = systemPersona.profile;
+          } else if (field === "background") {
+            persona.background = systemPersona.background;
+          }
+          if (persona.userCustomizedFields) {
+            persona.userCustomizedFields = persona.userCustomizedFields.filter((f) => f !== field);
+          }
+        }
+        await this.context.storage.storePersonaFile(
+          personaId,
+          "profile.json",
+          JSON.stringify(persona, null, 2),
+          this.userId
+        );
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/index.ts
+var src_exports = {};
+__export(src_exports, {
+  ADRService: () => ADRService,
+  ADVERSARIAL_STEP: () => ADVERSARIAL_STEP,
+  ANALYZER_REGISTRY: () => ANALYZER_REGISTRY,
+  AgentFindingsSchema: () => AgentFindingsSchema,
+  AgentFormat: () => AgentFormat,
+  AgentInstallationService: () => AgentInstallationService,
+  AgentService: () => AgentService,
+  AgentsMdService: () => AgentsMdService,
+  AnalyseService: () => AnalyseService,
+  AnalysisService: () => AnalysisService,
+  AnalyzerDefinitionSchema: () => AnalyzerDefinitionSchema,
+  AnalyzerDetectionService: () => AnalyzerDetectionService,
+  AnalyzerExecutionResultSchema: () => AnalyzerExecutionResultSchema,
+  AnalyzerExecutionStatus: () => AnalyzerExecutionStatus,
+  AnalyzerExecutorService: () => AnalyzerExecutorService,
+  AnalyzerOutputFormat: () => AnalyzerOutputFormat,
+  AnalyzerResultsSchema: () => AnalyzerResultsSchema,
+  AnalyzerRunSummarySchema: () => AnalyzerRunSummarySchema,
+  AssemblyResultSchema: () => AssemblyResultSchema,
+  AssemblyService: () => AssemblyService,
+  AuthTokenService: () => AuthTokenService,
+  BaseDetector: () => BaseDetector,
+  BaseService: () => BaseService,
+  CAPABILITY_INSTALLERS: () => CAPABILITY_INSTALLERS,
+  CATEGORY_MAX_DEDUCTION: () => CATEGORY_MAX_DEDUCTION,
+  CATEGORY_WEIGHTS: () => CATEGORY_WEIGHTS,
+  CODE_COVERAGE_STEP: () => CODE_COVERAGE_STEP,
+  CategoryInvestigationSchema: () => CategoryInvestigationSchema,
+  CategoryProgressSchema: () => CategoryProgressSchema,
+  CategoryProgressSummarySchema: () => CategoryProgressSummarySchema,
+  CategoryScoreSchema: () => CategoryScoreSchema,
+  ChatAnalysisService: () => ChatAnalysisService,
+  CheckDefinitionSchema: () => CheckDefinitionSchema,
+  ClaudeCliClient: () => ClaudeCliClient,
+  ClaudeCodeFormatter: () => ClaudeCodeFormatter,
+  ConfigHealthService: () => ConfigHealthService,
+  ConfigService: () => ConfigService,
+  ConfigSetupService: () => ConfigSetupService,
+  ConsoleLogger: () => ConsoleLogger,
+  CredentialStorageService: () => CredentialStorageService,
+  DEFAULT_EFFORT_HOURS: () => DEFAULT_EFFORT_HOURS,
+  DEFAULT_PREFERENCES: () => DEFAULT_PREFERENCES,
+  DefaultModuleRegistry: () => DefaultModuleRegistry,
+  DetectedAnalyzerSchema: () => DetectedAnalyzerSchema,
+  ESLINT_HOOK_STEP: () => ESLINT_HOOK_STEP,
+  EXEC_HELPER_CONTENT: () => EXEC_HELPER_CONTENT,
+  EffortLevel: () => EffortLevel,
+  FileInvestigationResultSchema: () => FileInvestigationResultSchema,
+  FileInvestigationSchema: () => FileInvestigationSchema,
+  FileListingService: () => FileListingService,
+  FileLogger: () => FileLogger,
+  FileTaskProgressSchema: () => FileTaskProgressSchema,
+  FingerprintMatchSchema: () => FingerprintMatchSchema,
+  FixService: () => FixService,
+  FormatterFactory: () => FormatterFactory,
+  GRADE_THRESHOLDS: () => GRADE_THRESHOLDS,
+  HooksService: () => HooksService,
+  ImpactLevel: () => ImpactLevel,
+  ImprovementInitiativeSchema: () => ImprovementInitiativeSchema,
+  ImprovementPhaseSchema: () => ImprovementPhaseSchema,
+  InvestigationChecklistSchema: () => InvestigationChecklistSchema,
+  InvestigationCoverageSchema: () => InvestigationCoverageSchema,
+  InvestigationFileStatus: () => InvestigationFileStatus,
+  InvestigationFindingSchema: () => InvestigationFindingSchema,
+  InvestigationOrchestratorService: () => InvestigationOrchestratorService,
+  InvestigationProgressSummarySchema: () => InvestigationProgressSummarySchema,
+  InvestigationSummarySchema: () => InvestigationSummarySchema,
+  IssueFingerprintSchema: () => IssueFingerprintSchema,
+  IssueSeverity: () => IssueSeverity,
+  JavaScriptDetector: () => JavaScriptDetector,
+  KeyedAnalyzerSectionSchema: () => KeyedAnalyzerSectionSchema,
+  LOG_LEVEL_PRIORITY: () => LOG_LEVEL_PRIORITY,
+  LibraryClient: () => LibraryClient,
+  LocalFilesystemStorageAdapter: () => LocalFilesystemStorageAdapter,
+  LocalStoragePathBuilder: () => LocalStoragePathBuilder,
+  MatchResultSchema: () => MatchResultSchema,
+  MemoryService: () => MemoryService,
+  MessageDomain: () => MessageDomain,
+  MessageIntent: () => MessageIntent,
+  PROGRESS_SCHEMA_VERSION: () => PROGRESS_SCHEMA_VERSION,
+  PersonaEnhancer: () => PersonaEnhancer,
+  PersonaLearningService: () => PersonaLearningService,
+  PersonaService: () => PersonaService,
+  PersonaSyncService: () => PersonaSyncService,
+  PipelineService: () => PipelineService,
+  PlanningService: () => PlanningService,
+  PlatformConfigAdapter: () => PlatformConfigAdapter,
+  PlatformPathBuilder: () => PlatformPathBuilder,
+  PluginDiscoveryService: () => PluginDiscoveryService,
+  QualityCategory: () => QualityCategory,
+  QualityGrade: () => QualityGrade,
+  QualityImprovementPlanSchema: () => QualityImprovementPlanSchema,
+  QualityIssueSchema: () => QualityIssueSchema,
+  QualityRunResultSchema: () => QualityRunResultSchema,
+  QualityRunSummarySchema: () => QualityRunSummarySchema,
+  QualityService: () => QualityService,
+  RecommendationService: () => RecommendationService,
+  ReminderInbox: () => ReminderInbox,
+  RepoConfigService: () => RepoConfigService,
+  RepoService: () => RepoService,
+  ResponseValidationService: () => ResponseValidationService,
+  Result: () => ResultHelpers,
+  ReviewWatcher: () => ReviewWatcher,
+  RulesService: () => RulesService,
+  RunComparisonSchema: () => RunComparisonSchema,
+  SEVERITY_DEFAULT_HOURS: () => SEVERITY_DEFAULT_HOURS,
+  SEVERITY_MULTIPLIERS: () => SEVERITY_MULTIPLIERS,
+  SaveQualityRunInputSchema: () => SaveQualityRunInputSchema,
+  ScriptAnalyzer: () => ScriptAnalyzer,
+  SkillLoader: () => SkillLoader,
+  SkillValidationGrade: () => SkillValidationGrade,
+  SkillValidationService: () => SkillValidationService,
+  SkillValidationSeverity: () => SkillValidationSeverity,
+  SourceBreakdownSchema: () => SourceBreakdownSchema,
+  StrategyService: () => StrategyService,
+  StructuredRecommendationSchema: () => StructuredRecommendationSchema,
+  SystemPersonaService: () => SystemPersonaService,
+  TEST_PLAN_EMOJIS: () => TEST_PLAN_EMOJIS,
+  TYPESCRIPT_HOOK_STEP: () => TYPESCRIPT_HOOK_STEP,
+  TechContextService: () => TechContextService,
+  TechnicalDebtSummarySchema: () => TechnicalDebtSummarySchema,
+  ThinkingService: () => ThinkingService,
+  advancePipeline: () => advancePipeline,
+  analyseForCLI: () => analyseForCLI,
+  analyseRepository: () => analyseRepository,
+  analyzeComplexity: () => analyzeComplexity,
+  analyzeContextDrift: () => analyzeContextDrift,
+  analyzeEmotionalTone: () => analyzeEmotionalTone,
+  analyzeThoughtHistory: () => analyzeThoughtHistory,
+  appendEvent: () => appendEvent,
+  applyBulkUpdates: () => applyBulkUpdates,
+  applyEvent: () => applyEvent,
+  asImportLibraryPersona: () => asImportLibraryPersona,
+  asShowCurrent: () => asShowCurrent,
+  asSwitchPersona: () => asSwitchPersona,
+  autoCorrect: () => autoCorrect,
+  batchExecute: () => batchExecute,
+  bootstrapPersona: () => bootstrapPersona,
+  buildPersonaContext: () => buildPersonaContext,
+  buildQualityScores: () => buildQualityScores,
+  calculateComplexityScore: () => calculateComplexityScore,
+  calculateStructuralComplexity: () => calculateStructuralComplexity,
+  checkConsistency: () => checkConsistency,
+  checkGoalAlignment: () => checkGoalAlignment,
+  checkRequiresCodeSamples: () => checkRequiresCodeSamples,
+  checkRequiresExamples: () => checkRequiresExamples,
+  checkRequiresFactChecking: () => checkRequiresFactChecking,
+  checkRequiresStepByStep: () => checkRequiresStepByStep,
+  checkRequiresVisualization: () => checkRequiresVisualization,
+  chunk: () => chunk,
+  classifyIntent: () => classifyIntent,
+  classifyMemory: () => classifyMemory,
+  cleanString: () => cleanString,
+  clearCliStatusCache: () => clearCliStatusCache,
+  compact: () => compact,
+  compareAnalysis: () => compareAnalysis,
+  computeOverallScore: () => computeOverallScore,
+  configGet: () => configGet,
+  configList: () => configList,
+  configReset: () => configReset,
+  configSet: () => configSet2,
+  configShowSources: () => configShowSources,
+  createConsoleLogger: () => createConsoleLogger,
+  createDefaultProfile: () => createDefaultProfile,
+  createError: () => createError,
+  createMemoryModule: () => createMemoryModule,
+  createModuleContext: () => createModuleContext,
+  createModuleRegistry: () => createModuleRegistry,
+  createParallelExecutor: () => createParallelExecutor,
+  createPersonaModule: () => createPersonaModule,
+  deepClone: () => deepClone,
+  deepMerge: () => deepMerge,
+  deriveContainerStatus: () => deriveContainerStatus,
+  derivePhase: () => derivePhase,
+  detectADRPatterns: () => detectADRPatterns,
+  detectClaudeCliStatus: () => detectClaudeCliStatus,
+  detectRepositoryRoot: () => detectRepositoryRoot,
+  detectRepositoryRootSync: () => detectRepositoryRootSync,
+  detectTechStackChanges: () => detectTechStackChanges,
+  detectWorktreeInfo: () => detectWorktreeInfo,
+  detectWorktreeInfoSync: () => detectWorktreeInfoSync,
+  evaluateStrategy: () => evaluateStrategy,
+  executeParallel: () => executeParallel,
+  executeParallelMap: () => executeParallelMap,
+  extractConceptualIndicators: () => extractConceptualIndicators,
+  extractDetailsFromProfile: () => extractDetailsFromProfile,
+  extractDirective: () => extractDirective,
+  extractEntities: () => extractEntities,
+  extractFact: () => extractFact,
+  extractFeaturesFromText: () => extractFeaturesFromText,
+  extractInsights: () => extractInsights,
+  extractIntentSignals: () => extractIntentSignals,
+  extractKeyValuePairs: () => extractKeyValuePairs,
+  extractLearningInsights: () => extractLearningInsights,
+  extractPhasesFromText: () => extractPhasesFromText,
+  extractRelationships: () => extractRelationships,
+  extractRulesFromProfile: () => extractRulesFromProfile,
+  extractTechnicalIndicators: () => extractTechnicalIndicators,
+  extractTechnicalTerms: () => extractTechnicalTerms,
+  findLatestQualityRunDir: () => findLatestQualityRunDir,
+  findProjectRoot: () => findProjectRoot,
+  findRepoRoot: () => findRepoRoot,
+  first: () => first,
+  formatActionResults: () => formatActionResults,
+  formatActivationMessage: () => formatActivationMessage,
+  formatAgentChanges: () => formatAgentChanges,
+  formatConfigGet: () => formatConfigGet,
+  formatConfigList: () => formatConfigList,
+  formatConfigReset: () => formatConfigReset,
+  formatConfigSet: () => formatConfigSet,
+  formatConfigShowSources: () => formatConfigShowSources,
+  formatGraduated: () => formatGraduated,
+  formatPersona: () => formatPersona,
+  formatPersonaContext: () => formatPersonaContext,
+  formatPersonaList: () => formatPersonaList,
+  formatPlan: () => formatPlan,
+  formatPlanStructure: () => formatPlanStructure,
+  formatQualityAssembleRun: () => formatQualityAssembleRun,
+  formatQualityCompare: () => formatQualityCompare,
+  formatQualityDetails: () => formatQualityDetails,
+  formatQualityDetectAnalyzers: () => formatQualityDetectAnalyzers,
+  formatQualityHistory: () => formatQualityHistory,
+  formatQualityImplementPlan: () => formatQualityImplementPlan,
+  formatQualityMergeResults: () => formatQualityMergeResults,
+  formatQualityPlan: () => formatQualityPlan,
+  formatQualityPlanDetails: () => formatQualityPlanDetails,
+  formatQualityRunAnalyzers: () => formatQualityRunAnalyzers,
+  formatQualitySave: () => formatQualitySave,
+  formatRecommendationsList: () => formatRecommendationsList,
+  formatRulesList: () => formatRulesList,
+  formatRulesShow: () => formatRulesShow,
+  formatSystemReminder: () => formatSystemReminder,
+  formatTechStackChanges: () => formatTechStackChanges,
+  formatThoughtOutput: () => formatThoughtOutput,
+  formatTimestamp: () => formatTimestamp,
+  generateADRSuggestion: () => generateADRSuggestion,
+  generateComplexityReasoning: () => generateComplexityReasoning,
+  generateConsistencyReport: () => generateConsistencyReport,
+  generateHash: () => generateHash,
+  generateId: () => generateId,
+  generateMarkdown: () => generateMarkdown,
+  generatePersonaMarkdown: () => generatePersonaMarkdown,
+  generateQipMarkdown: () => generateQipMarkdown,
+  generateResponseStrategy: () => generateResponseStrategy,
+  generateRunId: () => generateRunId,
+  generateStatusReport: () => generateStatusReport,
+  generateThinkingReport: () => generateThinkingReport,
+  getActivePipeline: () => getActivePipeline,
+  getBootstrapInfo: () => getBootstrapInfo,
+  getCurrentTimestamp: () => getCurrentTimestamp,
+  getErrorMessage: () => getErrorMessage,
+  getHookSteps: () => getHookSteps,
+  getISOTimestamp: () => getISOTimestamp,
+  getIntentConfidence: () => getIntentConfidence,
+  getPackageVersion: () => getPackageVersion,
+  getPhaseDuration: () => getPhaseDuration,
+  getQualityStepScores: () => getQualityStepScores,
+  getRelativeTime: () => getRelativeTime,
+  getRepoRoot: () => getRepoRoot,
+  getServiceUrls: () => getServiceUrls,
+  getTBRUrl: () => getTBRUrl,
+  getTBSUrl: () => getTBSUrl,
+  groupBy: () => groupBy,
+  identifyContextualNeeds: () => identifyContextualNeeds,
+  identifyDomain: () => identifyDomain,
+  identifyDomainKeywords: () => identifyDomainKeywords,
+  identifyImplicitNeeds: () => identifyImplicitNeeds,
+  isArray: () => isArray,
+  isAtomicRecommendation: () => isAtomicRecommendation,
+  isBoolean: () => isBoolean2,
+  isBootstrappedPersona: () => isBootstrappedPersona,
+  isCapabilityRecommendation: () => isCapabilityRecommendation,
+  isDefined: () => isDefined,
+  isDevelopment: () => isDevelopment,
+  isEmpty: () => isEmpty,
+  isError: () => isError,
+  isNonEmptyString: () => isNonEmptyString,
+  isNullOrUndefined: () => isNullOrUndefined,
+  isNumber: () => isNumber,
+  isObject: () => isObject3,
+  isPhaseComplete: () => isPhaseComplete,
+  isPhaseInProgress: () => isPhaseInProgress,
+  isPipelineStep: () => isPipelineStep,
+  isString: () => isString,
+  isTaskComplete: () => isTaskComplete,
+  last: () => last,
+  loadFindingsFromQualityRun: () => loadFindingsFromQualityRun,
+  logServiceConfig: () => logServiceConfig,
+  markReviewStarted: () => markReviewStarted,
+  mergePersonaBlocks: () => mergePersonaBlocks,
+  mergeResults: () => mergeResults,
+  mergeSimilarFacts: () => mergeSimilarFacts,
+  mergeUpdates: () => mergeUpdates,
+  normalizePipeline: () => normalizePipeline,
+  normalizeStepType: () => normalizeStepType,
+  omit: () => omit2,
+  parseCommitMessage: () => parseCommitMessage,
+  parseFactsFromText: () => parseFactsFromText,
+  parseJsonWithRepair: () => parseJsonWithRepair,
+  parsePersistedReview: () => parsePersistedReview,
+  parsePersonaMarkdown: () => parsePersonaMarkdown,
+  parseProfile: () => parseProfile,
+  parseTestPlan: () => parseTestPlan,
+  parseTestPlanTable: () => parseTestPlanTable,
+  pathToRunId: () => pathToRunId,
+  personasArchive: () => personasArchive,
+  personasCreate: () => personasCreate,
+  personasList: () => personasList,
+  personasShow: () => personasShow,
+  personasUpdate: () => personasUpdate,
+  phaseToAction: () => phaseToAction,
+  pick: () => pick2,
+  planContentStrategy: () => planContentStrategy,
+  planResponseStructure: () => planResponseStructure,
+  processThought: () => processThought,
+  qualityAssembleRun: () => qualityAssembleRun,
+  qualityCompare: () => qualityCompare,
+  qualityDetails: () => qualityDetails,
+  qualityDetectAnalyzers: () => qualityDetectAnalyzers,
+  qualityHistory: () => qualityHistory,
+  qualityImplementPlan: () => qualityImplementPlan,
+  qualityMergeResults: () => qualityMergeResults,
+  qualityPlan: () => qualityPlan,
+  qualityPlanDetails: () => qualityPlanDetails,
+  qualityRunAnalyzers: () => qualityRunAnalyzers,
+  qualitySave: () => qualitySave,
+  readAllEvents: () => readAllEvents,
+  readCachedAnalyzers: () => readCachedAnalyzers,
+  readEventsForTask: () => readEventsForTask,
+  recommendationsAccept: () => recommendationsAccept,
+  recommendationsDismiss: () => recommendationsDismiss,
+  recommendationsGraduated: () => recommendationsGraduated,
+  recommendationsList: () => recommendationsList,
+  recommendationsRestore: () => recommendationsRestore,
+  repairJsonEscapes: () => repairJsonEscapes,
+  resolveFeatureFlags: () => resolveFeatureFlags,
+  resolvePersistPath: () => resolvePersistPath,
+  resolveQualityPersistPath: () => resolveQualityPersistPath,
+  resolveRepoRegistration: () => resolveRepoRegistration,
+  resolveStep: () => resolveStep,
+  rulesAdd: () => rulesAdd,
+  rulesList: () => rulesList,
+  rulesRemove: () => rulesRemove,
+  rulesShow: () => rulesShow,
+  runIdToPath: () => runIdToPath,
+  runSingleAnalyser: () => runSingleAnalyser,
+  scoreMemoryRelevance: () => scoreMemoryRelevance,
+  selectEnhancementTechniques: () => selectEnhancementTechniques,
+  serializeTestPlan: () => serializeTestPlan,
+  simpleHash: () => simpleHash,
+  stepForPhase: () => stepForPhase,
+  stringToStep: () => stringToStep,
+  taskRefsMatch: () => taskRefsMatch,
+  toCamelCase: () => toCamelCase,
+  toKebabCase: () => toKebabCase,
+  trimAll: () => trimAll,
+  truncate: () => truncate,
+  unique: () => unique,
+  updateQipMarkdown: () => updateQipMarkdown,
+  updateSystemBlock: () => updateSystemBlock,
+  updateUserBlock: () => updateUserBlock,
+  validateResponse: () => validateResponse,
+  validateThought: () => validateThought,
+  wrapError: () => wrapError
+});
+var init_src = __esm({
+  "packages/tiny-brain-core/src/index.ts"() {
+    "use strict";
+    init_types2();
+    init_config();
+    init_logger_interface();
+    init_console_logger();
+    init_file_logger();
+    init_storage_path_builder();
+    init_local_filesystem_adapter();
+    init_platform_path_builder();
+    init_platform_config_adapter();
+    init_base_service();
+    init_persona_service();
+    init_persona_enhancer();
+    init_persona_learning_service();
+    init_persona_context();
+    init_memory_service();
+    init_rules_service();
+    init_planning_service();
+    init_chat_analysis_service();
+    init_thinking_service();
+    init_response_validation_service();
+    init_strategy_service();
+    init_repo_config_service();
+    init_config_service();
+    init_fix_service();
+    init_types8();
+    init_adr_service();
+    init_types9();
+    init_plugin_discovery_service();
+    init_quality2();
+    init_hooks();
+    init_credential_storage_service();
+    init_auth_token_service();
+    init_analysis();
+    init_analysis();
+    init_analysis();
+    init_analysis();
+    init_analysis();
+    init_analysis();
+    init_analysis();
+    init_types10();
+    init_types11();
+    init_phase_derivation();
+    init_pipeline_normalizer();
+    init_pipeline_service();
+    init_pipeline();
+    init_persist();
+    init_quality_run_finder();
+    init_status_derivation();
+    init_review_watcher();
+    init_reminder_inbox();
+    init_event_store();
+    init_event_types();
+    init_types12();
+    init_repo_config();
+    init_user_preferences();
+    init_library_client();
+    init_skill_loader();
+    init_claude_cli_detection();
+    init_claude_cli_client();
+    init_registry2();
+    init_persona3();
+    init_persona2();
+    init_types13();
+    init_persona_markdown();
+    init_persona3();
+    init_analysis_diff();
+    init_analyser();
+    init_memory();
+    init_memory_classifier();
+    init_fact_extractor();
+    init_types14();
+    init_chat_analysis();
+    init_planning();
+    init_thinking();
+    init_response_validation();
+    init_strategy();
+    init_result();
+    init_context();
+    init_utils2();
+    init_constants();
+    init_handlers();
+    init_types16();
+    init_claude_code_formatter();
+    init_formatter_factory();
+    init_agent_installation_service();
+    init_repo_service();
+    init_repo_registration();
+    init_package_version();
+    init_agent_service();
+    init_system_persona_service();
+    init_persona_sync_service();
   }
 });
 
@@ -52163,6 +57633,9 @@ var require_main = __commonJS({
     module.exports = DotenvModule;
   }
 });
+
+// packages/tiny-brain-mcp/src/index.ts
+import { pathToFileURL } from "url";
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 import process2 from "node:process";
@@ -57491,7 +62964,7 @@ var StdioServerTransport = class {
   }
 };
 
-// packages/tiny-brain-mcp/src/index.ts
+// packages/tiny-brain-mcp/src/server.ts
 import { readFileSync as readFileSync4, appendFileSync, existsSync as existsSync12, mkdirSync as mkdirSync3 } from "fs";
 import { fileURLToPath as fileURLToPath8 } from "url";
 import { dirname as dirname13, join as join26 } from "path";
@@ -57647,8 +63120,8 @@ var Protocol = class {
                   if (queuedMessage.type === "response") {
                     resolver(message);
                   } else {
-                    const errorMessage = message;
-                    const error2 = new McpError(errorMessage.error.code, errorMessage.error.message, errorMessage.error.data);
+                    const errorMessage7 = message;
+                    const error2 = new McpError(errorMessage7.error.code, errorMessage7.error.message, errorMessage7.error.data);
                     resolver(error2);
                   }
                 } else {
@@ -58942,23 +64415,23 @@ var Server = class extends Protocol {
       const wrappedHandler = async (request, extra) => {
         const validatedRequest = safeParse3(CallToolRequestSchema, request);
         if (!validatedRequest.success) {
-          const errorMessage = validatedRequest.error instanceof Error ? validatedRequest.error.message : String(validatedRequest.error);
-          throw new McpError(ErrorCode.InvalidParams, `Invalid tools/call request: ${errorMessage}`);
+          const errorMessage7 = validatedRequest.error instanceof Error ? validatedRequest.error.message : String(validatedRequest.error);
+          throw new McpError(ErrorCode.InvalidParams, `Invalid tools/call request: ${errorMessage7}`);
         }
         const { params } = validatedRequest.data;
         const result = await Promise.resolve(handler(request, extra));
         if (params.task) {
           const taskValidationResult = safeParse3(CreateTaskResultSchema, result);
           if (!taskValidationResult.success) {
-            const errorMessage = taskValidationResult.error instanceof Error ? taskValidationResult.error.message : String(taskValidationResult.error);
-            throw new McpError(ErrorCode.InvalidParams, `Invalid task creation result: ${errorMessage}`);
+            const errorMessage7 = taskValidationResult.error instanceof Error ? taskValidationResult.error.message : String(taskValidationResult.error);
+            throw new McpError(ErrorCode.InvalidParams, `Invalid task creation result: ${errorMessage7}`);
           }
           return taskValidationResult.data;
         }
         const validationResult = safeParse3(CallToolResultSchema, result);
         if (!validationResult.success) {
-          const errorMessage = validationResult.error instanceof Error ? validationResult.error.message : String(validationResult.error);
-          throw new McpError(ErrorCode.InvalidParams, `Invalid tools/call result: ${errorMessage}`);
+          const errorMessage7 = validationResult.error instanceof Error ? validationResult.error.message : String(validationResult.error);
+          throw new McpError(ErrorCode.InvalidParams, `Invalid tools/call result: ${errorMessage7}`);
         }
         return validationResult.data;
       };
@@ -59240,724 +64713,7 @@ var Server = class extends Protocol {
 
 // packages/tiny-brain-mcp/src/core/mcp-server.ts
 init_src();
-
-// packages/tiny-brain-mcp/src/services/remote/auth-token-service.ts
 init_src();
-var AuthTokenService2 = class extends AuthTokenService {
-  constructor(context, config2) {
-    const credentials = config2?.account ? { clientId: config2.account.clientId, clientSecret: config2.account.clientSecret } : void 0;
-    super(context, credentials);
-  }
-};
-
-// packages/tiny-brain-mcp/src/services/credential-storage.service.ts
-init_src();
-
-// packages/tiny-brain-mcp/src/services/remote/system-persona-service.ts
-init_src();
-var SystemPersonaService = class extends BaseService {
-  tbrUrl;
-  // tiny-brain-remote for data
-  constructor(context) {
-    super(context);
-    this.tbrUrl = getTBRUrl();
-    this.log("debug", "SystemPersonaService initialized", {
-      tbrUrl: this.tbrUrl,
-      fromEnv: !!process.env.TBR_URL
-    });
-  }
-  /**
-   * Get auth token from context
-   */
-  getAuthToken() {
-    const localContext = this.context;
-    const token = localContext.authToken?.token || null;
-    this.log("debug", "getAuthToken called", {
-      hasAuthToken: !!localContext.authToken,
-      hasToken: !!token,
-      tokenPreview: token ? token.substring(0, 20) + "..." : "null",
-      contextKeys: Object.keys(localContext)
-    });
-    return token;
-  }
-  /**
-   * Make an MCP call to tiny-brain-remote
-   */
-  async callMCP(method, params) {
-    const token = this.getAuthToken();
-    if (!token) {
-      throw new Error("Not authenticated - no auth token in context");
-    }
-    const request = {
-      jsonrpc: "2.0",
-      method,
-      params,
-      id: Date.now()
-    };
-    const url = `${this.tbrUrl}/api/mcp`;
-    const headers = {
-      "Content-Type": "application/json",
-      "Accept": "application/json, text/event-stream",
-      "Authorization": `Bearer ${token}`
-    };
-    this.log("debug", "Making MCP call to tiny-brain-remote", {
-      method,
-      url,
-      requestBody: request,
-      authHeader: headers.Authorization.substring(0, 30) + "...",
-      fullToken: token
-      // Let's see the full token for debugging
-    });
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(request)
-    });
-    this.log("debug", "MCP response received", {
-      status: response.status,
-      statusText: response.statusText
-    });
-    if (!response.ok) {
-      throw new Error(`MCP call failed: ${response.status} ${response.statusText}`);
-    }
-    const text = await response.text();
-    this.log("debug", "MCP response text", {
-      length: text.length,
-      preview: text.substring(0, 200)
-    });
-    if (text.startsWith("event:")) {
-      const dataLine = text.split("\n").find((line) => line.startsWith("data: "));
-      if (dataLine) {
-        const jsonStr = dataLine.substring(6);
-        const data2 = JSON.parse(jsonStr);
-        this.log("debug", "Parsed SSE response", {
-          hasResult: !!data2.result,
-          hasError: !!data2.error,
-          resultIsError: data2.result?.isError,
-          fullResult: JSON.stringify(data2.result)
-          // Let's see the full result
-        });
-        if (data2.error) {
-          throw new Error(`MCP error: ${data2.error.message}`);
-        }
-        if (data2.result?.isError && data2.result?.content) {
-          const errorText = data2.result.content.filter((c) => c.type === "text").map((c) => c.text).join(" ");
-          throw new Error(`TBR error: ${errorText}`);
-        }
-        return data2.result;
-      }
-    }
-    const data = JSON.parse(text);
-    this.log("debug", "Parsed JSON response", {
-      hasResult: !!data.result,
-      hasError: !!data.error,
-      resultType: typeof data.result,
-      resultKeys: data.result ? Object.keys(data.result) : [],
-      resultIsError: data.result?.isError
-    });
-    if (data.error) {
-      throw new Error(`MCP error: ${data.error.message}`);
-    }
-    if (data.result?.isError && data.result?.content) {
-      const errorText = data.result.content.filter((c) => c.type === "text").map((c) => c.text).join(" ");
-      throw new Error(`TBR error: ${errorText}`);
-    }
-    return data.result;
-  }
-  /**
-   * Fetch all system personas
-   */
-  async fetchSystemPersonas() {
-    if (!this.getAuthToken()) {
-      this.log("info", "No auth token available, skipping system persona fetch");
-      return [];
-    }
-    try {
-      this.log("info", "Fetching system personas from tiny-brain-remote");
-      const result = await this.callMCP("tools/call", {
-        name: "system_personas",
-        arguments: {
-          operation: "list"
-        }
-      });
-      this.log("debug", "System personas result", {
-        hasResult: !!result,
-        resultType: typeof result,
-        resultKeys: result ? Object.keys(result) : [],
-        isError: result?.isError,
-        hasContent: !!result?.content
-      });
-      let personas = [];
-      if (result?.content && Array.isArray(result.content)) {
-        const textContent = result.content.find((c) => c.type === "text");
-        if (textContent?.text) {
-          try {
-            const parsed = JSON.parse(textContent.text);
-            this.log("debug", "Parsed personas response", {
-              hasPersonas: !!parsed.personas,
-              personasCount: parsed.personas?.length,
-              firstPersona: parsed.personas?.[0]
-            });
-            personas = parsed.personas || [];
-            personas = personas.map((p) => {
-              const metadata = p.metadata || p;
-              return {
-                id: `${metadata.category}-${metadata.subcategory}-${metadata.name}`,
-                name: metadata.name,
-                description: metadata.description || "",
-                profile: p.details || p.profile || "",
-                background: metadata.background || p.background,
-                expertise: metadata.expertise || p.expertise || [],
-                version: metadata.version || "1.0.0",
-                lastUpdated: metadata.lastUpdated || (/* @__PURE__ */ new Date()).toISOString()
-              };
-            });
-          } catch (parseError) {
-            this.log("error", "Failed to parse personas JSON", parseError);
-          }
-        }
-      } else if (result?.personas) {
-        personas = result.personas;
-      }
-      this.log("info", `Fetched ${personas.length} system personas`);
-      return personas;
-    } catch (error2) {
-      this.log("error", "Failed to fetch system personas", error2);
-      return [];
-    }
-  }
-  /**
-   * Fetch a specific system persona
-   */
-  async fetchSystemPersona(personaId) {
-    if (!this.getAuthToken()) {
-      this.log("info", "No auth token available, cannot fetch system persona");
-      return null;
-    }
-    try {
-      this.log("info", `Fetching system persona: ${personaId}`);
-      const parts = personaId.split("-");
-      let category;
-      let subcategory;
-      let name;
-      if (parts.length >= 3) {
-        category = parts[0];
-        subcategory = parts[1];
-        name = parts.slice(2).join("-");
-      } else if (parts.length === 2) {
-        category = parts[0];
-        subcategory = void 0;
-        name = parts[1];
-      } else {
-        category = parts[0];
-        subcategory = void 0;
-        name = parts[0];
-      }
-      const args = {
-        operation: "get",
-        category,
-        name
-      };
-      if (subcategory) {
-        args.subcategory = subcategory;
-      }
-      const result = await this.callMCP("tools/call", {
-        name: "system_personas",
-        arguments: args
-      });
-      let persona = null;
-      if (result?.content && Array.isArray(result.content)) {
-        const textContent = result.content.find((c) => c.type === "text");
-        if (textContent?.text) {
-          try {
-            const parsed = JSON.parse(textContent.text);
-            if (parsed) {
-              persona = {
-                id: personaId,
-                name: parsed.name || name,
-                description: parsed.description || "",
-                profile: parsed.profile || "",
-                background: parsed.background,
-                expertise: parsed.expertise || [],
-                version: parsed.version || "1.0.0",
-                lastUpdated: parsed.lastUpdated || (/* @__PURE__ */ new Date()).toISOString()
-              };
-            }
-          } catch (parseError) {
-            this.log("error", "Failed to parse persona JSON", parseError);
-          }
-        }
-      } else if (result && typeof result === "object" && result.name) {
-        persona = result;
-      }
-      if (!persona) {
-        this.log("warn", `System persona not found: ${personaId}`);
-        return null;
-      }
-      this.log("info", `Fetched system persona: ${personaId} (v${persona.version})`);
-      return persona;
-    } catch (error2) {
-      this.log("error", `Failed to fetch system persona: ${personaId}`, error2);
-      return null;
-    }
-  }
-  /**
-   * Check if authenticated
-   */
-  isAuthenticated() {
-    return !!this.getAuthToken();
-  }
-};
-
-// packages/tiny-brain-mcp/src/storage/local-filesystem-adapter.ts
-import { promises as fs28 } from "fs";
-import { dirname as dirname5, join as join16 } from "path";
-
-// packages/tiny-brain-mcp/src/storage/storage-path-builder.ts
-import { join as join15 } from "path";
-var LocalStoragePathBuilder = class {
-  basePath;
-  constructor(basePath = "~/.tiny-brain") {
-    this.basePath = basePath.startsWith("~") ? join15(process.env.HOME || process.env.USERPROFILE || "", basePath.slice(1)) : basePath;
-  }
-  buildPersonaPath(personaId, fileName, _userId) {
-    return join15(this.basePath, "personas", personaId, fileName);
-  }
-  buildPersonaDirectoryPath(personaId, _userId) {
-    return join15(this.basePath, "personas", personaId);
-  }
-  buildUserDataPath(key, _userId) {
-    return join15(this.basePath, key);
-  }
-  buildUserBasePath(_userId) {
-    return this.basePath;
-  }
-  extractPersonaId(path38) {
-    const parts = path38.split(/[/\\]/);
-    const personasIndex = parts.findIndex((part) => part === "personas");
-    return personasIndex !== -1 && personasIndex + 1 < parts.length ? parts[personasIndex + 1] : null;
-  }
-  extractUserId(_path) {
-    return null;
-  }
-};
-
-// packages/tiny-brain-mcp/src/storage/local-filesystem-adapter.ts
-var LocalFilesystemStorageAdapter = class {
-  pathBuilder;
-  autoCreate;
-  personasDir;
-  constructor(config2) {
-    this.pathBuilder = new LocalStoragePathBuilder(config2.baseDir);
-    this.autoCreate = config2.autoCreate ?? true;
-    this.personasDir = this.pathBuilder.buildUserBasePath() + "/personas";
-  }
-  async initializeUserStorage(_userId) {
-    if (!this.autoCreate) return;
-    const basePath = this.pathBuilder.buildUserBasePath();
-    const personasPath = join16(basePath, "personas");
-    await this.ensureDirectoryExists(basePath);
-    await this.ensureDirectoryExists(personasPath);
-  }
-  async storePersonaFile(personaId, fileName, content, _userId) {
-    const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
-    const directory = dirname5(filePath);
-    if (this.autoCreate) {
-      await this.ensureDirectoryExists(directory);
-    }
-    await fs28.writeFile(filePath, content, "utf8");
-  }
-  async getPersonaFile(personaId, fileName, _userId) {
-    const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
-    try {
-      return await fs28.readFile(filePath, "utf8");
-    } catch (error2) {
-      if (error2.code === "ENOENT") {
-        return null;
-      }
-      throw error2;
-    }
-  }
-  async deletePersonaFile(personaId, fileName, _userId) {
-    const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
-    try {
-      await fs28.unlink(filePath);
-    } catch (error2) {
-      if (error2.code !== "ENOENT") {
-        throw error2;
-      }
-    }
-  }
-  async listPersonaFiles(personaId, _userId) {
-    const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
-    try {
-      const getAllFiles = async (dir, basePath = "") => {
-        const entries = await fs28.readdir(dir, { withFileTypes: true });
-        const files = [];
-        for (const entry of entries) {
-          const fullPath = join16(dir, entry.name);
-          const relativePath = basePath ? join16(basePath, entry.name) : entry.name;
-          if (entry.isDirectory()) {
-            const subFiles = await getAllFiles(fullPath, relativePath);
-            files.push(...subFiles);
-          } else if (entry.isFile()) {
-            files.push(relativePath);
-          }
-        }
-        return files;
-      };
-      const allFiles = await getAllFiles(personaDir);
-      return allFiles;
-    } catch (error2) {
-      if (error2.code === "ENOENT") {
-        return [];
-      }
-      throw error2;
-    }
-  }
-  async listPersonas(_userId) {
-    const personasDir = join16(this.pathBuilder.buildUserBasePath(), "personas");
-    try {
-      const directories = await fs28.readdir(personasDir);
-      const dirStats = await Promise.all(
-        directories.map(async (dir) => {
-          const dirPath = join16(personasDir, dir);
-          const stat3 = await fs28.stat(dirPath);
-          return { name: dir, isDirectory: stat3.isDirectory() };
-        })
-      );
-      return dirStats.filter(({ isDirectory }) => isDirectory).map(({ name }) => name);
-    } catch (error2) {
-      if (error2.code === "ENOENT") {
-        return [];
-      }
-      throw error2;
-    }
-  }
-  async deletePersona(personaId, _userId) {
-    const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
-    try {
-      await fs28.rm(personaDir, { recursive: true, force: true });
-    } catch (error2) {
-      if (error2.code !== "ENOENT") {
-        throw error2;
-      }
-    }
-  }
-  async createPersonaDirectories(personaId, _userId) {
-    if (!this.autoCreate) {
-      return;
-    }
-    const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
-    await this.ensureDirectoryExists(personaDir);
-  }
-  async storeUserData(key, content, _userId) {
-    const filePath = this.pathBuilder.buildUserDataPath(key);
-    const directory = dirname5(filePath);
-    if (this.autoCreate) {
-      await this.ensureDirectoryExists(directory);
-    }
-    await fs28.writeFile(filePath, content, "utf8");
-  }
-  async getUserData(key, _userId) {
-    const filePath = this.pathBuilder.buildUserDataPath(key);
-    try {
-      return await fs28.readFile(filePath, "utf8");
-    } catch (error2) {
-      if (error2.code === "ENOENT") {
-        return null;
-      }
-      throw error2;
-    }
-  }
-  async deleteUserData(key, _userId) {
-    const filePath = this.pathBuilder.buildUserDataPath(key);
-    try {
-      await fs28.unlink(filePath);
-    } catch (error2) {
-      if (error2.code !== "ENOENT") {
-        throw error2;
-      }
-    }
-  }
-  async isAvailable() {
-    try {
-      const basePath = this.pathBuilder.buildUserBasePath();
-      if (this.autoCreate) {
-        await this.ensureDirectoryExists(basePath);
-      }
-      await fs28.access(basePath, fs28.constants.R_OK | fs28.constants.W_OK);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  async renamePersona(oldPersonaId, newPersonaId, _userId) {
-    const oldPath = dirname5(this.pathBuilder.buildPersonaPath(oldPersonaId, ""));
-    const newPath = dirname5(this.pathBuilder.buildPersonaPath(newPersonaId, ""));
-    try {
-      await fs28.access(oldPath);
-    } catch {
-      throw new Error(`Persona '${oldPersonaId}' does not exist`);
-    }
-    try {
-      await fs28.access(newPath);
-      throw new Error(`Persona '${newPersonaId}' already exists`);
-    } catch {
-    }
-    await fs28.rename(oldPath, newPath);
-    const profilePath = join16(newPath, "profile.md");
-    try {
-      const profileContent = await fs28.readFile(profilePath, "utf-8");
-      const lines = profileContent.split("\n");
-      if (lines[0].startsWith("#")) {
-        lines[0] = `# ${newPersonaId}`;
-        await fs28.writeFile(profilePath, lines.join("\n"), "utf-8");
-      }
-    } catch {
-    }
-    const metadataPath = join16(newPath, "metadata.json");
-    try {
-      const metadataContent = await fs28.readFile(metadataPath, "utf-8");
-      const metadata = JSON.parse(metadataContent);
-      metadata.name = newPersonaId;
-      metadata.lastRenamed = (/* @__PURE__ */ new Date()).toISOString();
-      await fs28.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
-    } catch {
-    }
-  }
-  getDeploymentInfo() {
-    return {
-      mode: "local",
-      supportsMultiUser: false,
-      basePath: this.pathBuilder.buildUserBasePath()
-    };
-  }
-  /**
-   * Ensure directory exists, creating it if necessary
-   */
-  async ensureDirectoryExists(dirPath) {
-    try {
-      await fs28.mkdir(dirPath, { recursive: true });
-    } catch (error2) {
-      if (error2.code !== "EEXIST") {
-        throw error2;
-      }
-    }
-  }
-  /**
-   * Get the base path for debugging/info purposes
-   */
-  getBasePath() {
-    return this.pathBuilder.buildUserBasePath();
-  }
-};
-
-// packages/tiny-brain-mcp/src/core/file-logger.ts
-import * as fs29 from "fs";
-import * as path31 from "path";
-var LOG_LEVELS = {
-  debug: 0,
-  info: 1,
-  notice: 2,
-  warning: 3,
-  error: 4,
-  critical: 5,
-  alert: 6,
-  emergency: 7
-};
-var FileLogger = class {
-  config;
-  fileStream;
-  currentFileSize = 0;
-  constructor(config2 = {}) {
-    const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    const defaultLogPath = path31.join(homeDir, ".tiny-brain", "debug.log");
-    this.config = {
-      logFilePath: config2.logFilePath || defaultLogPath,
-      maxFileSize: config2.maxFileSize || 10 * 1024 * 1024,
-      maxRotatedFiles: config2.maxRotatedFiles || 3,
-      appendMode: config2.appendMode !== false,
-      logLevel: config2.logLevel || "debug",
-      enabled: config2.enabled !== false
-    };
-    if (this.config.enabled) {
-      this.initialize();
-    }
-  }
-  setLogLevel(level) {
-    this.config.logLevel = level;
-  }
-  getLogLevel() {
-    return this.config.logLevel;
-  }
-  setMcpNotificationHandler(_handler) {
-  }
-  initialize() {
-    try {
-      const logDir = path31.dirname(this.config.logFilePath);
-      if (!fs29.existsSync(logDir)) {
-        fs29.mkdirSync(logDir, { recursive: true });
-      }
-      if (fs29.existsSync(this.config.logFilePath)) {
-        const stats = fs29.statSync(this.config.logFilePath);
-        this.currentFileSize = stats.size;
-        if (this.currentFileSize >= this.config.maxFileSize) {
-          this.rotateLogFile();
-          this.currentFileSize = 0;
-        }
-      }
-      this.fileStream = fs29.createWriteStream(this.config.logFilePath, {
-        flags: this.config.appendMode ? "a" : "w"
-      });
-      this.writeLog("info", "FileLogger initialized", {
-        logFilePath: this.config.logFilePath,
-        pid: process.pid
-      });
-    } catch {
-    }
-  }
-  rotateLogFile() {
-    try {
-      for (let i = this.config.maxRotatedFiles - 1; i >= 0; i--) {
-        const oldPath = i === 0 ? this.config.logFilePath : `${this.config.logFilePath}.${i}`;
-        const newPath = `${this.config.logFilePath}.${i + 1}`;
-        if (fs29.existsSync(oldPath)) {
-          if (i === this.config.maxRotatedFiles - 1) {
-            fs29.unlinkSync(oldPath);
-          } else {
-            fs29.renameSync(oldPath, newPath);
-          }
-        }
-      }
-    } catch {
-    }
-  }
-  shouldLog(level) {
-    if (!this.config.enabled || !this.fileStream) {
-      return false;
-    }
-    return LOG_LEVELS[level] >= LOG_LEVELS[this.config.logLevel];
-  }
-  writeLog(level, message, data) {
-    if (!this.shouldLog(level)) return;
-    try {
-      const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-      const logEntry = {
-        timestamp: timestamp2,
-        level: level.toUpperCase(),
-        pid: process.pid,
-        message,
-        ...data && { data }
-      };
-      const logLine = JSON.stringify(logEntry) + "\n";
-      const bytes = Buffer.byteLength(logLine);
-      if (this.currentFileSize + bytes > this.config.maxFileSize) {
-        this.fileStream?.end();
-        this.rotateLogFile();
-        this.currentFileSize = 0;
-        this.fileStream = fs29.createWriteStream(this.config.logFilePath, {
-          flags: "a"
-        });
-      }
-      this.fileStream?.write(logLine);
-      this.currentFileSize += bytes;
-    } catch {
-    }
-  }
-  debug(message, data) {
-    this.writeLog("debug", message, data);
-  }
-  info(message, data) {
-    this.writeLog("info", message, data);
-  }
-  notice(message, data) {
-    this.writeLog("notice", message, data);
-  }
-  warn(message, data) {
-    this.writeLog("warning", message, data);
-  }
-  warning(message, data) {
-    this.writeLog("warning", message, data);
-  }
-  error(message, error2) {
-    const errorData = error2 instanceof Error ? {
-      message: error2.message,
-      stack: error2.stack,
-      name: error2.name
-    } : error2;
-    this.writeLog("error", message, errorData);
-  }
-  critical(message, data) {
-    this.writeLog("critical", message, data);
-  }
-  alert(message, data) {
-    this.writeLog("alert", message, data);
-  }
-  emergency(message, data) {
-    this.writeLog("emergency", message, data);
-  }
-  child(context) {
-    return new ContextualFileLogger(this, context);
-  }
-  async close() {
-    return new Promise((resolve3) => {
-      if (this.fileStream) {
-        this.fileStream.end(() => {
-          this.fileStream = void 0;
-          resolve3();
-        });
-      } else {
-        resolve3();
-      }
-    });
-  }
-};
-var ContextualFileLogger = class {
-  constructor(parent, context) {
-    this.parent = parent;
-    this.context = context;
-  }
-  setLogLevel(level) {
-    this.parent.setLogLevel(level);
-  }
-  getLogLevel() {
-    return this.parent.getLogLevel();
-  }
-  setMcpNotificationHandler(handler) {
-    this.parent.setMcpNotificationHandler(handler);
-  }
-  debug(message, data) {
-    this.parent.debug(`[${this.context}] ${message}`, data);
-  }
-  info(message, data) {
-    this.parent.info(`[${this.context}] ${message}`, data);
-  }
-  notice(message, data) {
-    this.parent.notice(`[${this.context}] ${message}`, data);
-  }
-  warn(message, data) {
-    this.parent.warn(`[${this.context}] ${message}`, data);
-  }
-  warning(message, data) {
-    this.parent.warning(`[${this.context}] ${message}`, data);
-  }
-  error(message, error2) {
-    this.parent.error(`[${this.context}] ${message}`, error2);
-  }
-  critical(message, data) {
-    this.parent.critical(`[${this.context}] ${message}`, data);
-  }
-  alert(message, data) {
-    this.parent.alert(`[${this.context}] ${message}`, data);
-  }
-  emergency(message, data) {
-    this.parent.emergency(`[${this.context}] ${message}`, data);
-  }
-  child(context) {
-    return this.parent.child(`${this.context}:${context}`);
-  }
-};
 
 // packages/tiny-brain-mcp/src/tools/rules/rules.tool.ts
 init_zod();
@@ -59987,13 +64743,9 @@ var createSuccessResult = (text) => ({
 init_src();
 var RulesArgsSchema = external_exports.object({
   operation: external_exports.enum(["add", "list", "show", "remove"]),
-  content: external_exports.string().optional(),
-  context: external_exports.string().optional()
+  content: external_exports.string().optional()
 });
-var RulesTool = class _RulesTool {
-  /**
-   * Get the tool definition
-   */
+var RulesTool = class {
   static getToolDefinition() {
     return {
       name: "rules",
@@ -60009,10 +64761,6 @@ var RulesTool = class _RulesTool {
           content: {
             type: "string",
             description: "For add: rule to add. For list/remove: search query. Not needed for show."
-          },
-          context: {
-            type: "string",
-            description: "Optional context or category (for add operation)"
           }
         },
         required: ["operation"]
@@ -60021,19 +64769,16 @@ var RulesTool = class _RulesTool {
   }
   static async execute(args, context) {
     try {
-      const validatedArgs = RulesArgsSchema.parse(args);
-      const rulesService = new RulesService(context);
-      switch (validatedArgs.operation) {
+      const parsed = RulesArgsSchema.parse(args);
+      switch (parsed.operation) {
         case "add":
-          return await _RulesTool.handleAdd(validatedArgs, rulesService, context.userId);
+          return await handleAdd(parsed, context);
         case "list":
-          return await _RulesTool.handleList(validatedArgs, rulesService, context.userId);
+          return await handleList(parsed, context);
         case "show":
-          return await _RulesTool.handleShow(rulesService, context.userId);
+          return await handleShow(context);
         case "remove":
-          return await _RulesTool.handleRemove(validatedArgs, rulesService, context.userId);
-        default:
-          return createErrorResult(`Unknown rules operation: ${validatedArgs.operation}`);
+          return await handleRemove(parsed, context);
       }
     } catch (error2) {
       if (error2 instanceof external_exports.ZodError) {
@@ -60044,1944 +64789,142 @@ var RulesTool = class _RulesTool {
       return createErrorResult(error2 instanceof Error ? error2.message : "Unknown error occurred");
     }
   }
-  static async handleAdd(args, rulesService, userId) {
-    if (!args.content) {
-      return createErrorResult("Content is required for add operation");
-    }
-    if (!userId) {
-      return createErrorResult("User ID is required");
-    }
-    try {
-      const result = await rulesService.addRule(args.content, userId);
-      if (!result.success) {
-        return createErrorResult(result.message);
-      }
-      return createSuccessResult(
-        `${result.message}
-Rule: "${result.rule}"
-Total rules: ${result.totalRules}`
-      );
-    } catch (error2) {
-      return createErrorResult(
-        `Failed to add rule: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-      );
-    }
-  }
-  static async handleList(args, rulesService, userId) {
-    if (!userId) {
-      return createErrorResult("User ID is required");
-    }
-    try {
-      const result = await rulesService.listRules(args.content, userId);
-      if (result.rules.length === 0) {
-        return createSuccessResult("No rules found" + (args.content ? ` matching "${args.content}"` : ""));
-      }
-      const rulesText = result.rules.map((rule, index) => `${index + 1}. ${rule}`).join("\n");
-      return createSuccessResult(`Found ${result.totalRules} rule(s):
-
-${rulesText}`);
-    } catch (error2) {
-      return createErrorResult(
-        `Failed to list rules: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-      );
-    }
-  }
-  static async handleShow(rulesService, userId) {
-    if (!userId) {
-      return createErrorResult("User ID is required");
-    }
-    try {
-      const data = await rulesService.getAllRules(userId);
-      if (data.rules.length === 0) {
-        return createSuccessResult("No rules defined yet.");
-      }
-      const rulesText = data.rules.map((rule, index) => `${index + 1}. ${rule}`).join("\n");
-      const output = `# Golden Rules
-
-${rulesText}
-
----
-Created: ${data.metadata.createdAt}
-Last updated: ${data.metadata.updatedAt}
-Total rules: ${data.rules.length}`;
-      return createSuccessResult(output);
-    } catch (error2) {
-      return createErrorResult(
-        `Failed to show rules: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-      );
-    }
-  }
-  static async handleRemove(args, rulesService, userId) {
-    if (!args.content) {
-      return createErrorResult("Content is required for remove operation");
-    }
-    if (!userId) {
-      return createErrorResult("User ID is required");
-    }
-    try {
-      const result = await rulesService.removeRule(args.content, userId);
-      if (!result.success) {
-        return createErrorResult(result.message);
-      }
-      return createSuccessResult(
-        `${result.message}
-Removed: "${result.removedRule}"
-Remaining rules: ${result.remainingRules}`
-      );
-    } catch (error2) {
-      return createErrorResult(
-        `Failed to remove rule: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-      );
-    }
-  }
 };
+async function handleAdd(args, ctx) {
+  const result = await rulesAdd({ content: args.content ?? "" }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(
+    `Rule added successfully
+Rule: "${result.data.rule}"
+Total rules: ${result.data.totalRules}`
+  );
+}
+async function handleList(args, ctx) {
+  const result = await rulesList({ query: args.content }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatRulesList(result.data, args.content));
+}
+async function handleShow(ctx) {
+  const result = await rulesShow(ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatRulesShow(result.data));
+}
+async function handleRemove(args, ctx) {
+  const result = await rulesRemove({ query: args.content ?? "" }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(
+    `Rule removed successfully
+Removed: "${result.data.removedRule}"
+Remaining rules: ${result.data.remainingRules}`
+  );
+}
 
 // packages/tiny-brain-mcp/src/tools/persona/as.tool.ts
 init_zod();
 init_src();
-
-// packages/tiny-brain-mcp/src/services/persona-service.ts
-init_src();
-var PersonaService2 = class extends PersonaService {
-  systemPersonaService;
-  constructor(context) {
-    super(context);
-    this.systemPersonaService = new SystemPersonaService(context);
-  }
-  /**
-   * Get insights for a persona
-   */
-  async getInsights(personaName) {
-    try {
-      const insightsContent = await this.storage.getPersonaFile(personaName, "insights.json", this.userId);
-      if (!insightsContent) return null;
-      return JSON.parse(insightsContent);
-    } catch (error2) {
-      this.log("debug", `Failed to load insights for ${personaName}:`, error2);
-      return null;
-    }
-  }
-  /**
-   * Override listPersonasWithMode to add library support
-   */
-  async listPersonasWithMode(mode = "all") {
-    const result = [];
-    const activePersona = this.context.activePersona?.id;
-    this.log("debug", `listPersonasWithMode called with mode: ${mode}`, {
-      hasAuthToken: !!this.systemPersonaService.isAuthenticated(),
-      authTokenDetails: this.context.authToken ? "present" : "missing"
-    });
-    if (mode === "local" || mode === "all") {
-      const localPersonas = await this.listPersonas({ includeArchived: false });
-      for (const name of localPersonas) {
-        const item = {
-          name,
-          source: "local",
-          isActive: name === activePersona
-        };
-        try {
-          const metadataContent = await this.storage.getPersonaFile(name, "metadata.json", this.userId);
-          if (metadataContent) {
-            const metadata = JSON.parse(metadataContent);
-            if (metadata.description) {
-              item.description = metadata.description;
-            }
-            if (metadata.sourceLibrary) {
-              item.isSynced = true;
-              item.libraryId = metadata.sourceLibrary.id;
-            }
-          }
-        } catch {
-        }
-        if (!item.description) {
-          try {
-            const persona = await this.loadPersona({ personaName: name });
-            if (persona && persona.persona) {
-              const description = persona.persona.system.metadata.description;
-              if (description) {
-                item.description = description;
-              }
-            }
-          } catch {
-          }
-        }
-        result.push(item);
-      }
-    }
-    const isAuthenticated = this.systemPersonaService.isAuthenticated();
-    this.log("info", `Library persona check: mode=${mode}, authenticated=${isAuthenticated}`);
-    const context = this.context;
-    this.log("info", `Context check: hasAuthToken=${!!context.authToken}, tokenPreview=${context.authToken?.token ? context.authToken.token.substring(0, 20) + "..." : "none"}`);
-    if (mode === "library" || mode === "all") {
-      if (!isAuthenticated) {
-        if (mode === "library" || mode === "all") {
-          const placeholderItem = {
-            name: "_library_unavailable",
-            source: "library",
-            description: "Authentication required to access library personas",
-            isPlaceholder: true
-          };
-          result.push(placeholderItem);
-        }
-      } else {
-        try {
-          this.log("info", "Fetching library personas...");
-          const libraryPersonas = await this.systemPersonaService.fetchSystemPersonas();
-          this.log("info", `Fetched ${libraryPersonas.length} library personas`);
-          const libraryToLocal = /* @__PURE__ */ new Map();
-          if (mode === "all") {
-            for (const localItem of result) {
-              if (localItem.libraryId) {
-                libraryToLocal.set(localItem.libraryId, localItem.name);
-              }
-            }
-          } else {
-            const localPersonas = await this.listPersonas({ includeArchived: false });
-            for (const name of localPersonas) {
-              try {
-                const metadataContent = await this.storage.getPersonaFile(name, "metadata.json", this.userId);
-                if (metadataContent) {
-                  const metadata = JSON.parse(metadataContent);
-                  if (metadata.sourceLibrary?.id) {
-                    libraryToLocal.set(metadata.sourceLibrary.id, name);
-                  }
-                }
-              } catch {
-              }
-            }
-          }
-          for (const libraryPersona of libraryPersonas) {
-            const item = {
-              name: libraryPersona.name,
-              source: "library",
-              description: libraryPersona.description,
-              version: libraryPersona.version,
-              libraryId: libraryPersona.id
-            };
-            const localName = libraryToLocal.get(libraryPersona.id);
-            if (localName) {
-              item.isSynced = true;
-              item.syncedLocalName = localName;
-            }
-            result.push(item);
-          }
-        } catch (error2) {
-          this.log("warn", "Failed to fetch library personas", error2);
-        }
-      }
-    }
-    return result;
-  }
-  /**
-   * Import a library persona by name or ID
-   */
-  async importLibraryPersonaByName(nameOrId) {
-    if (!this.systemPersonaService.isAuthenticated()) {
-      return null;
-    }
-    const libraryPersonas = await this.systemPersonaService.fetchSystemPersonas();
-    const libraryPersona = libraryPersonas.find(
-      (p) => p.name === nameOrId || p.id === nameOrId
-    );
-    if (!libraryPersona) {
-      return null;
-    }
-    const fullPersona = await this.systemPersonaService.fetchSystemPersona(libraryPersona.id);
-    if (!fullPersona) {
-      this.log("warn", `Could not fetch full details for library persona: ${libraryPersona.id}`);
-      return null;
-    }
-    const localName = await super.importLibraryPersona(fullPersona);
-    return localName;
-  }
-  /**
-   * Check if a persona exists locally
-   */
-  async exists(personaName) {
-    const personas = await this.listPersonas({});
-    return personas.includes(personaName);
-  }
-  /**
-   * Ensure a persona has a USER block for user customizations
-   */
-  async ensureUserBlock(personaName) {
-    let profileContent;
-    try {
-      profileContent = await this.context.storage.getPersonaFile(
-        personaName,
-        "profile.md",
-        this.context.userId
-      );
-    } catch {
-      this.log("warn", `Could not load persona ${personaName} to add USER block`);
-      return;
-    }
-    if (!profileContent) {
-      this.log("warn", `Persona ${personaName} has no profile.md content`);
-      return;
-    }
-    if (profileContent.includes("<!-- USER-BLOCK-START -->")) {
-      this.log("info", `Persona ${personaName} already has USER block`);
-      return;
-    }
-    const enhancedProfile = this.addUserBlockToProfile(profileContent, personaName);
-    await this.savePersona({
-      personaName,
-      profile: enhancedProfile
-    });
-    this.log("info", `Added USER block to persona ${personaName}`);
-  }
-  /**
-   * Add a USER block to a persona
-   */
-  addUserBlock(persona, localName) {
-    this.log("debug", `addUserBlock called with persona keys: ${Object.keys(persona)}, systemBlock type: ${typeof persona.systemBlock}`);
-    if (!persona.systemBlock) {
-      this.log("error", `addUserBlock: systemBlock is undefined or null`);
-      throw new Error("systemBlock is required but was undefined");
-    }
-    const enhancedSystemBlock = this.addUserBlockToProfile(persona.systemBlock, localName);
-    return {
-      ...persona,
-      systemBlock: enhancedSystemBlock
-    };
-  }
-  /**
-   * Add a USER block to a profile string that doesn't have one
-   */
-  addUserBlockToProfile(profileContent, personaName) {
-    this.log("debug", `addUserBlockToProfile called with profileContent type: ${typeof profileContent}, length: ${profileContent?.length || 0}`);
-    if (!profileContent) {
-      this.log("error", `addUserBlockToProfile: profileContent is undefined or null`);
-      throw new Error("profileContent is required but was undefined");
-    }
-    const systemBlockEnd = "<!-- SYSTEM-BLOCK-END -->";
-    const systemEndIndex = profileContent.indexOf(systemBlockEnd);
-    const userBlock = `
-
-<!-- USER-BLOCK-START -->
-## User Metadata
-- Created: ${(/* @__PURE__ */ new Date()).toISOString()}
-- Modified: ${(/* @__PURE__ */ new Date()).toISOString()}
-- Source: Library (${personaName})
-
-## User Rules
-<!-- User can add custom rules here -->
-
-## User Details
-<!-- User can add custom details here -->
-<!-- USER-BLOCK-END -->`;
-    if (systemEndIndex === -1) {
-      return profileContent + userBlock;
-    }
-    const insertPoint = systemEndIndex + systemBlockEnd.length;
-    const before = profileContent.substring(0, insertPoint);
-    const after = profileContent.substring(insertPoint);
-    return before + userBlock + after;
-  }
-  /**
-   * Add agent instructions to a persona's USER block
-   */
-  async addAgentInstructions(personaName, agentList) {
-    let profileContent;
-    try {
-      profileContent = await this.context.storage.getPersonaFile(
-        personaName,
-        "profile.md",
-        this.context.userId
-      );
-    } catch {
-      this.log("warn", `Could not load persona ${personaName} for agent enhancement`);
-      return;
-    }
-    if (!profileContent) {
-      this.log("warn", `Persona ${personaName} has no profile.md content`);
-      return;
-    }
-    const { PersonaEnhancer: PersonaEnhancer2 } = await Promise.resolve().then(() => (init_persona_enhancer(), persona_enhancer_exports));
-    const profileWithAgents = PersonaEnhancer2.enhanceProfile(profileContent, {
-      personaName,
-      installedAgents: agentList
-    });
-    await this.savePersona({
-      personaName,
-      profile: profileWithAgents
-    });
-    this.log("info", `Added agent instructions to persona ${personaName}`);
-  }
-};
-
-// packages/tiny-brain-mcp/src/services/repo-service.ts
-import * as fs30 from "fs/promises";
-import { existsSync as existsSync8, readFileSync } from "fs";
-import * as path32 from "path";
-import { fileURLToPath as fileURLToPath5 } from "url";
-
-// packages/tiny-brain-mcp/src/utils/repo-utils.ts
-import { execSync as execSync2 } from "child_process";
-import { existsSync as existsSync7 } from "fs";
-import { join as join18, dirname as dirname7 } from "path";
-import { fileURLToPath as fileURLToPath4 } from "url";
-function findRepoRoot(startPath) {
-  const cwd = startPath || process.cwd();
-  try {
-    const gitRoot = execSync2("git rev-parse --show-toplevel", {
-      cwd,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "ignore"]
-      // Ignore stderr
-    }).trim();
-    if (gitRoot && existsSync7(gitRoot)) {
-      return gitRoot;
-    }
-  } catch {
-  }
-  let currentPath = cwd;
-  while (currentPath !== dirname7(currentPath)) {
-    if (existsSync7(join18(currentPath, ".git"))) {
-      return currentPath;
-    }
-    currentPath = dirname7(currentPath);
-  }
-  console.warn("No git repository found, using current directory:", cwd);
-  return cwd;
-}
-var cachedRepoRoot = null;
-function getRepoRoot() {
-  if (!cachedRepoRoot) {
-    const thisFileDir = dirname7(fileURLToPath4(import.meta.url));
-    cachedRepoRoot = findRepoRoot(thisFileDir);
-  }
-  return cachedRepoRoot;
-}
-
-// packages/tiny-brain-mcp/src/services/repo-service.ts
-init_src();
-var RepoService = class _RepoService {
-  constructor(context) {
-    this.context = context;
-    const contextWithRepo = {
-      ...context,
-      repositoryRoot: context.repositoryRoot || this.getRepositoryRoot()
-    };
-    this.configService = new ConfigService(contextWithRepo);
-  }
-  static REPO_BLOCK_START = "## tiny-brain - start";
-  static REPO_BLOCK_END = "## tiny-brain - end";
-  configService;
-  /**
-   * Get repository root using the repo-utils helper
-   * This is used as fallback when context.repositoryRoot is not set
-   */
-  getRepositoryRoot() {
-    try {
-      return getRepoRoot();
-    } catch {
-      return void 0;
-    }
-  }
-  /**
-   * Read the repository block from context file (for legacy migration)
-   */
-  async readRepoBlockFromContextFile(contextFilePath = "CLAUDE.md") {
-    try {
-      const repoRoot = getRepoRoot();
-      const fullPath = path32.join(repoRoot, contextFilePath);
-      const content = await fs30.readFile(fullPath, "utf-8");
-      const startMarker = _RepoService.REPO_BLOCK_START;
-      const endMarker = _RepoService.REPO_BLOCK_END;
-      const startIndex = content.indexOf(startMarker);
-      if (startIndex === -1) {
-        return null;
-      }
-      const endIndex = content.indexOf(endMarker, startIndex);
-      if (endIndex === -1) {
-        const nextSectionIndex = content.indexOf("\n## ", startIndex + 1);
-        if (nextSectionIndex > -1) {
-          return content.substring(startIndex, nextSectionIndex).trimEnd();
-        }
-        return content.substring(startIndex).trimEnd();
-      }
-      return content.substring(startIndex, endIndex + endMarker.length).trimEnd();
-    } catch (error2) {
-      if (error2.code === "ENOENT") {
-        return null;
-      }
-      throw error2;
-    }
-  }
-  /**
-   * Extract version from tiny-brain block frontmatter
-   * @param content - The content containing the tiny-brain block
-   * @returns Version string or null if not found/invalid
-   */
-  extractTinyBrainVersion(content) {
-    const versionRegex = /## tiny-brain - start\n---\nversion: ([0-9]+\.[0-9]+\.[0-9]+)/;
-    const match2 = content.match(versionRegex);
-    return match2 ? match2[1] : null;
-  }
-  /**
-   * Check if we're in a repository context
-   */
-  isInRepository() {
-    try {
-      getRepoRoot();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  /**
-   * Check if repository is initialized (has .tiny-brain/analysis.json)
-   * This is the new initialization check - no longer checks CLAUDE.md
-   */
-  async isRepositoryInitialized() {
-    if (!this.isInRepository()) {
-      return false;
-    }
-    try {
-      const repoRoot = getRepoRoot();
-      const analysisPath = path32.join(repoRoot, ".tiny-brain", "analysis.json");
-      return existsSync8(analysisPath);
-    } catch {
-      return false;
-    }
-  }
-  /**
-   * Get the analysis version from package.json
-   */
-  getAnalysisVersion() {
-    try {
-      const currentFilePath = fileURLToPath5(import.meta.url);
-      const packageJsonPath = path32.join(path32.dirname(currentFilePath), "../../package.json");
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
-      return packageJson.version || "0.0.0";
-    } catch (error2) {
-      this.context.logger.warn("Failed to read package version:", error2);
-      return "0.0.0";
-    }
-  }
-  /**
-   * Write workflow sections to CLAUDE.md based on config flags
-   *
-   * Writes the following sections when their respective flags are enabled:
-   * - Commit Message Format (when SDD enabled)
-   * - TDD Workflow (when TDD enabled)
-   * - Progress Tracking Auto-Commit Configuration (when SDD enabled)
-   * - Operational Tracking Directory (when SDD enabled)
-   */
-  async writeWorkflowSections(options = {}) {
-    const { contextPath = "CLAUDE.md" } = options;
-    const enableSDD = await this.configService.isSDDEnabled();
-    const enableTDD = await this.configService.isTDDEnabled();
-    const enableAgentic = await this.configService.isAgenticCodingEnabled();
-    if (!enableSDD && !enableTDD) {
-      return;
-    }
-    let workflowContent = "";
-    workflowContent += this.formatRepoContextSection(enableAgentic, options.isMonorepo);
-    if (enableSDD) {
-      workflowContent += this.formatCommitMessageSection();
-    }
-    if (enableTDD) {
-      workflowContent += this.formatTDDWorkflowSection();
-    }
-    if (enableSDD) {
-      workflowContent += this.formatProgressTrackingSection();
-    }
-    if (enableSDD) {
-      workflowContent += this.formatWorktreeMergeSection();
-    }
-    if (enableSDD) {
-      workflowContent += this.formatOperationalTrackingSection();
-    }
-    const version2 = this.getAnalysisVersion();
-    const repoBlock = `${_RepoService.REPO_BLOCK_START}
----
-version: ${version2}
----
-
-${workflowContent}${_RepoService.REPO_BLOCK_END}
-`;
-    const repoRoot = getRepoRoot();
-    const fullPath = path32.join(repoRoot, contextPath);
-    let existingContent = "";
-    try {
-      existingContent = await fs30.readFile(fullPath, "utf-8");
-    } catch {
-    }
-    const startMarker = _RepoService.REPO_BLOCK_START;
-    const endMarker = _RepoService.REPO_BLOCK_END;
-    if (existingContent.includes(startMarker)) {
-      const startIndex = existingContent.indexOf(startMarker);
-      const endIndex = existingContent.indexOf(endMarker, startIndex);
-      if (endIndex > -1) {
-        const afterEnd = existingContent.substring(endIndex + endMarker.length);
-        existingContent = existingContent.substring(0, startIndex) + repoBlock + afterEnd;
-      } else {
-        const nextSectionIndex = existingContent.indexOf("\n## ", startIndex + 1);
-        if (nextSectionIndex > -1) {
-          existingContent = existingContent.substring(0, startIndex) + repoBlock + existingContent.substring(nextSectionIndex);
-        } else {
-          existingContent = existingContent.substring(0, startIndex) + repoBlock;
-        }
-      }
-    } else {
-      existingContent = existingContent.trimEnd() + "\n\n" + repoBlock;
-    }
-    await fs30.mkdir(path32.dirname(fullPath), { recursive: true });
-    await fs30.writeFile(fullPath, existingContent, "utf-8");
-    this.context.logger.info(`Updated workflow sections in ${contextPath}`);
-  }
-  /**
-   * Format the Repository Context section
-   * When agentic coding is enabled, includes a mandatory agent delegation section
-   */
-  formatRepoContextSection(enableAgenticCoding, isMonorepo) {
-    let content = `## Repository Context
-
-`;
-    if (isMonorepo) {
-      content += `Before starting work, read the root \`AGENTS.md\` for comprehensive project context (tech stack, commands, structure).
-When working in a specific package, also read that package's \`AGENTS.md\` for package-specific details.
-`;
-    } else {
-      content += `Before starting work, read \`AGENTS.md\` for comprehensive project context (tech stack, commands, structure).
-`;
-    }
-    content += `Also read \`.tiny-brain/analysis.json\` for detailed detection data and test patterns.
-
-`;
-    if (enableAgenticCoding) {
-      content += `## TDD Implementation
-
-Write tests and production code directly in the main session. Follow the RED/GREEN/REFACTOR cycle:
-
-1. **RED**: Write failing tests, commit with \`test:\` prefix
-2. **GREEN**: Write minimum implementation to pass tests, commit with \`feat:\` prefix
-   - The review pipeline triggers automatically after feat: commits (via pipeline command)
-   - Handle refactoring from review as \`refactor:\` commits
-3. Run \`npx tiny-brain commit progress\` when the TDD cycle is complete
-
-`;
-    }
-    return content;
-  }
-  /**
-   * Format the Commit Message Format section
-   */
-  formatCommitMessageSection() {
-    return `## Commit Message Format
-
-### CRITICAL: Commit Header Requirements
-
-**BEFORE EVERY COMMIT**, check if you're working on tracked work:
-
-1. **Active PRDs?** Check \`.tiny-brain/progress/\` for \`in_progress\` status
-2. **Open Fixes?** Check \`.tiny-brain/fixes/progress.json\` for \`not_started\` or \`in_progress\` status
-
-**If YES, you MUST include tracking headers or the commit will be REJECTED.**
-
-### For PRD-tracked work:
-\`\`\`
-feat(scope): description
-
-PRD: {prd-id}
-Feature: {feature-id}
-Task: {exact task description from progress.json}
-
-Description of changes...
-\`\`\`
-
-### For Fix-tracked work:
-\`\`\`
-feat(scope): description
-
-Fix: {fix-id}
-Task: {exact task description from fix document}
-
-Description of changes...
-\`\`\`
-
-### Commit Types
-| Type | When | Headers Required? |
-|------|------|-------------------|
-| \`test:\` | Writing failing tests (TDD RED) | Yes |
-| \`feat:\` | Implementation (TDD GREEN) | Yes |
-| \`fix:\` | Bug fixes | Yes |
-| \`refactor:\` | Code improvement | Yes |
-| \`chore:\` | Maintenance (untracked) | No |
-| \`untracked:\` | Work not related to any PRD or Fix | No |
-
-**WARNING:** The commit-msg hook will reject commits missing required headers.
-
-### Fix Status Workflow
-
-Fix documents have four statuses: \`not_started\` \u2192 \`in_progress\` \u2192 \`completed\` | \`superseded\`
-
-**When starting work on a fix:**
-1. Open the fix file: \`.tiny-brain/fixes/{fix-id}.md\`
-2. Update frontmatter: \`status: in_progress\`
-3. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
-
-**After each commit:**
-1. Update the completed task(s) in the markdown:
-   \`\`\`markdown
-   ### 1. Task description
-   status: completed
-   commitSha: abc1234
-   \`\`\`
-2. If one commit addresses multiple tasks, use the same commitSha for all of them
-3. If a task is no longer needed (work done elsewhere or obsolete), mark it superseded:
-   \`\`\`markdown
-   ### 3. Obsolete task
-   status: superseded
-   commitSha: null
-   \`\`\`
-4. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
-
-**When all tasks are complete:**
-1. **ONLY set \`status: completed\`** when ALL tasks are accounted for:
-   - 100% of tasks must have either \`status: completed\` (with commitSha) or \`status: superseded\`
-   - Example: A fix with 5 tasks could be: 3 completed + 2 superseded = completed
-   - A fix with incomplete tasks stays \`in_progress\`
-2. Update YAML frontmatter:
-   - Set \`status: completed\`
-   - Set \`resolved: YYYY-MM-DDTHH:mm:ss.sssZ\` (ISO timestamp)
-   - Add \`resolution\` object:
-     \`\`\`yaml
-     resolution:
-       rootCause: Brief description of what caused the issue
-       fix:
-         - First fix action taken
-         - Second fix action taken
-       filesModified:
-         - path/to/file1.ts
-         - path/to/file2.ts
-     \`\`\`
-3. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
-
-**Note:** The markdown file is the source of truth. The \`sync-progress\` command updates \`progress.json\` from the markdown.
-
-`;
-  }
-  /**
-   * Format the TDD Workflow section
-   */
-  formatTDDWorkflowSection() {
-    return `## TDD Workflow
-
-IMPORTANT: This repository follows strict Test-Driven Development (TDD) with a 3-phase commit workflow.
-
-**Red \u2192 Green \u2192 Refactor Cycle:**
-
-1. **Red Phase** (\`test:\` or \`test(scope):\` commits):
-   - **CRITICAL \u2014 you MUST run before writing tests:**
-     \`npx tiny-brain task-start --task '...' [--fix ID | --prd ID --feature ID]\`
-   - For tasks that don't need tests (config, shell scripts, docs, templates), skip RED:
-     \`npx tiny-brain task-start --task '...' [--fix ID | --prd ID --feature ID] --phase green\`
-     This sets \`testCommitSha: 'skipped'\` and goes straight to Green phase.
-   - Write failing tests first
-   - Tests SHOULD fail (that's the point!)
-   - Use: \`git commit -m "test: ..."\` or \`git commit -m "test(api): ..."\`
-   - Git hook automatically runs typecheck + lint but SKIPS tests
-   - Tracked in: \`testCommitSha\` field
-
-2. **Green Phase** (\`feat:\` or \`feat(scope):\` commits):
-   - Phase is derived automatically from commit SHAs (no manual step needed)
-   - Implement minimum code to make tests pass
-   - Use: \`git commit -m "feat: ..."\` or \`git commit -m "feat(auth): ..."\`
-   - Git hook automatically runs full checks (typecheck + lint + test)
-   - Tracked in: \`commitSha\` field
-   - **After commit:** adversarial review starts automatically
-
-3. **Refactor Phase** (\`refactor:\` or \`refactor(scope):\` commits - optional):
-   - Triggered by adversarial review suggestions
-   - Improve code quality without changing behavior
-   - Use: \`git commit -m "refactor: ..."\` or \`git commit -m "refactor(plan): ..."\`
-   - Git hook automatically runs full checks (typecheck + lint + test)
-   - **After commit:** post-commit hook automatically records refactor completion
-
-4. **Progress Commit** (end of cycle):
-   - After the full RED\u2192GREEN\u2192REFACTOR cycle is complete
-   - Run: \`npx tiny-brain commit-progress\`
-
-**What you must do manually:** Only \`task-start\` before writing tests. Everything else is automated by hooks.
-
-**What you must NOT do:** Do not manually manage phase transitions \u2014 they are derived from commit SHAs.
-
-`;
-  }
-  /**
-   * Format the Progress Tracking Auto-Commit Configuration section
-   */
-  formatProgressTrackingSection() {
-    return `## Progress Tracking Auto-Commit Configuration
-
-By default, tiny-brain uses **manual mode** for progress.json commits. This means after tracking a task commit, you must manually stage and commit the progress.json updates. This keeps your working tree clean and gives you full control over what gets committed.
-
-### Default Behavior (Manual Mode)
-
-When you complete a task with a \`feat:\` or \`test:\` commit:
-1. The post-commit hook updates progress.json automatically
-2. You'll see a friendly message with instructions
-3. Commit the progress.json changes by running:
-   \`\`\`bash
-   npx tiny-brain commit-progress
-   \`\`\`
-
-### Enabling Auto-Commit
-
-Auto-commit automatically creates a second commit containing progress.json updates after each tracked task commit.
-
-**Enable globally (all repos):**
-\`\`\`bash
-npx tiny-brain config preferences set autoCommitProgress true
-\`\`\`
-
-**Enable for current repo only:**
-\`\`\`bash
-npx tiny-brain config preferences set autoCommitProgress true --repo
-\`\`\`
-
-**Disable auto-commit:**
-\`\`\`bash
-npx tiny-brain config preferences set autoCommitProgress false
-\`\`\`
-
-**Check current setting:**
-\`\`\`bash
-npx tiny-brain config preferences get autoCommitProgress
-\`\`\`
-
-### When to Use Each Mode
-
-**Use Manual Mode (default) when:**
-- Working in a team - keeps progress updates separate from feature commits
-- You want full control over what gets committed
-- You prefer to batch progress updates
-- You're concerned about commit history noise
-
-**Use Auto-Commit Mode when:**
-- Working solo or in small teams where commit noise is acceptable
-- You want progress always synced with remote
-- You frequently switch machines and need up-to-date progress
-- You forget to commit progress.json regularly
-
-### Configuration Hierarchy
-
-Settings follow this precedence (highest to lowest):
-1. Per-repository config (\`.git/tiny-brain/preferences.json\`)
-2. Global config (\`~/.tiny-brain/config/preferences.json\`)
-3. Default values (manual mode)
-
-This allows you to set a global preference but override it per repository as needed.
-
-`;
-  }
-  /**
-   * Format the Worktree Merge Workflow section
-   */
-  formatWorktreeMergeSection() {
-    return `## Worktree Merge Workflow
-
-When merging a worktree branch back into the main branch, \`progress.json\` files may conflict because both branches tracked different task completions. The \`post-merge\` git hook handles this automatically.
-
-### How It Works
-
-1. After a merge, the hook detects if any \`.tiny-brain/progress/*.json\` or \`.tiny-brain/fixes/progress.json\` files changed
-2. If so, it re-runs \`npx tiny-brain sync-progress\` on all markdown sources to regenerate progress.json
-3. The regenerated files are staged and committed as \`chore: re-sync progress after merge\`
-
-### Handling Merge Conflicts in progress.json
-
-If you encounter a merge conflict in progress.json:
-1. Accept either version (it doesn't matter which)
-2. Complete the merge
-3. The post-merge hook will regenerate progress.json from the markdown sources automatically
-
-### Manual Re-sync
-
-If the hook doesn't run or you need to re-sync manually:
-\`\`\`bash
-npx tiny-brain sync-progress docs/prd/*/features/*.md
-npx tiny-brain sync-progress .tiny-brain/fixes/*.md
-\`\`\`
-
-`;
-  }
-  /**
-   * Format the Operational Tracking Directory section
-   */
-  formatOperationalTrackingSection() {
-    return `## Operational Tracking Directory (.tiny-brain/)
-
-The \`.tiny-brain/\` directory stores operational tracking data separate from documentation:
-
-\`\`\`
-.tiny-brain/
-\u251C\u2500\u2500 analysis.json       # Detected tech stack and repo analysis
-\u251C\u2500\u2500 tech/               # Technology-specific context files
-\u2502   \u251C\u2500\u2500 config.json     # Tech context mode configuration
-\u2502   \u2514\u2500\u2500 {name}.md       # One file per detected technology
-\u251C\u2500\u2500 progress/           # PRD progress tracking
-\u2502   \u2514\u2500\u2500 {prd-id}.json   # One file per PRD
-\u2514\u2500\u2500 fixes/              # Fix progress tracking
-    \u2514\u2500\u2500 progress.json   # Aggregated fix tracking
-\`\`\`
-
-**Key distinction:**
-- **Documentation** (in \`docs/\`) - PRD markdown, feature specs, fix analysis - permanent, reviewed
-- **Operational tracking** (in \`.tiny-brain/\`) - progress.json files - transient, auto-generated
-
-### Gitignore Options
-
-Teams can choose whether to track progress files in git:
-
-**Option 1: Track progress (default)** - Keep \`.tiny-brain/\` in git for visibility across team members.
-
-**Option 2: Ignore progress** - Add to \`.gitignore\` to reduce PR noise:
-\`\`\`gitignore
-# Ignore operational tracking (optional)
-.tiny-brain/progress/
-.tiny-brain/fixes/progress.json
-\`\`\`
-
-**Option 3: Ignore all** - Ignore entire directory:
-\`\`\`gitignore
-.tiny-brain/
-\`\`\`
-
-`;
-  }
-};
-
-// packages/tiny-brain-mcp/src/agents/formatters/claude-code-formatter.ts
-var ClaudeCodeFormatter = class {
-  format = "claude-code" /* CLAUDE_CODE */;
-  getRepoContextFilePath() {
-    return "CLAUDE.md";
-  }
-  getAgentInstallPath() {
-    return ".claude/agents";
-  }
-  /**
-   * Format TBR agent JSON directly to Claude Code format
-   */
-  formatTbrAgent(agentData) {
-    const frontmatter = this.generateTbrFrontmatter(agentData);
-    const content = this.generateTbrContent(agentData);
-    return {
-      format: this.format,
-      filename: `${agentData.name}.md`,
-      content: `---
-${frontmatter}---
-
-${content}`,
-      metadata: {
-        platform: "claude-code",
-        version: agentData.details.version || "1.0.0"
-      }
-    };
-  }
-  generateTbrFrontmatter(agent) {
-    const lines = [];
-    lines.push(`name: ${agent.name}`);
-    lines.push(`description: ${this.escapeYaml(agent.details.description)}`);
-    return lines.join("\n") + "\n";
-  }
-  generateTbrContent(agent) {
-    const sections = [];
-    if (agent.mindset) {
-      sections.push(agent.mindset);
-    }
-    sections.push(`## Your Single Purpose
-${agent.details.description}`);
-    if (agent.boundaries) {
-      if (agent.boundaries.will?.length > 0) {
-        sections.push(`## What You Will Do
-${agent.boundaries.will.map((b) => `- ${b}`).join("\n")}`);
-      }
-      if (agent.boundaries.wont?.length > 0) {
-        sections.push(`## What You Won't Do
-${agent.boundaries.wont.map((b) => `- ${b}`).join("\n")}`);
-      }
-    }
-    if (agent.tasks && agent.tasks.length > 0) {
-      sections.push(`## Your Capabilities
-${agent.tasks.map((t) => `- ${t}`).join("\n")}`);
-    }
-    if (agent.flow) {
-      if (agent.flow.phases && agent.flow.phases.length > 0) {
-        const phaseList = agent.flow.phases.map((p) => {
-          let item = `- ${p.name}`;
-          if (p.tollgate) item += ` (Tollgate: ${p.tollgate})`;
-          return item;
-        }).join("\n");
-        sections.push(`## Your Workflow
-${phaseList}`);
-      }
-      if (agent.flow.priorities && agent.flow.priorities.length > 0) {
-        sections.push(`## Priorities
-${agent.flow.priorities.map((p) => `- ${p}`).join("\n")}`);
-      }
-    }
-    if (agent.output) {
-      let outputSection = `## Output Format
-Format: ${agent.output.format}
-`;
-      if (agent.output.includes && agent.output.includes.length > 0) {
-        outputSection += `
-Should include:
-${agent.output.includes.map((i) => `- ${i}`).join("\n")}`;
-      }
-      sections.push(outputSection);
-    }
-    if (agent.details.notes && agent.details.notes.length > 0) {
-      sections.push(`## Important Notes
-${agent.details.notes.map((n) => `- ${n}`).join("\n")}`);
-    }
-    return sections.join("\n\n");
-  }
-  formatAgent(agent) {
-    const frontmatter = this.generateFrontmatter(agent);
-    const content = this.generateContent(agent);
-    return {
-      format: this.format,
-      filename: `${agent.id}.md`,
-      content: `---
-${frontmatter}---
-
-${content}`,
-      metadata: {
-        platform: "claude-code",
-        version: agent.version || "1.0.0"
-      }
-    };
-  }
-  formatAgents(agents) {
-    return agents.map((agent) => this.formatAgent(agent));
-  }
-  generateFrontmatter(agent) {
-    const lines = [];
-    lines.push(`name: ${agent.id}`);
-    lines.push(`description: ${this.escapeYaml(agent.description)}`);
-    if (agent.tools && agent.tools.length > 0) {
-      lines.push(`tools: ${agent.tools.join(", ")}`);
-    }
-    return lines.join("\n") + "\n";
-  }
-  generateContent(agent) {
-    const sections = [];
-    sections.push(agent.systemPrompt);
-    if (agent.purpose) {
-      sections.push(`## Your Single Purpose
-${agent.purpose}`);
-    }
-    if (agent.capabilities.length > 0) {
-      sections.push(`## Your Capabilities
-${agent.capabilities.map((c) => `- ${c}`).join("\n")}`);
-    }
-    if (agent.examples && agent.examples.length > 0) {
-      sections.push(this.formatExamples(agent.examples));
-    }
-    if (agent.dependencies && agent.dependencies.length > 0) {
-      sections.push(`## Dependencies
-This agent requires: ${agent.dependencies.join(", ")}`);
-    }
-    return sections.join("\n\n");
-  }
-  formatExamples(examples) {
-    const exampleSections = examples.map((ex) => {
-      let section = "### Example";
-      if (ex.description) {
-        section += `: ${ex.description}`;
-      }
-      section += "\n\n**Input:**\n```\n" + ex.input + "\n```\n\n";
-      section += "**Output:**\n```\n" + ex.output + "\n```";
-      return section;
-    });
-    return `## Examples
-
-${exampleSections.join("\n\n")}`;
-  }
-  escapeYaml(str2) {
-    if (str2.includes(":") || str2.includes('"') || str2.includes("'") || str2.includes("\n")) {
-      return `"${str2.replace(/"/g, '\\"')}"`;
-    }
-    return str2;
-  }
-  parseAgent(content) {
-    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-    if (!frontmatterMatch) {
-      throw new Error("Invalid Claude Code agent format: missing frontmatter");
-    }
-    const frontmatter = this.parseFrontmatter(frontmatterMatch[1]);
-    const markdown = content.slice(frontmatterMatch[0].length).trim();
-    return {
-      id: frontmatter.name,
-      name: frontmatter.name,
-      description: frontmatter.description,
-      tools: frontmatter.tools ? frontmatter.tools.split(",").map((t) => t.trim()) : [],
-      systemPrompt: markdown,
-      purpose: this.extractSection(markdown, "Your Single Purpose"),
-      capabilities: this.extractListSection(markdown, "Your Capabilities"),
-      examples: this.extractExamples(markdown),
-      dependencies: this.extractListSection(markdown, "Dependencies")
-    };
-  }
-  parseFrontmatter(yaml) {
-    const result = {};
-    const lines = yaml.split("\n");
-    for (const line of lines) {
-      const match2 = line.match(/^(\w+):\s*(.+)$/);
-      if (match2) {
-        result[match2[1]] = match2[2].replace(/^["']|["']$/g, "");
-      }
-    }
-    return result;
-  }
-  extractSection(markdown, heading) {
-    const regex = new RegExp(`## ${heading}\\n([^#]+)`, "i");
-    const match2 = markdown.match(regex);
-    return match2 ? match2[1].trim() : "";
-  }
-  extractListSection(markdown, heading) {
-    const section = this.extractSection(markdown, heading);
-    if (!section) return [];
-    return section.split("\n").filter((line) => line.startsWith("-")).map((line) => line.replace(/^-\s*/, "").trim());
-  }
-  extractExamples(_markdown) {
-    return [];
-  }
-};
-
-// packages/tiny-brain-mcp/src/storage/platform-path-builder.ts
-import * as os2 from "os";
-import * as path33 from "path";
-var PlatformPathBuilder = class {
-  /**
-   * Get Claude Code MCP configuration file path
-   */
-  getClaudeCodeConfig(scope = "local") {
-    switch (scope) {
-      case "project":
-        return ".mcp.json";
-      case "user":
-        return path33.join(os2.homedir(), ".config", "claude", "mcp.json");
-      case "local":
-      default:
-        return ".mcp.json";
-    }
-  }
-  /**
-   * Get Claude Desktop configuration file path (OS-specific)
-   */
-  getClaudeDesktopConfig() {
-    const platform2 = os2.platform();
-    switch (platform2) {
-      case "darwin":
-        return path33.join(
-          os2.homedir(),
-          "Library",
-          "Application Support",
-          "Claude",
-          "claude_desktop_config.json"
-        );
-      case "win32": {
-        const appData = process.env.APPDATA || path33.join(os2.homedir(), "AppData", "Roaming");
-        return path33.join(appData, "Claude", "claude_desktop_config.json");
-      }
-      default:
-        return path33.join(os2.homedir(), ".config", "Claude", "claude_desktop_config.json");
-    }
-  }
-  /**
-   * Get Cursor IDE configuration file path
-   */
-  getCursorConfig() {
-    return path33.join(os2.homedir(), ".cursor", "mcp", "config.json");
-  }
-  /**
-   * Get ChatGPT Desktop configuration file path
-   */
-  getChatGPTConfig() {
-    const platform2 = os2.platform();
-    switch (platform2) {
-      case "darwin":
-        return path33.join(os2.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
-      case "win32": {
-        const appData = process.env.APPDATA || path33.join(os2.homedir(), "AppData", "Roaming");
-        return path33.join(appData, "ChatGPT", "config.json");
-      }
-      default:
-        return path33.join(os2.homedir(), ".config", "ChatGPT", "config.json");
-    }
-  }
-  /**
-   * Get platform-specific configuration path
-   */
-  getConfigPath(platform2, scope) {
-    switch (platform2.toLowerCase()) {
-      case "claude-code":
-        return this.getClaudeCodeConfig(scope);
-      case "claude-desktop":
-        return this.getClaudeDesktopConfig();
-      case "cursor":
-        return this.getCursorConfig();
-      case "chatgpt":
-        return this.getChatGPTConfig();
-      default:
-        throw new Error(`Unknown platform: ${platform2}`);
-    }
-  }
-  /**
-   * Normalize path for the current platform
-   */
-  normalizePathForPlatform(filePath) {
-    if (os2.platform() === "win32") {
-      return filePath.replace(/\//g, "\\");
-    }
-    return filePath;
-  }
-  /**
-   * Get backup directory for platform configs
-   */
-  getBackupDirectory() {
-    return path33.join(os2.homedir(), ".tiny-brain", "backups");
-  }
-};
-
-// packages/tiny-brain-mcp/src/storage/platform-config-adapter.ts
-import { promises as fs31, existsSync as existsSync9 } from "fs";
-import * as path34 from "path";
-var PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystemStorageAdapter {
-  platformPathBuilder;
-  constructor(config2) {
-    super(config2);
-    this.platformPathBuilder = new PlatformPathBuilder();
-  }
-  /**
-   * Read platform-specific configuration file
-   */
-  async readPlatformConfig(platform2, scope) {
-    try {
-      const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-      const content = await fs31.readFile(configPath, "utf-8");
-      return JSON.parse(content);
-    } catch (error2) {
-      const err = error2;
-      if (err.code === "ENOENT") {
-        return {};
-      }
-      throw error2;
-    }
-  }
-  /**
-   * Write platform-specific configuration file
-   */
-  async writePlatformConfig(platform2, config2, scope) {
-    const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
-    const directory = path34.dirname(configPath);
-    await fs31.mkdir(directory, { recursive: true });
-    await fs31.writeFile(configPath, JSON.stringify(config2, null, 2), "utf-8");
-  }
-  /**
-   * Backup platform configuration
-   */
-  async backupPlatformConfig(platform2, scope) {
-    try {
-      const config2 = await this.readPlatformConfig(platform2, scope);
-      if (Object.keys(config2).length === 0) {
-        return null;
-      }
-      const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/:/g, "-").replace(/\./g, "-");
-      const backupDir = this.platformPathBuilder.getBackupDirectory();
-      const backupFile = `${platform2}-${timestamp2}.backup`;
-      const backupPath = path34.join(backupDir, backupFile);
-      await fs31.mkdir(backupDir, { recursive: true });
-      await fs31.writeFile(backupPath, JSON.stringify(config2, null, 2), "utf-8");
-      return timestamp2;
-    } catch (error2) {
-      const err = error2;
-      if (err.code === "ENOENT") {
-        return null;
-      }
-      throw error2;
-    }
-  }
-  /**
-   * Restore platform configuration from backup
-   */
-  async restorePlatformConfig(platform2, backupId, scope) {
-    const backupDir = this.platformPathBuilder.getBackupDirectory();
-    const backupFile = `${platform2}-${backupId}.backup`;
-    const backupPath = path34.join(backupDir, backupFile);
-    const backupContent = await fs31.readFile(backupPath, "utf-8");
-    const config2 = JSON.parse(backupContent);
-    await this.writePlatformConfig(platform2, config2, scope);
-  }
-  /**
-   * Add or update an MCP server in platform configuration
-   */
-  async addMCPServer(platform2, serverName, serverConfig, scope) {
-    const config2 = await this.readPlatformConfig(platform2, scope);
-    if (platform2 === "claude-desktop") {
-      config2.mcpServers = config2.mcpServers || {};
-      config2.mcpServers[serverName] = serverConfig;
-    } else if (platform2 === "claude-code") {
-      config2.servers = config2.servers || {};
-      config2.servers[serverName] = serverConfig;
-    } else {
-      config2.servers = config2.servers || {};
-      config2.servers[serverName] = serverConfig;
-    }
-    await this.writePlatformConfig(platform2, config2, scope);
-  }
-  /**
-   * Remove an MCP server from platform configuration
-   */
-  async removeMCPServer(platform2, serverName, scope) {
-    const config2 = await this.readPlatformConfig(platform2, scope);
-    if (platform2 === "claude-desktop" && config2.mcpServers) {
-      delete config2.mcpServers[serverName];
-    } else if (config2.servers) {
-      delete config2.servers[serverName];
-    }
-    await this.writePlatformConfig(platform2, config2, scope);
-  }
-  /**
-   * Check if an MCP server is configured
-   */
-  async isMCPServerConfigured(platform2, serverName, scope) {
-    const config2 = await this.readPlatformConfig(platform2, scope);
-    if (platform2 === "claude-desktop") {
-      return !!(config2.mcpServers && config2.mcpServers[serverName]);
-    }
-    return !!(config2.servers && config2.servers[serverName]);
-  }
-  /**
-   * Get the repository context file path for the current platform
-   * This is where repo-specific information is stored (tech stack, conventions, etc.)
-   */
-  static getRepoContextFile() {
-    const platform2 = _PlatformConfigAdapter.detectPlatform();
-    const repoRoot = getRepoRoot();
-    switch (platform2) {
-      case "claude-code":
-        return path34.join(repoRoot, "CLAUDE.md");
-      case "cursor":
-        return path34.join(repoRoot, ".cursorrules");
-      case "vscode":
-        return path34.join(repoRoot, ".vscode", "context.md");
-      case "windsurf":
-        return path34.join(repoRoot, ".windsurfrules");
-      default:
-        return path34.join(repoRoot, ".claude", "CLAUDE.md");
-    }
-  }
-  /**
-   * Detect the current platform based on environment variables
-   */
-  static detectPlatform() {
-    if (process.env.CLAUDE_CODE || process.env.MCP_SERVER) {
-      return "claude-code";
-    }
-    if (process.env.CURSOR_IDE) {
-      return "cursor";
-    }
-    if (process.env.VSCODE) {
-      return "vscode";
-    }
-    if (process.env.WINDSURF) {
-      return "windsurf";
-    }
-    const homeDir = process.env.HOME || process.env.USERPROFILE || "";
-    if (existsSync9(path34.join(homeDir, ".claude-code"))) {
-      return "claude-code";
-    }
-    if (existsSync9(path34.join(homeDir, "Library", "Application Support", "Claude"))) {
-      return "claude-desktop";
-    }
-    return "unknown";
-  }
-};
-
-// packages/tiny-brain-mcp/src/agents/formatters/formatter-factory.ts
-var FormatterFactory = class {
-  static formatters = /* @__PURE__ */ new Map([
-    ["claude-code" /* CLAUDE_CODE */, new ClaudeCodeFormatter()]
-  ]);
-  /**
-   * Get formatter for a specific platform
-   */
-  static getFormatter(format) {
-    const formatter = this.formatters.get(format);
-    if (!formatter) {
-      throw new Error(`No formatter available for format: ${format}`);
-    }
-    return formatter;
-  }
-  /**
-   * Register a custom formatter
-   */
-  static registerFormatter(format, formatter) {
-    this.formatters.set(format, formatter);
-  }
-  /**
-   * Get all available formats
-   */
-  static getAvailableFormats() {
-    return Array.from(this.formatters.keys());
-  }
-  /**
-   * Detect format based on platform or environment
-   */
-  static detectFormat(platform2) {
-    if (platform2) {
-      switch (platform2.toLowerCase()) {
-        case "claude":
-        case "claude-code":
-        case "claude-desktop":
-        case "anthropic":
-          return "claude-code" /* CLAUDE_CODE */;
-        default:
-          throw new Error(`Unsupported platform: ${platform2}. Only Claude Code is currently supported.`);
-      }
-    }
-    const detectedPlatform = PlatformConfigAdapter.detectPlatform();
-    switch (detectedPlatform) {
-      case "claude-code":
-      case "claude-desktop":
-        return "claude-code" /* CLAUDE_CODE */;
-      default:
-        throw new Error(`Unsupported platform: ${detectedPlatform}. Only Claude Code is currently supported.`);
-    }
-  }
-};
-
-// packages/tiny-brain-mcp/src/services/agent-service.ts
-var semver = __toESM(require_semver2(), 1);
-
-// packages/tiny-brain-mcp/src/services/agent-installation-service.ts
-init_src();
-import * as fs32 from "fs/promises";
-import * as path35 from "path";
-import * as crypto3 from "crypto";
-var AgentInstallationService = class {
-  constructor(context) {
-    this.context = context;
-    this.libraryClient = new LibraryClient();
-    void this.libraryClient;
-  }
-  libraryClient;
-  /**
-   * Download agent content from the library
-   * Note: This is a placeholder implementation since getAgentContent doesn't exist in LibraryClient yet
-   */
-  async downloadAgentContent(agentName, version2) {
-    try {
-      const content = this.generateMockAgentContent(agentName, version2);
-      return {
-        content,
-        version: version2,
-        checksum: crypto3.createHash("sha256").update(content).digest("hex")
-      };
-    } catch (error2) {
-      const message = error2 instanceof Error ? error2.message : "Unknown error";
-      this.context.logger.error(`Failed to download agent ${agentName}:`, error2);
-      throw new Error(`Failed to download agent content: ${message}`);
-    }
-  }
-  /**
-   * Generate mock agent content (placeholder until API is available)
-   */
-  generateMockAgentContent(agentName, version2) {
-    const title = agentName.split("-").map(
-      (word) => word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(" ");
-    return `# ${title}
-
-Downloaded agent from library.
-
-## Your Single Purpose
-Specialized ${agentName.replace(/-/g, " ")} functionality
-
-## What You Will Do
-- Implement ${agentName.replace(/-/g, " ")} features
-- Follow best practices
-- Write comprehensive tests
-
-## What You Won't Do
-- Work outside specialization
-- Skip documentation
-- Ignore error handling
-
-<!-- Agent Metadata -->
-<!-- Version: ${version2} -->
-<!-- Generated: ${(/* @__PURE__ */ new Date()).toISOString()} -->
-<!-- Source: tiny-brain-library -->
-`;
-  }
-  /**
-   * Install an agent to .claude/agents/
-   */
-  async installAgent(agentInfo) {
-    try {
-      const repoRoot = getRepoRoot();
-      const agentsDir = path35.join(repoRoot, ".claude", "agents");
-      await fs32.mkdir(agentsDir, { recursive: true });
-      let content = agentInfo.content;
-      if (!content) {
-        const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
-        content = downloaded.content;
-      }
-      const filePath = path35.join(agentsDir, `${agentInfo.name}.md`);
-      await fs32.writeFile(filePath, content, "utf-8");
-      this.context.logger.info(`Successfully installed agent: ${agentInfo.name}`);
-      return { success: true };
-    } catch (error2) {
-      const errorMsg = error2 instanceof Error ? error2.message : "Unknown error";
-      this.context.logger.error(`Failed to install ${agentInfo.name}:`, error2);
-      if (errorMsg.includes("permission denied") || errorMsg.includes("EACCES")) {
-        return {
-          success: false,
-          error: errorMsg,
-          suggestion: "Check directory permissions for .claude/agents/"
-        };
-      }
-      return {
-        success: false,
-        error: errorMsg
-      };
-    }
-  }
-  /**
-   * Update an existing agent, preserving customizations
-   */
-  async updateAgent(agentInfo) {
-    try {
-      const repoRoot = getRepoRoot();
-      const filePath = path35.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
-      const existingContent = await fs32.readFile(filePath, "utf-8");
-      const hasCustomizations = this.detectCustomizations(existingContent);
-      let backupCreated = false;
-      if (hasCustomizations) {
-        const backupPath = `${filePath}.backup.${Date.now()}`;
-        await fs32.writeFile(backupPath, existingContent, "utf-8");
-        backupCreated = true;
-        this.context.logger.info(`Created backup of customized agent: ${backupPath}`);
-      }
-      let newContent = agentInfo.content;
-      if (!newContent) {
-        const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
-        newContent = downloaded.content;
-      }
-      const updatedContent = this.updateAgentMetadata(newContent, agentInfo.version);
-      await fs32.writeFile(filePath, updatedContent, "utf-8");
-      this.context.logger.info(`Successfully updated agent: ${agentInfo.name} to v${agentInfo.version}`);
-      return {
-        updated: true,
-        hadCustomizations: hasCustomizations,
-        backupCreated
-      };
-    } catch (error2) {
-      this.context.logger.error(`Failed to update agent ${agentInfo.name}:`, error2);
-      throw error2;
-    }
-  }
-  /**
-   * Remove an agent safely
-   */
-  async removeAgent(agentName) {
-    try {
-      const repoRoot = getRepoRoot();
-      const filePath = path35.join(repoRoot, ".claude", "agents", `${agentName}.md`);
-      await fs32.access(filePath);
-      await fs32.unlink(filePath);
-      this.context.logger.info(`Successfully removed agent: ${agentName}`);
-    } catch (error2) {
-      if (error2.code === "ENOENT") {
-        this.context.logger.warn(`Agent file not found: ${agentName}.md`);
-        return;
-      }
-      this.context.logger.error(`Failed to remove agent ${agentName}:`, error2);
-      throw error2;
-    }
-  }
-  /**
-   * Install multiple agents efficiently
-   */
-  async batchInstall(agentsToInstall) {
-    const results = {
-      successful: [],
-      failed: []
-    };
-    const repoRoot = getRepoRoot();
-    const agentsDir = path35.join(repoRoot, ".claude", "agents");
-    await fs32.mkdir(agentsDir, { recursive: true });
-    for (const agent of agentsToInstall) {
-      try {
-        const result = await this.installAgent(agent);
-        if (result.success) {
-          results.successful.push(agent.name);
-        } else {
-          results.failed.push(agent.name);
-          this.context.logger.error(`Batch install failed for ${agent.name}: ${result.error}`);
-        }
-      } catch (error2) {
-        results.failed.push(agent.name);
-        this.context.logger.error(`Batch install error for ${agent.name}:`, error2);
-      }
-    }
-    this.context.logger.info(`Batch install complete: ${results.successful.length} successful, ${results.failed.length} failed`);
-    return results;
-  }
-  /**
-   * Validate agent content integrity
-   */
-  async validateAgentContent(content, expectedChecksum) {
-    const validation = {
-      isValid: false,
-      hasRequiredSections: false,
-      hasMetadata: false,
-      checksumValid: true
-    };
-    const requiredSections = [
-      "## Your Single Purpose",
-      "## What You Will Do",
-      "## What You Won't Do"
-    ];
-    validation.hasRequiredSections = requiredSections.every(
-      (section) => content.includes(section)
-    );
-    validation.hasMetadata = content.includes("<!-- Agent Metadata -->") && content.includes("<!-- Version:") && content.includes("<!-- Generated:");
-    if (expectedChecksum) {
-      const actualChecksum = crypto3.createHash("sha256").update(content).digest("hex");
-      validation.checksumValid = actualChecksum === expectedChecksum;
-    }
-    validation.isValid = validation.hasRequiredSections && validation.hasMetadata && validation.checksumValid;
-    return validation;
-  }
-  /**
-   * Get list of installed agents with metadata
-   */
-  async getInstalledAgents() {
-    try {
-      const repoRoot = getRepoRoot();
-      const agentsDir = path35.join(repoRoot, ".claude", "agents");
-      const files = await fs32.readdir(agentsDir);
-      const agentFiles = files.filter((file) => file.endsWith(".md"));
-      const installedAgents = [];
-      for (const file of agentFiles) {
-        try {
-          const filePath = path35.join(agentsDir, file);
-          const content = await fs32.readFile(filePath, "utf-8");
-          const agentName = file.replace(".md", "");
-          const metadata = this.extractAgentMetadata(content);
-          installedAgents.push({
-            name: agentName,
-            version: metadata.version || "1.0.0",
-            lastUpdated: metadata.generated || (/* @__PURE__ */ new Date()).toISOString()
-          });
-        } catch (error2) {
-          this.context.logger.warn(`Failed to read agent metadata from ${file}:`, error2);
-        }
-      }
-      return installedAgents.sort((a, b) => a.name.localeCompare(b.name));
-    } catch (error2) {
-      if (error2.code === "ENOENT") {
-        return [];
-      }
-      this.context.logger.error("Failed to get installed agents:", error2);
-      throw error2;
-    }
-  }
-  /**
-   * Detect if agent content has customizations
-   */
-  detectCustomizations(content) {
-    if (content.includes("<!-- Customized: true -->")) {
-      return true;
-    }
-    const customizationSignals = [
-      "Custom modifications",
-      "Custom purpose",
-      "Custom functionality",
-      "User-modified",
-      "Local changes"
-    ];
-    return customizationSignals.some(
-      (signal) => content.toLowerCase().includes(signal.toLowerCase())
-    );
-  }
-  /**
-   * Update agent metadata (version and timestamp)
-   */
-  updateAgentMetadata(content, version2) {
-    let updatedContent = content;
-    const versionRegex = /<!-- Version: (.+?) -->/;
-    updatedContent = updatedContent.replace(versionRegex, `<!-- Version: ${version2} -->`);
-    const timestampRegex = /<!-- Generated: (.+?) -->/;
-    updatedContent = updatedContent.replace(timestampRegex, `<!-- Generated: ${(/* @__PURE__ */ new Date()).toISOString()} -->`);
-    return updatedContent;
-  }
-  /**
-   * Extract agent metadata from content
-   */
-  extractAgentMetadata(content) {
-    const metadata = {};
-    const versionMatch = content.match(/<!-- Version: (.+?) -->/);
-    if (versionMatch) {
-      metadata.version = versionMatch[1];
-    }
-    const generatedMatch = content.match(/<!-- Generated: (.+?) -->/);
-    if (generatedMatch) {
-      metadata.generated = generatedMatch[1];
-    }
-    return metadata;
-  }
-};
-
-// packages/tiny-brain-mcp/src/services/agent-service.ts
-var AgentService = class {
-  constructor(context) {
-    this.context = context;
-  }
-  installationService;
-  /**
-   * Format agents for the current formatter type
-   */
-  formatAgents(agents, formatter) {
-    try {
-      const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
-      this.context.logger.debug("[AgentService] Raw agents from TBR:", {
-        agentCount: agents.length,
-        agents: agents.map((agent) => ({
-          name: agent.name,
-          hasDetails: !!agent.details,
-          hasMindset: !!agent.mindset,
-          hasBoundaries: !!agent.boundaries,
-          hasTasks: !!agent.tasks,
-          hasFlow: !!agent.flow,
-          rawAgent: agent
-        }))
-      });
-      this.context.logger.debug("[AgentService] Using formatter:", {
-        formatterType: activeFormatter?.constructor?.name || "unknown",
-        hasFormatTbrAgent: typeof activeFormatter?.formatTbrAgent === "function",
-        formatterKeys: activeFormatter ? Object.keys(activeFormatter) : [],
-        formatterPrototype: activeFormatter ? Object.getOwnPropertyNames(Object.getPrototypeOf(activeFormatter)) : []
-      });
-      if (!activeFormatter.formatTbrAgent || typeof activeFormatter.formatTbrAgent !== "function") {
-        throw new Error(`Formatter ${activeFormatter?.constructor?.name || "unknown"} does not have formatTbrAgent method`);
-      }
-      const formattedAgents = agents.map((agent) => {
-        const formatted = activeFormatter.formatTbrAgent(agent);
-        this.context.logger.debug("[AgentService] Formatted agent:", {
-          name: agent.name,
-          filename: formatted.filename,
-          contentLength: formatted.content.length,
-          contentPreview: formatted.content.substring(0, 200),
-          fullContent: formatted.content
-        });
-        return formatted;
-      });
-      return formattedAgents;
-    } catch (error2) {
-      this.context.logger.error("[AgentService] Error formatting agents:", error2);
-      throw error2;
-    }
-  }
-  /**
-   * Install formatted agents to the filesystem
-   */
-  async installAgents(formattedAgents, formatter) {
-    const fs34 = await import("fs/promises");
-    const path38 = await import("path");
-    const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
-    const repoRoot = getRepoRoot();
-    const agentsPath = path38.join(repoRoot, activeFormatter.getAgentInstallPath());
-    this.context.logger.debug("[AgentService] Installing agents:", {
-      repoRoot,
-      agentsPath,
-      agentCount: formattedAgents.length
-    });
-    await fs34.mkdir(agentsPath, { recursive: true });
-    for (const agent of formattedAgents) {
-      const agentPath = path38.join(agentsPath, agent.filename);
-      await fs34.writeFile(agentPath, agent.content, "utf-8");
-      this.context.logger.info(`Agent '${agent.filename}' installed to ${agentPath}`);
-    }
-    this.context.logger.info(`Installed ${formattedAgents.length} agents to ${agentsPath}`);
-  }
-  /**
-   * Install agents with version checking and overwrite strategy
-   */
-  async installAgentsWithVersionCheck(agents, options = {}) {
-    const fs34 = await import("fs/promises");
-    const path38 = await import("path");
-    const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
-    const formattedAgents = this.formatAgents(agents, formatter);
-    const repoRoot = getRepoRoot();
-    const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
-    const result = {
-      installed: [],
-      skipped: [],
-      updated: [],
-      errors: []
-    };
-    await fs34.mkdir(agentsPath, { recursive: true });
-    const installedAgents = await this.getInstalledAgents();
-    const installedMap = new Map(installedAgents.map((a) => [a.name, a]));
-    for (const agent of formattedAgents) {
-      const agentPath = path38.join(agentsPath, agent.filename);
-      const agentName = agent.filename.replace(".md", "");
-      try {
-        const fileExists = await fs34.access(agentPath).then(() => true).catch(() => false);
-        if (!fileExists) {
-          await fs34.writeFile(agentPath, agent.content, "utf-8");
-          result.installed.push(agentName);
-          this.context.logger.info(`Installed new agent: ${agentName}`);
-        } else {
-          const strategy = options.overwriteStrategy || "version-check";
-          if (strategy === "never") {
-            result.skipped.push(agentName);
-            this.context.logger.debug(`Skipped existing agent: ${agentName}`);
-          } else if (strategy === "always") {
-            if (options.backupExisting) {
-              const backupPath = `${agentPath}.backup.${Date.now()}`;
-              await fs34.copyFile(agentPath, backupPath);
-            }
-            await fs34.writeFile(agentPath, agent.content, "utf-8");
-            result.updated.push(agentName);
-            this.context.logger.info(`Updated agent (forced): ${agentName}`);
-          } else {
-            const installed = installedMap.get(agentName);
-            const newVersion = this.extractVersion(agent.content);
-            const installedVersion = installed?.version || "0.0.0";
-            if (semver.gt(newVersion, installedVersion)) {
-              if (options.backupExisting) {
-                const backupPath = `${agentPath}.backup.${Date.now()}`;
-                await fs34.copyFile(agentPath, backupPath);
-              }
-              await fs34.writeFile(agentPath, agent.content, "utf-8");
-              result.updated.push(agentName);
-              this.context.logger.info(`Updated agent: ${agentName} (${installedVersion} -> ${newVersion})`);
-            } else {
-              result.skipped.push(agentName);
-              this.context.logger.debug(`Skipped agent (same or newer version): ${agentName} (current: ${installedVersion})`);
-            }
-          }
-        }
-      } catch (error2) {
-        const errorMsg = error2 instanceof Error ? error2.message : "Unknown error";
-        result.errors.push({ agent: agentName, error: errorMsg });
-        this.context.logger.error(`Failed to install agent ${agentName}:`, error2);
-      }
-    }
-    return result;
-  }
-  /**
-   * Remove agents from disk
-   */
-  async removeAgents(agentNames) {
-    const result = { removed: [], errors: [] };
-    if (!this.installationService && "platformInfo" in this.context) {
-      this.installationService = new AgentInstallationService(this.context);
-    }
-    const fs34 = await import("fs/promises");
-    const path38 = await import("path");
-    const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
-    const repoRoot = getRepoRoot();
-    const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
-    for (const agentName of agentNames) {
-      try {
-        const agentFile = path38.join(agentsPath, `${agentName}.md`);
-        try {
-          await fs34.access(agentFile);
-        } catch {
-          result.errors.push(`Agent ${agentName} not found`);
-          continue;
-        }
-        await fs34.unlink(agentFile);
-        result.removed.push(agentName);
-        this.context.logger.info(`Removed agent: ${agentName}`);
-      } catch (error2) {
-        const errorMsg = error2 instanceof Error ? error2.message : "Unknown error";
-        result.errors.push(`Failed to remove ${agentName}: ${errorMsg}`);
-        this.context.logger.error(`Failed to remove agent ${agentName}:`, error2);
-      }
-    }
-    return result;
-  }
-  /**
-   * Get installed agents from disk
-   */
-  async getInstalledAgents() {
-    if (!this.installationService && "platformInfo" in this.context) {
-      this.installationService = new AgentInstallationService(this.context);
-    }
-    if (this.installationService) {
-      return await this.installationService.getInstalledAgents();
-    }
-    const fs34 = await import("fs/promises");
-    const path38 = await import("path");
-    const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
-    const repoRoot = getRepoRoot();
-    const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
-    try {
-      const files = await fs34.readdir(agentsPath);
-      const agentFiles = files.filter((f) => f.endsWith(".md"));
-      const agents = [];
-      for (const file of agentFiles) {
-        const content = await fs34.readFile(path38.join(agentsPath, file), "utf-8");
-        const name = file.replace(".md", "");
-        const version2 = this.extractVersion(content);
-        agents.push({ name, version: version2, lastUpdated: (/* @__PURE__ */ new Date()).toISOString() });
-      }
-      return agents;
-    } catch (error2) {
-      if (error2.code === "ENOENT") {
-        return [];
-      }
-      throw error2;
-    }
-  }
-  /**
-   * Extract version from agent content
-   */
-  extractVersion(content) {
-    const versionMatch = content.match(/<!-- Version: (.+?) -->/);
-    return versionMatch ? versionMatch[1] : "1.0.0";
-  }
-  /**
-   * Format and install agents in one operation
-   */
-  async formatAndInstallAgents(agents, formatter) {
-    const formattedAgents = this.formatAgents(agents, formatter);
-    await this.installAgents(formattedAgents, formatter);
-    return formattedAgents;
-  }
-  /**
-   * Get the default formatter
-   */
-  getDefaultFormatter() {
-    return FormatterFactory.getFormatter(FormatterFactory.detectFormat());
-  }
-  /**
-   * Detect formatter type from environment
-   */
-  detectFormatterType() {
-    return FormatterFactory.detectFormat();
-  }
-};
-
-// packages/tiny-brain-mcp/src/tools/persona/as.tool.ts
 var AsArgsSchema = external_exports.object({
   personaName: external_exports.string().optional(),
   confirmCreate: external_exports.boolean().optional()
 });
+function parseAsInput(raw) {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("library:")) {
+    const after = trimmed.substring("library:".length).trim();
+    const [libraryName, ...rest] = after.split(/\s+/);
+    if (!libraryName) {
+      return {
+        library: null,
+        libraryFormatInvalid: true,
+        personaName: null,
+        newName: void 0
+      };
+    }
+    return {
+      library: {
+        libraryName,
+        localName: rest.length > 0 ? rest.join(" ") : libraryName
+      },
+      libraryFormatInvalid: false,
+      personaName: null,
+      newName: void 0
+    };
+  }
+  const parts = trimmed.split(/\s+/);
+  return {
+    library: null,
+    libraryFormatInvalid: false,
+    personaName: parts[0],
+    newName: parts.length > 1 ? parts.slice(1).join(" ") : void 0
+  };
+}
+async function buildMcpExtras(ctx) {
+  const agentService = new AgentService(ctx);
+  const formatter = agentService.getDefaultFormatter();
+  const contextFilePath = formatter?.getRepoContextFilePath();
+  const [installed, featureFlags] = await Promise.all([
+    agentService.getInstalledAgents().catch(() => []),
+    resolveFeatureFlags(ctx)
+  ]);
+  return {
+    contextFilePath,
+    hasAgents: installed.length > 0,
+    featureFlags
+  };
+}
+function formatActionAsToolResult(action, extras, ctx, trailingNote = "") {
+  if (action.kind === "no-active-persona") {
+    let helpMessage = "## No Active Persona\n\n";
+    helpMessage += "No persona is currently selected.\n\n";
+    if (action.availablePersonas.length > 0) {
+      helpMessage += "### Available Personas:\n";
+      for (const persona of action.availablePersonas) {
+        helpMessage += `- ${persona}
+`;
+      }
+      helpMessage += "\n";
+    }
+    helpMessage += "### How to use:\n";
+    helpMessage += "- `as <persona_name>` - Switch to a persona\n";
+    helpMessage += "- `as library:<name>` - Import from library\n";
+    helpMessage += "- `manage_personas list` - See all personas with details\n";
+    return { content: [{ type: "text", text: helpMessage }], isError: false };
+  }
+  if (action.kind === "requires-confirmation") {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              requiresConfirmation: true,
+              action: "createPersona",
+              personaName: action.personaName,
+              message: `Persona "${action.personaName}" doesn't exist. Would you like to create it?`,
+              availablePersonas: action.availablePersonas.length > 0 ? action.availablePersonas : void 0,
+              hint: "To confirm creation, call the tool again with confirmCreate: true"
+            },
+            null,
+            2
+          )
+        }
+      ],
+      isError: false
+    };
+  }
+  const text = formatPersonaContext(
+    action.persona,
+    extras.contextFilePath,
+    extras.hasAgents,
+    extras.featureFlags,
+    ctx.libraryAuth
+  );
+  return {
+    content: [{ type: "text", text: text + trailingNote }],
+    isError: false
+  };
+}
 var AsTool = class _AsTool {
   static getToolDefinition() {
     return {
@@ -62004,20 +64947,7 @@ var AsTool = class _AsTool {
   \u2022 as library:<name> - Import from library
   \u2022 as library:<name> <local_name> - Import and rename
 
-\u{1F4DD} EXAMPLES:
-  \u2022 as - Show current active persona
-  \u2022 as developer - Switch to 'developer' persona
-  \u2022 as developer fred - Rename 'developer' to 'fred'
-  \u2022 as library:developer - Import 'developer' from library
-  \u2022 as library:developer fred - Import as 'fred' locally
-
-\u{1F6E1}\uFE0F SAFETY: New personas require confirmation to prevent accidental creation
-
-\u{1F3AF} USE CASES:
-  \u2022 Project-specific contexts
-  \u2022 Different communication styles
-  \u2022 Specialized knowledge domains
-  \u2022 Repository-aware agent installation`,
+\u{1F6E1}\uFE0F SAFETY: New personas require confirmation to prevent accidental creation`,
       inputSchema: {
         type: "object",
         properties: {
@@ -62035,312 +64965,88 @@ var AsTool = class _AsTool {
       }
     };
   }
-  /**
-   * Main execution entry point
-   */
   static async execute(args, context) {
     context.logger.debug("[As tool] [execute]");
-    const localContext = context;
     try {
       const validatedArgs = AsArgsSchema.parse(args);
-      if (!validatedArgs.personaName) {
-        return _AsTool.handleShowCurrentPersona(context);
+      const parsed = parseAsInput(validatedArgs.personaName);
+      if (!parsed) {
+        const result2 = await asShowCurrent(context);
+        if (!result2.ok) return createErrorResult(result2.error);
+        const extras2 = await buildMcpExtras(context);
+        return formatActionAsToolResult(result2.data, extras2, context);
       }
-      return _AsTool.handleSwitchPersona({
-        personaName: validatedArgs.personaName,
-        confirmCreate: validatedArgs.confirmCreate
-      }, localContext);
+      if (parsed.libraryFormatInvalid) {
+        return createErrorResult(
+          "Invalid library persona format. Use: library:<persona_name> [local_name]"
+        );
+      }
+      if (parsed.library) {
+        return _AsTool.handleLibraryPersona(
+          parsed.library.libraryName,
+          parsed.library.localName,
+          context,
+          context.authToken
+        );
+      }
+      if (!parsed.personaName) {
+        return createErrorResult("Invalid persona command");
+      }
+      const result = await asSwitchPersona(
+        {
+          personaName: parsed.personaName,
+          newName: parsed.newName,
+          confirmCreate: validatedArgs.confirmCreate
+        },
+        context
+      );
+      if (!result.ok) return createErrorResult(result.error);
+      const extras = await buildMcpExtras(context);
+      return formatActionAsToolResult(result.data, extras, context);
     } catch (error2) {
       if (error2 instanceof external_exports.ZodError) {
         return createErrorResult(
           `Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`
         );
       }
-      return createErrorResult(error2 instanceof Error ? error2.message : "Unknown error occurred");
-    }
-  }
-  /**
-   * Handle showing the current active persona
-   */
-  static async handleShowCurrentPersona(context) {
-    context.logger.debug("No persona specified: showing current persona");
-    if (!context.activePersona?.id) {
-      const service = new PersonaService2(context);
-      const availablePersonas = await service.listPersonas({});
-      let helpMessage = "## No Active Persona\n\n";
-      helpMessage += "No persona is currently selected.\n\n";
-      if (availablePersonas.length > 0) {
-        helpMessage += "### Available Personas:\n";
-        availablePersonas.forEach((persona) => {
-          helpMessage += `- ${persona}
-`;
-        });
-        helpMessage += "\n";
-      }
-      helpMessage += "### How to use:\n";
-      helpMessage += "- `as <persona_name>` - Switch to a persona\n";
-      helpMessage += "- `as library:<name>` - Import from library\n";
-      helpMessage += "- `manage_personas list` - See all personas with details\n";
-      return {
-        content: [{
-          type: "text",
-          text: helpMessage
-        }],
-        isError: false
-      };
-    }
-    const profileContent = await context.storage.getPersonaFile(
-      context.activePersona.id,
-      "profile.md",
-      context.userId
-    );
-    if (!profileContent) {
-      return createErrorResult(`Failed to load current persona '${context.activePersona.id}'`);
-    }
-    const parsedPersona = parsePersonaMarkdown(profileContent);
-    if (context.activePersona?.id) {
-      parsedPersona.name = context.activePersona.id;
-    }
-    const agentService = new AgentService(context);
-    const formatter = agentService.getDefaultFormatter();
-    const contextFilePath = formatter.getRepoContextFilePath();
-    const response = await buildPersonaContext(context, parsedPersona);
-    const [hasAgents, featureFlags] = await Promise.all([
-      _AsTool.checkHasAgents(context, contextFilePath),
-      resolveFeatureFlags(context)
-    ]);
-    return {
-      content: [{
-        type: "text",
-        text: formatPersonaContext(response, contextFilePath, hasAgents, featureFlags, context.libraryAuth)
-      }],
-      isError: false
-    };
-  }
-  /**
-   * Handle persona switch/creation with clear flow
-   */
-  static async handleSwitchPersona(args, context) {
-    context.logger.debug(`[As tool] [handleSwitchPersona: ${args.personaName} ]`);
-    const fullPersonaName = args.personaName;
-    if (fullPersonaName.startsWith("library:")) {
-      return _AsTool.handleLibraryPersona(fullPersonaName, context);
-    }
-    const parts = fullPersonaName.split(/\s+/);
-    const personaName = parts[0];
-    const newName = parts.length > 1 ? parts.slice(1).join(" ") : null;
-    const personaService = new PersonaService2(context);
-    const exists = await personaService.exists(personaName);
-    if (exists) {
-      context.logger.debug(`[As tool] [handleSwitchPersona] persona already exists`);
-      if (newName) {
-        context.logger.debug("[As tool] [handleSwitchPersona] found persona name and rename");
-        return _AsTool.handlePersonaRename(personaName, newName, personaService, context);
-      }
-      context.logger.debug("[As tool] [handleSwitchPersona] switching to existing persona");
-      const profile = await personaService.loadPersona({ personaName });
-      if (!profile) {
-        return createErrorResult(`[As tool] [handleSwitchPersona] failed to load persona '${personaName}'`);
-      }
-      const profileContent = await context.storage.getPersonaFile(
-        personaName,
-        "profile.md",
-        context.userId
+      return createErrorResult(
+        error2 instanceof Error ? error2.message : "Unknown error occurred"
       );
-      if (!profileContent) {
-        return createErrorResult(`[As tool] [handleSwitchPersona] failed to load profile.md for '${personaName}'`);
-      }
-      const parsedPersona = parsePersonaMarkdown(profileContent);
-      parsedPersona.name = personaName;
-      const agentService = new AgentService(context);
-      const formatter = agentService.getDefaultFormatter();
-      const contextFilePath = formatter?.getRepoContextFilePath();
-      const updatedContext = await _AsTool.activatePersona(personaName, profile, context);
-      const response = await buildPersonaContext(updatedContext, parsedPersona);
-      const [hasAgents, featureFlags] = await Promise.all([
-        _AsTool.checkHasAgents(updatedContext, contextFilePath),
-        resolveFeatureFlags(updatedContext)
-      ]);
-      return {
-        content: [{
-          type: "text",
-          text: formatPersonaContext(response, contextFilePath, hasAgents, featureFlags, updatedContext.libraryAuth)
-        }],
-        isError: false
-      };
-    } else {
-      return _AsTool.handlePersonaNotFound({ personaName, confirmCreate: args.confirmCreate }, personaService, context);
     }
   }
   /**
-   * Handle library persona import - simplified to only import persona
+   * Library import wrapper — delegates to the core
+   * `asImportLibraryPersona` handler, then adds the MCP-only repo
+   * "needs init" trailing note. The note depends on `RepoService`
+   * which still lives in MCP; once it relocates to core (PRD task 2-2)
+   * the trailing-note logic moves into the handler too.
    */
-  static async handleLibraryPersona(personaName, context) {
-    const afterPrefix = personaName.substring("library:".length).trim();
-    const parts = afterPrefix.split(/\s+/);
-    const libraryPersonaName = parts[0];
-    const localPersonaName = parts.slice(1).join(" ") || libraryPersonaName;
-    if (!libraryPersonaName) {
-      return createErrorResult("Invalid library persona format. Use: library:<persona_name> [local_name]");
-    }
-    if (!context.authToken?.token) {
-      return createErrorResult("authentication required to fetch library personas");
-    }
-    try {
-      const libraryClient = new LibraryClient();
-      const personaResponse = await libraryClient.getPersona(
-        libraryPersonaName,
-        context.authToken?.token || "",
-        false
-        // Without agents
-      );
-      const personaService = new PersonaService2(context);
-      const personaData = typeof personaResponse === "string" ? { systemBlock: personaResponse } : personaResponse.systemBlock ? personaResponse : { systemBlock: personaResponse.persona?.systemBlock || JSON.stringify(personaResponse) };
-      const enhancedPersona = personaService.addUserBlock(
-        personaData,
-        localPersonaName
-      );
-      const metadata = {
-        id: localPersonaName,
-        name: localPersonaName,
-        description: personaResponse.description || `${personaResponse.name} persona`,
-        created: (/* @__PURE__ */ new Date()).toISOString(),
-        lastUpdated: (/* @__PURE__ */ new Date()).toISOString(),
-        sourceLibrary: {
-          id: personaResponse.id,
-          name: libraryPersonaName,
-          version: personaResponse.version || "1.0.0",
-          importedAt: (/* @__PURE__ */ new Date()).toISOString()
-        }
-      };
-      const parsedPersona = await personaService.create(localPersonaName, enhancedPersona, metadata);
-      context.logger.info(`Imported library persona '${libraryPersonaName}' as '${localPersonaName}'`);
-      const updatedContext = await _AsTool.activatePersona(localPersonaName, { profile: enhancedPersona.systemBlock }, context);
-      const repoService = new RepoService(context);
-      let needsInitMessage = "";
-      if (repoService.isInRepository()) {
-        const initialized = await repoService.isRepositoryInitialized();
-        if (!initialized) {
-          needsInitMessage = "\n\n\u{1F4DD} Note: Repository not initialized. Run `analyse` to fetch recommended agents for your tech stack.";
-        }
-      }
-      const agentService = new AgentService(context);
-      const formatter = agentService.getDefaultFormatter();
-      const contextFilePath = formatter?.getRepoContextFilePath();
-      const response = await buildPersonaContext(updatedContext, parsedPersona);
-      const [hasAgents, featureFlags] = await Promise.all([
-        _AsTool.checkHasAgents(updatedContext, contextFilePath),
-        resolveFeatureFlags(updatedContext)
-      ]);
-      return {
-        content: [{
-          type: "text",
-          text: formatPersonaContext(response, contextFilePath, hasAgents, featureFlags, updatedContext.libraryAuth) + needsInitMessage
-        }],
-        isError: false
-      };
-    } catch (error2) {
-      context.logger.error(`Failed to fetch library persona: ${error2}`);
-      return createErrorResult(`Failed to fetch library persona: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
-    }
-  }
-  /**
-   * Activate persona in context and return updated context
-   */
-  static async activatePersona(personaName, loadPersonaResult, context) {
-    if (context.updateActivePersona) {
-      const personaProfile = {
-        id: personaName,
-        userContent: {
-          profile: loadPersonaResult.profile || loadPersonaResult.persona
-        }
-      };
-      const newContext = await context.updateActivePersona(personaProfile);
-      return newContext || context;
-    }
-    return context;
-  }
-  /**
-   * Check if agents are installed by checking the platform-specific agents directory
-   */
-  static async checkHasAgents(context, _contextFilePath) {
-    try {
-      const agentService = new AgentService(context);
-      const installedAgents = await agentService.getInstalledAgents();
-      return installedAgents.length > 0;
-    } catch {
-      return false;
-    }
-  }
-  /**
-   * Handle renaming an existing persona
-   */
-  static async handlePersonaRename(oldName, newName, service, context) {
-    try {
-      await context.storage.renamePersona(oldName, newName, context.userId);
-      const profile = await service.loadPersona({ personaName: newName });
-      if (!profile) {
-        return createErrorResult(`Failed to load renamed persona '${newName}'`);
-      }
-      const profileContent = await context.storage.getPersonaFile(
-        newName,
-        "profile.md",
-        context.userId
-      );
-      if (!profileContent) {
-        return createErrorResult(`Failed to load profile.md for renamed persona '${newName}'`);
-      }
-      const parsedPersona = parsePersonaMarkdown(profileContent);
-      parsedPersona.name = newName;
-      const agentService = new AgentService(context);
-      const formatter = agentService.getDefaultFormatter();
-      const contextFilePath = formatter?.getRepoContextFilePath();
-      const updatedContext = await _AsTool.activatePersona(newName, profile, context);
-      context.logger.info(`Renamed persona '${oldName}' to '${newName}'`);
-      const response = await buildPersonaContext(updatedContext, parsedPersona);
-      const [hasAgents, featureFlags] = await Promise.all([
-        _AsTool.checkHasAgents(updatedContext, contextFilePath),
-        resolveFeatureFlags(updatedContext)
-      ]);
-      return {
-        content: [{
-          type: "text",
-          text: formatPersonaContext(response, contextFilePath, hasAgents, featureFlags, updatedContext.libraryAuth)
-        }],
-        isError: false
-      };
-    } catch (error2) {
-      context.logger.error(`Failed to rename persona: ${error2}`);
-      return createErrorResult(`Failed to rename persona '${oldName}' to '${newName}': ${error2 instanceof Error ? error2.message : "Unknown error"}`);
-    }
-  }
-  static async handlePersonaNotFound(args, service, context) {
-    const availablePersonas = await service.listPersonas({}) || [];
-    if (!args.confirmCreate) {
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            requiresConfirmation: true,
-            action: "createPersona",
-            personaName: args.personaName,
-            message: `Persona "${args.personaName}" doesn't exist. Would you like to create it?`,
-            availablePersonas: availablePersonas.length > 0 ? availablePersonas : void 0,
-            hint: "To confirm creation, call the tool again with confirmCreate: true"
-          }, null, 2)
-        }],
-        isError: false
-      };
-    }
-    const profileString = createDefaultProfile(args.personaName, (/* @__PURE__ */ new Date()).toISOString());
-    await service.createPersona({
-      personaName: args.personaName,
-      profile: profileString
-    });
-    return _AsTool.handleSwitchPersona(
-      { ...args },
-      // confirmCreate is already true, no recursion issue
+  static async handleLibraryPersona(libraryPersonaName, localPersonaName, context, authToken) {
+    const result = await asImportLibraryPersona(
+      {
+        libraryName: libraryPersonaName,
+        localName: localPersonaName,
+        authToken: authToken?.token ?? ""
+      },
       context
+    );
+    if (!result.ok) {
+      return createErrorResult(result.error);
+    }
+    const repoService = new RepoService(context);
+    let needsInitMessage = "";
+    if (repoService.isInRepository()) {
+      const initialized = await repoService.isRepositoryInitialized();
+      if (!initialized) {
+        needsInitMessage = "\n\n\u{1F4DD} Note: Repository not initialized. Run `analyse` to fetch recommended agents for your tech stack.";
+      }
+    }
+    const extras = await buildMcpExtras(context);
+    return formatActionAsToolResult(
+      result.data,
+      extras,
+      context,
+      needsInitMessage
     );
   }
 };
@@ -62354,7 +65060,6 @@ var ManagePersonasArgsSchema = external_exports.object({
   data: external_exports.record(external_exports.unknown()).optional(),
   includeArchived: external_exports.boolean().optional(),
   mode: external_exports.enum(["all", "local", "library"]).optional()
-  // For list operation
 });
 var ManagePersonasTool = class {
   static getToolDefinition() {
@@ -62380,6 +65085,11 @@ var ManagePersonasTool = class {
           includeArchived: {
             type: "boolean",
             description: "Include archived personas in list (default: false)"
+          },
+          mode: {
+            type: "string",
+            enum: ["all", "local", "library"],
+            description: "List filter mode (all, local-only, or library-only)"
           }
         },
         required: ["operation"]
@@ -62388,165 +65098,18 @@ var ManagePersonasTool = class {
   }
   static async execute(args, context) {
     try {
-      const validatedArgs = ManagePersonasArgsSchema.parse(args);
-      const service = new PersonaService2(context);
-      switch (validatedArgs.operation) {
-        case "list": {
-          if (validatedArgs.includeArchived !== void 0) {
-            const personas2 = await service.listPersonas({
-              includeArchived: validatedArgs.includeArchived
-            });
-            const activePersona2 = context.activePersona?.id;
-            const response2 = formatPersonaList(personas2, activePersona2);
-            return createSuccessResult(response2);
-          }
-          const mode = validatedArgs.data?.mode || validatedArgs.mode || "all";
-          const personas = await service.listPersonasWithMode(mode);
-          const activePersona = context.activePersona?.id;
-          const response = formatPersonaList(personas, activePersona);
-          return createSuccessResult(response);
-        }
-        case "create": {
-          if (!validatedArgs.personaName) {
-            return createErrorResult("personaName is required for create operation");
-          }
-          const existing = await service.loadPersona({
-            personaName: validatedArgs.personaName
-          });
-          if (existing) {
-            return createErrorResult(`Persona "${validatedArgs.personaName}" already exists`);
-          }
-          const newProfile = createDefaultProfile(
-            validatedArgs.personaName,
-            (/* @__PURE__ */ new Date()).toISOString(),
-            validatedArgs.data?.description,
-            validatedArgs.data?.style
-          );
-          await service.createPersona({
-            personaName: validatedArgs.personaName,
-            profile: newProfile
-          });
-          return createSuccessResult(`Created persona "${validatedArgs.personaName}"`);
-        }
-        case "update": {
-          if (!validatedArgs.personaName) {
-            return createErrorResult("personaName is required for update operation");
-          }
-          if (!validatedArgs.data) {
-            return createErrorResult("data is required for update operation");
-          }
-          const data = validatedArgs.data;
-          if (data.name && typeof data.name === "string" && data.name !== validatedArgs.personaName) {
-            await service.renamePersona({
-              personaName: validatedArgs.personaName,
-              newPersonaName: data.name
-            });
-            return createSuccessResult(
-              `Renamed persona from "${validatedArgs.personaName}" to "${data.name}"`
-            );
-          }
-          const learningEvaluation = PersonaLearningService.evaluateUpdateForLearning(
-            data,
-            context
-          );
-          let insightsUpdated = false;
-          if (learningEvaluation.hasLearning && learningEvaluation.extractedLearning) {
-            context.logger.info(
-              `Learning opportunity detected for persona "${validatedArgs.personaName}"`,
-              {
-                learningType: learningEvaluation.learningType,
-                confidence: learningEvaluation.confidence,
-                extractedLearning: learningEvaluation.extractedLearning
-              }
-            );
-            await service.updateInsights({
-              personaName: validatedArgs.personaName,
-              insights: learningEvaluation.extractedLearning
-            });
-            insightsUpdated = true;
-          }
-          let profileUpdated = false;
-          if (data.profile && typeof data.profile === "string") {
-            await service.savePersona({
-              personaName: validatedArgs.personaName,
-              profile: data.profile
-            });
-            profileUpdated = true;
-          }
-          const updatedItems = [];
-          if (insightsUpdated) {
-            updatedItems.push(
-              `${learningEvaluation.learningType} (confidence: ${learningEvaluation.confidence?.toFixed(1)})`
-            );
-          }
-          if (profileUpdated) {
-            updatedItems.push("profile");
-          }
-          if (updatedItems.length > 0) {
-            return createSuccessResult(
-              `Updated persona "${validatedArgs.personaName}": ${updatedItems.join(", ")}`
-            );
-          }
-          const updates = JSON.stringify(data, null, 2);
-          const existingPersona = await service.loadPersona({
-            personaName: validatedArgs.personaName
-          });
-          if (!existingPersona) {
-            return createErrorResult(`Persona "${validatedArgs.personaName}" not found`);
-          }
-          const profileString = await context.storage.getPersonaFile(
-            validatedArgs.personaName,
-            "profile.md",
-            context.userId
-          );
-          const updatedProfile = profileString + "\n\n## Updates\n" + JSON.stringify(updates, null, 2);
-          await service.savePersona({
-            personaName: validatedArgs.personaName,
-            profile: updatedProfile
-          });
-          return createSuccessResult(
-            `Updated persona "${validatedArgs.personaName}" profile (fallback)`
-          );
-        }
-        case "archive": {
-          if (!validatedArgs.personaName) {
-            return createErrorResult("personaName is required for archive operation");
-          }
-          const archiveReason = validatedArgs.data?.reason;
-          await service.archivePersona({
-            personaName: validatedArgs.personaName,
-            reason: archiveReason
-          });
-          return createSuccessResult(`Archived persona "${validatedArgs.personaName}"`);
-        }
-        case "show": {
-          if (!validatedArgs.personaName) {
-            return createErrorResult("personaName is required for show operation");
-          }
-          const persona = await service.loadPersona({
-            personaName: validatedArgs.personaName
-          });
-          if (!persona) {
-            return createErrorResult(`Persona "${validatedArgs.personaName}" not found`);
-          }
-          const files = await service.listPersonaFiles({
-            personaName: validatedArgs.personaName
-          });
-          const formattedPersona = formatPersona(
-            persona?.persona || null,
-            validatedArgs.personaName
-          );
-          let response = `Persona: ${validatedArgs.personaName}
-`;
-          response += `Files: ${files.length}
-
-`;
-          response += `Profile:
-${formattedPersona}`;
-          return createSuccessResult(response);
-        }
-        default:
-          return createErrorResult(`Unknown operation: ${validatedArgs.operation}`);
+      const parsed = ManagePersonasArgsSchema.parse(args);
+      switch (parsed.operation) {
+        case "list":
+          return await handleList2(parsed, context);
+        case "create":
+          return await handleCreate(parsed, context);
+        case "update":
+          return await handleUpdate(parsed, context);
+        case "archive":
+          return await handleArchive(parsed, context);
+        case "show":
+          return await handleShow2(parsed, context);
       }
     } catch (error2) {
       if (error2 instanceof external_exports.ZodError) {
@@ -62558,668 +65121,84 @@ ${formattedPersona}`;
     }
   }
 };
+async function handleList2(args, ctx) {
+  const mode = args.data?.mode ?? args.mode;
+  const result = await personasList(
+    { mode, includeArchived: args.includeArchived },
+    ctx
+  );
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatPersonaList(result.data.personas, result.data.activePersona));
+}
+async function handleCreate(args, ctx) {
+  if (!args.personaName) return createErrorResult("personaName is required for create operation");
+  const result = await personasCreate(
+    {
+      personaName: args.personaName,
+      description: args.data?.description,
+      style: args.data?.style
+    },
+    ctx
+  );
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(`Created persona "${result.data.personaName}"`);
+}
+async function handleUpdate(args, ctx) {
+  if (!args.personaName) return createErrorResult("personaName is required for update operation");
+  if (!args.data) return createErrorResult("data is required for update operation");
+  const result = await personasUpdate(
+    { personaName: args.personaName, data: args.data },
+    ctx
+  );
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatUpdate(args.personaName, result.data));
+}
+async function handleArchive(args, ctx) {
+  if (!args.personaName) return createErrorResult("personaName is required for archive operation");
+  const result = await personasArchive(
+    { personaName: args.personaName, reason: args.data?.reason },
+    ctx
+  );
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(`Archived persona "${result.data.personaName}"`);
+}
+async function handleShow2(args, ctx) {
+  if (!args.personaName) return createErrorResult("personaName is required for show operation");
+  const result = await personasShow({ personaName: args.personaName }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  const profileForFormatter = result.data.persona ?? result.data.profileContent ?? null;
+  const formatted = formatPersona(profileForFormatter, result.data.personaName);
+  return createSuccessResult(
+    `Persona: ${result.data.personaName}
+Files: ${result.data.files.length}
+
+Profile:
+${formatted}`
+  );
+}
+function formatUpdate(personaName, data) {
+  if (data.renamed) {
+    return `Renamed persona from "${data.from}" to "${data.to}"`;
+  }
+  const items = [];
+  if (data.insightsUpdated && data.learningType && data.learningConfidence !== void 0) {
+    items.push(`${data.learningType} (confidence: ${data.learningConfidence.toFixed(1)})`);
+  } else if (data.insightsUpdated) {
+    items.push("insights");
+  }
+  if (data.profileUpdated) items.push("profile");
+  if (items.length > 0) {
+    return `Updated persona "${personaName}": ${items.join(", ")}`;
+  }
+  if (data.fallbackAppend) {
+    return `Updated persona "${personaName}" profile (fallback)`;
+  }
+  return `Updated persona "${personaName}"`;
+}
 
 // packages/tiny-brain-mcp/src/tools/analyse.tool.ts
 init_zod();
-
-// packages/tiny-brain-mcp/src/services/analyse-service.ts
 init_src();
-import { fileURLToPath as fileURLToPath7 } from "url";
-import { dirname as dirname11, join as join24 } from "path";
-import { existsSync as existsSync10 } from "fs";
-import { readFile as readFile12, readdir as readdir9, writeFile as writeFile5 } from "fs/promises";
-
-// packages/tiny-brain-mcp/src/utils/package-version.ts
-import { readFileSync as readFileSync2 } from "fs";
-import { join as join23, dirname as dirname10 } from "path";
-import { fileURLToPath as fileURLToPath6 } from "url";
-function getPackageVersion() {
-  const __filename = fileURLToPath6(import.meta.url);
-  const __dirname = dirname10(__filename);
-  const packagePath = join23(__dirname, "..", "..", "package.json");
-  try {
-    const packageJson = JSON.parse(readFileSync2(packagePath, "utf-8"));
-    return packageJson.version;
-  } catch (error2) {
-    throw new Error(`Failed to read package version: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
-  }
-}
-
-// packages/tiny-brain-mcp/src/services/analyse-service.ts
-var AnalyseService = class {
-  constructor(context) {
-    this.context = context;
-    this.configService = new ConfigService(context);
-    this.repoService = new RepoService(context);
-    this.libraryClient = new LibraryClient();
-    this.techContextService = new TechContextService(process.cwd());
-    this.recommendationService = new RecommendationService(process.cwd());
-  }
-  repoService;
-  libraryClient;
-  configService;
-  techContextService;
-  recommendationService;
-  /**
-   * Perform repository analysis with unified behavior for initialized/uninitialized repos
-   */
-  async performAnalysis(options = {}) {
-    const { dryRun = false, contextPath = "CLAUDE.md" } = options;
-    const currentAnalysis = await analyseRepository(process.cwd());
-    this.context.logger.info(`Repository analysis complete: ${currentAnalysis.languages.join(", ")}`);
-    await this.registerRepository();
-    const configSetupResult = await this.performConfigSetup();
-    const prdInitialized = configSetupResult?.prdInitialized ?? false;
-    const adrInitialized = configSetupResult?.adrInitialized ?? false;
-    const qualityInitialized = configSetupResult?.qualityInitialized ?? false;
-    const fixesInitialized = configSetupResult?.fixesInitialized ?? false;
-    const gitHooksInstalled = configSetupResult?.gitHooksInstalled ?? false;
-    const skillPermissionsAdded = configSetupResult?.skillPermissionsAdded ?? [];
-    const analysisInput = {
-      languages: currentAnalysis.languages,
-      frameworks: currentAnalysis.frameworks,
-      testingTools: currentAnalysis.testingTools,
-      buildTools: currentAnalysis.buildTools,
-      hasTests: currentAnalysis.hasTests,
-      testFileCount: currentAnalysis.testFileCount,
-      testPatterns: currentAnalysis.testPatterns,
-      isPolyglot: currentAnalysis.isPolyglot,
-      primaryLanguage: currentAnalysis.primaryLanguage,
-      documentationPattern: currentAnalysis.documentationPattern,
-      documentationLocations: currentAnalysis.documentationLocations,
-      // Rich metadata
-      packageManager: currentAnalysis.packageManager,
-      scripts: currentAnalysis.scripts,
-      linting: currentAnalysis.linting,
-      monorepo: currentAnalysis.monorepo,
-      projectName: currentAnalysis.projectName,
-      sourceDirectories: currentAnalysis.sourceDirectories
-    };
-    const detectionService = new AnalyzerDetectionService(process.cwd());
-    const detectedAnalyzers = await detectionService.detectAnalyzers();
-    if (detectedAnalyzers.length > 0) {
-      analysisInput.analyzers = detectedAnalyzers.map((a) => {
-        const def = ANALYZER_REGISTRY.find((d) => d.id === a.analyzerId);
-        let pipelineCommand = null;
-        if (def?.variants) {
-          for (const variant of def.variants) {
-            if (variant.changedTemplate) {
-              pipelineCommand = variant.changedTemplate;
-              break;
-            }
-          }
-        }
-        return {
-          id: a.analyzerId,
-          name: a.name,
-          variant: null,
-          configPaths: [...a.configPaths],
-          commands: {
-            quality: a.commands[0],
-            pipeline: pipelineCommand
-          },
-          categories: [...a.categories],
-          emoji: def?.emoji,
-          color: def?.color
-        };
-      });
-    }
-    const stackChanged = await this.techContextService.hasStackChanged(analysisInput);
-    const existingAnalysis = await this.techContextService.readAnalysis();
-    const isFirstAnalysis = existingAnalysis === null;
-    if (!dryRun) {
-      await this.techContextService.writeAnalysis(analysisInput);
-    }
-    let writtenTechContexts = [];
-    if (!dryRun) {
-      writtenTechContexts = await this.fetchAndWriteTechContexts(currentAnalysis);
-    }
-    let recommendations = [];
-    if (!dryRun) {
-      recommendations = await this.fetchAndWriteRecommendations(currentAnalysis);
-    }
-    const enableAgentic = await this.configService.isAgenticCodingEnabled();
-    if (!dryRun) {
-      await this.techContextService.syncAgents(enableAgentic);
-    }
-    let agentsMdStatus;
-    const manageAgentsMd = await this.configService.isManageAgentsMdEnabled();
-    if (!dryRun && manageAgentsMd) {
-      agentsMdStatus = await this.generateAgentsMd(currentAnalysis);
-    }
-    const currentVersion = getPackageVersion();
-    const existingContent = await this.repoService.readRepoBlockFromContextFile(contextPath);
-    const contextBlockVersion = existingContent ? this.repoService.extractTinyBrainVersion(existingContent) ?? void 0 : void 0;
-    const contextBlockUpdated = existingContent ? this.needsTinyBrainUpdate(existingContent, currentVersion) : false;
-    if (isFirstAnalysis) {
-      this.context.logger.info("First analysis - no previous repository context found");
-      return {
-        analysis: currentAnalysis,
-        isFirstAnalysis: true,
-        dryRun,
-        contextPath,
-        enableAgenticCoding: enableAgentic,
-        prdInitialized,
-        adrInitialized,
-        qualityInitialized,
-        fixesInitialized,
-        gitHooksInstalled,
-        contextBlockVersion,
-        contextBlockUpdated,
-        skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
-        writtenTechContexts,
-        agentsMdStatus,
-        recommendations
-      };
-    }
-    if (!stackChanged) {
-      this.context.logger.info("No tech stack changes detected");
-      return {
-        analysis: currentAnalysis,
-        isFirstAnalysis: false,
-        dryRun,
-        contextPath,
-        enableAgenticCoding: enableAgentic,
-        prdInitialized,
-        adrInitialized,
-        qualityInitialized,
-        fixesInitialized,
-        gitHooksInstalled,
-        contextBlockVersion,
-        contextBlockUpdated,
-        skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
-        writtenTechContexts,
-        agentsMdStatus,
-        recommendations
-      };
-    }
-    const previousStack = existingAnalysis?.stack;
-    const techStackDiff = previousStack ? {
-      added: [
-        ...currentAnalysis.languages.filter((l) => !previousStack.languages.includes(l)),
-        ...currentAnalysis.frameworks.filter((f) => !previousStack.frameworks.includes(f)),
-        ...currentAnalysis.buildTools.filter((b) => !previousStack.build.includes(b)),
-        ...currentAnalysis.testingTools.filter((t) => !previousStack.testing.includes(t))
-      ],
-      removed: [
-        ...previousStack.languages.filter((l) => !currentAnalysis.languages.includes(l)),
-        ...previousStack.frameworks.filter((f) => !currentAnalysis.frameworks.includes(f)),
-        ...previousStack.build.filter((b) => !currentAnalysis.buildTools.includes(b)),
-        ...previousStack.testing.filter((t) => !currentAnalysis.testingTools.includes(t))
-      ]
-    } : { added: [], removed: [] };
-    this.context.logger.info(`Tech stack changes detected: +${techStackDiff.added.length} -${techStackDiff.removed.length}`);
-    return {
-      analysis: currentAnalysis,
-      isFirstAnalysis: false,
-      dryRun,
-      contextPath,
-      enableAgenticCoding: enableAgentic,
-      prdInitialized,
-      adrInitialized,
-      qualityInitialized,
-      fixesInitialized,
-      gitHooksInstalled,
-      contextBlockVersion,
-      contextBlockUpdated,
-      changes: {
-        techStackAdded: techStackDiff.added,
-        techStackRemoved: techStackDiff.removed
-      },
-      skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
-      writtenTechContexts,
-      agentsMdStatus,
-      recommendations
-    };
-  }
-  /**
-   * Generate AGENTS.md file in the repository root
-   * For monorepos, also generates per-package AGENTS.md files
-   * Uses AgentsMdService from tiny-brain-core
-   */
-  async generateAgentsMd(analysis) {
-    const repoRoot = process.cwd();
-    const agentsMdService = new AgentsMdService(repoRoot);
-    const agentsMdPath = join24(repoRoot, "AGENTS.md");
-    let existingContent;
-    try {
-      existingContent = await readFile12(agentsMdPath, "utf-8");
-    } catch {
-    }
-    const readmeExcerpt = await agentsMdService.extractReadmeExcerpt();
-    let packageDescriptions;
-    if (analysis.monorepo?.packages && analysis.monorepo.packages.length > 0) {
-      packageDescriptions = await this.collectPackageDescriptions(repoRoot, analysis.monorepo.packages);
-    }
-    const result = await agentsMdService.generateContent({
-      analysis,
-      readmeExcerpt,
-      repoPath: repoRoot,
-      existingContent,
-      packageDescriptions
-    });
-    if (!existingContent) {
-      await writeFile5(agentsMdPath, result.content, "utf-8");
-      this.context.logger.info("Created AGENTS.md");
-    } else if (!result.contentChanged) {
-      this.context.logger.info("AGENTS.md is up to date");
-    } else {
-      await writeFile5(agentsMdPath, result.content, "utf-8");
-      this.context.logger.info("Updated AGENTS.md");
-    }
-    if (analysis.monorepo?.packages && analysis.monorepo.packages.length > 0) {
-      await this.generatePerPackageAgentsMd(repoRoot, analysis, agentsMdService);
-    }
-    if (!existingContent) return "created";
-    if (!result.contentChanged) return "up-to-date";
-    return "updated";
-  }
-  /**
-   * Read package.json from each workspace directory to collect names and descriptions
-   */
-  async collectPackageDescriptions(repoRoot, packages) {
-    const descriptions = [];
-    for (const pkgPath of packages) {
-      const fullPath = join24(repoRoot, pkgPath);
-      const pkgJsonPath = join24(fullPath, "package.json");
-      try {
-        const raw = await readFile12(pkgJsonPath, "utf-8");
-        const pkgJson = JSON.parse(raw);
-        descriptions.push({
-          name: pkgJson.name,
-          path: pkgPath,
-          description: pkgJson.description
-        });
-      } catch {
-        descriptions.push({ path: pkgPath });
-      }
-    }
-    return descriptions;
-  }
-  /**
-   * Generate AGENTS.md for each workspace package in a monorepo
-   */
-  async generatePerPackageAgentsMd(repoRoot, analysis, agentsMdService) {
-    const packages = analysis.monorepo?.packages ?? [];
-    for (const pkgPath of packages) {
-      const fullPkgPath = join24(repoRoot, pkgPath);
-      const pkgAgentsMdPath = join24(fullPkgPath, "AGENTS.md");
-      let existingPkgContent;
-      try {
-        existingPkgContent = await readFile12(pkgAgentsMdPath, "utf-8");
-      } catch {
-      }
-      const pkgResult = await agentsMdService.generatePackageContent(
-        fullPkgPath,
-        analysis,
-        existingPkgContent
-      );
-      if (!existingPkgContent || pkgResult.contentChanged) {
-        await writeFile5(pkgAgentsMdPath, pkgResult.content, "utf-8");
-        this.context.logger.debug(`Wrote AGENTS.md for ${pkgPath}`);
-      }
-    }
-  }
-  /**
-   * Register repository in dashboard for visibility
-   * Called after successful analysis regardless of invocation method
-   */
-  async registerRepository() {
-    try {
-      const repoRoot = process.cwd();
-      const repoConfigService = new RepoConfigService(this.context);
-      const repoName = repoRoot.split("/").pop() || "unknown";
-      const prdCount = await this.countPrdsInRepo(repoRoot);
-      await repoConfigService.registerRepo({
-        name: repoName,
-        path: repoRoot,
-        prdCount
-      });
-      this.context.logger.debug(`Registered repository: ${repoName}`);
-    } catch (error2) {
-      this.context.logger.warn(`Failed to register repository: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
-    }
-  }
-  /**
-   * Count PRD directories in a repository
-   */
-  async countPrdsInRepo(repoPath) {
-    try {
-      const prdDir = join24(repoPath, "docs", "prd");
-      if (!existsSync10(prdDir)) {
-        return 0;
-      }
-      const entries = await readdir9(prdDir, { withFileTypes: true });
-      return entries.filter((e) => e.isDirectory() && !e.name.startsWith("_")).length;
-    } catch {
-      return 0;
-    }
-  }
-  /**
-   * Perform config setup using core ConfigSetupService.
-   * Delegates directory initialization, git hooks, skill permissions, and CLAUDE.md
-   * context block writing to the shared service.
-   */
-  async performConfigSetup() {
-    try {
-      const hooksSourceDir = this.resolveHooksDir();
-      const version2 = getPackageVersion();
-      const configSetup = new ConfigSetupService({
-        repoPath: process.cwd(),
-        version: version2,
-        hooksSourceDir,
-        logger: {
-          info: (msg) => this.context.logger.info(msg),
-          debug: (msg) => this.context.logger.debug(msg),
-          warn: (msg) => this.context.logger.warn(msg)
-        }
-      });
-      return await configSetup.performSetup();
-    } catch (error2) {
-      this.context.logger.warn(`Config setup failed: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
-      return void 0;
-    }
-  }
-  /**
-   * Resolve hooks template directory from the core package.
-   * Tries the core package's templates first (monorepo layout), then falls back
-   * to the MCP package's own templates for backward compatibility.
-   */
-  resolveHooksDir() {
-    try {
-      const __filename = fileURLToPath7(import.meta.url);
-      const __dirname = dirname11(__filename);
-      const coreHooksDir = join24(__dirname, "..", "..", "..", "tiny-brain-core", "templates", "hooks");
-      if (existsSync10(coreHooksDir)) return coreHooksDir;
-      const mcpHooksDir = join24(__dirname, "..", "..", "templates", "hooks");
-      if (existsSync10(mcpHooksDir)) return mcpHooksDir;
-      return void 0;
-    } catch {
-      return void 0;
-    }
-  }
-  /**
-   * Fetch tech contexts from TBR and write them to .tiny-brain/tech/
-   * Only called when enableAgenticCoding=false
-   */
-  async fetchAndWriteTechContexts(analysis) {
-    try {
-      const localContext = this.context;
-      if (!localContext.authToken?.token) {
-        this.context.logger.debug("No auth token available for TBR API call");
-        return [];
-      }
-      const response = await this.libraryClient.getTechContexts(analysis, localContext.authToken.token);
-      if (!response?.techContexts || response.techContexts.length === 0) {
-        this.context.logger.debug("No tech contexts returned from TBR");
-        return [];
-      }
-      const writtenContexts = [];
-      for (const techContext of response.techContexts) {
-        const name = techContext.frontmatter.name;
-        await this.techContextService.writeTechFileRaw(name, techContext.raw);
-        writtenContexts.push(name);
-        this.context.logger.debug(`Wrote tech context: ${name}`);
-      }
-      this.context.logger.info(`Wrote ${writtenContexts.length} tech context(s) to .tiny-brain/tech/`);
-      return writtenContexts;
-    } catch (error2) {
-      this.context.logger.warn(`Failed to fetch tech contexts from TBR: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
-      return [];
-    }
-  }
-  /**
-   * Fetch recommendations from TBR and write them via RecommendationService
-   */
-  async fetchAndWriteRecommendations(analysis) {
-    try {
-      const localContext = this.context;
-      if (!localContext.authToken?.token) {
-        this.context.logger.debug("No auth token available for recommendations API call");
-        return [];
-      }
-      const response = await this.libraryClient.getRecommendations(analysis, localContext.authToken.token);
-      if (!response?.recommendations || response.recommendations.length === 0) {
-        this.context.logger.debug("No recommendations returned from TBR");
-        return [];
-      }
-      await this.recommendationService.writeRecommendations(response.recommendations, response.fetchedAt);
-      this.context.logger.info(`Fetched ${response.recommendations.length} recommendation(s) from TBR`);
-      return response.recommendations;
-    } catch (error2) {
-      this.context.logger.warn(`Failed to fetch recommendations from TBR: ${error2 instanceof Error ? error2.message : "Unknown error"}`);
-      return [];
-    }
-  }
-  /**
-   * Format analysis output for display
-   */
-  formatAnalysisOutput(result) {
-    const lines = [];
-    if (result.dryRun) {
-      lines.push("[DRY RUN - No changes applied]\n");
-      if (result.changes) {
-        lines.push("Would apply the following changes:\n");
-      }
-    }
-    const currentVersion = getPackageVersion();
-    if (result.contextBlockUpdated) {
-      lines.push(`\u{1F4DD} Context block updated to v${currentVersion}`);
-      if (result.contextBlockVersion) {
-        lines.push(`  (was v${result.contextBlockVersion})
-`);
-      } else {
-        lines.push(`  (was not versioned)
-`);
-      }
-    } else if (result.contextBlockVersion) {
-      lines.push(`\u2705 Context block current (v${currentVersion})
-`);
-    } else if (!result.isFirstAnalysis) {
-      lines.push(`\u{1F4DD} Context block will be initialised with v${currentVersion}
-`);
-    }
-    if (result.isFirstAnalysis) {
-      lines.push(`\u{1F4C2} Repository: ${process.cwd()}`);
-      lines.push("\n\u{1F4CA} Tech stack:");
-      lines.push(`  Languages: ${result.analysis.languages.join(", ")}`);
-      lines.push(`  Frameworks: ${result.analysis.frameworks.join(", ")}`);
-      lines.push(`  Build Tools: ${result.analysis.buildTools.join(", ")}`);
-      lines.push(`  Testing Tools: ${result.analysis.testingTools.join(", ")}`);
-      if (result.analysis.packageManager) {
-        lines.push(`  Package Manager: ${result.analysis.packageManager}`);
-      }
-      if (result.analysis.documentationPattern) {
-        lines.push(`
-\u{1F4DA} Documentation: ${result.analysis.documentationPattern}`);
-        if (result.analysis.documentationLocations) {
-          lines.push(`  Locations: ${result.analysis.documentationLocations.join(", ")}`);
-        }
-      }
-      if (result.prdInitialized) {
-        lines.push("\n\u{1F4CB} PRD Structure: Initialized");
-        lines.push("  Created docs/prd/ directory");
-      }
-      if (result.adrInitialized) {
-        lines.push("\n\u{1F4D0} ADR Structure: Initialized");
-        lines.push("  Created docs/adr/ directory");
-      }
-      if (result.qualityInitialized) {
-        lines.push("\n\u{1F4CA} Quality Analysis: Initialized");
-        lines.push("  Created .tiny-brain/quality/ directory");
-      }
-      if (result.fixesInitialized) {
-        lines.push("\n\u{1F527} Fixes Tracking: Initialized");
-        lines.push("  Created .tiny-brain/fixes/ directory");
-      }
-      if (result.gitHooksInstalled) {
-        lines.push("\n\u{1FA9D} Git Hooks: Installed");
-        lines.push("  TDD workflow hooks in .git/hooks/");
-      }
-      if (result.skillPermissionsAdded && result.skillPermissionsAdded.length > 0) {
-        lines.push("\n\u{1F510} Skill Permissions: Added to .claude/settings.json");
-        lines.push(`  ${result.skillPermissionsAdded.length} permissions added for skill file operations`);
-      }
-      lines.push("\n\u{1F4DD} Tech Contexts Written:");
-      if (result.writtenTechContexts && result.writtenTechContexts.length > 0) {
-        lines.push(`  ${result.writtenTechContexts.join(", ")}`);
-      } else {
-        lines.push("  None");
-      }
-    } else if (result.changes) {
-      const techDiff = {
-        added: result.changes.techStackAdded,
-        removed: result.changes.techStackRemoved
-      };
-      const techChanges = formatTechStackChanges(techDiff);
-      if (techChanges) {
-        lines.push(techChanges);
-      }
-      lines.push("\n\u{1F4DD} Tech Contexts Written:");
-      if (result.writtenTechContexts && result.writtenTechContexts.length > 0) {
-        lines.push(`  ${result.writtenTechContexts.join(", ")}`);
-      } else {
-        lines.push("  None");
-      }
-    } else {
-      lines.push("\u{1F4CA} Repository analysis complete - no changes detected");
-      lines.push("\n\u{1F4DD} Tech Contexts Written:");
-      if (result.writtenTechContexts && result.writtenTechContexts.length > 0) {
-        lines.push(`  ${result.writtenTechContexts.join(", ")}`);
-      } else {
-        lines.push("  None");
-      }
-    }
-    this.appendRichMetadataOutput(lines, result.analysis);
-    if (result.agentsMdStatus) {
-      const statusLabel = result.agentsMdStatus === "created" ? "Created" : result.agentsMdStatus === "updated" ? "Updated" : "Up to date";
-      lines.push(`
-AGENTS.md: ${statusLabel}`);
-    }
-    if (result.recommendations && result.recommendations.length > 0) {
-      lines.push("\n\u{1F3AF} Recommendations:");
-      const groupLabels = { skill: "Skills", agent: "Agents", hook: "Hooks" };
-      const grouped = /* @__PURE__ */ new Map();
-      for (const rec of result.recommendations) {
-        const existing = grouped.get(rec.type) ?? [];
-        grouped.set(rec.type, [...existing, rec]);
-      }
-      for (const [type2, label] of Object.entries(groupLabels)) {
-        const recs = grouped.get(type2);
-        if (recs && recs.length > 0) {
-          lines.push(`
-  ${label}:`);
-          for (const rec of recs) {
-            lines.push(`    \u2022 ${rec.name} \u2014 ${rec.description}`);
-            lines.push(`      Reason: ${rec.reason}`);
-          }
-        }
-      }
-      lines.push("\n  Use `recommendations operation=accept` to install");
-    }
-    return lines.join("\n");
-  }
-  /**
-   * Append rich metadata sections to output lines
-   */
-  appendRichMetadataOutput(lines, analysis) {
-    if (analysis.packageManager) {
-      lines.push(`
-  Package Manager: ${analysis.packageManager}`);
-    }
-    const scripts = analysis.scripts;
-    if (scripts && (scripts.test?.command || scripts.build?.command || scripts.dev?.command || scripts.lint?.command || scripts.e2e?.command)) {
-      lines.push("\n\u{1F4CB} Commands:");
-      if (scripts.test?.command) lines.push(`  Test: ${scripts.test.command}`);
-      if (scripts.build?.command) lines.push(`  Build: ${scripts.build.command}`);
-      if (scripts.dev?.command) lines.push(`  Dev: ${scripts.dev.command}`);
-      if (scripts.lint?.command) lines.push(`  Lint: ${scripts.lint.command}`);
-      if (scripts.e2e?.command) lines.push(`  E2E: ${scripts.e2e.command}`);
-    }
-    if (analysis.linting) {
-      lines.push("\n\u{1F50D} Linting:");
-      if (analysis.linting.tool) {
-        lines.push(`  Tool: ${analysis.linting.tool}`);
-      }
-      if (analysis.linting.plugins && analysis.linting.plugins.length > 0) {
-        lines.push(`  Plugins: ${analysis.linting.plugins.join(", ")}`);
-      }
-    }
-    if (analysis.monorepo) {
-      lines.push("\n\u{1F4E6} Monorepo:");
-      if (analysis.monorepo.tool) {
-        lines.push(`  Tool: ${analysis.monorepo.tool}`);
-      }
-      if (analysis.monorepo.packages && analysis.monorepo.packages.length > 0) {
-        lines.push("  Packages:");
-        for (const pkg of analysis.monorepo.packages) {
-          lines.push(`    - ${pkg}`);
-        }
-      }
-    }
-  }
-  /**
-   * Compare two tech stacks and return differences
-   * Handles null previous analysis (first run)
-   */
-  compareTechStacks(previousAnalysis, currentAnalysis) {
-    if (!previousAnalysis) {
-      return {
-        added: [
-          ...currentAnalysis.languages,
-          ...currentAnalysis.frameworks,
-          ...currentAnalysis.buildTools,
-          ...currentAnalysis.testingTools
-        ],
-        removed: []
-      };
-    }
-    return detectTechStackChanges(
-      {
-        languages: previousAnalysis.languages || [],
-        frameworks: previousAnalysis.frameworks || [],
-        buildTools: previousAnalysis.buildTools || [],
-        testingTools: previousAnalysis.testingTools || []
-      },
-      {
-        languages: currentAnalysis.languages || [],
-        frameworks: currentAnalysis.frameworks || [],
-        buildTools: currentAnalysis.buildTools || [],
-        testingTools: currentAnalysis.testingTools || []
-      }
-    );
-  }
-  /**
-   * Check if tiny-brain block needs updating based on version
-   * @param existingContent - Content containing existing tiny-brain block
-   * @param currentVersion - Current package version
-   * @returns true if update needed (version mismatch or missing)
-   */
-  needsTinyBrainUpdate(existingContent, currentVersion) {
-    const existingVersion = this.repoService.extractTinyBrainVersion(existingContent);
-    if (!existingVersion) {
-      return true;
-    }
-    return this.compareVersions(existingVersion, currentVersion) < 0;
-  }
-  /**
-   * Compare semantic versions (e.g., "0.11.0" vs "0.12.0")
-   * @param v1 - First version string
-   * @param v2 - Second version string
-   * @returns -1 if v1 < v2, 0 if equal, 1 if v1 > v2
-   */
-  compareVersions(v1, v2) {
-    const parts1 = v1.split(".").map(Number);
-    const parts2 = v2.split(".").map(Number);
-    for (let i = 0; i < 3; i++) {
-      if (parts1[i] < parts2[i]) return -1;
-      if (parts1[i] > parts2[i]) return 1;
-    }
-    return 0;
-  }
-};
-
-// packages/tiny-brain-mcp/src/tools/analyse.tool.ts
 init_src();
 var AnalyseArgsSchema = external_exports.object({
   dryRun: external_exports.boolean().optional().default(false)
@@ -63298,8 +65277,6 @@ var AnalyseTool = class _AnalyseTool {
 
 // packages/tiny-brain-mcp/src/tools/quality/quality.tool.ts
 init_zod();
-import { promises as fs33 } from "fs";
-import path36 from "path";
 init_src();
 var QualityArgsSchema = external_exports.object({
   operation: external_exports.enum([
@@ -63315,7 +65292,6 @@ var QualityArgsSchema = external_exports.object({
     "assemble-run",
     "implement-plan"
   ]),
-  // For 'save' operation
   score: external_exports.number().min(0).max(100).optional(),
   grade: external_exports.enum(["A", "B", "C", "D", "F"]).optional(),
   issues: external_exports.array(QualityIssueSchema).optional(),
@@ -63325,23 +65301,17 @@ var QualityArgsSchema = external_exports.object({
     frameworks: external_exports.array(external_exports.string()).optional(),
     projectType: external_exports.string().optional()
   }).optional(),
-  // For 'history' operation
   limit: external_exports.number().min(1).optional(),
-  // For 'details' operation
   runId: external_exports.string().optional(),
-  // For 'compare' operation
   baseRunId: external_exports.string().optional(),
   targetRunId: external_exports.string().optional(),
-  // For 'plan' operation
   sourceRunId: external_exports.string().optional(),
   targetGrade: external_exports.string().optional(),
-  // For 'plan-details' operation
   planId: external_exports.string().optional(),
-  // For 'merge-results' operation
   analyzerIssues: external_exports.array(QualityIssueSchema).optional(),
   llmIssues: external_exports.array(QualityIssueSchema).optional()
 });
-var QualityTool = class _QualityTool {
+var QualityTool = class {
   static getToolDefinition() {
     return {
       name: "quality",
@@ -63388,7 +65358,6 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
             ],
             description: "The quality operation to perform"
           },
-          // For 'save' operation
           score: {
             type: "number",
             description: "Quality score from 0-100 (required for save)"
@@ -63409,43 +65378,7 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
                 file: { type: "string" },
                 line: { type: "number" },
                 message: { type: "string" },
-                suggestion: { type: "string" },
-                effort: {
-                  type: "string",
-                  enum: ["trivial", "small", "medium", "large", "epic"],
-                  description: "Estimated effort to remediate"
-                },
-                impact: {
-                  type: "string",
-                  enum: ["critical", "high", "medium", "low"],
-                  description: "Impact level if this issue is not addressed"
-                },
-                theme: {
-                  type: "string",
-                  description: 'Thematic grouping tag (e.g., "type-safety", "auth-hardening")'
-                },
-                evidence: {
-                  type: "string",
-                  description: "Code snippet or evidence showing the problem"
-                },
-                relatedIssues: {
-                  type: "array",
-                  items: { type: "number" },
-                  description: "Indices of related issues in the same run"
-                },
-                references: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "External references such as CWE or OWASP identifiers"
-                },
-                scoreImpact: {
-                  type: "number",
-                  description: "Points that would be gained if this issue were fixed"
-                },
-                effortHours: {
-                  type: "number",
-                  description: "Estimated hours to remediate"
-                }
+                suggestion: { type: "string" }
               },
               required: ["category", "severity", "file", "message"]
             }
@@ -63459,17 +65392,14 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
             type: "object",
             description: "Repository context (languages, frameworks, etc.)"
           },
-          // For 'history' operation
           limit: {
             type: "number",
             description: "Maximum number of runs to return (optional for history)"
           },
-          // For 'details' operation
           runId: {
             type: "string",
-            description: "Run ID (required for details, assemble-run; optional for run-analysers to reuse Phase 1 directory)"
+            description: "Run ID (required for details, assemble-run; optional for run-analysers)"
           },
-          // For 'compare' operation
           baseRunId: {
             type: "string",
             description: "Base run ID for comparison (required for compare)"
@@ -63478,21 +65408,18 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
             type: "string",
             description: "Target run ID for comparison (required for compare)"
           },
-          // For 'plan' operation
           sourceRunId: {
             type: "string",
             description: "Source run ID to generate improvement plan from (required for plan)"
           },
           targetGrade: {
             type: "string",
-            description: "Target grade to aim for in the improvement plan (optional for plan)"
+            description: "Target grade for the improvement plan (optional for plan)"
           },
-          // For 'plan-details' operation
           planId: {
             type: "string",
-            description: "Plan ID to retrieve details for (required for plan-details)"
+            description: "Plan ID for plan-details / implement-plan operations"
           },
-          // For 'merge-results' operation
           analyzerIssues: {
             type: "array",
             description: "Array of analyzer issues (required for merge-results)",
@@ -63528,38 +65455,30 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
   }
   static async execute(args, context) {
     try {
-      const validatedArgs = QualityArgsSchema.parse(args);
-      if (!context.repositoryRoot) {
-        return createErrorResult(
-          "Repository root not found. Quality tool requires a git repository context."
-        );
-      }
-      const service = new QualityService(context.repositoryRoot);
-      switch (validatedArgs.operation) {
+      const parsed = QualityArgsSchema.parse(args);
+      switch (parsed.operation) {
         case "save":
-          return await _QualityTool.handleSave(validatedArgs, service);
+          return await handleSave(parsed, context);
         case "history":
-          return await _QualityTool.handleHistory(validatedArgs, service);
+          return await handleHistory(parsed, context);
         case "details":
-          return await _QualityTool.handleDetails(validatedArgs, service);
+          return await handleDetails(parsed, context);
         case "compare":
-          return await _QualityTool.handleCompare(validatedArgs, service);
+          return await handleCompare(parsed, context);
         case "plan":
-          return await _QualityTool.handlePlan(validatedArgs, service);
+          return await handlePlan(parsed, context);
         case "plan-details":
-          return await _QualityTool.handlePlanDetails(validatedArgs, context.repositoryRoot);
-        case "detect-analysers":
-          return await _QualityTool.handleDetectAnalyzers(context.repositoryRoot);
-        case "run-analysers":
-          return await _QualityTool.handleRunAnalyzers(validatedArgs, context.repositoryRoot);
-        case "merge-results":
-          return _QualityTool.handleMergeResults(validatedArgs);
-        case "assemble-run":
-          return await _QualityTool.handleAssembleRun(validatedArgs, context.repositoryRoot);
+          return await handlePlanDetails(parsed, context);
         case "implement-plan":
-          return await _QualityTool.handleImplementPlan(validatedArgs, service);
-        default:
-          return createErrorResult(`Unknown operation: ${validatedArgs.operation}`);
+          return await handleImplementPlan(parsed, context);
+        case "detect-analysers":
+          return await handleDetectAnalyzers(context);
+        case "run-analysers":
+          return await handleRunAnalyzers(parsed, context);
+        case "merge-results":
+          return handleMergeResults(parsed);
+        case "assemble-run":
+          return await handleAssembleRun(parsed, context);
       }
     } catch (error2) {
       if (error2 instanceof external_exports.ZodError) {
@@ -63569,400 +65488,89 @@ Persists and retrieves quality analysis results. Analysis is performed by agents
       return createErrorResult(error2 instanceof Error ? error2.message : "Unknown error occurred");
     }
   }
-  static async handleSave(args, service) {
-    if (args.score === void 0) {
-      return createErrorResult("score is required for save operation");
-    }
-    if (!args.grade) {
-      return createErrorResult("grade is required for save operation");
-    }
-    const saveInput = SaveQualityRunInputSchema.parse({
+};
+async function handleSave(args, ctx) {
+  if (args.score === void 0) {
+    return createErrorResult("score is required for save operation");
+  }
+  if (args.grade === void 0) {
+    return createErrorResult("grade is required for save operation");
+  }
+  const result = await qualitySave(
+    {
       score: args.score,
       grade: args.grade,
-      issues: args.issues || [],
-      recommendations: args.recommendations || [],
+      issues: args.issues,
+      recommendations: args.recommendations,
       context: args.context
-    });
-    const result = await service.saveRunResult(saveInput);
-    const response = [
-      "\u2705 Quality run saved successfully!",
-      "",
-      `\u{1F4CA} Run ID: ${result.runId}`,
-      `\u{1F4C1} File: ${result.filePath}`,
-      `\u{1F4C8} Score: ${args.score}/100 (Grade: ${args.grade})`,
-      `\u{1F50D} Issues: ${args.issues?.length || 0}`,
-      "",
-      'Use "quality history" to see all runs.'
-    ].join("\n");
-    return createSuccessResult(response);
-  }
-  static async handleHistory(args, service) {
-    const runs = await service.getPreviousRuns(args.limit);
-    if (runs.length === 0) {
-      return createSuccessResult(
-        "No quality runs found.\n\nRun a quality analysis first to create history."
-      );
-    }
-    const lines = ["\u{1F4CA} Quality Run History", ""];
-    for (const run of runs) {
-      const gradeEmoji = run.grade === "A" ? "\u{1F31F}" : run.grade === "F" ? "\u274C" : "\u{1F4CB}";
-      lines.push(`${gradeEmoji} **${run.date}** - Score: ${run.score}/100 (${run.grade})`);
-      lines.push(`   Run ID: ${run.runId}`);
-      lines.push(`   Issues: ${run.issueCount}`);
-      lines.push("");
-    }
-    lines.push('Use "quality details runId=<id>" to see full details.');
-    return createSuccessResult(lines.join("\n"));
-  }
-  static async handleDetails(args, service) {
-    if (!args.runId) {
-      return createErrorResult("runId is required for details operation");
-    }
-    const run = await service.getRunDetails(args.runId);
-    if (!run) {
-      return createErrorResult(`Quality run not found: ${args.runId}`);
-    }
-    const lines = [
-      `\u{1F4CA} Quality Run Details: ${run.runId}`,
-      "",
-      "## Summary",
-      `**Date:** ${run.date}`,
-      `**Score:** ${run.score}/100`,
-      `**Grade:** ${run.grade}`,
-      `**Issues:** ${run.issues.length}`,
-      ""
-    ];
-    if (run.issues.length > 0) {
-      lines.push("## Issues by Category");
-      for (const [category, count] of Object.entries(run.issuesByCategory)) {
-        if (count > 0) {
-          lines.push(`- ${category}: ${count}`);
-        }
-      }
-      lines.push("");
-      lines.push("## Issue Details");
-      for (const issue2 of run.issues) {
-        const location = issue2.line ? `${issue2.file}:${issue2.line}` : issue2.file;
-        lines.push(`- **[${issue2.severity}]** ${issue2.message}`);
-        lines.push(`  - Category: ${issue2.category}`);
-        lines.push(`  - Location: \`${location}\``);
-        if (issue2.suggestion) {
-          lines.push(`  - Suggestion: ${issue2.suggestion}`);
-        }
-      }
-      lines.push("");
-    }
-    if (run.recommendations.length > 0) {
-      lines.push("## Recommendations");
-      for (const rec of run.recommendations) {
-        lines.push(`- ${rec}`);
-      }
-      lines.push("");
-    }
-    if (run.context) {
-      lines.push("## Repository Context");
-      if (run.context.languages?.length) {
-        lines.push(`- Languages: ${run.context.languages.join(", ")}`);
-      }
-      if (run.context.frameworks?.length) {
-        lines.push(`- Frameworks: ${run.context.frameworks.join(", ")}`);
-      }
-      if (run.context.projectType) {
-        lines.push(`- Project Type: ${run.context.projectType}`);
-      }
-    }
-    return createSuccessResult(lines.join("\n"));
-  }
-  static async handleCompare(args, service) {
-    if (!args.baseRunId) {
-      return createErrorResult("baseRunId is required for compare operation");
-    }
-    if (!args.targetRunId) {
-      return createErrorResult("targetRunId is required for compare operation");
-    }
-    const comparison = await service.compareRuns(args.baseRunId, args.targetRunId);
-    if (!comparison) {
-      return createErrorResult(
-        `One or both runs not found: ${args.baseRunId}, ${args.targetRunId}`
-      );
-    }
-    const deltaSign = comparison.scoreDelta >= 0 ? "+" : "";
-    const lines = [
-      `\u{1F4CA} Run Comparison: ${comparison.baseRunId} \u2192 ${comparison.targetRunId}`,
-      "",
-      "## Summary",
-      `**Score Delta:** ${deltaSign}${comparison.scoreDelta}`,
-      `**Grade Change:** ${comparison.gradeChange.from} \u2192 ${comparison.gradeChange.to}`,
-      `**New Issues:** ${comparison.newIssues.length}`,
-      `**Resolved Issues:** ${comparison.resolvedIssues.length}`,
-      `**Persistent Issues:** ${comparison.persistentIssues.length}`,
-      ""
-    ];
-    const categoryEntries = Object.entries(comparison.categoryChanges);
-    if (categoryEntries.length > 0) {
-      lines.push("## Category Changes");
-      lines.push("");
-      lines.push("| Category | Count Delta | Deduction Delta |");
-      lines.push("|----------|-------------|-----------------|");
-      for (const [category, changes] of categoryEntries) {
-        const countSign = changes.countDelta >= 0 ? "+" : "";
-        const deductionSign = changes.deductionDelta >= 0 ? "+" : "";
-        lines.push(
-          `| ${category} | ${countSign}${changes.countDelta} | ${deductionSign}${changes.deductionDelta.toFixed(1)} |`
-        );
-      }
-      lines.push("");
-    }
-    if (comparison.newIssues.length > 0) {
-      lines.push("## New Issues");
-      for (const issue2 of comparison.newIssues) {
-        lines.push(`- **[${issue2.severity}]** ${issue2.message} (${issue2.file})`);
-      }
-      lines.push("");
-    }
-    if (comparison.resolvedIssues.length > 0) {
-      lines.push("## Resolved Issues");
-      for (const issue2 of comparison.resolvedIssues) {
-        lines.push(`- **[${issue2.severity}]** ${issue2.message} (${issue2.file})`);
-      }
-      lines.push("");
-    }
-    return createSuccessResult(lines.join("\n"));
-  }
-  static async handlePlan(args, service) {
-    if (!args.sourceRunId) {
-      return createErrorResult("sourceRunId is required for plan operation");
-    }
-    const run = await service.getRunDetails(args.sourceRunId);
-    if (!run) {
-      return createErrorResult(`Quality run not found: ${args.sourceRunId}`);
-    }
-    const plan = QualityService.generateImprovementPlan(run, args.targetGrade);
-    const result = await service.saveImprovementPlan(plan);
-    const totalInitiatives = plan.phases.reduce(
-      (sum, phase) => sum + phase.initiatives.length,
-      0
-    );
-    const response = [
-      "\u2705 Quality Improvement Plan generated successfully!",
-      "",
-      `\u{1F4CB} Plan ID: ${result.planId}`,
-      `\u{1F4C1} File: ${result.filePath}`,
-      `\u{1F4CA} Current Score: ${plan.currentScore}/100 (Grade ${plan.currentGrade})`,
-      `\u{1F3AF} Phases: ${plan.phases.length}`,
-      `\u{1F4E6} Initiatives: ${totalInitiatives}`,
-      `\u23F1\uFE0F Total Effort: ${plan.totalEffortHours} hours`,
-      "",
-      "## Executive Summary",
-      "",
-      plan.executiveSummary,
-      "",
-      'Use "quality plan-details planId=<id>" to see full plan details.'
-    ].join("\n");
-    return createSuccessResult(response);
-  }
-  static async handlePlanDetails(args, repositoryRoot) {
-    if (!args.planId) {
-      return createErrorResult("planId is required for plan-details operation");
-    }
-    try {
-      const plansDir = path36.join(repositoryRoot, ".tiny-brain", "quality", "plans");
-      const filePath = path36.join(plansDir, `${args.planId}.md`);
-      const content = await fs33.readFile(filePath, "utf-8");
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
-      if (!jsonMatch) {
-        return createErrorResult(`Could not parse plan data from: ${args.planId}`);
-      }
-      const planData = JSON.parse(jsonMatch[1]);
-      const lines = [
-        `\u{1F4CB} Quality Improvement Plan: ${planData.planId}`,
-        "",
-        "## Summary",
-        `**Date:** ${planData.date}`,
-        `**Source Run:** ${planData.sourceRunId}`,
-        `**Current Score:** ${planData.currentScore}/100 (Grade ${planData.currentGrade})`,
-        `**Total Effort:** ${planData.totalEffortHours} hours`,
-        "",
-        "## Executive Summary",
-        "",
-        planData.executiveSummary,
-        ""
-      ];
-      if (planData.phases && planData.phases.length > 0) {
-        lines.push("## Phases");
-        lines.push("");
-        for (const phase of planData.phases) {
-          lines.push(
-            `### Phase ${phase.phase}: ${phase.name}`
-          );
-          lines.push(`**Projected Score:** ${phase.projectedScore}/100 (Grade ${phase.projectedGrade})`);
-          lines.push(`**Effort:** ${phase.totalEffortHours} hours`);
-          lines.push(`**Initiatives:** ${phase.initiatives.length}`);
-          lines.push("");
-        }
-      }
-      if (planData.roiAnalysis) {
-        lines.push("## ROI Analysis");
-        lines.push(`**Estimated Cost:** ${planData.roiAnalysis.currency} ${planData.roiAnalysis.estimatedCostToFix}`);
-        lines.push("");
-      }
-      return createSuccessResult(lines.join("\n"));
-    } catch {
-      return createErrorResult(`Improvement plan not found: ${args.planId}`);
-    }
-  }
-  static async handleDetectAnalyzers(repositoryRoot) {
-    const service = new AnalyzerDetectionService(repositoryRoot);
-    const analyzers = await service.detectAnalyzers();
-    if (analyzers.length === 0) {
-      return createSuccessResult(
-        "No static analyzers detected in this repository.\n\nSupported analyzers: ESLint, TypeScript, npm audit, RuboCop, ruff."
-      );
-    }
-    const lines = [
-      `\u{1F50D} Detected ${analyzers.length} analyzer(s):`,
-      ""
-    ];
-    for (const analyzer of analyzers) {
-      lines.push(`- **${analyzer.name}** (${analyzer.analyzerId})`);
-      lines.push(`  Configs: ${analyzer.configPaths.join(", ")}`);
-      lines.push(`  Categories: ${analyzer.categories.join(", ")}`);
-    }
-    lines.push("");
-    lines.push(JSON.stringify(analyzers, null, 2));
-    return createSuccessResult(lines.join("\n"));
-  }
-  static async handleRunAnalyzers(args, repositoryRoot) {
-    const runId = args.runId ?? generateRunId();
-    const runDir = path36.join(repositoryRoot, ".tiny-brain", "quality", "runs", runIdToPath(runId));
-    const outputPath = path36.join(runDir, "analysis.json");
-    const outputDir = path36.join(runDir, "analysers");
-    const cached2 = await readCachedAnalyzers(repositoryRoot);
-    const analyzers = cached2 ?? await new AnalyzerDetectionService(repositoryRoot).detectAnalyzers();
-    const emptyResults = {
-      issues: [],
-      executions: [],
-      totalDurationMs: 0,
-      summary: { total: 0, succeeded: 0, failed: 0, timedOut: 0, skipped: 0 }
-    };
-    if (analyzers.length === 0) {
-      await fs33.mkdir(runDir, { recursive: true });
-      await fs33.writeFile(outputPath, JSON.stringify(emptyResults, null, 2), "utf-8");
-      return createSuccessResult(
-        `\u{1F527} No analyzers detected. Empty results written to file.
-  Run ID: ${runId}
-  Output: ${outputPath}`
-      );
-    }
-    const executorService = new AnalyzerExecutorService(repositoryRoot);
-    const results = await executorService.executeAnalyzers(analyzers, outputDir);
-    await fs33.mkdir(runDir, { recursive: true });
-    await fs33.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
-    const lines = [
-      `\u{1F527} Executed ${results.summary.total} analyzer(s):`,
-      `  Succeeded: ${results.summary.succeeded}`,
-      `  Failed: ${results.summary.failed}`,
-      `  Total issues: ${results.issues.length}`,
-      `  Duration: ${results.totalDurationMs}ms`,
-      `  Run ID: ${runId}`,
-      `  Output: ${outputPath}`,
-      `  Raw files: ${outputDir}/`
-    ];
-    return createSuccessResult(lines.join("\n"));
-  }
-  static async handleAssembleRun(args, repositoryRoot) {
-    if (!args.runId) {
-      return createErrorResult("runId is required for assemble-run operation (YYYY-MM-DD date prefix)");
-    }
-    const assemblyService = new AssemblyService(repositoryRoot);
-    const result = await assemblyService.assembleRun(args.runId, args.baseRunId);
-    const lines = [
-      "\u2705 Quality run assembled successfully!",
-      "",
-      `\u{1F4CA} Run ID: ${result.runId}`,
-      `\u{1F4C8} Score: ${result.score}/100 (Grade: ${result.grade})`,
-      `\u{1F50D} Issues: ${result.issueCount}`,
-      `\u{1F4C1} File: ${result.filePath}`
-    ];
-    if (result.planId) {
-      lines.push(`\u{1F4CB} Plan: ${result.planId}`);
-      lines.push(`\u{1F4C1} Plan File: ${result.planFilePath}`);
-    }
-    if (result.incremental) {
-      lines.push("");
-      lines.push("### Incremental Analysis");
-      lines.push(`  Base run: ${result.baseRunId}`);
-      lines.push(`  Files analyzed: ${result.filesAnalyzed}`);
-      lines.push(`  Files carried forward: ${result.filesCarriedForward}`);
-    }
-    lines.push("");
-    lines.push("### Source Breakdown");
-    lines.push(`  Analyzer: ${result.sourceBreakdown.analyzer}`);
-    lines.push(`  Specialist: ${result.sourceBreakdown.llm}`);
-    lines.push(`  Total: ${result.sourceBreakdown.total}`);
-    const categoryEntries = Object.entries(result.categoryBreakdown);
-    if (categoryEntries.length > 0) {
-      lines.push("");
-      lines.push("### Category Breakdown");
-      for (const [category, count] of categoryEntries) {
-        lines.push(`  ${category}: ${count}`);
-      }
-    }
-    return createSuccessResult(lines.join("\n"));
-  }
-  static async handleImplementPlan(args, service) {
-    if (!args.planId) {
-      return createErrorResult("planId is required for implement-plan operation");
-    }
-    const plan = await service.loadImprovementPlan(args.planId);
-    if (!plan) {
-      return createErrorResult(`Improvement plan not found: ${args.planId}`);
-    }
-    const run = await service.getRunDetails(plan.sourceRunId);
-    if (!run) {
-      return createErrorResult(`Source quality run not found: ${plan.sourceRunId}`);
-    }
-    const fixIds = await service.generateFixesFromPlan(plan, run.issues);
-    if (fixIds.length === 0) {
-      return createSuccessResult("No initiatives found in plan. No fix documents created.");
-    }
-    const lines = [
-      `Created ${fixIds.length} fix document(s) from Quality Improvement Plan ${args.planId}`,
-      "",
-      "## Fixes Created",
-      "",
-      "| Fix ID | File |",
-      "|--------|------|"
-    ];
-    for (const fixId of fixIds) {
-      lines.push(`| ${fixId} | .tiny-brain/fixes/${fixId}.md |`);
-    }
-    lines.push("");
-    lines.push("## Next Steps");
-    lines.push("");
-    for (const fixId of fixIds) {
-      lines.push(`1. Run \`npx tiny-brain sync-progress .tiny-brain/fixes/${fixId}.md\``);
-    }
-    lines.push("2. Start working on fixes using the /fix workflow");
-    lines.push("3. Track progress in the dashboard");
-    return createSuccessResult(lines.join("\n"));
-  }
-  static handleMergeResults(args) {
-    const analyzerIssues = args.analyzerIssues ?? [];
-    const llmIssues = args.llmIssues ?? [];
-    const result = mergeResults(analyzerIssues, llmIssues);
-    const lines = [
-      `\u{1F500} Merged results:`,
-      `  Analyzer issues: ${result.sourceBreakdown.analyzer}`,
-      `  LLM issues: ${result.sourceBreakdown.llm}`,
-      `  Total (deduplicated): ${result.sourceBreakdown.total}`,
-      `  Duplicates removed: ${result.duplicatesRemoved}`,
-      "",
-      JSON.stringify(result, null, 2)
-    ];
-    return createSuccessResult(lines.join("\n"));
-  }
-};
+    },
+    ctx
+  );
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualitySave(result.data));
+}
+async function handleHistory(args, ctx) {
+  const result = await qualityHistory({ limit: args.limit }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityHistory(result.data));
+}
+async function handleDetails(args, ctx) {
+  const result = await qualityDetails({ runId: args.runId ?? "" }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityDetails(result.data));
+}
+async function handleCompare(args, ctx) {
+  const result = await qualityCompare(
+    { baseRunId: args.baseRunId ?? "", targetRunId: args.targetRunId ?? "" },
+    ctx
+  );
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityCompare(result.data));
+}
+async function handlePlan(args, ctx) {
+  const result = await qualityPlan(
+    { sourceRunId: args.sourceRunId ?? "", targetGrade: args.targetGrade },
+    ctx
+  );
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityPlan(result.data));
+}
+async function handlePlanDetails(args, ctx) {
+  const result = await qualityPlanDetails({ planId: args.planId ?? "" }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityPlanDetails(result.data));
+}
+async function handleImplementPlan(args, ctx) {
+  const result = await qualityImplementPlan({ planId: args.planId ?? "" }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityImplementPlan(result.data));
+}
+async function handleDetectAnalyzers(ctx) {
+  const result = await qualityDetectAnalyzers(ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityDetectAnalyzers(result.data));
+}
+async function handleRunAnalyzers(args, ctx) {
+  const result = await qualityRunAnalyzers({ runId: args.runId }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityRunAnalyzers(result.data));
+}
+function handleMergeResults(args) {
+  const result = qualityMergeResults({
+    analyzerIssues: args.analyzerIssues,
+    llmIssues: args.llmIssues
+  });
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityMergeResults(result.data));
+}
+async function handleAssembleRun(args, ctx) {
+  const result = await qualityAssembleRun(
+    { runId: args.runId ?? "", baseRunId: args.baseRunId },
+    ctx
+  );
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatQualityAssembleRun(result.data));
+}
 
 // packages/tiny-brain-mcp/src/tools/config/config.tool.ts
 init_zod();
@@ -63973,7 +65581,7 @@ var ConfigArgsSchema = external_exports.object({
   value: external_exports.string().optional(),
   scope: external_exports.enum(["global", "repo"]).optional()
 });
-var ConfigTool = class _ConfigTool {
+var ConfigTool = class {
   static getToolDefinition() {
     return {
       name: "config",
@@ -63987,23 +65595,6 @@ var ConfigTool = class _ConfigTool {
   \u2022 show-sources: Display preferences with their source (repo/global/default)
   \u2022 set: Set a preference value (requires key, value, and optional scope)
   \u2022 reset: Reset all preferences to defaults
-
-\u{1F4CA} PREFERENCES:
-  \u2022 autoCommitProgress - Auto-commit progress.json changes
-  \u2022 autoArchive - Auto-archive completed PRDs and resolved fixes during sync
-  \u2022 enableAgenticCoding - Enable AI-driven development mode
-  \u2022 enableSDD - Enable Suggestion-Driven Development
-  \u2022 enableTDD - Enable Test-Driven Development
-  \u2022 combineRedGreenCommits - Combine red+green into a single feat: commit
-  \u2022 enableAdversarial - Enable adversarial review phase in TDD pipeline
-  \u2022 enableADR - Enable Architecture Decision Records
-  \u2022 enableQuality - Enable Quality Analysis
-  \u2022 manageAgentsMd - Manage AGENTS.md file during analyse
-  \u2022 defaultPersona - Default persona to activate at session start
-  \u2022 docsDirectory - Documentation directory path
-  \u2022 adrDirectory - ADR directory path
-  \u2022 prdDirectory - PRD directory path
-  \u2022 testPatterns - Test file patterns array
 
 \u{1F3AF} SCOPE:
   \u2022 repo (default): Save to repository config ([repo]/.tiny-brain/config.json)
@@ -64041,21 +65632,18 @@ var ConfigTool = class _ConfigTool {
   }
   static async execute(args, context) {
     try {
-      const validatedArgs = ConfigArgsSchema.parse(args);
-      const configService = new ConfigService(context);
-      switch (validatedArgs.operation) {
+      const parsed = ConfigArgsSchema.parse(args);
+      switch (parsed.operation) {
         case "list":
-          return await _ConfigTool.handleList(configService);
+          return await handleList3(context);
         case "get":
-          return await _ConfigTool.handleGet(validatedArgs, configService);
+          return await handleGet(parsed, context);
         case "show-sources":
-          return await _ConfigTool.handleShowSources(configService);
+          return await handleShowSources(context);
         case "set":
-          return await _ConfigTool.handleSet(validatedArgs, configService, context);
+          return await handleSet(parsed, context);
         case "reset":
-          return await _ConfigTool.handleReset(configService);
-        default:
-          return createErrorResult(`Unknown operation: ${validatedArgs.operation}`);
+          return await handleReset(context);
       }
     } catch (error2) {
       if (error2 instanceof external_exports.ZodError) {
@@ -64066,195 +65654,35 @@ var ConfigTool = class _ConfigTool {
       return createErrorResult(error2 instanceof Error ? error2.message : "Unknown error occurred");
     }
   }
-  static async handleList(configService) {
-    try {
-      const preferences = await configService.getPreferences();
-      const repo = preferences.repo;
-      const lines = [
-        "# Current Preferences",
-        "",
-        "## Feature Flags",
-        `- **autoCommitProgress**: ${repo.autoCommitProgress}`,
-        `- **autoArchive**: ${repo.autoArchive}`,
-        `- **enableAgenticCoding**: ${repo.enableAgenticCoding}`,
-        `- **enableSDD**: ${repo.enableSDD}`,
-        `- **enableTDD**: ${repo.enableTDD}`,
-        `- **combineRedGreenCommits**: ${repo.combineRedGreenCommits}`,
-        `- **enableAdversarial**: ${repo.enableAdversarial}`,
-        `- **enableADR**: ${repo.enableADR}`,
-        `- **enableQuality**: ${repo.enableQuality}`,
-        `- **manageAgentsMd**: ${repo.manageAgentsMd}`,
-        `- **defaultPersona**: ${repo.defaultPersona}`,
-        "",
-        "## Directory Paths",
-        `- **docsDirectory**: \`${repo.directories.docs}\``,
-        `- **adrDirectory**: \`${repo.directories.adr}\``,
-        `- **prdDirectory**: \`${repo.directories.prd}\``,
-        "",
-        "## Test Configuration",
-        `- **testPatterns**: ${JSON.stringify(repo.testPatterns)}`,
-        "",
-        "---",
-        "",
-        "\u{1F4A1} **To modify preferences**, use the CLI:",
-        "```bash",
-        "npx tiny-brain config preferences set <key> <value>",
-        "npx tiny-brain config preferences reset",
-        "```"
-      ];
-      return createSuccessResult(lines.join("\n"));
-    } catch (error2) {
-      return createErrorResult(
-        `Failed to list preferences: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-      );
-    }
-  }
-  static async handleGet(args, configService) {
-    if (!args.key) {
-      return createErrorResult("key is required for get operation");
-    }
-    try {
-      const result = await configService.getPreferenceByKey(args.key);
-      if (!result.isValid) {
-        return createErrorResult(result.error);
-      }
-      const lines = [
-        `# Preference: ${args.key}`,
-        "",
-        `**Value**: ${typeof result.value === "object" ? JSON.stringify(result.value) : result.value}`,
-        "",
-        "---",
-        "",
-        "\u{1F4A1} **To modify this preference**, use the CLI:",
-        "```bash",
-        `npx tiny-brain config preferences set ${args.key} <value>`,
-        "```"
-      ];
-      return createSuccessResult(lines.join("\n"));
-    } catch (error2) {
-      return createErrorResult(
-        `Failed to get preference: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-      );
-    }
-  }
-  static async handleShowSources(configService) {
-    try {
-      const sources = await configService.getPreferenceSources();
-      const { repo: repoConfig, global: globalConfig2, merged } = sources;
-      const getSource = (key) => {
-        if (repoConfig.repo && key in repoConfig.repo && repoConfig.repo[key] !== void 0) {
-          return "Repository";
-        }
-        if (globalConfig2.repo && key in globalConfig2.repo && globalConfig2.repo[key] !== void 0) {
-          return "Global";
-        }
-        return "Default";
-      };
-      const getDirSource = (dirKey) => {
-        if (repoConfig.repo?.directories && dirKey in repoConfig.repo.directories) {
-          return "Repository";
-        }
-        if (globalConfig2.repo?.directories && dirKey in globalConfig2.repo.directories) {
-          return "Global";
-        }
-        return "Default";
-      };
-      const testPatternsSource = repoConfig.repo?.testPatterns ? "Repository" : globalConfig2.repo?.testPatterns ? "Global" : "Default";
-      const lines = [
-        "# Preference Sources",
-        "",
-        "## Feature Flags",
-        `- **autoCommitProgress**: ${merged.repo.autoCommitProgress} _(${getSource("autoCommitProgress")})_`,
-        `- **autoArchive**: ${merged.repo.autoArchive} _(${getSource("autoArchive")})_`,
-        `- **enableAgenticCoding**: ${merged.repo.enableAgenticCoding} _(${getSource("enableAgenticCoding")})_`,
-        `- **enableSDD**: ${merged.repo.enableSDD} _(${getSource("enableSDD")})_`,
-        `- **enableTDD**: ${merged.repo.enableTDD} _(${getSource("enableTDD")})_`,
-        `- **combineRedGreenCommits**: ${merged.repo.combineRedGreenCommits} _(${getSource("combineRedGreenCommits")})_`,
-        `- **enableAdversarial**: ${merged.repo.enableAdversarial} _(${getSource("enableAdversarial")})_`,
-        `- **enableADR**: ${merged.repo.enableADR} _(${getSource("enableADR")})_`,
-        `- **enableQuality**: ${merged.repo.enableQuality} _(${getSource("enableQuality")})_`,
-        `- **manageAgentsMd**: ${merged.repo.manageAgentsMd} _(${getSource("manageAgentsMd")})_`,
-        `- **defaultPersona**: ${merged.repo.defaultPersona} _(${getSource("defaultPersona")})_`,
-        "",
-        "## Directory Paths",
-        `- **docsDirectory**: \`${merged.repo.directories.docs}\` _(${getDirSource("docs")})_`,
-        `- **adrDirectory**: \`${merged.repo.directories.adr}\` _(${getDirSource("adr")})_`,
-        `- **prdDirectory**: \`${merged.repo.directories.prd}\` _(${getDirSource("prd")})_`,
-        "",
-        "## Test Configuration",
-        `- **testPatterns**: ${JSON.stringify(merged.repo.testPatterns)} _(${testPatternsSource})_`,
-        "",
-        "---",
-        "",
-        "## Config Files",
-        "- **Global**: `~/.tiny-brain/config/preferences.json`",
-        "- **Repository**: `[repo]/.tiny-brain/config.json`"
-      ];
-      return createSuccessResult(lines.join("\n"));
-    } catch (error2) {
-      return createErrorResult(
-        `Failed to show preference sources: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-      );
-    }
-  }
-  static async handleSet(args, configService, context) {
-    if (!args.key) {
-      return createErrorResult("key is required for set operation");
-    }
-    if (args.value === void 0) {
-      return createErrorResult("value is required for set operation");
-    }
-    const scope = args.scope || "repo";
-    try {
-      const result = await configService.setPreferenceByKey(args.key, args.value, scope);
-      if (!result.success) {
-        return createErrorResult(result.error);
-      }
-      if (args.key === "enableAgenticCoding" && scope === "repo" && context.repositoryRoot) {
-        const techContextService = new TechContextService(context.repositoryRoot);
-        const enableAgentic = args.value === "true";
-        await techContextService.syncAgents(enableAgentic);
-      }
-      const scopeLabel = scope === "global" ? "Global" : "Repository";
-      const displayValue = args.value === "true" || args.value === "false" ? args.value === "true" : args.value;
-      const lines = [
-        "# Preference Updated",
-        "",
-        `\u2705 **${args.key}** set to \`${displayValue}\``,
-        "",
-        `\u{1F4C1} **Scope**: ${scopeLabel}`,
-        "",
-        "---",
-        "",
-        "\u{1F4A1} Use `config operation=show-sources` to see all preference sources."
-      ];
-      return createSuccessResult(lines.join("\n"));
-    } catch (error2) {
-      return createErrorResult(
-        `Failed to set preference: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-      );
-    }
-  }
-  static async handleReset(configService) {
-    try {
-      await configService.resetPreferences();
-      const lines = [
-        "# Preferences reset",
-        "",
-        "\u2705 All preferences have been reset to their default values.",
-        "",
-        "---",
-        "",
-        "\u{1F4A1} Use `config operation=list` to see current preference values."
-      ];
-      return createSuccessResult(lines.join("\n"));
-    } catch (error2) {
-      return createErrorResult(
-        `Failed to reset preferences: ${error2 instanceof Error ? error2.message : "Unknown error"}`
-      );
-    }
-  }
 };
+async function handleList3(ctx) {
+  const result = await configList(ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatConfigList(result.data));
+}
+async function handleGet(args, ctx) {
+  const result = await configGet({ key: args.key ?? "" }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatConfigGet(result.data));
+}
+async function handleShowSources(ctx) {
+  const result = await configShowSources(ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatConfigShowSources(result.data));
+}
+async function handleSet(args, ctx) {
+  const result = await configSet2(
+    { key: args.key ?? "", value: args.value, scope: args.scope },
+    ctx
+  );
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatConfigSet(result.data));
+}
+async function handleReset(ctx) {
+  const result = await configReset(ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatConfigReset(result.data));
+}
 
 // packages/tiny-brain-mcp/src/tools/recommendations/recommendations.tool.ts
 init_zod();
@@ -64263,7 +65691,7 @@ var RecommendationsArgsSchema = external_exports.object({
   operation: external_exports.enum(["list", "accept", "dismiss", "restore", "graduated"]),
   items: external_exports.array(external_exports.string()).optional()
 });
-var RecommendationsTool = class _RecommendationsTool {
+var RecommendationsTool = class {
   static getToolDefinition() {
     return {
       name: "recommendations",
@@ -64295,24 +65723,18 @@ Operations:
   }
   static async execute(args, context) {
     try {
-      const validatedArgs = RecommendationsArgsSchema.parse(args);
-      if (!context.repositoryRoot) {
-        return createErrorResult("Repository root is required for recommendations");
-      }
-      const service = new RecommendationService(context.repositoryRoot);
-      switch (validatedArgs.operation) {
+      const parsed = RecommendationsArgsSchema.parse(args);
+      switch (parsed.operation) {
         case "list":
-          return await _RecommendationsTool.handleList(service);
+          return await handleList4(context);
         case "accept":
-          return await _RecommendationsTool.handleAccept(validatedArgs, service);
+          return await handleAccept(parsed, context);
         case "dismiss":
-          return await _RecommendationsTool.handleDismiss(validatedArgs, service);
+          return await handleDismiss(parsed, context);
         case "restore":
-          return await _RecommendationsTool.handleRestore(validatedArgs, service);
+          return await handleRestore(parsed, context);
         case "graduated":
-          return await _RecommendationsTool.handleGraduated(service);
-        default:
-          return createErrorResult(`Unknown operation: ${validatedArgs.operation}`);
+          return await handleGraduated(context);
       }
     } catch (error2) {
       if (error2 instanceof external_exports.ZodError) {
@@ -64323,133 +65745,32 @@ Operations:
       return createErrorResult(error2 instanceof Error ? error2.message : "Unknown error occurred");
     }
   }
-  static async handleList(service) {
-    const pending = await service.getPendingRecommendations();
-    if (pending.length === 0) {
-      return createSuccessResult("No pending recommendations. Run `analyse` to fetch new recommendations.");
-    }
-    const grouped = {};
-    for (const rec of pending) {
-      const typeLabel = rec.type === "skill" ? "Skills" : rec.type === "agent" ? "Agents" : rec.type === "capability" ? "Capabilities" : "Hooks";
-      if (!grouped[typeLabel]) {
-        grouped[typeLabel] = [];
-      }
-      grouped[typeLabel].push(rec);
-    }
-    const lines = ["# Pending Recommendations", ""];
-    for (const [type2, recs] of Object.entries(grouped)) {
-      lines.push(`## ${type2}`, "");
-      for (const rec of recs) {
-        lines.push(`- **${rec.name}**: ${rec.description}`);
-        lines.push(`  _Reason: ${rec.reason}_`);
-      }
-      lines.push("");
-    }
-    lines.push("---", "", "Use `accept` with item names to install recommendations.");
-    return createSuccessResult(lines.join("\n"));
-  }
-  static async handleAccept(args, service) {
-    if (!args.items || args.items.length === 0) {
-      return createErrorResult("`items` is required for accept operation");
-    }
-    const recsFile = await service.readRecommendations();
-    if (!recsFile) {
-      return createErrorResult("No recommendations file found. Run `analyse` first.");
-    }
-    const results = ["# Accept Results", ""];
-    for (const name of args.items) {
-      const match2 = recsFile.recommendations.find(
-        (r) => r.name.toLowerCase() === name.toLowerCase()
-      );
-      if (!match2) {
-        results.push(`- **${name}**: Not found (unrecognized name)`);
-        continue;
-      }
-      try {
-        await service.acceptRecommendation(match2);
-        results.push(`- **${match2.name}**: Accepted`);
-      } catch (error2) {
-        const msg = error2 instanceof Error ? error2.message : "Unknown error";
-        results.push(`- **${match2.name}**: Failed - ${msg}`);
-      }
-    }
-    return createSuccessResult(results.join("\n"));
-  }
-  static async handleDismiss(args, service) {
-    if (!args.items || args.items.length === 0) {
-      return createErrorResult("`items` is required for dismiss operation");
-    }
-    const recsFile = await service.readRecommendations();
-    if (!recsFile) {
-      return createErrorResult("No recommendations file found. Run `analyse` first.");
-    }
-    const results = ["# Dismiss Results", ""];
-    for (const name of args.items) {
-      const match2 = recsFile.recommendations.find(
-        (r) => r.name.toLowerCase() === name.toLowerCase()
-      );
-      if (!match2) {
-        results.push(`- **${name}**: Not found (unrecognized name)`);
-        continue;
-      }
-      await service.dismissRecommendation(match2.id);
-      results.push(`- **${match2.name}**: Dismissed`);
-    }
-    return createSuccessResult(results.join("\n"));
-  }
-  static async handleRestore(args, service) {
-    if (!args.items || args.items.length === 0) {
-      return createErrorResult("`items` is required for restore operation");
-    }
-    const recsFile = await service.readRecommendations();
-    if (!recsFile) {
-      return createErrorResult("No recommendations file found. Run `analyse` first.");
-    }
-    const dismissed = await service.readDismissedRecommendations();
-    const dismissedIds = new Set(dismissed.map((d) => d.recommendationId));
-    const results = ["# Restore Results", ""];
-    for (const name of args.items) {
-      const match2 = recsFile.recommendations.find(
-        (r) => r.name.toLowerCase() === name.toLowerCase()
-      );
-      if (!match2) {
-        results.push(`- **${name}**: Not found (unrecognized name)`);
-        continue;
-      }
-      if (!dismissedIds.has(match2.id)) {
-        results.push(`- **${match2.name}**: Not dismissed (nothing to restore)`);
-        continue;
-      }
-      await service.restoreRecommendation(match2.id);
-      results.push(`- **${match2.name}**: Restored`);
-    }
-    return createSuccessResult(results.join("\n"));
-  }
-  static async handleGraduated(service) {
-    const installed = await service.readInstalledRecommendations();
-    if (installed.length === 0) {
-      return createSuccessResult("No graduated recommendations yet. Use `accept` to install recommendations.");
-    }
-    const lines = ["# Graduated Recommendations", ""];
-    for (const item of installed) {
-      const { origin } = item;
-      lines.push(`- **${origin.recommendationName}** (${origin.type})`);
-      lines.push(`  Source: ${origin.source}`);
-      lines.push(`  Accepted: ${origin.acceptedAt}`);
-      if (item.installedVersion) {
-        lines.push(`  Version: v${item.installedVersion}`);
-      }
-      if (item.stepResults && item.stepResults.length > 0) {
-        lines.push("  Steps:");
-        for (const step of item.stepResults) {
-          const pathInfo = step.installedPath ? ` \u2192 ${step.installedPath}` : "";
-          lines.push(`    - ${step.description} (${step.status})${pathInfo}`);
-        }
-      }
-    }
-    return createSuccessResult(lines.join("\n"));
-  }
 };
+async function handleList4(ctx) {
+  const result = await recommendationsList(ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatRecommendationsList(result.data));
+}
+async function handleAccept(args, ctx) {
+  const result = await recommendationsAccept({ items: args.items ?? [] }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatActionResults("Accept Results", result.data.results));
+}
+async function handleDismiss(args, ctx) {
+  const result = await recommendationsDismiss({ items: args.items ?? [] }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatActionResults("Dismiss Results", result.data.results));
+}
+async function handleRestore(args, ctx) {
+  const result = await recommendationsRestore({ items: args.items ?? [] }, ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatActionResults("Restore Results", result.data.results));
+}
+async function handleGraduated(ctx) {
+  const result = await recommendationsGraduated(ctx);
+  if (!result.ok) return createErrorResult(result.error);
+  return createSuccessResult(formatGraduated(result.data));
+}
 
 // packages/tiny-brain-mcp/src/tools/tool-registry.ts
 var ToolRegistry = class {
@@ -64481,756 +65802,6 @@ var ToolRegistry = class {
       recommendations: RecommendationsTool
     };
     return toolMap[name];
-  }
-};
-
-// packages/tiny-brain-mcp/src/prompts/persona/persona.prompt.ts
-init_zod();
-init_src();
-var ListPersonasArgsSchema = external_exports.object({});
-var BecomeArgsSchema = external_exports.object({
-  persona_name: external_exports.string(),
-  autoCreate: external_exports.boolean().optional().default(true)
-});
-var CreatePersonaArgsSchema = external_exports.object({
-  name: external_exports.string(),
-  description: external_exports.string().optional(),
-  style: external_exports.string().optional()
-});
-var UpdatePersonaArgsSchema = external_exports.object({
-  name: external_exports.string(),
-  updates: external_exports.string()
-});
-var ArchivePersonaArgsSchema = external_exports.object({
-  name: external_exports.string(),
-  reason: external_exports.string().optional()
-});
-var ShowPersonaArgsSchema = external_exports.object({
-  name: external_exports.string()
-});
-var CurrentPersonaArgsSchema = external_exports.object({});
-var PersonaPrompt = class _PersonaPrompt {
-  /**
-   * Get all persona-related prompt definitions
-   */
-  static getPromptDefinitions() {
-    return [
-      {
-        name: "as",
-        description: "\u{1F3AD} Switch to a specific persona to tailor responses",
-        arguments: [
-          {
-            name: "persona_name",
-            description: "Name of the persona to become",
-            required: true
-          }
-        ]
-      },
-      {
-        name: "list_personas",
-        description: "\u{1F4CB} Show all available personas"
-      },
-      {
-        name: "create_persona",
-        description: "\u2728 Create a new persona with specific traits",
-        arguments: [
-          {
-            name: "name",
-            description: "Name for the new persona",
-            required: true
-          },
-          {
-            name: "description",
-            description: "Description of persona traits and characteristics",
-            required: true
-          }
-        ]
-      },
-      {
-        name: "update_persona",
-        description: "\u270F\uFE0F Update an existing persona",
-        arguments: [
-          {
-            name: "name",
-            description: "Name of the persona to update",
-            required: true
-          },
-          {
-            name: "updates",
-            description: "What to update about the persona",
-            required: true
-          }
-        ]
-      },
-      {
-        name: "archive_persona",
-        description: "\u{1F4E6} Archive a persona (safe removal)",
-        arguments: [
-          {
-            name: "name",
-            description: "Name of the persona to archive",
-            required: true
-          },
-          {
-            name: "reason",
-            description: "Reason for archiving",
-            required: false
-          }
-        ]
-      },
-      {
-        name: "show_persona",
-        description: "\u{1F441}\uFE0F Display detailed information about a specific persona",
-        arguments: [
-          {
-            name: "name",
-            description: "Name of the persona to show",
-            required: true
-          }
-        ]
-      },
-      {
-        name: "current_persona",
-        description: "\u{1F3AD} Show information about the currently active persona"
-      }
-    ];
-  }
-  /**
-   * Main handler that routes to specific prompt handlers
-   */
-  static async handle(name, args, context) {
-    switch (name) {
-      case "list_personas":
-        return await _PersonaPrompt.handleListPersonas(args, context);
-      case "as":
-        return await _PersonaPrompt.handleBecome(args, context);
-      case "create_persona":
-        return await _PersonaPrompt.handleCreatePersona(args, context);
-      case "update_persona":
-        return await _PersonaPrompt.handleUpdatePersona(args, context);
-      case "archive_persona":
-        return await _PersonaPrompt.handleRemovePersona(args, context);
-      case "show_persona":
-        return await _PersonaPrompt.handleShowPersona(args, context);
-      case "current_persona":
-        return await _PersonaPrompt.handleCurrentPersona(args, context);
-      default:
-        throw new Error(`Unknown persona prompt: ${name}`);
-    }
-  }
-  static async handleListPersonas(args, context) {
-    try {
-      ListPersonasArgsSchema.parse(args);
-      const service = new PersonaService2(context);
-      const personas = await service.listPersonasWithMode("all");
-      const response = formatPersonaList(personas, context.activePersona?.id);
-      return {
-        description: "List all available personas",
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: "List all personas"
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: response
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-  static async handleBecome(args, context) {
-    try {
-      const validatedArgs = BecomeArgsSchema.parse(args);
-      const service = new PersonaService2(context);
-      const existingPersona = await service.loadPersona({
-        personaName: validatedArgs.persona_name
-      });
-      if (!existingPersona && !validatedArgs.autoCreate) {
-        return {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: `Switch to "${validatedArgs.persona_name}" persona`
-              }
-            },
-            {
-              role: "assistant",
-              content: {
-                type: "text",
-                text: `Persona "${validatedArgs.persona_name}" not found. Set autoCreate: true to create it.`
-              }
-            }
-          ]
-        };
-      }
-      let isNew = false;
-      if (!existingPersona && validatedArgs.autoCreate) {
-        const newProfile = createDefaultProfile(validatedArgs.persona_name, (/* @__PURE__ */ new Date()).toISOString());
-        await service.createPersona({
-          personaName: validatedArgs.persona_name,
-          profile: newProfile
-        });
-        isNew = true;
-      }
-      const message = formatActivationMessage(validatedArgs.persona_name, isNew);
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Switch to "${validatedArgs.persona_name}" persona`
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: message
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-  static async handleCreatePersona(args, context) {
-    try {
-      const validatedArgs = CreatePersonaArgsSchema.parse(args);
-      const service = new PersonaService2(context);
-      const existing = await service.loadPersona({
-        personaName: validatedArgs.name
-      });
-      if (existing) {
-        return {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: `Create persona "${validatedArgs.name}"`
-              }
-            },
-            {
-              role: "assistant",
-              content: {
-                type: "text",
-                text: `Persona "${validatedArgs.name}" already exists`
-              }
-            }
-          ]
-        };
-      }
-      const profile = createDefaultProfile(
-        validatedArgs.name,
-        (/* @__PURE__ */ new Date()).toISOString(),
-        validatedArgs.description,
-        validatedArgs.style
-      );
-      await service.createPersona({
-        personaName: validatedArgs.name,
-        profile
-      });
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Create persona "${validatedArgs.name}"`
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: `Created persona "${validatedArgs.name}"`
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-  static async handleUpdatePersona(args, context) {
-    try {
-      const validatedArgs = UpdatePersonaArgsSchema.parse(args);
-      const service = new PersonaService2(context);
-      const existingPersona = await service.loadPersona({
-        personaName: validatedArgs.name
-      });
-      if (!existingPersona) {
-        return {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: `Update persona "${validatedArgs.name}"`
-              }
-            },
-            {
-              role: "assistant",
-              content: {
-                type: "text",
-                text: `Persona "${validatedArgs.name}" not found`
-              }
-            }
-          ]
-        };
-      }
-      let data;
-      try {
-        data = JSON.parse(validatedArgs.updates);
-      } catch {
-        data = { description: validatedArgs.updates };
-      }
-      const learningEvaluation = PersonaLearningService.evaluateUpdateForLearning(
-        data,
-        context
-      );
-      const updatesApplied = [];
-      if (learningEvaluation.hasLearning && learningEvaluation.extractedLearning) {
-        await service.updateInsights({
-          personaName: validatedArgs.name,
-          insights: learningEvaluation.extractedLearning
-        });
-        updatesApplied.push(`${learningEvaluation.learningType}`);
-      }
-      if (data.profile && typeof data.profile === "string") {
-        await service.savePersona({
-          personaName: validatedArgs.name,
-          profile: data.profile
-        });
-        updatesApplied.push("profile");
-      } else if (!learningEvaluation.hasLearning) {
-        const profileString = await context.storage.getPersonaFile(
-          validatedArgs.name,
-          "profile.md",
-          context.userId
-        );
-        const updatedProfile = profileString + "\n\n## Updates\n" + validatedArgs.updates;
-        await service.savePersona({
-          personaName: validatedArgs.name,
-          profile: updatedProfile
-        });
-        updatesApplied.push("profile (appended)");
-      }
-      const updateMessage = updatesApplied.length > 0 ? `Updated persona "${validatedArgs.name}": ${updatesApplied.join(", ")}` : `Updated persona "${validatedArgs.name}"`;
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Update persona "${validatedArgs.name}" with changes: ${validatedArgs.updates}`
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: updateMessage
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-  static async handleRemovePersona(args, context) {
-    try {
-      const validatedArgs = ArchivePersonaArgsSchema.parse(args);
-      const service = new PersonaService2(context);
-      const existing = await service.loadPersona({
-        personaName: validatedArgs.name
-      });
-      if (!existing) {
-        return {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: `Archive persona "${validatedArgs.name}"`
-              }
-            },
-            {
-              role: "assistant",
-              content: {
-                type: "text",
-                text: `Persona "${validatedArgs.name}" not found`
-              }
-            }
-          ]
-        };
-      }
-      await service.archivePersona({
-        personaName: validatedArgs.name,
-        reason: validatedArgs.reason || "Archived via prompt handler"
-      });
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Archive persona "${validatedArgs.name}"`
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: `Archived persona "${validatedArgs.name}"`
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-  static async handleShowPersona(args, context) {
-    try {
-      const validatedArgs = ShowPersonaArgsSchema.parse(args);
-      const service = new PersonaService2(context);
-      const persona = await service.loadPersona({
-        personaName: validatedArgs.name
-      });
-      if (!persona) {
-        return {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: `Show persona "${validatedArgs.name}"`
-              }
-            },
-            {
-              role: "assistant",
-              content: {
-                type: "text",
-                text: `Persona "${validatedArgs.name}" not found`
-              }
-            }
-          ]
-        };
-      }
-      const files = await service.listPersonaFiles({
-        personaName: validatedArgs.name
-      });
-      const formattedPersona = formatPersona(
-        persona?.persona || null,
-        validatedArgs.name
-      );
-      let response = `Persona: ${validatedArgs.name}
-`;
-      response += `Files: ${files.length}
-
-`;
-      response += formattedPersona;
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Show persona "${validatedArgs.name}"`
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: response
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-  static async handleCurrentPersona(args, context) {
-    try {
-      CurrentPersonaArgsSchema.parse(args);
-      const activePersonaName = context.activePersona?.id;
-      if (!activePersonaName) {
-        return {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: "Show current persona"
-              }
-            },
-            {
-              role: "assistant",
-              content: {
-                type: "text",
-                text: "No persona is currently active"
-              }
-            }
-          ]
-        };
-      }
-      const service = new PersonaService2(context);
-      const persona = await service.loadPersona({
-        personaName: activePersonaName
-      });
-      const formattedPersona = formatPersona(
-        persona?.persona || null,
-        activePersonaName
-      );
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: "Show current persona"
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: formattedPersona
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-};
-
-// packages/tiny-brain-mcp/src/prompts/rules/rules.prompt.ts
-init_zod();
-init_src();
-var AddRuleArgsSchema = external_exports.object({
-  rule: external_exports.string()
-});
-var ListRulesArgsSchema = external_exports.object({
-  query: external_exports.string().optional()
-});
-var RemoveRuleArgsSchema = external_exports.object({
-  rule: external_exports.string()
-});
-var RulesPrompt = class _RulesPrompt {
-  /**
-   * Get all rules-related prompt definitions
-   */
-  static getPromptDefinitions() {
-    return [
-      {
-        name: "add-rule",
-        description: "\u{1F4CB} Add a universal rule or directive that applies across all personas",
-        arguments: [
-          {
-            name: "rule",
-            description: 'The rule or directive to add (e.g., "ALWAYS use TDD")',
-            required: true
-          }
-        ]
-      },
-      {
-        name: "list-rules",
-        description: "\u{1F4CB} List all rules or search for specific ones",
-        arguments: [
-          {
-            name: "query",
-            description: "Optional search query to filter rules. Leave empty to list all rules.",
-            required: false
-          }
-        ]
-      },
-      {
-        name: "remove-rule",
-        description: "\u{1F5D1}\uFE0F Remove a specific rule from the system",
-        arguments: [
-          {
-            name: "rule",
-            description: "The rule to remove",
-            required: true
-          }
-        ]
-      }
-    ];
-  }
-  /**
-   * Main handler that routes to specific prompt handlers
-   */
-  static async handle(name, args, context) {
-    switch (name) {
-      case "add-rule":
-        return await _RulesPrompt.handleAddRule(args, context);
-      case "list-rules":
-        return await _RulesPrompt.handleListRules(args, context);
-      case "remove-rule":
-        return await _RulesPrompt.handleRemoveRule(args, context);
-      default:
-        throw new Error(`Unknown rules prompt: ${name}`);
-    }
-  }
-  /**
-   * Handle add-rule prompt - adds a new universal rule
-   */
-  static async handleAddRule(args, context) {
-    try {
-      const validatedArgs = AddRuleArgsSchema.parse(args);
-      const rulesService = new RulesService(context);
-      const result = await rulesService.addRule(
-        validatedArgs.rule,
-        context.userId
-      );
-      const resultText = result.success ? `${result.message}
-Rule: "${result.rule}"
-Total rules: ${result.totalRules}` : result.message;
-      return {
-        description: "Remember information with smart classification",
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Add rule: ${validatedArgs.rule}`
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: resultText
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-  /**
-   * Handle list-rules prompt - lists all rules or filtered by query
-   */
-  static async handleListRules(args, context) {
-    try {
-      const validatedArgs = ListRulesArgsSchema.parse(args || {});
-      const rulesService = new RulesService(context);
-      const result = await rulesService.listRules(
-        validatedArgs.query,
-        context.userId
-      );
-      const resultText = result.rules.length > 0 ? `Found ${result.totalRules} rule(s):
-
-${result.rules.map((rule, index) => `${index + 1}. ${rule}`).join("\n")}` : `No rules found${validatedArgs.query ? ` matching "${validatedArgs.query}"` : ""}`;
-      return {
-        description: "List all rules or search for specific ones",
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: validatedArgs.query ? `List rules matching: ${validatedArgs.query}` : "List all rules"
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: resultText
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-  /**
-   * Handle remove-rule prompt - removes a rule from the list
-   */
-  static async handleRemoveRule(args, context) {
-    try {
-      const validatedArgs = RemoveRuleArgsSchema.parse(args);
-      const rulesService = new RulesService(context);
-      const result = await rulesService.removeRule(
-        validatedArgs.rule,
-        context.userId
-      );
-      const resultText = result.success ? `${result.message}
-Removed: "${result.removedRule}"
-Remaining rules: ${result.remainingRules}` : result.message;
-      return {
-        description: "Remove information from memory",
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Remove rule: ${validatedArgs.rule}`
-            }
-          },
-          {
-            role: "assistant",
-            content: {
-              type: "text",
-              text: resultText
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
   }
 };
 
@@ -65437,7 +66008,7 @@ var UpdatePlanArgsSchema = external_exports.object({
   operation: external_exports.enum(["add-feature", "update-feature-status", "add-task"]),
   featureNumber: external_exports.number().optional(),
   content: external_exports.string().optional(),
-  status: external_exports.enum(["pending", "in_progress", "completed"]).optional()
+  status: external_exports.enum(["not_started", "in_progress", "completed", "superseded"]).optional()
 });
 var PlanStatusArgsSchema = external_exports.object({
   planId: external_exports.string().optional(),
@@ -66021,14 +66592,23 @@ var PlanningPrompt = class _PlanningPrompt {
 };
 
 // packages/tiny-brain-mcp/src/prompts/prompt-registry.ts
+var PROMPT_MAP = {
+  // Planning prompts
+  "create-plan": PlanningPrompt,
+  "update-plan": PlanningPrompt,
+  "plan-status": PlanningPrompt,
+  "list-plans": PlanningPrompt,
+  "plan-report": PlanningPrompt,
+  // Thinking prompts
+  think_through: ThinkingPrompt,
+  explain_reasoning: ThinkingPrompt
+};
 var PromptRegistry = class {
   /**
    * Get all available prompt definitions from all prompts
    */
   static getPrompts() {
     return [
-      ...PersonaPrompt.getPromptDefinitions(),
-      ...RulesPrompt.getPromptDefinitions(),
       ...ThinkingPrompt.getPromptDefinitions(),
       ...PlanningPrompt.getPromptDefinitions()
     ];
@@ -66047,30 +66627,7 @@ var PromptRegistry = class {
    * Get a specific prompt class by name
    */
   static getPromptByName(name) {
-    const promptMap = {
-      // Persona prompts
-      list_personas: PersonaPrompt,
-      as: PersonaPrompt,
-      create_persona: PersonaPrompt,
-      update_persona: PersonaPrompt,
-      archive_persona: PersonaPrompt,
-      show_persona: PersonaPrompt,
-      current_persona: PersonaPrompt,
-      // Rules prompts
-      "add-rule": RulesPrompt,
-      "list-rules": RulesPrompt,
-      "remove-rule": RulesPrompt,
-      // Planning prompts
-      "create-plan": PlanningPrompt,
-      "update-plan": PlanningPrompt,
-      "plan-status": PlanningPrompt,
-      "list-plans": PlanningPrompt,
-      "plan-report": PlanningPrompt,
-      // Thinking prompts
-      think_through: ThinkingPrompt,
-      explain_reasoning: ThinkingPrompt
-    };
-    return promptMap[name];
+    return PROMPT_MAP[name];
   }
 };
 
@@ -66281,8 +66838,7 @@ var MCPServer = class {
         this.logger.debug("Not in a git repository, skipping repo registration");
         return;
       }
-      const { RepoConfigService: RepoConfigService2, detectWorktreeInfo: detectWorktreeInfo2 } = await Promise.resolve().then(() => (init_src(), src_exports));
-      const { resolveRepoRegistration: resolveRepoRegistration2 } = await Promise.resolve().then(() => (init_repo_registration(), repo_registration_exports));
+      const { RepoConfigService: RepoConfigService2, detectWorktreeInfo: detectWorktreeInfo2, resolveRepoRegistration: resolveRepoRegistration2 } = await Promise.resolve().then(() => (init_src(), src_exports));
       const worktreeInfo = await detectWorktreeInfo2(cwd);
       const registrationOptions = resolveRepoRegistration2(cwd, worktreeInfo);
       const repoConfigService = new RepoConfigService2(this.baseContext);
@@ -66345,7 +66901,11 @@ var MCPServer = class {
       clientIdPreview: this.config.account?.clientId ? this.config.account.clientId.substring(0, 15) + "..." : "none"
     });
     try {
-      this.authTokenService = new AuthTokenService2(this.baseContext, this.config);
+      const credentials = this.config.account ? {
+        clientId: this.config.account.clientId,
+        clientSecret: this.config.account.clientSecret
+      } : void 0;
+      this.authTokenService = new AuthTokenService(this.baseContext, credentials);
       const token = await this.authTokenService.authenticate();
       if (token) {
         this.logger.info("Successfully authenticated with tiny-brain service", {
@@ -66451,8 +67011,7 @@ var MCPServer = class {
     try {
       const context = {
         ...this.baseContext,
-        authToken: this.authToken,
-        config: this.config
+        authToken: this.authToken
       };
       const systemPersonaService = new SystemPersonaService(context);
       if (systemPersonaService.isAuthenticated()) {
@@ -66521,7 +67080,6 @@ var MCPServer = class {
       timestamp: /* @__PURE__ */ new Date(),
       activePersona,
       authToken: this.authToken,
-      config: this.config,
       // dashboardLauncher removed — dashboard is standalone
       updateActivePersona: (persona) => {
         const newPersonaId = persona?.id;
@@ -66607,7 +67165,6 @@ var MCPServer = class {
       timestamp: /* @__PURE__ */ new Date(),
       activePersona,
       authToken: this.authToken,
-      config: this.config,
       updateActivePersona: (persona) => {
         const newPersonaId = persona?.id;
         this.activePersona = newPersonaId;
@@ -66707,216 +67264,8 @@ var MCPServer = class {
   }
 };
 
-// packages/tiny-brain-mcp/src/core/console-logger.ts
-var ConsoleLogger = class _ConsoleLogger {
-  minLevel;
-  context;
-  mcpNotificationHandler;
-  constructor(minLevel = "info", context) {
-    this.minLevel = minLevel;
-    this.context = context;
-  }
-  setLogLevel(level) {
-    this.minLevel = level;
-  }
-  getLogLevel() {
-    return this.minLevel;
-  }
-  setMcpNotificationHandler(handler) {
-    this.mcpNotificationHandler = handler;
-  }
-  shouldLog(level) {
-    const priorities = {
-      debug: 0,
-      info: 1,
-      notice: 2,
-      warning: 3,
-      error: 4,
-      critical: 5,
-      alert: 6,
-      emergency: 7
-    };
-    return priorities[level] >= priorities[this.minLevel];
-  }
-  log(level, message, data) {
-    if (!this.shouldLog(level)) return;
-    if (this.mcpNotificationHandler) {
-      this.mcpNotificationHandler({
-        jsonrpc: "2.0",
-        method: "notifications/message",
-        params: {
-          level,
-          logger: this.context,
-          data: { message, ...data }
-        }
-      });
-    }
-  }
-  debug(message, data) {
-    this.log("debug", message, data);
-  }
-  info(message, data) {
-    this.log("info", message, data);
-  }
-  notice(message, data) {
-    this.log("notice", message, data);
-  }
-  warn(message, data) {
-    this.log("warning", message, data);
-  }
-  warning(message, data) {
-    this.log("warning", message, data);
-  }
-  error(message, error2) {
-    this.log("error", message, error2);
-  }
-  critical(message, data) {
-    this.log("critical", message, data);
-  }
-  alert(message, data) {
-    this.log("alert", message, data);
-  }
-  emergency(message, data) {
-    this.log("emergency", message, data);
-  }
-  child(context) {
-    const childContext = this.context ? `${this.context}:${context}` : context;
-    const childLogger = new _ConsoleLogger(this.minLevel, childContext);
-    if (this.mcpNotificationHandler) {
-      childLogger.setMcpNotificationHandler(this.mcpNotificationHandler);
-    }
-    return childLogger;
-  }
-};
-function createConsoleLogger(minLevel) {
-  const envLogLevel = process.env.LOG_LEVEL?.toLowerCase();
-  const validLogLevels = [
-    "debug",
-    "info",
-    "notice",
-    "warning",
-    "error",
-    "critical",
-    "alert",
-    "emergency"
-  ];
-  const effectiveLevel = envLogLevel && validLogLevels.includes(envLogLevel) ? envLogLevel : minLevel || "info";
-  return new ConsoleLogger(effectiveLevel);
-}
-
-// packages/tiny-brain-mcp/src/services/agent-manager.ts
-init_src();
-var AgentManager = class {
-  constructor(context) {
-    this.context = context;
-    this.agentService = new AgentService(context);
-    this.libraryClient = new LibraryClient();
-  }
-  agentService;
-  libraryClient;
-  /**
-   * Execute agent recommendations (install/update/remove)
-   */
-  async executeRecommendations(selections, repoAnalysis) {
-    const result = {
-      installed: [],
-      updated: [],
-      removed: [],
-      skipped: [],
-      errors: []
-    };
-    try {
-      const agentsToProcess = await this.fetchAgentData(
-        selections,
-        repoAnalysis,
-        result
-      );
-      if (agentsToProcess.length > 0) {
-        const installResult = await this.agentService.installAgentsWithVersionCheck(
-          agentsToProcess,
-          {
-            overwriteStrategy: "version-check",
-            backupExisting: true
-          }
-        );
-        result.installed.push(...installResult.installed);
-        result.updated.push(...installResult.updated);
-        result.skipped.push(...installResult.skipped);
-        installResult.errors.forEach((e) => {
-          result.errors.push({
-            operation: "install/update",
-            message: `${e.agent}: ${e.error}`
-          });
-        });
-      }
-      if (selections.remove.length > 0) {
-        const agentNamesToRemove = selections.remove.map((r) => r.name);
-        const removeResult = await this.agentService.removeAgents(agentNamesToRemove);
-        result.removed.push(...removeResult.removed);
-        removeResult.errors.forEach((e) => {
-          result.errors.push({
-            operation: "remove",
-            message: e
-          });
-        });
-      }
-    } catch (error2) {
-      const message = error2 instanceof Error ? error2.message : "Unknown error";
-      result.errors.push({
-        operation: "general",
-        message
-      });
-      this.context.logger.error("Error executing recommendations:", error2);
-    }
-    return result;
-  }
-  /**
-   * Fetch full agent data from TBR
-   */
-  async fetchAgentData(selections, repoAnalysis, result) {
-    const agentsNeeded = [...selections.install, ...selections.update];
-    if (agentsNeeded.length === 0) {
-      return [];
-    }
-    const localContext = this.context;
-    const agentResponse = await this.libraryClient.getAgents(
-      repoAnalysis,
-      localContext.authToken?.token || ""
-    );
-    const agentMap = new Map(
-      agentResponse.agents.map((agent) => [agent.name, agent])
-    );
-    const agentsToProcess = [];
-    for (const rec of selections.install) {
-      const agentData = agentMap.get(rec.name);
-      if (agentData) {
-        agentsToProcess.push(agentData);
-      } else {
-        result.errors.push({
-          operation: "fetch",
-          message: `Agent not found: ${rec.name}`
-        });
-      }
-    }
-    for (const rec of selections.update) {
-      const agentData = agentMap.get(rec.name);
-      if (agentData) {
-        agentData.details.version = rec.to;
-        agentsToProcess.push(agentData);
-      } else {
-        result.errors.push({
-          operation: "fetch",
-          message: `Agent not found: ${rec.name}`
-        });
-      }
-    }
-    return agentsToProcess;
-  }
-};
-
-// packages/tiny-brain-mcp/src/index.ts
+// packages/tiny-brain-mcp/src/server.ts
 global.mcpServerStarted = false;
-var VERSION = "0.13.1";
 function startupLog(message, data) {
   message = `(startup) ${message}`;
   const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
@@ -66946,8 +67295,8 @@ function startupLog(message, data) {
     }
   }
 }
-async function main() {
-  startupLog("main() function called");
+async function bootMcpServer() {
+  startupLog("bootMcpServer() called");
   const __filename = fileURLToPath8(import.meta.url);
   const __dirname = dirname13(__filename);
   const envPath = join26(__dirname, "../.env.local");
@@ -66967,17 +67316,17 @@ async function main() {
   try {
     startupLog("Fetching package.json version...");
     const packageJson = JSON.parse(readFileSync4(join26(__dirname, "../package.json"), "utf-8"));
-    const VERSION2 = packageJson.version;
+    const VERSION = packageJson.version;
     startupLog("Starting server", {
       pid: process.pid,
       node: process.version,
-      version: VERSION2,
+      version: VERSION,
       args: process.argv,
       env: process.env
     });
     const server = new MCPServer({
       name: "tiny-brain-local",
-      version: VERSION2,
+      version: VERSION,
       autoStartDashboard: process.env.AUTOSTARTDASHBOARD !== "false" && process.env.TINY_BRAIN_AUTO_START_DASHBOARD !== "false",
       dashboardPort: parseInt(process.env.DASHBOARD_PORT || "8765"),
       account: {
@@ -67018,38 +67367,18 @@ async function main() {
     process.exit(1);
   }
 }
-var isDirectExecution = process.argv[1]?.endsWith("index.js") || process.argv[1]?.endsWith("index.ts");
+
+// packages/tiny-brain-mcp/src/index.ts
+var isScriptEntry = process.argv[1] !== void 0 && import.meta.url === pathToFileURL(process.argv[1]).href;
 var isTestEnvironment = process.env.VITEST === "true" || process.env.TEST === "true";
-if (isDirectExecution && !isTestEnvironment) {
-  startupLog("Starting main() execution");
-  main().catch((error2) => {
-    startupLog("Fatal error in main()", {
-      error: error2 instanceof Error ? {
-        message: error2.message,
-        stack: error2.stack,
-        name: error2.name
-      } : error2
-    });
+if (isScriptEntry && !isTestEnvironment) {
+  bootMcpServer().catch((error2) => {
+    console.error("[tiny-brain-startup] Fatal error in bootMcpServer()", error2);
     process.exit(1);
   });
 }
 export {
-  AgentManager,
-  AnalyseService,
-  AuthTokenService2 as AuthTokenService,
-  ConsoleLogger,
-  CredentialStorageService,
-  FileLogger,
-  LocalFilesystemStorageAdapter,
-  MCPServer,
-  PlatformConfigAdapter,
-  PlatformPathBuilder,
-  PromptRegistry,
-  SystemPersonaService,
-  ToolRegistry,
-  VERSION,
-  createConsoleLogger,
-  main
+  bootMcpServer
 };
 /*! Bundled license information:
 

@@ -1,12 +1,35 @@
+var __create = Object.create;
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __commonJS = (cb, mod) => function __require() {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 
 // packages/tiny-brain-core/src/types/result.ts
 var ResultHelpers;
@@ -508,8 +531,8 @@ var init_parseUtil = __esm({
     init_errors();
     init_en();
     makeIssue = (params) => {
-      const { data, path: path36, errorMaps, issueData } = params;
-      const fullPath = [...path36, ...issueData.path || []];
+      const { data, path: path42, errorMaps, issueData } = params;
+      const fullPath = [...path42, ...issueData.path || []];
       const fullIssue = {
         ...issueData,
         path: fullPath
@@ -521,15 +544,15 @@ var init_parseUtil = __esm({
           message: issueData.message
         };
       }
-      let errorMessage = "";
+      let errorMessage7 = "";
       const maps = errorMaps.filter((m) => !!m).slice().reverse();
       for (const map2 of maps) {
-        errorMessage = map2(fullIssue, { data, defaultError: errorMessage }).message;
+        errorMessage7 = map2(fullIssue, { data, defaultError: errorMessage7 }).message;
       }
       return {
         ...issueData,
         path: fullPath,
-        message: errorMessage
+        message: errorMessage7
       };
     };
     EMPTY_PATH = [];
@@ -817,11 +840,11 @@ var init_types = __esm({
     init_parseUtil();
     init_util();
     ParseInputLazyPath = class {
-      constructor(parent, value, path36, key) {
+      constructor(parent, value, path42, key) {
         this._cachedPath = [];
         this.parent = parent;
         this.data = value;
-        this._path = path36;
+        this._path = path42;
         this._key = key;
       }
       get path() {
@@ -5037,6 +5060,886 @@ var init_logger_interface = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/logger/console-logger.ts
+function createConsoleLogger(minLevel) {
+  const envLogLevel = process.env.LOG_LEVEL?.toLowerCase();
+  const validLogLevels = [
+    "debug",
+    "info",
+    "notice",
+    "warning",
+    "error",
+    "critical",
+    "alert",
+    "emergency"
+  ];
+  const effectiveLevel = envLogLevel && validLogLevels.includes(envLogLevel) ? envLogLevel : minLevel || "info";
+  return new ConsoleLogger(effectiveLevel);
+}
+var ConsoleLogger;
+var init_console_logger = __esm({
+  "packages/tiny-brain-core/src/logger/console-logger.ts"() {
+    "use strict";
+    ConsoleLogger = class _ConsoleLogger {
+      minLevel;
+      context;
+      mcpNotificationHandler;
+      constructor(minLevel = "info", context) {
+        this.minLevel = minLevel;
+        this.context = context;
+      }
+      setLogLevel(level) {
+        this.minLevel = level;
+      }
+      getLogLevel() {
+        return this.minLevel;
+      }
+      setMcpNotificationHandler(handler) {
+        this.mcpNotificationHandler = handler;
+      }
+      shouldLog(level) {
+        const priorities = {
+          debug: 0,
+          info: 1,
+          notice: 2,
+          warning: 3,
+          error: 4,
+          critical: 5,
+          alert: 6,
+          emergency: 7
+        };
+        return priorities[level] >= priorities[this.minLevel];
+      }
+      log(level, message, data) {
+        if (!this.shouldLog(level)) return;
+        if (this.mcpNotificationHandler) {
+          this.mcpNotificationHandler({
+            jsonrpc: "2.0",
+            method: "notifications/message",
+            params: {
+              level,
+              logger: this.context,
+              data: { message, ...data }
+            }
+          });
+        }
+      }
+      debug(message, data) {
+        this.log("debug", message, data);
+      }
+      info(message, data) {
+        this.log("info", message, data);
+      }
+      notice(message, data) {
+        this.log("notice", message, data);
+      }
+      warn(message, data) {
+        this.log("warning", message, data);
+      }
+      warning(message, data) {
+        this.log("warning", message, data);
+      }
+      error(message, error) {
+        this.log("error", message, error);
+      }
+      critical(message, data) {
+        this.log("critical", message, data);
+      }
+      alert(message, data) {
+        this.log("alert", message, data);
+      }
+      emergency(message, data) {
+        this.log("emergency", message, data);
+      }
+      child(context) {
+        const childContext = this.context ? `${this.context}:${context}` : context;
+        const childLogger = new _ConsoleLogger(this.minLevel, childContext);
+        if (this.mcpNotificationHandler) {
+          childLogger.setMcpNotificationHandler(this.mcpNotificationHandler);
+        }
+        return childLogger;
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/logger/file-logger.ts
+import * as fs from "fs";
+import * as path from "path";
+var LOG_LEVELS, FileLogger, ContextualFileLogger;
+var init_file_logger = __esm({
+  "packages/tiny-brain-core/src/logger/file-logger.ts"() {
+    "use strict";
+    LOG_LEVELS = {
+      debug: 0,
+      info: 1,
+      notice: 2,
+      warning: 3,
+      error: 4,
+      critical: 5,
+      alert: 6,
+      emergency: 7
+    };
+    FileLogger = class {
+      config;
+      fileStream;
+      currentFileSize = 0;
+      constructor(config = {}) {
+        const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+        const defaultLogPath = path.join(homeDir, ".tiny-brain", "debug.log");
+        this.config = {
+          logFilePath: config.logFilePath || defaultLogPath,
+          maxFileSize: config.maxFileSize || 10 * 1024 * 1024,
+          maxRotatedFiles: config.maxRotatedFiles || 3,
+          appendMode: config.appendMode !== false,
+          logLevel: config.logLevel || "debug",
+          enabled: config.enabled !== false
+        };
+        if (this.config.enabled) {
+          this.initialize();
+        }
+      }
+      setLogLevel(level) {
+        this.config.logLevel = level;
+      }
+      getLogLevel() {
+        return this.config.logLevel;
+      }
+      setMcpNotificationHandler(_handler) {
+      }
+      initialize() {
+        try {
+          const logDir = path.dirname(this.config.logFilePath);
+          if (!fs.existsSync(logDir)) {
+            fs.mkdirSync(logDir, { recursive: true });
+          }
+          if (fs.existsSync(this.config.logFilePath)) {
+            const stats = fs.statSync(this.config.logFilePath);
+            this.currentFileSize = stats.size;
+            if (this.currentFileSize >= this.config.maxFileSize) {
+              this.rotateLogFile();
+              this.currentFileSize = 0;
+            }
+          }
+          this.fileStream = fs.createWriteStream(this.config.logFilePath, {
+            flags: this.config.appendMode ? "a" : "w"
+          });
+          this.writeLog("info", "FileLogger initialized", {
+            logFilePath: this.config.logFilePath,
+            pid: process.pid
+          });
+        } catch {
+        }
+      }
+      rotateLogFile() {
+        try {
+          for (let i = this.config.maxRotatedFiles - 1; i >= 0; i--) {
+            const oldPath = i === 0 ? this.config.logFilePath : `${this.config.logFilePath}.${i}`;
+            const newPath = `${this.config.logFilePath}.${i + 1}`;
+            if (fs.existsSync(oldPath)) {
+              if (i === this.config.maxRotatedFiles - 1) {
+                fs.unlinkSync(oldPath);
+              } else {
+                fs.renameSync(oldPath, newPath);
+              }
+            }
+          }
+        } catch {
+        }
+      }
+      shouldLog(level) {
+        if (!this.config.enabled || !this.fileStream) {
+          return false;
+        }
+        return LOG_LEVELS[level] >= LOG_LEVELS[this.config.logLevel];
+      }
+      writeLog(level, message, data) {
+        if (!this.shouldLog(level)) return;
+        try {
+          const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
+          const logEntry = {
+            timestamp: timestamp2,
+            level: level.toUpperCase(),
+            pid: process.pid,
+            message,
+            ...data && { data }
+          };
+          const logLine = JSON.stringify(logEntry) + "\n";
+          const bytes = Buffer.byteLength(logLine);
+          if (this.currentFileSize + bytes > this.config.maxFileSize) {
+            this.fileStream?.end();
+            this.rotateLogFile();
+            this.currentFileSize = 0;
+            this.fileStream = fs.createWriteStream(this.config.logFilePath, {
+              flags: "a"
+            });
+          }
+          this.fileStream?.write(logLine);
+          this.currentFileSize += bytes;
+        } catch {
+        }
+      }
+      debug(message, data) {
+        this.writeLog("debug", message, data);
+      }
+      info(message, data) {
+        this.writeLog("info", message, data);
+      }
+      notice(message, data) {
+        this.writeLog("notice", message, data);
+      }
+      warn(message, data) {
+        this.writeLog("warning", message, data);
+      }
+      warning(message, data) {
+        this.writeLog("warning", message, data);
+      }
+      error(message, error) {
+        const errorData = error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        } : error;
+        this.writeLog("error", message, errorData);
+      }
+      critical(message, data) {
+        this.writeLog("critical", message, data);
+      }
+      alert(message, data) {
+        this.writeLog("alert", message, data);
+      }
+      emergency(message, data) {
+        this.writeLog("emergency", message, data);
+      }
+      child(context) {
+        return new ContextualFileLogger(this, context);
+      }
+      async close() {
+        return new Promise((resolve3) => {
+          if (this.fileStream) {
+            this.fileStream.end(() => {
+              this.fileStream = void 0;
+              resolve3();
+            });
+          } else {
+            resolve3();
+          }
+        });
+      }
+    };
+    ContextualFileLogger = class {
+      constructor(parent, context) {
+        this.parent = parent;
+        this.context = context;
+      }
+      setLogLevel(level) {
+        this.parent.setLogLevel(level);
+      }
+      getLogLevel() {
+        return this.parent.getLogLevel();
+      }
+      setMcpNotificationHandler(handler) {
+        this.parent.setMcpNotificationHandler(handler);
+      }
+      debug(message, data) {
+        this.parent.debug(`[${this.context}] ${message}`, data);
+      }
+      info(message, data) {
+        this.parent.info(`[${this.context}] ${message}`, data);
+      }
+      notice(message, data) {
+        this.parent.notice(`[${this.context}] ${message}`, data);
+      }
+      warn(message, data) {
+        this.parent.warn(`[${this.context}] ${message}`, data);
+      }
+      warning(message, data) {
+        this.parent.warning(`[${this.context}] ${message}`, data);
+      }
+      error(message, error) {
+        this.parent.error(`[${this.context}] ${message}`, error);
+      }
+      critical(message, data) {
+        this.parent.critical(`[${this.context}] ${message}`, data);
+      }
+      alert(message, data) {
+        this.parent.alert(`[${this.context}] ${message}`, data);
+      }
+      emergency(message, data) {
+        this.parent.emergency(`[${this.context}] ${message}`, data);
+      }
+      child(context) {
+        return this.parent.child(`${this.context}:${context}`);
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/storage/storage-path-builder.ts
+import { join as join3 } from "path";
+var LocalStoragePathBuilder;
+var init_storage_path_builder = __esm({
+  "packages/tiny-brain-core/src/storage/storage-path-builder.ts"() {
+    "use strict";
+    LocalStoragePathBuilder = class {
+      basePath;
+      constructor(basePath = "~/.tiny-brain") {
+        this.basePath = basePath.startsWith("~") ? join3(process.env.HOME || process.env.USERPROFILE || "", basePath.slice(1)) : basePath;
+      }
+      buildPersonaPath(personaId, fileName, _userId) {
+        return join3(this.basePath, "personas", personaId, fileName);
+      }
+      buildPersonaDirectoryPath(personaId, _userId) {
+        return join3(this.basePath, "personas", personaId);
+      }
+      buildUserDataPath(key, _userId) {
+        return join3(this.basePath, key);
+      }
+      buildUserBasePath(_userId) {
+        return this.basePath;
+      }
+      extractPersonaId(path42) {
+        const parts = path42.split(/[/\\]/);
+        const personasIndex = parts.findIndex((part) => part === "personas");
+        return personasIndex !== -1 && personasIndex + 1 < parts.length ? parts[personasIndex + 1] : null;
+      }
+      extractUserId(_path) {
+        return null;
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/storage/local-filesystem-adapter.ts
+import { promises as fs2 } from "fs";
+import { dirname as dirname2, join as join4 } from "path";
+var LocalFilesystemStorageAdapter;
+var init_local_filesystem_adapter = __esm({
+  "packages/tiny-brain-core/src/storage/local-filesystem-adapter.ts"() {
+    "use strict";
+    init_storage_path_builder();
+    LocalFilesystemStorageAdapter = class {
+      pathBuilder;
+      autoCreate;
+      personasDir;
+      constructor(config) {
+        this.pathBuilder = new LocalStoragePathBuilder(config.baseDir);
+        this.autoCreate = config.autoCreate ?? true;
+        this.personasDir = this.pathBuilder.buildUserBasePath() + "/personas";
+      }
+      async initializeUserStorage(_userId) {
+        if (!this.autoCreate) return;
+        const basePath = this.pathBuilder.buildUserBasePath();
+        const personasPath = join4(basePath, "personas");
+        await this.ensureDirectoryExists(basePath);
+        await this.ensureDirectoryExists(personasPath);
+      }
+      async storePersonaFile(personaId, fileName, content, _userId) {
+        const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
+        const directory = dirname2(filePath);
+        if (this.autoCreate) {
+          await this.ensureDirectoryExists(directory);
+        }
+        await fs2.writeFile(filePath, content, "utf8");
+      }
+      async getPersonaFile(personaId, fileName, _userId) {
+        const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
+        try {
+          return await fs2.readFile(filePath, "utf8");
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            return null;
+          }
+          throw error;
+        }
+      }
+      async deletePersonaFile(personaId, fileName, _userId) {
+        const filePath = this.pathBuilder.buildPersonaPath(personaId, fileName);
+        try {
+          await fs2.unlink(filePath);
+        } catch (error) {
+          if (error.code !== "ENOENT") {
+            throw error;
+          }
+        }
+      }
+      async listPersonaFiles(personaId, _userId) {
+        const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
+        try {
+          const getAllFiles = async (dir, basePath = "") => {
+            const entries = await fs2.readdir(dir, { withFileTypes: true });
+            const files = [];
+            for (const entry of entries) {
+              const fullPath = join4(dir, entry.name);
+              const relativePath = basePath ? join4(basePath, entry.name) : entry.name;
+              if (entry.isDirectory()) {
+                const subFiles = await getAllFiles(fullPath, relativePath);
+                files.push(...subFiles);
+              } else if (entry.isFile()) {
+                files.push(relativePath);
+              }
+            }
+            return files;
+          };
+          const allFiles = await getAllFiles(personaDir);
+          return allFiles;
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            return [];
+          }
+          throw error;
+        }
+      }
+      async listPersonas(_userId) {
+        const personasDir = join4(this.pathBuilder.buildUserBasePath(), "personas");
+        try {
+          const directories = await fs2.readdir(personasDir);
+          const dirStats = await Promise.all(
+            directories.map(async (dir) => {
+              const dirPath = join4(personasDir, dir);
+              const stat4 = await fs2.stat(dirPath);
+              return { name: dir, isDirectory: stat4.isDirectory() };
+            })
+          );
+          return dirStats.filter(({ isDirectory }) => isDirectory).map(({ name }) => name);
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            return [];
+          }
+          throw error;
+        }
+      }
+      async deletePersona(personaId, _userId) {
+        const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
+        try {
+          await fs2.rm(personaDir, { recursive: true, force: true });
+        } catch (error) {
+          if (error.code !== "ENOENT") {
+            throw error;
+          }
+        }
+      }
+      async createPersonaDirectories(personaId, _userId) {
+        if (!this.autoCreate) {
+          return;
+        }
+        const personaDir = this.pathBuilder.buildPersonaDirectoryPath(personaId);
+        await this.ensureDirectoryExists(personaDir);
+      }
+      async storeUserData(key, content, _userId) {
+        const filePath = this.pathBuilder.buildUserDataPath(key);
+        const directory = dirname2(filePath);
+        if (this.autoCreate) {
+          await this.ensureDirectoryExists(directory);
+        }
+        await fs2.writeFile(filePath, content, "utf8");
+      }
+      async getUserData(key, _userId) {
+        const filePath = this.pathBuilder.buildUserDataPath(key);
+        try {
+          return await fs2.readFile(filePath, "utf8");
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            return null;
+          }
+          throw error;
+        }
+      }
+      async deleteUserData(key, _userId) {
+        const filePath = this.pathBuilder.buildUserDataPath(key);
+        try {
+          await fs2.unlink(filePath);
+        } catch (error) {
+          if (error.code !== "ENOENT") {
+            throw error;
+          }
+        }
+      }
+      async isAvailable() {
+        try {
+          const basePath = this.pathBuilder.buildUserBasePath();
+          if (this.autoCreate) {
+            await this.ensureDirectoryExists(basePath);
+          }
+          await fs2.access(basePath, fs2.constants.R_OK | fs2.constants.W_OK);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      async renamePersona(oldPersonaId, newPersonaId, _userId) {
+        const oldPath = dirname2(this.pathBuilder.buildPersonaPath(oldPersonaId, ""));
+        const newPath = dirname2(this.pathBuilder.buildPersonaPath(newPersonaId, ""));
+        try {
+          await fs2.access(oldPath);
+        } catch {
+          throw new Error(`Persona '${oldPersonaId}' does not exist`);
+        }
+        try {
+          await fs2.access(newPath);
+          throw new Error(`Persona '${newPersonaId}' already exists`);
+        } catch {
+        }
+        await fs2.rename(oldPath, newPath);
+        const profilePath = join4(newPath, "profile.md");
+        try {
+          const profileContent = await fs2.readFile(profilePath, "utf-8");
+          const lines = profileContent.split("\n");
+          if (lines[0].startsWith("#")) {
+            lines[0] = `# ${newPersonaId}`;
+            await fs2.writeFile(profilePath, lines.join("\n"), "utf-8");
+          }
+        } catch {
+        }
+        const metadataPath = join4(newPath, "metadata.json");
+        try {
+          const metadataContent = await fs2.readFile(metadataPath, "utf-8");
+          const metadata = JSON.parse(metadataContent);
+          metadata.name = newPersonaId;
+          metadata.lastRenamed = (/* @__PURE__ */ new Date()).toISOString();
+          await fs2.writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
+        } catch {
+        }
+      }
+      getDeploymentInfo() {
+        return {
+          mode: "local",
+          supportsMultiUser: false,
+          basePath: this.pathBuilder.buildUserBasePath()
+        };
+      }
+      /**
+       * Ensure directory exists, creating it if necessary
+       */
+      async ensureDirectoryExists(dirPath) {
+        try {
+          await fs2.mkdir(dirPath, { recursive: true });
+        } catch (error) {
+          if (error.code !== "EEXIST") {
+            throw error;
+          }
+        }
+      }
+      /**
+       * Get the base path for debugging/info purposes
+       */
+      getBasePath() {
+        return this.pathBuilder.buildUserBasePath();
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/storage/platform-path-builder.ts
+import * as os from "os";
+import * as path2 from "path";
+var PlatformPathBuilder;
+var init_platform_path_builder = __esm({
+  "packages/tiny-brain-core/src/storage/platform-path-builder.ts"() {
+    "use strict";
+    PlatformPathBuilder = class {
+      /**
+       * Get Claude Code MCP configuration file path
+       */
+      getClaudeCodeConfig(scope = "local") {
+        switch (scope) {
+          case "project":
+            return ".mcp.json";
+          case "user":
+            return path2.join(os.homedir(), ".config", "claude", "mcp.json");
+          case "local":
+          default:
+            return ".mcp.json";
+        }
+      }
+      /**
+       * Get Claude Desktop configuration file path (OS-specific)
+       */
+      getClaudeDesktopConfig() {
+        const platform2 = os.platform();
+        switch (platform2) {
+          case "darwin":
+            return path2.join(
+              os.homedir(),
+              "Library",
+              "Application Support",
+              "Claude",
+              "claude_desktop_config.json"
+            );
+          case "win32": {
+            const appData = process.env.APPDATA || path2.join(os.homedir(), "AppData", "Roaming");
+            return path2.join(appData, "Claude", "claude_desktop_config.json");
+          }
+          default:
+            return path2.join(os.homedir(), ".config", "Claude", "claude_desktop_config.json");
+        }
+      }
+      /**
+       * Get Cursor IDE configuration file path
+       */
+      getCursorConfig() {
+        return path2.join(os.homedir(), ".cursor", "mcp", "config.json");
+      }
+      /**
+       * Get ChatGPT Desktop configuration file path
+       */
+      getChatGPTConfig() {
+        const platform2 = os.platform();
+        switch (platform2) {
+          case "darwin":
+            return path2.join(os.homedir(), "Library", "Application Support", "ChatGPT", "config.json");
+          case "win32": {
+            const appData = process.env.APPDATA || path2.join(os.homedir(), "AppData", "Roaming");
+            return path2.join(appData, "ChatGPT", "config.json");
+          }
+          default:
+            return path2.join(os.homedir(), ".config", "ChatGPT", "config.json");
+        }
+      }
+      /**
+       * Get platform-specific configuration path
+       */
+      getConfigPath(platform2, scope) {
+        switch (platform2.toLowerCase()) {
+          case "claude-code":
+            return this.getClaudeCodeConfig(scope);
+          case "claude-desktop":
+            return this.getClaudeDesktopConfig();
+          case "cursor":
+            return this.getCursorConfig();
+          case "chatgpt":
+            return this.getChatGPTConfig();
+          default:
+            throw new Error(`Unknown platform: ${platform2}`);
+        }
+      }
+      /**
+       * Normalize path for the current platform
+       */
+      normalizePathForPlatform(filePath) {
+        if (os.platform() === "win32") {
+          return filePath.replace(/\//g, "\\");
+        }
+        return filePath;
+      }
+      /**
+       * Get backup directory for platform configs
+       */
+      getBackupDirectory() {
+        return path2.join(os.homedir(), ".tiny-brain", "backups");
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/utils/repo-utils.ts
+import { execSync } from "child_process";
+import { existsSync as existsSync3 } from "fs";
+import { join as join6, dirname as dirname3 } from "path";
+import { fileURLToPath } from "url";
+function findRepoRoot(startPath) {
+  const cwd = startPath || process.cwd();
+  try {
+    const gitRoot = execSync("git rev-parse --show-toplevel", {
+      cwd,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "ignore"]
+      // Ignore stderr
+    }).trim();
+    if (gitRoot && existsSync3(gitRoot)) {
+      return gitRoot;
+    }
+  } catch {
+  }
+  let currentPath = cwd;
+  while (currentPath !== dirname3(currentPath)) {
+    if (existsSync3(join6(currentPath, ".git"))) {
+      return currentPath;
+    }
+    currentPath = dirname3(currentPath);
+  }
+  console.warn("No git repository found, using current directory:", cwd);
+  return cwd;
+}
+function getRepoRoot() {
+  if (!cachedRepoRoot) {
+    const thisFileDir = dirname3(fileURLToPath(import.meta.url));
+    cachedRepoRoot = findRepoRoot(thisFileDir);
+  }
+  return cachedRepoRoot;
+}
+var cachedRepoRoot;
+var init_repo_utils = __esm({
+  "packages/tiny-brain-core/src/utils/repo-utils.ts"() {
+    "use strict";
+    cachedRepoRoot = null;
+  }
+});
+
+// packages/tiny-brain-core/src/storage/platform-config-adapter.ts
+import { promises as fs3, existsSync as existsSync4 } from "fs";
+import * as path3 from "path";
+var PlatformConfigAdapter;
+var init_platform_config_adapter = __esm({
+  "packages/tiny-brain-core/src/storage/platform-config-adapter.ts"() {
+    "use strict";
+    init_local_filesystem_adapter();
+    init_platform_path_builder();
+    init_repo_utils();
+    PlatformConfigAdapter = class _PlatformConfigAdapter extends LocalFilesystemStorageAdapter {
+      platformPathBuilder;
+      constructor(config) {
+        super(config);
+        this.platformPathBuilder = new PlatformPathBuilder();
+      }
+      /**
+       * Read platform-specific configuration file
+       */
+      async readPlatformConfig(platform2, scope) {
+        try {
+          const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
+          const content = await fs3.readFile(configPath, "utf-8");
+          return JSON.parse(content);
+        } catch (error) {
+          const err = error;
+          if (err.code === "ENOENT") {
+            return {};
+          }
+          throw error;
+        }
+      }
+      /**
+       * Write platform-specific configuration file
+       */
+      async writePlatformConfig(platform2, config, scope) {
+        const configPath = this.platformPathBuilder.getConfigPath(platform2, scope);
+        const directory = path3.dirname(configPath);
+        await fs3.mkdir(directory, { recursive: true });
+        await fs3.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
+      }
+      /**
+       * Backup platform configuration
+       */
+      async backupPlatformConfig(platform2, scope) {
+        try {
+          const config = await this.readPlatformConfig(platform2, scope);
+          if (Object.keys(config).length === 0) {
+            return null;
+          }
+          const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/:/g, "-").replace(/\./g, "-");
+          const backupDir = this.platformPathBuilder.getBackupDirectory();
+          const backupFile = `${platform2}-${timestamp2}.backup`;
+          const backupPath = path3.join(backupDir, backupFile);
+          await fs3.mkdir(backupDir, { recursive: true });
+          await fs3.writeFile(backupPath, JSON.stringify(config, null, 2), "utf-8");
+          return timestamp2;
+        } catch (error) {
+          const err = error;
+          if (err.code === "ENOENT") {
+            return null;
+          }
+          throw error;
+        }
+      }
+      /**
+       * Restore platform configuration from backup
+       */
+      async restorePlatformConfig(platform2, backupId, scope) {
+        const backupDir = this.platformPathBuilder.getBackupDirectory();
+        const backupFile = `${platform2}-${backupId}.backup`;
+        const backupPath = path3.join(backupDir, backupFile);
+        const backupContent = await fs3.readFile(backupPath, "utf-8");
+        const config = JSON.parse(backupContent);
+        await this.writePlatformConfig(platform2, config, scope);
+      }
+      /**
+       * Add or update an MCP server in platform configuration
+       */
+      async addMCPServer(platform2, serverName, serverConfig, scope) {
+        const config = await this.readPlatformConfig(platform2, scope);
+        if (platform2 === "claude-desktop") {
+          config.mcpServers = config.mcpServers || {};
+          config.mcpServers[serverName] = serverConfig;
+        } else if (platform2 === "claude-code") {
+          config.servers = config.servers || {};
+          config.servers[serverName] = serverConfig;
+        } else {
+          config.servers = config.servers || {};
+          config.servers[serverName] = serverConfig;
+        }
+        await this.writePlatformConfig(platform2, config, scope);
+      }
+      /**
+       * Remove an MCP server from platform configuration
+       */
+      async removeMCPServer(platform2, serverName, scope) {
+        const config = await this.readPlatformConfig(platform2, scope);
+        if (platform2 === "claude-desktop" && config.mcpServers) {
+          delete config.mcpServers[serverName];
+        } else if (config.servers) {
+          delete config.servers[serverName];
+        }
+        await this.writePlatformConfig(platform2, config, scope);
+      }
+      /**
+       * Check if an MCP server is configured
+       */
+      async isMCPServerConfigured(platform2, serverName, scope) {
+        const config = await this.readPlatformConfig(platform2, scope);
+        if (platform2 === "claude-desktop") {
+          return !!(config.mcpServers && config.mcpServers[serverName]);
+        }
+        return !!(config.servers && config.servers[serverName]);
+      }
+      /**
+       * Get the repository context file path for the current platform
+       * This is where repo-specific information is stored (tech stack, conventions, etc.)
+       */
+      static getRepoContextFile() {
+        const platform2 = _PlatformConfigAdapter.detectPlatform();
+        const repoRoot = getRepoRoot();
+        switch (platform2) {
+          case "claude-code":
+            return path3.join(repoRoot, "CLAUDE.md");
+          case "cursor":
+            return path3.join(repoRoot, ".cursorrules");
+          case "vscode":
+            return path3.join(repoRoot, ".vscode", "context.md");
+          case "windsurf":
+            return path3.join(repoRoot, ".windsurfrules");
+          default:
+            return path3.join(repoRoot, ".claude", "CLAUDE.md");
+        }
+      }
+      /**
+       * Detect the current platform based on environment variables
+       */
+      static detectPlatform() {
+        if (process.env.CLAUDE_CODE || process.env.MCP_SERVER) {
+          return "claude-code";
+        }
+        if (process.env.CURSOR_IDE) {
+          return "cursor";
+        }
+        if (process.env.VSCODE) {
+          return "vscode";
+        }
+        if (process.env.WINDSURF) {
+          return "windsurf";
+        }
+        const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+        if (existsSync4(path3.join(homeDir, ".claude-code"))) {
+          return "claude-code";
+        }
+        if (existsSync4(path3.join(homeDir, "Library", "Application Support", "Claude"))) {
+          return "claude-desktop";
+        }
+        return "unknown";
+      }
+    };
+  }
+});
+
 // packages/tiny-brain-core/src/services/base-service.ts
 var BaseService;
 var init_base_service = __esm({
@@ -6064,6 +6967,301 @@ ${libraryPersona.profile}
           this.userId
         );
         return localName;
+      }
+      /**
+       * Add a USER block to a persona-like object whose `systemBlock` is
+       * the raw library profile. Used by the `library:` import flow before
+       * `create()` writes the profile to storage.
+       *
+       * The USER block is inserted after `<!-- SYSTEM-BLOCK-END -->` if the
+       * library profile contains the marker; otherwise it's appended.
+       * Mutates nothing — returns a new object.
+       */
+      addUserBlock(persona, localName) {
+        if (!persona.systemBlock) {
+          throw new Error("systemBlock is required but was undefined");
+        }
+        return {
+          ...persona,
+          systemBlock: this.addUserBlockToProfile(persona.systemBlock, localName)
+        };
+      }
+      /**
+       * Inject a USER block into raw profile markdown, immediately after
+       * `<!-- SYSTEM-BLOCK-END -->` if present, otherwise appended.
+       */
+      addUserBlockToProfile(profileContent, personaName) {
+        if (!profileContent) {
+          throw new Error("profileContent is required but was undefined");
+        }
+        const systemBlockEnd = "<!-- SYSTEM-BLOCK-END -->";
+        const systemEndIndex = profileContent.indexOf(systemBlockEnd);
+        const now = (/* @__PURE__ */ new Date()).toISOString();
+        const userBlock = `
+
+<!-- USER-BLOCK-START -->
+## User Metadata
+- Created: ${now}
+- Modified: ${now}
+- Source: Library (${personaName})
+
+## User Rules
+<!-- User can add custom rules here -->
+
+## User Details
+<!-- User can add custom details here -->
+<!-- USER-BLOCK-END -->`;
+        if (systemEndIndex === -1) {
+          return profileContent + userBlock;
+        }
+        const insertPoint = systemEndIndex + systemBlockEnd.length;
+        return profileContent.substring(0, insertPoint) + userBlock + profileContent.substring(insertPoint);
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/persona/persona-enhancer.ts
+var PersonaEnhancer;
+var init_persona_enhancer = __esm({
+  "packages/tiny-brain-core/src/services/persona/persona-enhancer.ts"() {
+    "use strict";
+    PersonaEnhancer = class {
+      /**
+       * Enhance a persona profile with agent usage instructions
+       */
+      static enhanceProfile(baseProfile, options) {
+        const { installedAgents } = options;
+        if (installedAgents.length === 0) {
+          return baseProfile;
+        }
+        const instructions = this.generateAgentInstructions(options);
+        if (baseProfile.includes("## Agent Usage") || baseProfile.includes("## User Agent Instructions")) {
+          return baseProfile;
+        }
+        const userBlockStart = "<!-- USER-BLOCK-START -->";
+        const userRulesPattern = /## User Rules[\s\S]*?(?=##|<!-- USER-BLOCK-END -->)/;
+        const userBlockIndex = baseProfile.indexOf(userBlockStart);
+        if (userBlockIndex !== -1) {
+          const afterUserBlock = baseProfile.substring(userBlockIndex);
+          const userRulesMatch = afterUserBlock.match(userRulesPattern);
+          if (userRulesMatch) {
+            const insertPoint = userBlockIndex + (userRulesMatch.index ?? 0) + userRulesMatch[0].length;
+            const before = baseProfile.substring(0, insertPoint);
+            const after = baseProfile.substring(insertPoint);
+            return `${before}
+${instructions}
+${after}`;
+          } else {
+            const insertPoint = userBlockIndex + userBlockStart.length;
+            const before = baseProfile.substring(0, insertPoint);
+            const after = baseProfile.substring(insertPoint);
+            return `${before}
+
+${instructions}${after}`;
+          }
+        } else {
+          const systemBlockEnd = "<!-- SYSTEM-BLOCK-END -->";
+          const systemEndIndex = baseProfile.indexOf(systemBlockEnd);
+          if (systemEndIndex !== -1) {
+            const insertPoint = systemEndIndex + systemBlockEnd.length;
+            const before = baseProfile.substring(0, insertPoint);
+            const after = baseProfile.substring(insertPoint);
+            const newUserBlock = `
+
+<!-- USER-BLOCK-START -->
+${instructions}
+<!-- USER-BLOCK-END -->`;
+            return `${before}${newUserBlock}${after}`;
+          } else {
+            return `${baseProfile}
+
+<!-- USER-BLOCK-START -->
+${instructions}
+<!-- USER-BLOCK-END -->`;
+          }
+        }
+      }
+      /**
+       * Generate agent usage instructions based on persona type and installed agents
+       */
+      static generateAgentInstructions(options) {
+        const { installedAgents, personaName, personaType } = options;
+        let instructions = `## User Agent Instructions
+
+You have specialized agents available for this repository. Use them as follows:
+
+`;
+        const agentsByCategory = this.groupAgentsByCategory(installedAgents);
+        if (personaType === "tester" || personaName.toLowerCase().includes("test") || personaName.toLowerCase() === "qa") {
+          instructions += this.generateTesterInstructions(agentsByCategory);
+        } else if (personaType === "developer" || personaName.toLowerCase().includes("dev")) {
+          instructions += this.generateDeveloperInstructions(agentsByCategory);
+        } else {
+          instructions += this.generateGenericInstructions(agentsByCategory);
+        }
+        instructions += `
+### Installed Agents for this Repository
+`;
+        installedAgents.forEach((agent) => {
+          instructions += `- ${agent.id} (${agent.description})
+`;
+        });
+        return instructions;
+      }
+      /**
+       * Group agents by their category/purpose
+       */
+      static groupAgentsByCategory(agents) {
+        const groups = /* @__PURE__ */ new Map();
+        agents.forEach((agent) => {
+          let category = "general";
+          if (agent.id.includes("test") || agent.description.toLowerCase().includes("test")) {
+            category = "testing";
+          } else if (agent.id.includes("analys") || agent.id.includes("analyze")) {
+            category = "analysis";
+          } else if (agent.id.includes("refactor")) {
+            category = "refactoring";
+          } else if (agent.id.includes("review")) {
+            category = "review";
+          } else if (agent.id.includes("strateg")) {
+            category = "planning";
+          }
+          if (!groups.has(category)) {
+            groups.set(category, []);
+          }
+          const categoryAgents = groups.get(category);
+          if (categoryAgents) {
+            categoryAgents.push(agent);
+          }
+        });
+        return groups;
+      }
+      /**
+       * Generate instructions for tester personas
+       */
+      static generateTesterInstructions(agentsByCategory) {
+        let instructions = "";
+        const testingAgents = agentsByCategory.get("testing") || [];
+        testingAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, this.getTestingUseCases(agent));
+        });
+        const analysisAgents = agentsByCategory.get("analysis") || [];
+        analysisAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, [
+            "Understanding code structure before testing",
+            "Identifying test requirements",
+            "Finding edge cases and dependencies"
+          ]);
+        });
+        const planningAgents = agentsByCategory.get("planning") || [];
+        planningAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, [
+            "Creating comprehensive test plans",
+            "Prioritizing test scenarios",
+            "Defining coverage goals"
+          ]);
+        });
+        instructions += `
+### Testing Workflow
+1. **Analyze**: Use analysis agents to understand the code
+2. **Plan**: Use strategy agents to plan comprehensive coverage  
+3. **Execute**: Use testing agents to write and run tests
+4. **Iterate**: Refine tests based on results
+
+`;
+        return instructions;
+      }
+      /**
+       * Generate instructions for developer personas
+       */
+      static generateDeveloperInstructions(agentsByCategory) {
+        let instructions = "";
+        const analysisAgents = agentsByCategory.get("analysis") || [];
+        analysisAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, [
+            "Understanding existing code before changes",
+            "Finding dependencies and impacts",
+            "Identifying refactoring opportunities"
+          ]);
+        });
+        const refactoringAgents = agentsByCategory.get("refactoring") || [];
+        refactoringAgents.forEach((agent) => {
+          instructions += this.formatAgentSection(agent, [
+            "Improving code structure",
+            "Extracting reusable components",
+            "Optimizing performance"
+          ]);
+        });
+        const testingAgents = agentsByCategory.get("testing") || [];
+        if (testingAgents.length > 0) {
+          instructions += `
+### Testing Your Code
+`;
+          testingAgents.forEach((agent) => {
+            instructions += this.formatAgentSection(agent, [
+              "Writing tests for new features",
+              "Ensuring code quality"
+            ]);
+          });
+        }
+        return instructions;
+      }
+      /**
+       * Generate generic instructions for other personas
+       */
+      static generateGenericInstructions(agentsByCategory) {
+        let instructions = "";
+        agentsByCategory.forEach((agents) => {
+          agents.forEach((agent) => {
+            instructions += this.formatAgentSection(agent);
+          });
+        });
+        return instructions;
+      }
+      /**
+       * Format a single agent section
+       */
+      static formatAgentSection(agent, useCases) {
+        let section = `### ${agent.name || agent.id}
+`;
+        section += `${agent.description}
+`;
+        section += "```json\n";
+        section += JSON.stringify({
+          subagent_type: agent.id,
+          prompt: "[specific task description]",
+          description: agent.id.split("-").slice(0, 2).join(" ")
+        }, null, 2);
+        section += "\n```\n";
+        if (useCases && useCases.length > 0) {
+          section += `Best for: ${useCases.join(", ")}
+`;
+        }
+        if (agent.capabilities && agent.capabilities.length > 0) {
+          section += `Capabilities: ${agent.capabilities.slice(0, 3).join(", ")}
+`;
+        }
+        section += "\n";
+        return section;
+      }
+      /**
+       * Get testing-specific use cases based on agent ID
+       */
+      static getTestingUseCases(agent) {
+        const id = agent.id.toLowerCase();
+        if (id.includes("react")) {
+          return ["Component testing", "User interactions", "State management", "Hooks testing"];
+        } else if (id.includes("jest")) {
+          return ["Unit tests", "Mocking", "Snapshot tests", "Async testing"];
+        } else if (id.includes("typescript")) {
+          return ["Type safety", "Interface testing", "Generic testing"];
+        } else if (id.includes("e2e") || id.includes("cypress") || id.includes("playwright")) {
+          return ["End-to-end flows", "User journeys", "Cross-browser testing"];
+        } else if (id.includes("api")) {
+          return ["API endpoints", "Request/response validation", "Error handling"];
+        }
+        return ["General testing"];
       }
     };
   }
@@ -7741,7 +8939,7 @@ var init_user_preferences_schema = __esm({
 
 // packages/tiny-brain-core/src/services/config/config-service.ts
 import { readFile } from "fs/promises";
-import { join as join2 } from "path";
+import { join as join8 } from "path";
 var CONFIG_VERSION, PREFERENCES_CONFIG_PATH, REPO_CONFIG_PATH, PIPELINE_KEYS, PREFERENCE_KEYS, ConfigService;
 var init_config_service = __esm({
   "packages/tiny-brain-core/src/services/config/config-service.ts"() {
@@ -8127,7 +9325,7 @@ var init_config_service = __esm({
         const errors = [];
         if (this.context.repositoryRoot) {
           try {
-            const configPath = join2(this.context.repositoryRoot, REPO_CONFIG_PATH);
+            const configPath = join8(this.context.repositoryRoot, REPO_CONFIG_PATH);
             const data = await readFile(configPath, "utf-8");
             let parsed;
             try {
@@ -8210,7 +9408,7 @@ var init_config_service = __esm({
           return {};
         }
         try {
-          const configPath = join2(this.context.repositoryRoot, REPO_CONFIG_PATH);
+          const configPath = join8(this.context.repositoryRoot, REPO_CONFIG_PATH);
           const data = await readFile(configPath, "utf-8");
           const parsed = JSON.parse(data);
           const validationResult = PartialPreferencesConfigSchema.safeParse(parsed);
@@ -8280,9 +9478,9 @@ var init_config_service = __esm({
         if (!this.context.repositoryRoot) {
           throw new Error("Cannot save repo config: not in a repository");
         }
-        const { writeFile: writeFile4, mkdir: mkdir3 } = await import("fs/promises");
-        const configPath = join2(this.context.repositoryRoot, REPO_CONFIG_PATH);
-        const configDir = join2(this.context.repositoryRoot, ".tiny-brain");
+        const { writeFile: writeFile7, mkdir: mkdir5 } = await import("fs/promises");
+        const configPath = join8(this.context.repositoryRoot, REPO_CONFIG_PATH);
+        const configDir = join8(this.context.repositoryRoot, ".tiny-brain");
         const existing = await this.loadRepoConfig();
         const merged = {
           ...existing,
@@ -8296,12 +9494,12 @@ var init_config_service = __esm({
             }
           }
         };
-        await mkdir3(configDir, { recursive: true });
+        await mkdir5(configDir, { recursive: true });
         const config = {
           version: CONFIG_VERSION,
           preferences: merged
         };
-        await writeFile4(configPath, JSON.stringify(config, null, 2), "utf-8");
+        await writeFile7(configPath, JSON.stringify(config, null, 2), "utf-8");
       }
       /**
        * Create default config
@@ -9353,7 +10551,7 @@ var init_escape = __esm({
 });
 
 // node_modules/minimatch/dist/esm/index.js
-var minimatch, starDotExtRE, starDotExtTest, starDotExtTestDot, starDotExtTestNocase, starDotExtTestNocaseDot, starDotStarRE, starDotStarTest, starDotStarTestDot, dotStarRE, dotStarTest, starRE, starTest, starTestDot, qmarksRE, qmarksTestNocase, qmarksTestNocaseDot, qmarksTestDot, qmarksTest, qmarksTestNoExt, qmarksTestNoExtDot, defaultPlatform, path, sep, GLOBSTAR, qmark2, star2, twoStarDot, twoStarNoDot, filter, ext, defaults, braceExpand, makeRe, match2, globMagic, regExpEscape2, Minimatch;
+var minimatch, starDotExtRE, starDotExtTest, starDotExtTestDot, starDotExtTestNocase, starDotExtTestNocaseDot, starDotStarRE, starDotStarTest, starDotStarTestDot, dotStarRE, dotStarTest, starRE, starTest, starTestDot, qmarksRE, qmarksTestNocase, qmarksTestNocaseDot, qmarksTestDot, qmarksTest, qmarksTestNoExt, qmarksTestNoExtDot, defaultPlatform, path4, sep, GLOBSTAR, qmark2, star2, twoStarDot, twoStarNoDot, filter, ext, defaults, braceExpand, makeRe, match2, globMagic, regExpEscape2, Minimatch;
 var init_esm3 = __esm({
   "node_modules/minimatch/dist/esm/index.js"() {
     init_esm2();
@@ -9422,11 +10620,11 @@ var init_esm3 = __esm({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    path = {
+    path4 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    sep = defaultPlatform === "win32" ? path.win32.sep : path.posix.sep;
+    sep = defaultPlatform === "win32" ? path4.win32.sep : path4.posix.sep;
     minimatch.sep = sep;
     GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     minimatch.GLOBSTAR = GLOBSTAR;
@@ -12437,7 +13635,7 @@ var init_esm5 = __esm({
 
 // node_modules/path-scurry/dist/esm/index.js
 import { posix, win32 } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 import { lstatSync, readdir as readdirCB, readdirSync, readlinkSync, realpathSync as rps } from "fs";
 import * as actualFS from "node:fs";
 import { lstat, readdir, readlink, realpath } from "node:fs/promises";
@@ -12708,12 +13906,12 @@ var init_esm6 = __esm({
       /**
        * Get the Path object referenced by the string path, resolved from this Path
        */
-      resolve(path36) {
-        if (!path36) {
+      resolve(path42) {
+        if (!path42) {
           return this;
         }
-        const rootPath = this.getRootString(path36);
-        const dir = path36.substring(rootPath.length);
+        const rootPath = this.getRootString(path42);
+        const dir = path42.substring(rootPath.length);
         const dirParts = dir.split(this.splitSep);
         const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
         return result;
@@ -13465,8 +14663,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path36) {
-        return win32.parse(path36).root;
+      getRootString(path42) {
+        return win32.parse(path42).root;
       }
       /**
        * @internal
@@ -13512,8 +14710,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path36) {
-        return path36.startsWith("/") ? "/" : "";
+      getRootString(path42) {
+        return path42.startsWith("/") ? "/" : "";
       }
       /**
        * @internal
@@ -13562,10 +14760,10 @@ var init_esm6 = __esm({
        *
        * @internal
        */
-      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs34 = defaultFS } = {}) {
-        this.#fs = fsFromOption(fs34);
+      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs40 = defaultFS } = {}) {
+        this.#fs = fsFromOption(fs40);
         if (cwd instanceof URL || cwd.startsWith("file://")) {
-          cwd = fileURLToPath(cwd);
+          cwd = fileURLToPath2(cwd);
         }
         const cwdPath = pathImpl.resolve(cwd);
         this.roots = /* @__PURE__ */ Object.create(null);
@@ -13602,11 +14800,11 @@ var init_esm6 = __esm({
       /**
        * Get the depth of a provided path, string, or the cwd
        */
-      depth(path36 = this.cwd) {
-        if (typeof path36 === "string") {
-          path36 = this.cwd.resolve(path36);
+      depth(path42 = this.cwd) {
+        if (typeof path42 === "string") {
+          path42 = this.cwd.resolve(path42);
         }
-        return path36.depth();
+        return path42.depth();
       }
       /**
        * Return the cache of child entries.  Exposed so subclasses can create
@@ -14093,9 +15291,9 @@ var init_esm6 = __esm({
         process2();
         return results;
       }
-      chdir(path36 = this.cwd) {
+      chdir(path42 = this.cwd) {
         const oldCwd = this.cwd;
-        this.cwd = typeof path36 === "string" ? this.cwd.resolve(path36) : path36;
+        this.cwd = typeof path42 === "string" ? this.cwd.resolve(path42) : path42;
         this.cwd[setAsCwd](oldCwd);
       }
     };
@@ -14121,8 +15319,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs34) {
-        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs34 });
+      newRoot(fs40) {
+        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs40 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -14150,8 +15348,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs34) {
-        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs34 });
+      newRoot(fs40) {
+        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs40 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -14190,7 +15388,7 @@ var init_pattern = __esm({
       #isUNC;
       #isAbsolute;
       #followGlobstar = true;
-      constructor(patternList, globList, index, platform) {
+      constructor(patternList, globList, index, platform2) {
         if (!isPatternList(patternList)) {
           throw new TypeError("empty pattern list");
         }
@@ -14207,7 +15405,7 @@ var init_pattern = __esm({
         this.#patternList = patternList;
         this.#globList = globList;
         this.#index = index;
-        this.#platform = platform;
+        this.#platform = platform2;
         if (this.#index === 0) {
           if (this.isUNC()) {
             const [p0, p1, p2, p3, ...prest] = this.#patternList;
@@ -14356,12 +15554,12 @@ var init_ignore = __esm({
       absoluteChildren;
       platform;
       mmopts;
-      constructor(ignored, { nobrace, nocase, noext, noglobstar, platform = defaultPlatform2 }) {
+      constructor(ignored, { nobrace, nocase, noext, noglobstar, platform: platform2 = defaultPlatform2 }) {
         this.relative = [];
         this.absolute = [];
         this.relativeChildren = [];
         this.absoluteChildren = [];
-        this.platform = platform;
+        this.platform = platform2;
         this.mmopts = {
           dot: true,
           nobrace,
@@ -14369,7 +15567,7 @@ var init_ignore = __esm({
           noext,
           noglobstar,
           optimizationLevel: 2,
-          platform,
+          platform: platform2,
           nocomment: true,
           nonegate: true
         };
@@ -14470,8 +15668,8 @@ var init_processor = __esm({
       }
       // match, absolute, ifdir
       entries() {
-        return [...this.store.entries()].map(([path36, n]) => [
-          path36,
+        return [...this.store.entries()].map(([path42, n]) => [
+          path42,
           !!(n & 2),
           !!(n & 1)
         ]);
@@ -14684,9 +15882,9 @@ var init_walker = __esm({
       signal;
       maxDepth;
       includeChildMatches;
-      constructor(patterns, path36, opts) {
+      constructor(patterns, path42, opts) {
         this.patterns = patterns;
-        this.path = path36;
+        this.path = path42;
         this.opts = opts;
         this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
         this.includeChildMatches = opts.includeChildMatches !== false;
@@ -14705,11 +15903,11 @@ var init_walker = __esm({
           });
         }
       }
-      #ignored(path36) {
-        return this.seen.has(path36) || !!this.#ignore?.ignored?.(path36);
+      #ignored(path42) {
+        return this.seen.has(path42) || !!this.#ignore?.ignored?.(path42);
       }
-      #childrenIgnored(path36) {
-        return !!this.#ignore?.childrenIgnored?.(path36);
+      #childrenIgnored(path42) {
+        return !!this.#ignore?.childrenIgnored?.(path42);
       }
       // backpressure mechanism
       pause() {
@@ -14924,8 +16122,8 @@ var init_walker = __esm({
     };
     GlobWalker = class extends GlobUtil {
       matches = /* @__PURE__ */ new Set();
-      constructor(patterns, path36, opts) {
-        super(patterns, path36, opts);
+      constructor(patterns, path42, opts) {
+        super(patterns, path42, opts);
       }
       matchEmit(e) {
         this.matches.add(e);
@@ -14962,8 +16160,8 @@ var init_walker = __esm({
     };
     GlobStream = class extends GlobUtil {
       results;
-      constructor(patterns, path36, opts) {
-        super(patterns, path36, opts);
+      constructor(patterns, path42, opts) {
+        super(patterns, path42, opts);
         this.results = new Minipass({
           signal: this.signal,
           objectMode: true
@@ -14999,7 +16197,7 @@ var init_walker = __esm({
 });
 
 // node_modules/glob/dist/esm/glob.js
-import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
 var defaultPlatform3, Glob;
 var init_glob = __esm({
   "node_modules/glob/dist/esm/glob.js"() {
@@ -15067,7 +16265,7 @@ var init_glob = __esm({
         if (!opts.cwd) {
           this.cwd = "";
         } else if (opts.cwd instanceof URL || opts.cwd.startsWith("file://")) {
-          opts.cwd = fileURLToPath2(opts.cwd);
+          opts.cwd = fileURLToPath3(opts.cwd);
         }
         this.cwd = opts.cwd || "";
         this.root = opts.root;
@@ -17936,8 +19134,8 @@ var init_status_derivation = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/planning-service.ts
-import { promises as fs } from "fs";
-import path2 from "path";
+import { promises as fs4 } from "fs";
+import path5 from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 function formatTitle(planName) {
@@ -18213,11 +19411,11 @@ var init_planning_service = __esm({
             this.log("debug", `Found ${prdDirs.length} PRD directories in repo`);
             const repoRoot = repoPathOverride || await this.findRepositoryRoot();
             for (const prdDir of prdDirs) {
-              const prdId = path2.basename(prdDir);
-              const progressPath = path2.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
+              const prdId = path5.basename(prdDir);
+              const progressPath = path5.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
               try {
-                await fs.access(progressPath);
-                const content = await fs.readFile(progressPath, "utf-8");
+                await fs4.access(progressPath);
+                const content = await fs4.readFile(progressPath, "utf-8");
                 const plan = JSON.parse(content);
                 if (type2 && plan.type !== type2) {
                   continue;
@@ -18361,7 +19559,7 @@ var init_planning_service = __esm({
        * Legacy location: docs/prd/{prdId}/progress.json
        */
       getProgressPath(repoRoot, prdId) {
-        return path2.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
+        return path5.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
       }
       /**
        * Save plan to repository storage only (repo-scoped plans)
@@ -18373,9 +19571,9 @@ var init_planning_service = __esm({
         try {
           const repoRoot = await this.findRepositoryRoot();
           const progressPath = this.getProgressPath(repoRoot, plan.prdId);
-          const progressDir = path2.dirname(progressPath);
-          await fs.mkdir(progressDir, { recursive: true });
-          await fs.writeFile(progressPath, JSON.stringify(plan, null, 2), "utf-8");
+          const progressDir = path5.dirname(progressPath);
+          await fs4.mkdir(progressDir, { recursive: true });
+          await fs4.writeFile(progressPath, JSON.stringify(plan, null, 2), "utf-8");
           this.log("debug", `Saved plan: ${plan.id} to ${progressPath}`);
           const event = {
             eventType: "prd:created",
@@ -18399,8 +19597,8 @@ var init_planning_service = __esm({
           const repoRoot = await this.findRepositoryRoot();
           const newProgressPath = this.getProgressPath(repoRoot, planId);
           try {
-            await fs.access(newProgressPath);
-            const content = await fs.readFile(newProgressPath, "utf-8");
+            await fs4.access(newProgressPath);
+            const content = await fs4.readFile(newProgressPath, "utf-8");
             const plan = JSON.parse(content);
             this.log("debug", `Successfully loaded plan: ${planId} from ${newProgressPath}`);
             return plan;
@@ -18408,16 +19606,16 @@ var init_planning_service = __esm({
           }
           const prdDirs = await this.getPRDDirectories();
           for (const prdDir of prdDirs) {
-            const legacyPath = path2.join(prdDir, "progress.json");
+            const legacyPath = path5.join(prdDir, "progress.json");
             try {
-              await fs.access(legacyPath);
-              const content = await fs.readFile(legacyPath, "utf-8");
+              await fs4.access(legacyPath);
+              const content = await fs4.readFile(legacyPath, "utf-8");
               const plan = JSON.parse(content);
               if (plan.id === planId) {
                 this.log("info", `Found plan in legacy location, migrating to ${newProgressPath}`);
-                const progressDir = path2.dirname(newProgressPath);
-                await fs.mkdir(progressDir, { recursive: true });
-                await fs.writeFile(newProgressPath, JSON.stringify(plan, null, 2), "utf-8");
+                const progressDir = path5.dirname(newProgressPath);
+                await fs4.mkdir(progressDir, { recursive: true });
+                await fs4.writeFile(newProgressPath, JSON.stringify(plan, null, 2), "utf-8");
                 this.log("debug", `Successfully migrated and loaded plan: ${planId}`);
                 return plan;
               }
@@ -18464,17 +19662,17 @@ var init_planning_service = __esm({
       async createPRDMarkdown(prdPath, frontmatter, content) {
         try {
           const repoRoot = process.cwd();
-          const fullPrdPath = path2.join(repoRoot, prdPath);
-          await fs.mkdir(fullPrdPath, { recursive: true });
-          await fs.mkdir(path2.join(fullPrdPath, "features"), { recursive: true });
+          const fullPrdPath = path5.join(repoRoot, prdPath);
+          await fs4.mkdir(fullPrdPath, { recursive: true });
+          await fs4.mkdir(path5.join(fullPrdPath, "features"), { recursive: true });
           const prdMarkdown = generatePRD({
             frontmatter,
             ...content,
             features: []
             // Initially empty
           });
-          const prdFilePath = path2.join(fullPrdPath, "prd.md");
-          await fs.writeFile(prdFilePath, prdMarkdown, "utf-8");
+          const prdFilePath = path5.join(fullPrdPath, "prd.md");
+          await fs4.writeFile(prdFilePath, prdMarkdown, "utf-8");
           this.log("info", `Created PRD markdown at ${prdFilePath}`);
           return prdFilePath;
         } catch (error) {
@@ -18490,12 +19688,12 @@ var init_planning_service = __esm({
        */
       async createPRDStructure(planName) {
         const repoRoot = process.cwd();
-        const prdPath = path2.join("docs", "prd", planName);
-        const fullPrdPath = path2.join(repoRoot, prdPath);
-        const featuresPath = path2.join(fullPrdPath, "features");
+        const prdPath = path5.join("docs", "prd", planName);
+        const fullPrdPath = path5.join(repoRoot, prdPath);
+        const featuresPath = path5.join(fullPrdPath, "features");
         try {
-          await fs.mkdir(fullPrdPath, { recursive: true });
-          await fs.mkdir(featuresPath, { recursive: true });
+          await fs4.mkdir(fullPrdPath, { recursive: true });
+          await fs4.mkdir(featuresPath, { recursive: true });
           this.log("info", `Created PRD structure at ${prdPath}`);
           return prdPath;
         } catch (error) {
@@ -18517,10 +19715,10 @@ var init_planning_service = __esm({
        */
       async writePRDFile(planName, planDetails) {
         const repoRoot = process.cwd();
-        const prdFilePath = path2.join(repoRoot, "docs", "prd", planName, "prd.md");
+        const prdFilePath = path5.join(repoRoot, "docs", "prd", planName, "prd.md");
         try {
-          const prdDir = path2.dirname(prdFilePath);
-          await fs.mkdir(prdDir, { recursive: true });
+          const prdDir = path5.dirname(prdFilePath);
+          await fs4.mkdir(prdDir, { recursive: true });
           const title = formatTitle(planName);
           const createdDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
           const frontmatter = [
@@ -18535,7 +19733,7 @@ var init_planning_service = __esm({
             // This creates the double newline after ---
           ].join("\n");
           const content = frontmatter + planDetails;
-          await fs.writeFile(prdFilePath, content, "utf-8");
+          await fs4.writeFile(prdFilePath, content, "utf-8");
           this.log("info", `Created PRD file at ${prdFilePath}`);
           return prdFilePath;
         } catch (error) {
@@ -18552,10 +19750,10 @@ var init_planning_service = __esm({
       async writeProgressFile(prdPath, plan) {
         try {
           const repoRoot = process.cwd();
-          const planName = path2.basename(prdPath);
-          const progressDir = path2.join(repoRoot, ".tiny-brain", "progress");
-          await fs.mkdir(progressDir, { recursive: true });
-          const progressFilePath = path2.join(progressDir, `${planName}.json`);
+          const planName = path5.basename(prdPath);
+          const progressDir = path5.join(repoRoot, ".tiny-brain", "progress");
+          await fs4.mkdir(progressDir, { recursive: true });
+          const progressFilePath = path5.join(progressDir, `${planName}.json`);
           const isTaskDone = (status) => status === "completed" || status === "superseded";
           const isFeatureDone = (status) => status === "completed" || status === "superseded";
           const features = plan.features || [];
@@ -18612,7 +19810,7 @@ var init_planning_service = __esm({
               }))
             }))
           };
-          await fs.writeFile(progressFilePath, JSON.stringify(progressData, null, 2), "utf-8");
+          await fs4.writeFile(progressFilePath, JSON.stringify(progressData, null, 2), "utf-8");
           this.log("info", `Created progress.json at ${progressFilePath}`);
           return progressFilePath;
         } catch (error) {
@@ -18633,10 +19831,10 @@ var init_planning_service = __esm({
             return false;
           }
           const repoRoot = process.cwd();
-          const prdDir = path2.join(repoRoot, "docs", "prd", planName);
-          const prdFile = path2.join(prdDir, "prd.md");
+          const prdDir = path5.join(repoRoot, "docs", "prd", planName);
+          const prdFile = path5.join(prdDir, "prd.md");
           try {
-            const dirStat = await fs.stat(prdDir);
+            const dirStat = await fs4.stat(prdDir);
             if (!dirStat.isDirectory()) {
               return false;
             }
@@ -18644,7 +19842,7 @@ var init_planning_service = __esm({
             return false;
           }
           try {
-            const fileStat = await fs.stat(prdFile);
+            const fileStat = await fs4.stat(prdFile);
             if (!fileStat.isFile()) {
               return false;
             }
@@ -18665,17 +19863,17 @@ var init_planning_service = __esm({
       async createFeatureMarkdown(prdPath, frontmatter, content) {
         try {
           const repoRoot = process.cwd();
-          const fullPrdPath = path2.join(repoRoot, prdPath);
-          const featuresDir = path2.join(fullPrdPath, "features");
-          await fs.mkdir(featuresDir, { recursive: true });
+          const fullPrdPath = path5.join(repoRoot, prdPath);
+          const featuresDir = path5.join(fullPrdPath, "features");
+          await fs4.mkdir(featuresDir, { recursive: true });
           const featureMarkdown = generateFeature({
             frontmatter,
             ...content,
             tasks: content?.tasks || []
             // Use provided tasks or empty array
           });
-          const featureFilePath = path2.join(featuresDir, `${frontmatter.id}.md`);
-          await fs.writeFile(featureFilePath, featureMarkdown, "utf-8");
+          const featureFilePath = path5.join(featuresDir, `${frontmatter.id}.md`);
+          await fs4.writeFile(featureFilePath, featureMarkdown, "utf-8");
           this.log("info", `Created feature markdown at ${featureFilePath}`);
           return featureFilePath;
         } catch (error) {
@@ -18736,10 +19934,10 @@ var init_planning_service = __esm({
             throw new Error("No PRD found in repository. Use plan accept to create a PRD first.");
           }
           const prdDir = prdDirs[0];
-          const prdId = path2.basename(prdDir);
+          const prdId = path5.basename(prdDir);
           const repoRoot = await this.findRepositoryRoot();
-          const progressPath = path2.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
-          const progressContent = await fs.readFile(progressPath, "utf-8");
+          const progressPath = path5.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
+          const progressContent = await fs4.readFile(progressPath, "utf-8");
           const plan = JSON.parse(progressContent);
           if (!plan.prdId || !plan.prdDirPath) {
             throw new Error("Plan does not have a PRD reference. This plan may be corrupted.");
@@ -19001,7 +20199,7 @@ var init_planning_service = __esm({
       async hasUserCommits(prdDir, userEmail) {
         try {
           const repoRoot = await this.findRepositoryRoot();
-          const relativePath = path2.relative(repoRoot, prdDir);
+          const relativePath = path5.relative(repoRoot, prdDir);
           const options = this.repositoryRoot ? { cwd: this.repositoryRoot } : {};
           const { stdout } = await execAsync(
             `git log --all --author="${userEmail}" --pretty=format:"%H" -- ${relativePath}`,
@@ -19045,19 +20243,19 @@ var init_planning_service = __esm({
        * @returns Array of absolute paths to PRD directories
        */
       async getPRDDirectoriesForPath(repoPath) {
-        const prdBaseDir = path2.join(repoPath, "docs/prd");
+        const prdBaseDir = path5.join(repoPath, "docs/prd");
         try {
-          await fs.access(prdBaseDir);
+          await fs4.access(prdBaseDir);
         } catch {
           return [];
         }
-        const entries = await fs.readdir(prdBaseDir);
+        const entries = await fs4.readdir(prdBaseDir);
         const prdDirs = [];
         for (const entry of entries) {
-          const entryPath = path2.join(prdBaseDir, entry);
-          const prdMdPath = path2.join(entryPath, "prd.md");
+          const entryPath = path5.join(prdBaseDir, entry);
+          const prdMdPath = path5.join(entryPath, "prd.md");
           try {
-            await fs.access(prdMdPath);
+            await fs4.access(prdMdPath);
             prdDirs.push(entryPath);
           } catch {
             continue;
@@ -19073,19 +20271,19 @@ var init_planning_service = __esm({
       async getPRDDirectories() {
         try {
           const repoRoot = await this.findRepositoryRoot();
-          const prdBaseDir = path2.join(repoRoot, "docs/prd");
+          const prdBaseDir = path5.join(repoRoot, "docs/prd");
           try {
-            await fs.access(prdBaseDir);
+            await fs4.access(prdBaseDir);
           } catch {
             return [];
           }
-          const entries = await fs.readdir(prdBaseDir);
+          const entries = await fs4.readdir(prdBaseDir);
           const prdDirs = [];
           for (const entry of entries) {
-            const entryPath = path2.join(prdBaseDir, entry);
-            const prdMdPath = path2.join(entryPath, "prd.md");
+            const entryPath = path5.join(prdBaseDir, entry);
+            const prdMdPath = path5.join(entryPath, "prd.md");
             try {
-              await fs.access(prdMdPath);
+              await fs4.access(prdMdPath);
               prdDirs.push(entryPath);
             } catch {
               continue;
@@ -19139,8 +20337,8 @@ var init_planning_service = __esm({
        * Read PRD markdown file and parse frontmatter
        */
       async readPRDMarkdown(prdPath) {
-        const prdMdPath = path2.join(prdPath, "prd.md");
-        const content = await fs.readFile(prdMdPath, "utf-8");
+        const prdMdPath = path5.join(prdPath, "prd.md");
+        const content = await fs4.readFile(prdMdPath, "utf-8");
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         const frontmatter = {
           id: "",
@@ -19176,13 +20374,13 @@ var init_planning_service = __esm({
        * Read all feature markdown files from a PRD directory
        */
       async readFeatureMarkdowns(prdPath) {
-        const featuresPath = path2.join(prdPath, "features");
+        const featuresPath = path5.join(prdPath, "features");
         try {
-          const files = await fs.readdir(featuresPath);
+          const files = await fs4.readdir(featuresPath);
           const features = [];
           for (const file of files) {
             if (!file.endsWith(".md")) continue;
-            const content = await fs.readFile(path2.join(featuresPath, file), "utf-8");
+            const content = await fs4.readFile(path5.join(featuresPath, file), "utf-8");
             const parsed = await this.parseFeatureMarkdown(content);
             const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
             let prdId = "";
@@ -19207,11 +20405,11 @@ var init_planning_service = __esm({
        * Load existing progress.json if it exists
        */
       async loadExistingProgressJson(prdPath) {
-        const prdId = path2.basename(prdPath);
+        const prdId = path5.basename(prdPath);
         try {
           const repoRoot = await this.findRepositoryRoot();
-          const progressPath = path2.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
-          const content = await fs.readFile(progressPath, "utf-8");
+          const progressPath = path5.join(repoRoot, ".tiny-brain", "progress", `${prdId}.json`);
+          const content = await fs4.readFile(progressPath, "utf-8");
           return JSON.parse(content);
         } catch {
           return null;
@@ -19337,10 +20535,10 @@ var init_planning_service = __esm({
           }
         };
         const repoRoot = await this.findRepoRootForPath(prdPath);
-        const progressDir = path2.join(repoRoot, ".tiny-brain", "progress");
-        await fs.mkdir(progressDir, { recursive: true });
-        const progressPath = path2.join(progressDir, `${frontmatter.id}.json`);
-        await fs.writeFile(progressPath, JSON.stringify(plan, null, 2));
+        const progressDir = path5.join(repoRoot, ".tiny-brain", "progress");
+        await fs4.mkdir(progressDir, { recursive: true });
+        const progressPath = path5.join(progressDir, `${frontmatter.id}.json`);
+        await fs4.writeFile(progressPath, JSON.stringify(plan, null, 2));
         let currentPrdContent = prdContent;
         let prdNeedsWrite = false;
         if (plan.status !== frontmatter.status) {
@@ -19368,8 +20566,8 @@ var init_planning_service = __esm({
           }
         }
         if (prdNeedsWrite) {
-          const prdMdPath = path2.join(prdPath, "prd.md");
-          await fs.writeFile(prdMdPath, currentPrdContent, "utf-8");
+          const prdMdPath = path5.join(prdPath, "prd.md");
+          await fs4.writeFile(prdMdPath, currentPrdContent, "utf-8");
         }
         if (currentFeature) {
           const syncEvent = {
@@ -19402,9 +20600,9 @@ var init_planning_service = __esm({
        * @returns FixesProgress object, or empty if file doesn't exist
        */
       async getFixesProgress(repoPath) {
-        const progressPath = path2.join(repoPath, ".tiny-brain", "fixes", "progress.json");
+        const progressPath = path5.join(repoPath, ".tiny-brain", "fixes", "progress.json");
         try {
-          const content = await fs.readFile(progressPath, "utf-8");
+          const content = await fs4.readFile(progressPath, "utf-8");
           const parsed = JSON.parse(content);
           if (parsed && Array.isArray(parsed.fixes)) {
             return parsed;
@@ -19422,14 +20620,14 @@ var init_planning_service = __esm({
        * @returns FixesProgress object with all fixes and their tasks
        */
       async syncFixes(repoPath) {
-        const fixesDir = path2.join(repoPath, ".tiny-brain", "fixes");
-        const progressPath = path2.join(fixesDir, "progress.json");
+        const fixesDir = path5.join(repoPath, ".tiny-brain", "fixes");
+        const progressPath = path5.join(fixesDir, "progress.json");
         const fixFiles = await glob("*.md", { cwd: fixesDir, absolute: true });
         const mdFiles = fixFiles.filter((f) => f.endsWith(".md") && !f.endsWith("progress.json"));
         let existingProgress = null;
         try {
-          await fs.access(progressPath);
-          const content = await fs.readFile(progressPath, "utf-8");
+          await fs4.access(progressPath);
+          const content = await fs4.readFile(progressPath, "utf-8");
           existingProgress = JSON.parse(content);
         } catch {
         }
@@ -19438,7 +20636,7 @@ var init_planning_service = __esm({
         const fixes = [];
         for (const filePath of mdFiles) {
           try {
-            const content = await fs.readFile(filePath, "utf-8");
+            const content = await fs4.readFile(filePath, "utf-8");
             const result2 = this.parseFixMarkdown(content, filePath, repoPath, existingProgress);
             switch (result2.kind) {
               case "ok": {
@@ -19451,7 +20649,7 @@ var init_planning_service = __esm({
                 break;
               }
               case "parse-error": {
-                const relativePath = path2.relative(repoPath, filePath);
+                const relativePath = path5.relative(repoPath, filePath);
                 const existing = existingProgress?.fixes.find(
                   (f) => f.filePath === relativePath
                 );
@@ -19476,8 +20674,8 @@ var init_planning_service = __esm({
           fixes,
           lastSynced: (/* @__PURE__ */ new Date()).toISOString()
         };
-        await fs.mkdir(fixesDir, { recursive: true });
-        await fs.writeFile(progressPath, JSON.stringify(result, null, 2), "utf-8");
+        await fs4.mkdir(fixesDir, { recursive: true });
+        await fs4.writeFile(progressPath, JSON.stringify(result, null, 2), "utf-8");
         return result;
       }
       /**
@@ -19485,11 +20683,11 @@ var init_planning_service = __esm({
        * Use after modifying task state in-memory (e.g. pipeline advancement).
        */
       async saveFixProgress(repoPath, fixesProgress) {
-        const fixesDir = path2.join(repoPath, ".tiny-brain", "fixes");
-        const progressPath = path2.join(fixesDir, "progress.json");
+        const fixesDir = path5.join(repoPath, ".tiny-brain", "fixes");
+        const progressPath = path5.join(fixesDir, "progress.json");
         fixesProgress.lastSynced = (/* @__PURE__ */ new Date()).toISOString();
-        await fs.mkdir(fixesDir, { recursive: true });
-        await fs.writeFile(progressPath, JSON.stringify(fixesProgress, null, 2), "utf-8");
+        await fs4.mkdir(fixesDir, { recursive: true });
+        await fs4.writeFile(progressPath, JSON.stringify(fixesProgress, null, 2), "utf-8");
       }
       /**
        * Parse a fix markdown file into a FixProgress object
@@ -19499,7 +20697,7 @@ var init_planning_service = __esm({
         if (!match3) return;
         const block = match3[2];
         const updated = /^archived:\s*.+$/m.test(block) ? block.replace(/^archived:\s*.+$/m, "archived: true") : block + "\narchived: true";
-        await fs.writeFile(filePath, match3[1] + updated + match3[3] + content.slice(match3[0].length), "utf-8");
+        await fs4.writeFile(filePath, match3[1] + updated + match3[3] + content.slice(match3[0].length), "utf-8");
       }
       parseFixMarkdown(content, filePath, repoPath, existingProgress) {
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
@@ -19511,7 +20709,7 @@ var init_planning_service = __esm({
         if (!parseResult.ok) {
           this.log(
             "warn",
-            `Frontmatter parse failed in ${path2.relative(repoPath, filePath)}: ${parseResult.error.message}. Preserving existing progress entry if any.`
+            `Frontmatter parse failed in ${path5.relative(repoPath, filePath)}: ${parseResult.error.message}. Preserving existing progress entry if any.`
           );
           return { kind: "parse-error", error: parseResult.error };
         }
@@ -19534,7 +20732,7 @@ var init_planning_service = __esm({
           if (!severity) missing.push("severity");
           this.log(
             "warn",
-            `Required frontmatter fields missing in ${path2.relative(repoPath, filePath)}: ${missing.join(", ")}. Skipping.`
+            `Required frontmatter fields missing in ${path5.relative(repoPath, filePath)}: ${missing.join(", ")}. Skipping.`
           );
           return { kind: "missing-fields", missing };
         }
@@ -19572,7 +20770,7 @@ var init_planning_service = __esm({
           }
           return task;
         });
-        const relativePath = path2.relative(repoPath, filePath);
+        const relativePath = path5.relative(repoPath, filePath);
         const resolution = parsed.resolution;
         const terminalStatuses = ["completed", "superseded"];
         const isTerminal = terminalStatuses.includes(frontmatter.status) || frontmatter.archived;
@@ -23962,7 +25160,7 @@ var init_strategy_service = __esm({
 // packages/tiny-brain-core/src/services/repo-config/repo-config-service.ts
 import { createHash } from "crypto";
 import { readFile as readFile2, readdir as readdir2, access } from "fs/promises";
-import { join as join3 } from "path";
+import { join as join9 } from "path";
 var CONFIG_VERSION2, REPOS_CONFIG_PATH, RepoConfigService;
 var init_repo_config_service = __esm({
   "packages/tiny-brain-core/src/services/repo-config/repo-config-service.ts"() {
@@ -24070,13 +25268,13 @@ var init_repo_config_service = __esm({
           complete: 0
         };
         try {
-          const prdDir = join3(repoPath, "docs", "prd");
+          const prdDir = join9(repoPath, "docs", "prd");
           await access(prdDir);
           const entries = await readdir2(prdDir, { withFileTypes: true });
           const prdDirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith("_"));
           for (const dir of prdDirs) {
             try {
-              const progressPath = join3(prdDir, dir.name, "progress.json");
+              const progressPath = join9(prdDir, dir.name, "progress.json");
               const content = await readFile2(progressPath, "utf-8");
               const progress = JSON.parse(content);
               const status = progress.status?.toLowerCase();
@@ -24189,8 +25387,8 @@ var init_repo_config_service = __esm({
       /**
        * Generate a unique repo ID from path
        */
-      generateRepoId(path36) {
-        const hash = createHash("sha256").update(path36).digest("hex");
+      generateRepoId(path42) {
+        const hash = createHash("sha256").update(path42).digest("hex");
         return `repo-${hash.substring(0, 12)}`;
       }
       /**
@@ -24200,7 +25398,7 @@ var init_repo_config_service = __esm({
       async extractContextFileData(repoPath) {
         const result = {};
         try {
-          const analysisPath = join3(repoPath, ".tiny-brain", "analysis.json");
+          const analysisPath = join9(repoPath, ".tiny-brain", "analysis.json");
           const analysisContent = await readFile2(analysisPath, "utf-8");
           const analysisData = JSON.parse(analysisContent);
           if (analysisData.detectedAt) {
@@ -24208,7 +25406,7 @@ var init_repo_config_service = __esm({
           }
         } catch {
           try {
-            const contextFilePath = join3(repoPath, "CLAUDE.md");
+            const contextFilePath = join9(repoPath, "CLAUDE.md");
             const content = await readFile2(contextFilePath, "utf-8");
             const yamlData = this.parseRepositoryContextYAML(content);
             if (yamlData?.analysisDate) {
@@ -24219,7 +25417,7 @@ var init_repo_config_service = __esm({
         }
         try {
           const contextFileName = "CLAUDE.md";
-          const contextFilePath = join3(repoPath, contextFileName);
+          const contextFilePath = join9(repoPath, contextFileName);
           const content = await readFile2(contextFilePath, "utf-8");
           result.contextFile = contextFileName;
           result.installedAgentCount = this.countInstalledAgents(content);
@@ -24267,8 +25465,8 @@ var init_repo_config_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/fix/fix-service.ts
-import { promises as fs2 } from "fs";
-import path3 from "path";
+import { promises as fs5 } from "fs";
+import path6 from "path";
 var FixService;
 var init_fix_service = __esm({
   "packages/tiny-brain-core/src/services/fix/fix-service.ts"() {
@@ -24277,19 +25475,19 @@ var init_fix_service = __esm({
     FixService = class {
       constructor(context) {
         this.context = context;
-        this.fixesDir = path3.join(context.repositoryRoot || "", ".tiny-brain", "fixes");
+        this.fixesDir = path6.join(context.repositoryRoot || "", ".tiny-brain", "fixes");
       }
       fixesDir;
       /**
        * Create a new fix document from template
        */
       async createFix(fixId, details) {
-        await fs2.mkdir(this.fixesDir, { recursive: true });
+        await fs5.mkdir(this.fixesDir, { recursive: true });
         const template = this.getDefaultTemplate();
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const content = template.replace(/\{\{fix-id\}\}/g, fixId).replace(/\{\{title\}\}/g, details.title).replace(/\{\{date\}\}/g, now).replace(/\{\{problem\}\}/g, details.problem);
-        const fixPath = path3.join(this.fixesDir, `${fixId}.md`);
-        await fs2.writeFile(fixPath, content, "utf-8");
+        const fixPath = path6.join(this.fixesDir, `${fixId}.md`);
+        await fs5.writeFile(fixPath, content, "utf-8");
         return {
           id: fixId,
           title: details.title,
@@ -24303,9 +25501,9 @@ var init_fix_service = __esm({
        * Load an existing fix document
        */
       async loadFix(fixId) {
-        const fixPath = path3.join(this.fixesDir, `${fixId}.md`);
+        const fixPath = path6.join(this.fixesDir, `${fixId}.md`);
         try {
-          const content = await fs2.readFile(fixPath, "utf-8");
+          const content = await fs5.readFile(fixPath, "utf-8");
           return this.parseFix(fixId, content);
         } catch {
           return null;
@@ -24332,7 +25530,7 @@ var init_fix_service = __esm({
        */
       async listFixes(status) {
         try {
-          const files = await fs2.readdir(this.fixesDir);
+          const files = await fs5.readdir(this.fixesDir);
           const fixes = [];
           for (const file of files) {
             if (!file.endsWith(".md") || file.startsWith(".")) continue;
@@ -24432,10 +25630,10 @@ var init_fix_service = __esm({
        * Save a fix document to markdown
        */
       async saveFix(fix) {
-        const fixPath = path3.join(this.fixesDir, `${fix.id}.md`);
+        const fixPath = path6.join(this.fixesDir, `${fix.id}.md`);
         let existingContent = "";
         try {
-          existingContent = await fs2.readFile(fixPath, "utf-8");
+          existingContent = await fs5.readFile(fixPath, "utf-8");
         } catch {
           existingContent = this.getDefaultTemplate().replace(/\{\{fix-id\}\}/g, fix.id).replace(/\{\{title\}\}/g, fix.title).replace(/\{\{date\}\}/g, fix.created).replace(/\{\{problem\}\}/g, fix.problem || "");
         }
@@ -24468,7 +25666,7 @@ ${commitLines}
 `
           );
         }
-        await fs2.writeFile(fixPath, content, "utf-8");
+        await fs5.writeFile(fixPath, content, "utf-8");
       }
       /**
        * Get default template content
@@ -24728,8 +25926,8 @@ var init_adr_suggestion_generator = __esm({
 });
 
 // packages/tiny-brain-core/src/services/adr/adr-service.ts
-import { promises as fs3 } from "fs";
-import path4 from "path";
+import { promises as fs6 } from "fs";
+import path7 from "path";
 import { exec as exec2 } from "child_process";
 import { promisify as promisify2 } from "util";
 var execAsync2, DEFAULT_ADR_TEMPLATE, ADRService;
@@ -24957,10 +26155,10 @@ decision_makers: []  # People involved in the decision
         if (!this.context.repositoryRoot) {
           throw new Error("Not in a git repository");
         }
-        const adrDir = path4.join(this.context.repositoryRoot, this.adrDirectory);
+        const adrDir = path7.join(this.context.repositoryRoot, this.adrDirectory);
         try {
-          await fs3.access(adrDir);
-          const files = await fs3.readdir(adrDir);
+          await fs6.access(adrDir);
+          const files = await fs6.readdir(adrDir);
           const adrFiles = files.filter(
             (file) => /^\d{3,4}-.*\.md$/.test(file)
           );
@@ -25044,12 +26242,12 @@ ${suggestion.context}`;
         }
         try {
           const adrNumber = await this.getNextADRNumber();
-          const adrDir = path4.join(this.context.repositoryRoot, this.adrDirectory);
-          await fs3.mkdir(adrDir, { recursive: true });
+          const adrDir = path7.join(this.context.repositoryRoot, this.adrDirectory);
+          await fs6.mkdir(adrDir, { recursive: true });
           let template = this.template;
           const paddedNumber = adrNumber.toString().padStart(4, "0");
           const filename = `${paddedNumber}-${suggestion.suggestedFileName}`;
-          const filePath = path4.join(adrDir, filename);
+          const filePath = path7.join(adrDir, filename);
           const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
           template = template.replace(/adr_number: 0/g, `adr_number: ${adrNumber}`);
           template = template.replace(/title: "Decision Title Here"/g, `title: "${suggestion.title}"`);
@@ -25072,10 +26270,10 @@ ${suggestion.context}`;
               techList
             );
           }
-          await fs3.writeFile(filePath, template, "utf-8");
+          await fs6.writeFile(filePath, template, "utf-8");
           return {
             success: true,
-            filePath: path4.relative(this.context.repositoryRoot, filePath),
+            filePath: path7.relative(this.context.repositoryRoot, filePath),
             adrNumber
           };
         } catch (error) {
@@ -25098,9 +26296,9 @@ var init_types9 = __esm({
 
 // packages/tiny-brain-core/src/services/plugin/plugin-discovery.service.ts
 import { readdir as readdir3, readFile as readFile3 } from "fs/promises";
-import { join as join4 } from "path";
-import { homedir } from "os";
-import { existsSync as existsSync2 } from "fs";
+import { join as join10 } from "path";
+import { homedir as homedir2 } from "os";
+import { existsSync as existsSync5 } from "fs";
 var PluginDiscoveryService;
 var init_plugin_discovery_service = __esm({
   "packages/tiny-brain-core/src/services/plugin/plugin-discovery.service.ts"() {
@@ -25109,7 +26307,7 @@ var init_plugin_discovery_service = __esm({
       claudePluginsDir;
       knownRepos;
       constructor(knownRepos = []) {
-        this.claudePluginsDir = join4(homedir(), ".claude", "plugins");
+        this.claudePluginsDir = join10(homedir2(), ".claude", "plugins");
         this.knownRepos = knownRepos;
       }
       /**
@@ -25143,8 +26341,8 @@ var init_plugin_discovery_service = __esm({
        * Read installed_plugins.json
        */
       async readInstalledPlugins() {
-        const filePath = join4(this.claudePluginsDir, "installed_plugins.json");
-        if (!existsSync2(filePath)) {
+        const filePath = join10(this.claudePluginsDir, "installed_plugins.json");
+        if (!existsSync5(filePath)) {
           return { version: 2, plugins: {} };
         }
         try {
@@ -25159,8 +26357,8 @@ var init_plugin_discovery_service = __esm({
        * Discover registered marketplaces
        */
       async discoverMarketplaces() {
-        const filePath = join4(this.claudePluginsDir, "known_marketplaces.json");
-        if (!existsSync2(filePath)) {
+        const filePath = join10(this.claudePluginsDir, "known_marketplaces.json");
+        if (!existsSync5(filePath)) {
           return [];
         }
         try {
@@ -25184,12 +26382,12 @@ var init_plugin_discovery_service = __esm({
        */
       async parsePluginFromEntry(pluginName, marketplaceName, entry) {
         const pluginPath = entry.installPath;
-        if (!existsSync2(pluginPath)) {
+        if (!existsSync5(pluginPath)) {
           console.warn(`Plugin path does not exist: ${pluginPath}`);
           return null;
         }
-        const manifestPath = join4(pluginPath, ".claude-plugin", "plugin.json");
-        if (!existsSync2(manifestPath)) {
+        const manifestPath = join10(pluginPath, ".claude-plugin", "plugin.json");
+        if (!existsSync5(manifestPath)) {
           console.warn(`No plugin.json found at: ${manifestPath}`);
           return null;
         }
@@ -25252,7 +26450,7 @@ var init_plugin_discovery_service = __esm({
        * Scan a plugins directory for installed plugins
        */
       async scanPluginDirectory(dir, scope, repoPath) {
-        if (!existsSync2(dir)) {
+        if (!existsSync5(dir)) {
           return [];
         }
         const plugins = [];
@@ -25260,7 +26458,7 @@ var init_plugin_discovery_service = __esm({
           const entries = await readdir3(dir, { withFileTypes: true });
           for (const entry of entries) {
             if (!entry.isDirectory()) continue;
-            const pluginPath = join4(dir, entry.name);
+            const pluginPath = join10(dir, entry.name);
             const plugin = await this.parsePlugin(pluginPath, scope, repoPath);
             if (plugin) {
               plugins.push(plugin);
@@ -25275,8 +26473,8 @@ var init_plugin_discovery_service = __esm({
        * Parse a single plugin directory
        */
       async parsePlugin(pluginPath, scope, repoPath) {
-        const manifestPath = join4(pluginPath, ".claude-plugin", "plugin.json");
-        if (!existsSync2(manifestPath)) {
+        const manifestPath = join10(pluginPath, ".claude-plugin", "plugin.json");
+        if (!existsSync5(manifestPath)) {
           return null;
         }
         try {
@@ -25306,14 +26504,14 @@ var init_plugin_discovery_service = __esm({
         const agents = [];
         let hasHooks = false;
         let hasMcp = false;
-        const skillsDir = manifest.skills ? join4(pluginPath, manifest.skills) : join4(pluginPath, "skills");
-        if (existsSync2(skillsDir)) {
+        const skillsDir = manifest.skills ? join10(pluginPath, manifest.skills) : join10(pluginPath, "skills");
+        if (existsSync5(skillsDir)) {
           try {
             const entries = await readdir3(skillsDir, { withFileTypes: true });
             for (const entry of entries) {
               if (entry.isDirectory()) {
-                const skillMd = join4(skillsDir, entry.name, "SKILL.md");
-                if (existsSync2(skillMd)) {
+                const skillMd = join10(skillsDir, entry.name, "SKILL.md");
+                if (existsSync5(skillMd)) {
                   skills.push(entry.name);
                 }
               }
@@ -25323,8 +26521,8 @@ var init_plugin_discovery_service = __esm({
         }
         if (Array.isArray(manifest.agents)) {
           for (const agentPath of manifest.agents) {
-            const fullPath = join4(pluginPath, agentPath);
-            if (existsSync2(fullPath)) {
+            const fullPath = join10(pluginPath, agentPath);
+            if (existsSync5(fullPath)) {
               const agentName = agentPath.split("/").pop()?.replace(".md", "") || "";
               if (agentName) {
                 agents.push(agentName);
@@ -25332,8 +26530,8 @@ var init_plugin_discovery_service = __esm({
             }
           }
         } else {
-          const agentsDir = manifest.agents ? join4(pluginPath, manifest.agents) : join4(pluginPath, "agents");
-          if (existsSync2(agentsDir)) {
+          const agentsDir = manifest.agents ? join10(pluginPath, manifest.agents) : join10(pluginPath, "agents");
+          if (existsSync5(agentsDir)) {
             try {
               const entries = await readdir3(agentsDir, { withFileTypes: true });
               for (const entry of entries) {
@@ -25345,10 +26543,10 @@ var init_plugin_discovery_service = __esm({
             }
           }
         }
-        const hooksPath = manifest.hooks ? join4(pluginPath, manifest.hooks) : join4(pluginPath, "hooks", "hooks.json");
-        hasHooks = existsSync2(hooksPath);
-        const mcpPath = manifest.mcpServers ? join4(pluginPath, manifest.mcpServers) : join4(pluginPath, ".mcp.json");
-        hasMcp = existsSync2(mcpPath);
+        const hooksPath = manifest.hooks ? join10(pluginPath, manifest.hooks) : join10(pluginPath, "hooks", "hooks.json");
+        hasHooks = existsSync5(hooksPath);
+        const mcpPath = manifest.mcpServers ? join10(pluginPath, manifest.mcpServers) : join10(pluginPath, ".mcp.json");
+        hasMcp = existsSync5(mcpPath);
         return { skills, agents, hasHooks, hasMcp };
       }
       /**
@@ -25367,7 +26565,7 @@ var init_plugin_discovery_service = __esm({
         const result = [];
         const seen = /* @__PURE__ */ new Set();
         this.addRepo(repoPath);
-        const localDir = join4(repoPath, ".claude", "local", "plugins");
+        const localDir = join10(repoPath, ".claude", "local", "plugins");
         const localPlugins = await this.scanPluginDirectory(localDir, "local", repoPath);
         for (const plugin of localPlugins) {
           if (!seen.has(plugin.name)) {
@@ -25375,7 +26573,7 @@ var init_plugin_discovery_service = __esm({
             seen.add(plugin.name);
           }
         }
-        const projectDir = join4(repoPath, ".claude", "plugins");
+        const projectDir = join10(repoPath, ".claude", "plugins");
         const projectPlugins = await this.scanPluginDirectory(projectDir, "project", repoPath);
         for (const plugin of projectPlugins) {
           if (!seen.has(plugin.name)) {
@@ -25523,8 +26721,8 @@ var init_fingerprint_matcher_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/quality-service.ts
-import { promises as fs4 } from "fs";
-import path5 from "path";
+import { promises as fs7 } from "fs";
+import path8 from "path";
 function generateRunId(date) {
   const d = date ?? /* @__PURE__ */ new Date();
   const year = d.getUTCFullYear();
@@ -25574,7 +26772,7 @@ var init_quality_service = __esm({
        * Get the runs directory path
        */
       get runsDir() {
-        return path5.join(this.repoPath, ".tiny-brain", "quality", "runs");
+        return path8.join(this.repoPath, ".tiny-brain", "quality", "runs");
       }
       /**
        * Delete a quality run and its associated plan.
@@ -25587,29 +26785,29 @@ var init_quality_service = __esm({
       async deleteRun(runId) {
         const isNested = runId.includes("T");
         if (isNested) {
-          const runDir = path5.join(this.runsDir, runIdToPath(runId));
-          await fs4.rm(runDir, { recursive: true, force: true });
-          const dateDir = path5.dirname(runDir);
+          const runDir = path8.join(this.runsDir, runIdToPath(runId));
+          await fs7.rm(runDir, { recursive: true, force: true });
+          const dateDir = path8.dirname(runDir);
           try {
-            const remaining = await fs4.readdir(dateDir);
+            const remaining = await fs7.readdir(dateDir);
             if (remaining.length === 0) {
-              await fs4.rmdir(dateDir);
+              await fs7.rmdir(dateDir);
             }
           } catch {
           }
         } else {
           try {
-            const files = await fs4.readdir(this.runsDir);
+            const files = await fs7.readdir(this.runsDir);
             for (const file of files) {
               if (file.startsWith(runId)) {
-                await fs4.rm(path5.join(this.runsDir, file), { force: true });
+                await fs7.rm(path8.join(this.runsDir, file), { force: true });
               }
             }
           } catch {
           }
         }
-        const planPath = path5.join(this.plansDir, `${runId}-plan.md`);
-        await fs4.rm(planPath, { force: true });
+        const planPath = path8.join(this.plansDir, `${runId}-plan.md`);
+        await fs7.rm(planPath, { force: true });
       }
       /**
        * Calculate quality score based on issues found
@@ -25790,8 +26988,8 @@ var init_quality_service = __esm({
         const runId = input.runId ?? generateRunId();
         const date = runId.includes("T") ? runId.split("T")[0] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
         const runPath = runIdToPath(runId);
-        const runDir = path5.join(this.runsDir, runPath);
-        await fs4.mkdir(runDir, { recursive: true });
+        const runDir = path8.join(this.runsDir, runPath);
+        await fs7.mkdir(runDir, { recursive: true });
         const issuesByCategory = _QualityService.getIssuesByCategory(input.issues);
         const content = this.formatRunMarkdown({
           runId,
@@ -25810,8 +27008,8 @@ var init_quality_service = __esm({
           investigationCoverage: input.investigationCoverage,
           agentFindings: input.agentFindings
         });
-        const filePath = path5.join(runDir, "quality.md");
-        await fs4.writeFile(filePath, content, "utf-8");
+        const filePath = path8.join(runDir, "quality.md");
+        await fs7.writeFile(filePath, content, "utf-8");
         return {
           runId,
           success: true,
@@ -26011,17 +27209,17 @@ var init_quality_service = __esm({
       async getPreviousRuns(limit) {
         const runs = [];
         try {
-          const entries = await fs4.readdir(this.runsDir, { withFileTypes: true });
+          const entries = await fs7.readdir(this.runsDir, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)) {
-              const dateDir = path5.join(this.runsDir, entry.name);
+              const dateDir = path8.join(this.runsDir, entry.name);
               try {
-                const timeEntries = await fs4.readdir(dateDir, { withFileTypes: true });
+                const timeEntries = await fs7.readdir(dateDir, { withFileTypes: true });
                 for (const timeEntry of timeEntries) {
                   if (timeEntry.isDirectory() && /^\d{2}-\d{2}$/.test(timeEntry.name)) {
-                    const qualityFile = path5.join(dateDir, timeEntry.name, "quality.md");
+                    const qualityFile = path8.join(dateDir, timeEntry.name, "quality.md");
                     try {
-                      const content = await fs4.readFile(qualityFile, "utf-8");
+                      const content = await fs7.readFile(qualityFile, "utf-8");
                       const runId = pathToRunId(`${entry.name}/${timeEntry.name}`);
                       const summary = this.parseRunSummary(runId, content);
                       if (summary) {
@@ -26034,8 +27232,8 @@ var init_quality_service = __esm({
               } catch {
               }
             } else if (entry.isFile() && entry.name.endsWith("-quality.md")) {
-              const filePath = path5.join(this.runsDir, entry.name);
-              const content = await fs4.readFile(filePath, "utf-8");
+              const filePath = path8.join(this.runsDir, entry.name);
+              const content = await fs7.readFile(filePath, "utf-8");
               const runId = entry.name.replace(".md", "");
               const summary = this.parseRunSummary(runId, content);
               if (summary) {
@@ -26084,8 +27282,8 @@ var init_quality_service = __esm({
        */
       async getRunDetails(runId) {
         try {
-          const filePath = isNestedRunId(runId) ? path5.join(this.runsDir, runIdToPath(runId), "quality.md") : path5.join(this.runsDir, `${runId}.md`);
-          const content = await fs4.readFile(filePath, "utf-8");
+          const filePath = isNestedRunId(runId) ? path8.join(this.runsDir, runIdToPath(runId), "quality.md") : path8.join(this.runsDir, `${runId}.md`);
+          const content = await fs7.readFile(filePath, "utf-8");
           const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
           if (!jsonMatch) {
             return null;
@@ -26185,7 +27383,7 @@ var init_quality_service = __esm({
        * Get the plans directory path
        */
       get plansDir() {
-        return path5.join(this.repoPath, ".tiny-brain", "quality", "plans");
+        return path8.join(this.repoPath, ".tiny-brain", "quality", "plans");
       }
       /**
        * Group quality issues into themed improvement initiatives.
@@ -26494,10 +27692,10 @@ var init_quality_service = __esm({
        * @returns The parsed QualityImprovementPlan, or null if not found/invalid
        */
       async loadImprovementPlan(planId) {
-        const filePath = path5.join(this.plansDir, `${planId}.md`);
+        const filePath = path8.join(this.plansDir, `${planId}.md`);
         let content;
         try {
-          content = await fs4.readFile(filePath, "utf-8");
+          content = await fs7.readFile(filePath, "utf-8");
         } catch {
           return null;
         }
@@ -26520,10 +27718,10 @@ var init_quality_service = __esm({
        * @returns Result with planId and file path
        */
       async saveImprovementPlan(plan) {
-        await fs4.mkdir(this.plansDir, { recursive: true });
+        await fs7.mkdir(this.plansDir, { recursive: true });
         const markdown = _QualityService.formatPlanMarkdown(plan);
-        const filePath = path5.join(this.plansDir, `${plan.planId}.md`);
-        await fs4.writeFile(filePath, markdown, "utf-8");
+        const filePath = path8.join(this.plansDir, `${plan.planId}.md`);
+        await fs7.writeFile(filePath, markdown, "utf-8");
         return {
           planId: plan.planId,
           filePath
@@ -26638,8 +27836,8 @@ var init_quality_service = __esm({
        * @returns Array of created fix IDs
        */
       async generateFixesFromPlan(plan, issues) {
-        const fixesDir = path5.join(this.repoPath, ".tiny-brain", "fixes");
-        await fs4.mkdir(fixesDir, { recursive: true });
+        const fixesDir = path8.join(this.repoPath, ".tiny-brain", "fixes");
+        await fs7.mkdir(fixesDir, { recursive: true });
         const fixIds = [];
         for (const phase of plan.phases) {
           for (const initiative of phase.initiatives) {
@@ -26647,8 +27845,8 @@ var init_quality_service = __esm({
             const dateMatch = plan.planId.match(/^(\d{4}-\d{2}-\d{2})/);
             const planDate = dateMatch ? dateMatch[1] : plan.planId;
             const fixId = `qip-${planDate}-${initiative.id}`;
-            const filePath = path5.join(fixesDir, `${fixId}.md`);
-            await fs4.writeFile(filePath, markdown, "utf-8");
+            const filePath = path8.join(fixesDir, `${fixId}.md`);
+            await fs7.writeFile(filePath, markdown, "utf-8");
             fixIds.push(fixId);
           }
         }
@@ -26790,7 +27988,7 @@ var init_analyzer_registry = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/analyzer-detection.service.ts
-import path6 from "path";
+import path9 from "path";
 var IGNORE_PATTERNS, AnalyzerDetectionService;
 var init_analyzer_detection_service = __esm({
   "packages/tiny-brain-core/src/services/quality/analyzer-detection.service.ts"() {
@@ -26871,7 +28069,7 @@ var init_analyzer_detection_service = __esm({
         return [...new Set(allMatches)].sort();
       }
       resolveCommand(template, configPath) {
-        const dir = path6.dirname(configPath);
+        const dir = path9.dirname(configPath);
         return template.replace("{config}", configPath).replace("{dir}", dir);
       }
     };
@@ -27308,7 +28506,7 @@ var init_parsers = __esm({
 
 // packages/tiny-brain-core/src/services/quality/analyzer-executor.service.ts
 import { exec as exec3 } from "child_process";
-import { promises as fs5 } from "fs";
+import { promises as fs8 } from "fs";
 import { promisify as promisify3 } from "util";
 function lookupDefinition(analyzerId) {
   return ANALYZER_REGISTRY.find((d) => d.id === analyzerId);
@@ -27349,7 +28547,7 @@ var init_analyzer_executor_service = __esm({
       }
       async executeAnalyzers(analyzers, outputDir) {
         if (outputDir) {
-          await fs5.mkdir(outputDir, { recursive: true });
+          await fs8.mkdir(outputDir, { recursive: true });
         }
         const startTime = Date.now();
         const allIssues = [];
@@ -27439,9 +28637,9 @@ var init_analyzer_executor_service = __esm({
             }
           }
           try {
-            const fileContent = await fs5.readFile(readPath, "utf-8");
+            const fileContent = await fs8.readFile(readPath, "utf-8");
             if (!fileContent.trim()) {
-              await fs5.unlink(readPath);
+              await fs8.unlink(readPath);
               continue;
             }
             const issues = parser(fileContent, this.repoPath);
@@ -27576,8 +28774,8 @@ var init_analyzer_executor_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/analyzer-cache.ts
-import { promises as fs6 } from "fs";
-import path7 from "path";
+import { promises as fs9 } from "fs";
+import path10 from "path";
 function isValidEntry(entry) {
   if (!entry || typeof entry !== "object") return false;
   const e = entry;
@@ -27587,9 +28785,9 @@ async function readCachedAnalyzers(repoPath, options) {
   if (options?.changed && !/^[0-9a-f]+$/i.test(options.changed)) {
     throw new Error(`Invalid SHA: ${options.changed}`);
   }
-  const analysisPath = path7.join(repoPath, ".tiny-brain", "analysis.json");
+  const analysisPath = path10.join(repoPath, ".tiny-brain", "analysis.json");
   try {
-    const content = await fs6.readFile(analysisPath, "utf-8");
+    const content = await fs9.readFile(analysisPath, "utf-8");
     const parsed = JSON.parse(content);
     if (!parsed.analyzers || !Array.isArray(parsed.analyzers) || parsed.analyzers.length === 0) {
       return null;
@@ -27622,15 +28820,15 @@ var init_analyzer_cache = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/run-single-analyser.ts
-import { promises as fs7 } from "fs";
+import { promises as fs10 } from "fs";
 import { tmpdir } from "os";
-import path8 from "path";
+import path11 from "path";
 async function runSingleAnalyser(repoPath, analyserId, options) {
   const cacheOptions = options?.changed ? { changed: options.changed } : void 0;
   const allAnalysers = await readCachedAnalyzers(repoPath, cacheOptions) ?? await new AnalyzerDetectionService(repoPath).detectAnalyzers(cacheOptions);
   const target = allAnalysers.find((a) => a.analyzerId === analyserId);
   if (!target) return null;
-  const outputDir = options?.outputDir ?? await fs7.mkdtemp(path8.join(tmpdir(), `tiny-brain-analyser-${analyserId}-`));
+  const outputDir = options?.outputDir ?? await fs10.mkdtemp(path11.join(tmpdir(), `tiny-brain-analyser-${analyserId}-`));
   const executor = new AnalyzerExecutorService(repoPath);
   return executor.executeAnalyzers([target], outputDir);
 }
@@ -28224,8 +29422,8 @@ var init_investigation_response_parser = __esm({
 
 // packages/tiny-brain-core/src/services/quality/file-investigator.service.ts
 import { createHash as createHash2 } from "crypto";
-import { promises as fs8 } from "fs";
-import path9 from "path";
+import { promises as fs11 } from "fs";
+import path12 from "path";
 var FileInvestigatorService;
 var init_file_investigator_service = __esm({
   "packages/tiny-brain-core/src/services/quality/file-investigator.service.ts"() {
@@ -28283,7 +29481,7 @@ var init_file_investigator_service = __esm({
         };
       }
       async readFileContent(filePath) {
-        return fs8.readFile(path9.join(this.repoPath, filePath), "utf-8");
+        return fs11.readFile(path12.join(this.repoPath, filePath), "utf-8");
       }
     };
   }
@@ -28402,8 +29600,8 @@ var init_investigation_orchestrator_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/investigation-progress.service.ts
-import { promises as fs9 } from "fs";
-import path10 from "path";
+import { promises as fs12 } from "fs";
+import path13 from "path";
 var init_investigation_progress_service = __esm({
   "packages/tiny-brain-core/src/services/quality/investigation-progress.service.ts"() {
     "use strict";
@@ -28486,8 +29684,8 @@ var init_result_merger_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/assembly.service.ts
-import { promises as fs10 } from "fs";
-import path11 from "path";
+import { promises as fs13 } from "fs";
+import path14 from "path";
 var AssemblyService;
 var init_assembly_service = __esm({
   "packages/tiny-brain-core/src/services/quality/assembly.service.ts"() {
@@ -28500,7 +29698,7 @@ var init_assembly_service = __esm({
         this.repoPath = repoPath;
       }
       get runsDir() {
-        return path11.join(this.repoPath, ".tiny-brain", "quality", "runs");
+        return path14.join(this.repoPath, ".tiny-brain", "quality", "runs");
       }
       /**
        * Assemble a quality run from intermediate files.
@@ -28510,7 +29708,7 @@ var init_assembly_service = __esm({
        */
       async assembleRun(runId, _baseRunId) {
         const runDir = this.resolveRunDir(runId);
-        const analysisPath = path11.join(runDir, "analysis.json");
+        const analysisPath = path14.join(runDir, "analysis.json");
         const analyzerData = await this.readAnalyzerData(analysisPath);
         const analyzerCount = analyzerData.totalIssues;
         const analyzersRun = analyzerData.executions;
@@ -28524,8 +29722,8 @@ var init_assembly_service = __esm({
         const score = QualityService.calculateScore(allIssues);
         const grade = QualityService.getGrade(score);
         const categoryBreakdown = QualityService.getIssuesByCategory(allIssues);
-        await fs10.mkdir(runDir, { recursive: true });
-        const reportPath = path11.join(runDir, "quality.md");
+        await fs13.mkdir(runDir, { recursive: true });
+        const reportPath = path14.join(runDir, "quality.md");
         await this.writeSummaryReport(reportPath, runId, totalIssues, analyzerCount, agentFindings, allIssues, analyzersRun);
         return {
           runId,
@@ -28553,7 +29751,7 @@ var init_assembly_service = __esm({
        */
       resolveRunDir(runId) {
         if (runId.includes("T")) {
-          return path11.join(this.runsDir, runIdToPath(runId));
+          return path14.join(this.runsDir, runIdToPath(runId));
         }
         return this.runsDir;
       }
@@ -28565,7 +29763,7 @@ var init_assembly_service = __esm({
        */
       async readAnalyzerData(analysisPath) {
         try {
-          const content = await fs10.readFile(analysisPath, "utf-8");
+          const content = await fs13.readFile(analysisPath, "utf-8");
           const parsed = JSON.parse(content);
           const isFlat = Array.isArray(parsed.issues) || Array.isArray(parsed.executions);
           if (isFlat) {
@@ -28610,13 +29808,13 @@ var init_assembly_service = __esm({
        */
       async collectAgentFindings(runDir) {
         const findings = {};
-        const agentsDir = path11.join(runDir, "agents");
+        const agentsDir = path14.join(runDir, "agents");
         try {
-          const files = await fs10.readdir(agentsDir);
+          const files = await fs13.readdir(agentsDir);
           for (const file of files) {
             if (!file.endsWith(".json")) continue;
             const stepType = file.replace(/\.json$/, "");
-            const issues = await this.readIssuesFromFile(path11.join(agentsDir, file));
+            const issues = await this.readIssuesFromFile(path14.join(agentsDir, file));
             findings[stepType] = { issueCount: issues.length, issues };
           }
         } catch {
@@ -28629,7 +29827,7 @@ var init_assembly_service = __esm({
        */
       async readIssuesFromFile(filePath) {
         try {
-          const content = await fs10.readFile(filePath, "utf-8");
+          const content = await fs13.readFile(filePath, "utf-8");
           const parsed = JSON.parse(content);
           if (Array.isArray(parsed)) return this.validateIssues(parsed);
           if (parsed && typeof parsed === "object") {
@@ -28698,7 +29896,7 @@ var init_assembly_service = __esm({
           "```",
           ""
         ];
-        await fs10.writeFile(reportPath, lines.join("\n"), "utf-8");
+        await fs13.writeFile(reportPath, lines.join("\n"), "utf-8");
       }
     };
   }
@@ -28724,36 +29922,36 @@ var init_quality_scoring = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/quality-run-finder.ts
-import { promises as fs11 } from "fs";
-import path12 from "path";
+import { promises as fs14 } from "fs";
+import path15 from "path";
 async function findLatestQualityRunDir(repoRoot) {
-  const runsDir = path12.join(repoRoot, ".tiny-brain", "quality", "runs");
+  const runsDir = path15.join(repoRoot, ".tiny-brain", "quality", "runs");
   let dateDirs;
   try {
-    dateDirs = await fs11.readdir(runsDir);
+    dateDirs = await fs14.readdir(runsDir);
   } catch {
     return null;
   }
   dateDirs.sort((a, b) => b.localeCompare(a));
   for (const dateDir of dateDirs) {
-    const datePath = path12.join(runsDir, dateDir);
-    const stat4 = await fs11.stat(datePath).catch(() => null);
+    const datePath = path15.join(runsDir, dateDir);
+    const stat4 = await fs14.stat(datePath).catch(() => null);
     if (!stat4?.isDirectory()) continue;
     let timeDirs;
     try {
-      timeDirs = await fs11.readdir(datePath);
+      timeDirs = await fs14.readdir(datePath);
     } catch {
       continue;
     }
     timeDirs.sort((a, b) => b.localeCompare(a));
     for (const timeDir of timeDirs) {
-      const timePath = path12.join(datePath, timeDir);
-      const timeStat = await fs11.stat(timePath).catch(() => null);
+      const timePath = path15.join(datePath, timeDir);
+      const timeStat = await fs14.stat(timePath).catch(() => null);
       if (!timeStat?.isDirectory()) continue;
-      const qualityMd = path12.join(timePath, "quality.md");
-      const hasQualityMd = await fs11.access(qualityMd).then(() => true, () => false);
+      const qualityMd = path15.join(timePath, "quality.md");
+      const hasQualityMd = await fs14.access(qualityMd).then(() => true, () => false);
       if (!hasQualityMd) continue;
-      return path12.join(".tiny-brain", "quality", "runs", dateDir, timeDir);
+      return path15.join(".tiny-brain", "quality", "runs", dateDir, timeDir);
     }
   }
   return null;
@@ -28808,8 +30006,8 @@ var init_json_repair = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/quality-step-scores.ts
-import { promises as fs12 } from "fs";
-import { join as join5 } from "path";
+import { promises as fs15 } from "fs";
+import { join as join11 } from "path";
 function buildQualityScores(steps, findings) {
   const scored = steps.map((s) => {
     const stepFindings = findings[s.type] ?? [];
@@ -28846,9 +30044,9 @@ function buildQualityScores(steps, findings) {
   };
 }
 async function loadFindingsFromQualityRun(repoRoot, runDirRelative, stepType) {
-  const agentsDir = join5(repoRoot, runDirRelative, "agents");
+  const agentsDir = join11(repoRoot, runDirRelative, "agents");
   try {
-    const content = await fs12.readFile(join5(agentsDir, `${stepType}.json`), "utf-8");
+    const content = await fs15.readFile(join11(agentsDir, `${stepType}.json`), "utf-8");
     const parsed = parseJsonWithRepair(content);
     if (Array.isArray(parsed)) return parsed;
     if (parsed !== null && typeof parsed === "object") {
@@ -29031,9 +30229,9 @@ var init_quality2 = __esm({
 });
 
 // packages/tiny-brain-core/src/services/hooks/hooks-service.ts
-import { existsSync as existsSync3 } from "fs";
+import { existsSync as existsSync6 } from "fs";
 import { readFile as readFile4, readdir as readdir4 } from "fs/promises";
-import { join as join6 } from "path";
+import { join as join12 } from "path";
 var HooksService;
 var init_hooks_service = __esm({
   "packages/tiny-brain-core/src/services/hooks/hooks-service.ts"() {
@@ -29048,7 +30246,7 @@ var init_hooks_service = __esm({
        */
       async getPluginHooks() {
         const hooksJsonPath = this.getPluginHooksPath();
-        if (!existsSync3(hooksJsonPath)) {
+        if (!existsSync6(hooksJsonPath)) {
           return [];
         }
         try {
@@ -29074,8 +30272,8 @@ var init_hooks_service = __esm({
        * Get all git hooks from .git/hooks/
        */
       async getGitHooks() {
-        const gitHooksDir = join6(this.repoRoot, ".git", "hooks");
-        if (!existsSync3(gitHooksDir)) {
+        const gitHooksDir = join12(this.repoRoot, ".git", "hooks");
+        if (!existsSync6(gitHooksDir)) {
           return [];
         }
         try {
@@ -29089,7 +30287,7 @@ var init_hooks_service = __esm({
               name: entry.name,
               event: entry.name,
               type: "git",
-              path: join6(gitHooksDir, entry.name)
+              path: join12(gitHooksDir, entry.name)
             });
           }
           return hooks;
@@ -29101,8 +30299,8 @@ var init_hooks_service = __esm({
        * Get all repo hooks from .claude/hooks/hooks.json
        */
       async getRepoHooks() {
-        const hooksJsonPath = join6(this.repoRoot, ".claude", "hooks", "hooks.json");
-        if (!existsSync3(hooksJsonPath)) {
+        const hooksJsonPath = join12(this.repoRoot, ".claude", "hooks", "hooks.json");
+        if (!existsSync6(hooksJsonPath)) {
           return [];
         }
         try {
@@ -29148,8 +30346,8 @@ var init_hooks_service = __esm({
         }
       }
       async getGitHookContent(hookName) {
-        const hookPath = join6(this.repoRoot, ".git", "hooks", hookName);
-        if (!existsSync3(hookPath)) {
+        const hookPath = join12(this.repoRoot, ".git", "hooks", hookName);
+        if (!existsSync6(hookPath)) {
           return null;
         }
         try {
@@ -29160,7 +30358,7 @@ var init_hooks_service = __esm({
       }
       async getPluginHookContent(hookName) {
         const hooksJsonPath = this.getPluginHooksPath();
-        if (!existsSync3(hooksJsonPath)) {
+        if (!existsSync6(hooksJsonPath)) {
           return null;
         }
         try {
@@ -29192,8 +30390,8 @@ var init_hooks_service = __esm({
         }
       }
       async getRepoHookContent(hookName) {
-        const hooksJsonPath = join6(this.repoRoot, ".claude", "hooks", "hooks.json");
-        if (!existsSync3(hooksJsonPath)) {
+        const hooksJsonPath = join12(this.repoRoot, ".claude", "hooks", "hooks.json");
+        if (!existsSync6(hooksJsonPath)) {
           return null;
         }
         try {
@@ -29226,11 +30424,11 @@ var init_hooks_service = __esm({
       }
       getPluginHooksPath() {
         const possiblePaths = [
-          join6(this.repoRoot, ".claude-plugin", "hooks", "hooks.json"),
-          join6(this.repoRoot, "hooks", "hooks.json")
+          join12(this.repoRoot, ".claude-plugin", "hooks", "hooks.json"),
+          join12(this.repoRoot, "hooks", "hooks.json")
         ];
         for (const p of possiblePaths) {
-          if (existsSync3(p)) {
+          if (existsSync6(p)) {
             return p;
           }
         }
@@ -29249,9 +30447,9 @@ var init_hooks = __esm({
 });
 
 // packages/tiny-brain-core/src/services/auth/credential-storage.service.ts
-import * as fs13 from "fs/promises";
-import * as path13 from "path";
-import * as os from "os";
+import * as fs16 from "fs/promises";
+import * as path16 from "path";
+import * as os2 from "os";
 import * as crypto3 from "crypto";
 var CredentialStorageService;
 var init_credential_storage_service = __esm({
@@ -29263,8 +30461,8 @@ var init_credential_storage_service = __esm({
       iterations = 1e5;
       keyLength = 32;
       constructor() {
-        const homeDir = os.homedir();
-        this.credentialsPath = path13.join(homeDir, ".tiny-brain", "config", "credentials.json");
+        const homeDir = os2.homedir();
+        this.credentialsPath = path16.join(homeDir, ".tiny-brain", "config", "credentials.json");
       }
       async setCredential(key, value) {
         const validKeys = ["clientId", "clientSecret"];
@@ -29318,7 +30516,7 @@ var init_credential_storage_service = __esm({
       }
       async clearCredentials() {
         try {
-          await fs13.unlink(this.credentialsPath);
+          await fs16.unlink(this.credentialsPath);
         } catch (error) {
           if (error.code !== "ENOENT") {
             throw error;
@@ -29368,7 +30566,7 @@ var init_credential_storage_service = __esm({
         return decrypted.toString("utf8");
       }
       deriveKey(salt) {
-        const passphrase = os.homedir();
+        const passphrase = os2.homedir();
         return crypto3.pbkdf2Sync(
           passphrase,
           salt,
@@ -29379,7 +30577,7 @@ var init_credential_storage_service = __esm({
       }
       async loadStoredCredentials() {
         try {
-          const data = await fs13.readFile(this.credentialsPath, "utf8");
+          const data = await fs16.readFile(this.credentialsPath, "utf8");
           return JSON.parse(data);
         } catch (error) {
           if (error.code === "ENOENT") {
@@ -29389,14 +30587,14 @@ var init_credential_storage_service = __esm({
         }
       }
       async saveStoredCredentials(credentials) {
-        const dir = path13.dirname(this.credentialsPath);
-        await fs13.mkdir(dir, { recursive: true });
-        await fs13.writeFile(
+        const dir = path16.dirname(this.credentialsPath);
+        await fs16.mkdir(dir, { recursive: true });
+        await fs16.writeFile(
           this.credentialsPath,
           JSON.stringify(credentials, null, 2),
           "utf8"
         );
-        await fs13.chmod(this.credentialsPath, 384);
+        await fs16.chmod(this.credentialsPath, 384);
       }
     };
   }
@@ -29571,8 +30769,8 @@ var init_auth_token_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/tech-context-service.ts
-import { promises as fs14 } from "fs";
-import path14 from "path";
+import { promises as fs17 } from "fs";
+import path17 from "path";
 import crypto4 from "crypto";
 var TechContextService;
 var init_tech_context_service = __esm({
@@ -29584,9 +30782,9 @@ var init_tech_context_service = __esm({
       techDir;
       agentsDir;
       constructor(repoPath) {
-        this.tinyBrainDir = path14.join(repoPath, ".tiny-brain");
-        this.techDir = path14.join(this.tinyBrainDir, "tech");
-        this.agentsDir = path14.join(repoPath, ".claude", "agents");
+        this.tinyBrainDir = path17.join(repoPath, ".tiny-brain");
+        this.techDir = path17.join(this.tinyBrainDir, "tech");
+        this.agentsDir = path17.join(repoPath, ".claude", "agents");
       }
       /** Get the .tiny-brain directory path */
       getTinyBrainDir() {
@@ -29602,8 +30800,8 @@ var init_tech_context_service = __esm({
       }
       /** Ensure required directories exist */
       async ensureDirectories() {
-        await fs14.mkdir(this.tinyBrainDir, { recursive: true });
-        await fs14.mkdir(this.techDir, { recursive: true });
+        await fs17.mkdir(this.tinyBrainDir, { recursive: true });
+        await fs17.mkdir(this.techDir, { recursive: true });
       }
       /**
        * Write analysis data to .tiny-brain/analysis.json
@@ -29650,8 +30848,8 @@ var init_tech_context_service = __esm({
         if (analysis.envFiles && analysis.envFiles.length > 0) file.envFiles = analysis.envFiles;
         if (analysis.ci) file.ci = analysis.ci;
         if (analysis.analyzers && analysis.analyzers.length > 0) file.analyzers = analysis.analyzers;
-        const filePath = path14.join(this.tinyBrainDir, "analysis.json");
-        await fs14.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
+        const filePath = path17.join(this.tinyBrainDir, "analysis.json");
+        await fs17.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
       }
       /**
        * Write a tech expertise file with YAML frontmatter
@@ -29671,8 +30869,8 @@ var init_tech_context_service = __esm({
         const fileContent = `${yamlFrontmatter}
 
 ${content}`;
-        const filePath = path14.join(this.techDir, `${name}.md`);
-        await fs14.writeFile(filePath, fileContent, "utf-8");
+        const filePath = path17.join(this.techDir, `${name}.md`);
+        await fs17.writeFile(filePath, fileContent, "utf-8");
       }
       /**
        * Write raw markdown content to a tech file
@@ -29680,16 +30878,16 @@ ${content}`;
        */
       async writeTechFileRaw(name, content) {
         await this.ensureDirectories();
-        const filePath = path14.join(this.techDir, `${name}.md`);
-        await fs14.writeFile(filePath, content, "utf-8");
+        const filePath = path17.join(this.techDir, `${name}.md`);
+        await fs17.writeFile(filePath, content, "utf-8");
       }
       /**
        * Read analysis data from .tiny-brain/analysis.json
        */
       async readAnalysis() {
-        const filePath = path14.join(this.tinyBrainDir, "analysis.json");
+        const filePath = path17.join(this.tinyBrainDir, "analysis.json");
         try {
-          const content = await fs14.readFile(filePath, "utf-8");
+          const content = await fs17.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return null;
@@ -29700,12 +30898,12 @@ ${content}`;
        */
       async readTechFiles() {
         try {
-          const files = await fs14.readdir(this.techDir);
+          const files = await fs17.readdir(this.techDir);
           const techFiles = [];
           for (const file of files) {
             if (!file.endsWith(".md")) continue;
-            const filePath = path14.join(this.techDir, file);
-            const content = await fs14.readFile(filePath, "utf-8");
+            const filePath = path17.join(this.techDir, file);
+            const content = await fs17.readFile(filePath, "utf-8");
             const parsed = this.parseFrontmatter(content);
             if (parsed) {
               techFiles.push({
@@ -29725,7 +30923,7 @@ ${content}`;
       async getTechForFile(filePath) {
         const techFiles = await this.readTechFiles();
         const matches = [];
-        const basename3 = path14.basename(filePath);
+        const basename3 = path17.basename(filePath);
         for (const techFile of techFiles) {
           for (const pattern of techFile.frontmatter.filePatterns) {
             if (minimatch(filePath, pattern) || minimatch(basename3, pattern) || minimatch(filePath, `**/${pattern}`) || filePath.includes(pattern.replace(/\/$/, ""))) {
@@ -29770,16 +30968,16 @@ ${content}`;
           ...config,
           lastSynced: (/* @__PURE__ */ new Date()).toISOString()
         };
-        const filePath = path14.join(this.techDir, "config.json");
-        await fs14.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
+        const filePath = path17.join(this.techDir, "config.json");
+        await fs17.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
       }
       /**
        * Read config from .tiny-brain/tech/config.json
        */
       async readConfig() {
-        const filePath = path14.join(this.techDir, "config.json");
+        const filePath = path17.join(this.techDir, "config.json");
         try {
-          const content = await fs14.readFile(filePath, "utf-8");
+          const content = await fs17.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return { useAgents: false };
@@ -29793,12 +30991,12 @@ ${content}`;
        * - Sub-agent invocation context
        */
       async installTechAgents() {
-        await fs14.mkdir(this.agentsDir, { recursive: true });
+        await fs17.mkdir(this.agentsDir, { recursive: true });
         const techFiles = await this.readTechFiles();
         for (const techFile of techFiles) {
           const name = techFile.frontmatter.name;
           const agentFileName = `tech-${name}.md`;
-          const agentPath = path14.join(this.agentsDir, agentFileName);
+          const agentPath = path17.join(this.agentsDir, agentFileName);
           const description = techFile.frontmatter.description || `${name} development specialist. Use for ${techFile.frontmatter.domain} tasks involving ${name}.`;
           const agentContent = `---
 name: tech-${name}
@@ -29814,7 +31012,7 @@ You are a specialized ${name} development agent invoked by the developer agent. 
 ## Tech Expertise
 
 ${techFile.content}`;
-          await fs14.writeFile(agentPath, agentContent, "utf-8");
+          await fs17.writeFile(agentPath, agentContent, "utf-8");
         }
       }
       /**
@@ -29822,10 +31020,10 @@ ${techFile.content}`;
        */
       async removeTechAgents() {
         try {
-          const files = await fs14.readdir(this.agentsDir);
+          const files = await fs17.readdir(this.agentsDir);
           for (const file of files) {
             if (file.startsWith("tech-") && file.endsWith(".md")) {
-              await fs14.unlink(path14.join(this.agentsDir, file));
+              await fs17.unlink(path17.join(this.agentsDir, file));
             }
           }
         } catch {
@@ -29920,8 +31118,8 @@ ${techFile.content}`;
 });
 
 // packages/tiny-brain-core/src/analyser/detectors/base-detector.ts
-import * as fs15 from "fs/promises";
-import * as path15 from "path";
+import * as fs18 from "fs/promises";
+import * as path18 from "path";
 var BaseDetector;
 var init_base_detector = __esm({
   "packages/tiny-brain-core/src/analyser/detectors/base-detector.ts"() {
@@ -29932,7 +31130,7 @@ var init_base_detector = __esm({
       }
       async fileExists(filePath) {
         try {
-          await fs15.access(path15.join(this.dirPath, filePath));
+          await fs18.access(path18.join(this.dirPath, filePath));
           return true;
         } catch {
           return false;
@@ -29940,7 +31138,7 @@ var init_base_detector = __esm({
       }
       async readFile(filePath) {
         try {
-          return await fs15.readFile(path15.join(this.dirPath, filePath), "utf8");
+          return await fs18.readFile(path18.join(this.dirPath, filePath), "utf8");
         } catch {
           return "";
         }
@@ -29955,7 +31153,7 @@ var init_base_detector = __esm({
       }
       async findFiles(pattern) {
         try {
-          const files = await fs15.readdir(this.dirPath);
+          const files = await fs18.readdir(this.dirPath);
           return files.filter((file) => {
             if (pattern.includes("*")) {
               const regex = new RegExp(pattern.replace("*", ".*"));
@@ -30371,20 +31569,20 @@ var init_script_analyzer = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/utils.ts
-import * as path16 from "path";
-import * as fs16 from "fs/promises";
+import * as path19 from "path";
+import * as fs19 from "fs/promises";
 async function findProjectRoot(startPath) {
-  let currentPath = path16.resolve(startPath);
+  let currentPath = path19.resolve(startPath);
   while (currentPath !== "/") {
     try {
-      const gitPath = path16.join(currentPath, ".git");
-      const stats = await fs16.stat(gitPath);
+      const gitPath = path19.join(currentPath, ".git");
+      const stats = await fs19.stat(gitPath);
       if (stats.isDirectory()) {
         return currentPath;
       }
     } catch {
     }
-    currentPath = path16.dirname(currentPath);
+    currentPath = path19.dirname(currentPath);
   }
   return startPath;
 }
@@ -30395,8 +31593,8 @@ var init_utils = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/index.ts
-import * as fs17 from "fs/promises";
-import * as path17 from "path";
+import * as fs20 from "fs/promises";
+import * as path20 from "path";
 async function analyseRepository(rootPath = process.cwd(), options) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const languages = /* @__PURE__ */ new Set();
@@ -30473,7 +31671,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     if (stack.database?.vendor) databases.add(stack.database.vendor);
   }
   function detectFileType(fileName) {
-    const ext2 = path17.extname(fileName).toLowerCase();
+    const ext2 = path20.extname(fileName).toLowerCase();
     if ([".js", ".mjs", ".cjs", ".jsx"].includes(ext2)) {
       languages.add("javascript");
       languageFileCounts.javascript = (languageFileCounts.javascript || 0) + 1;
@@ -30511,7 +31709,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     for (const pattern of TEST_PATTERNS) {
       if (fileName.includes(pattern)) {
         testFiles.push(fileName);
-        const ext2 = path17.extname(fileName);
+        const ext2 = path20.extname(fileName);
         if (ext2) {
           testPatterns.add(pattern + ext2.substring(1));
         }
@@ -30522,10 +31720,10 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   async function detectOtherLanguages(dirPath, files) {
     try {
       for (const file of files) {
-        const filePath = path17.join(dirPath, file);
+        const filePath = path20.join(dirPath, file);
         if (file === "requirements.txt" || file === "setup.py" || file === "pyproject.toml") {
           languages.add("python");
-          const content = await fs17.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs20.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("django")) frameworks.add("django");
           if (content.includes("flask")) frameworks.add("flask");
           if (content.includes("fastapi")) frameworks.add("fastapi");
@@ -30534,14 +31732,14 @@ async function analyseRepository(rootPath = process.cwd(), options) {
         }
         if (file === "go.mod" || file === "go.sum") {
           languages.add("go");
-          const content = await fs17.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs20.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("testify")) testingTools.add("testify");
           if (content.includes("gin-gonic")) frameworks.add("gin");
           if (content.includes("echo")) frameworks.add("echo");
         }
         if (file === "Gemfile" || file === "Rakefile") {
           languages.add("ruby");
-          const content = await fs17.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs20.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("rails")) frameworks.add("rails");
           if (content.includes("sinatra")) frameworks.add("sinatra");
           if (content.includes("rspec")) testingTools.add("rspec");
@@ -30568,7 +31766,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   });
   const documentationLocations = [];
   let documentationPattern;
-  const rootFiles = await fs17.readdir(rootPath).catch(() => []);
+  const rootFiles = await fs20.readdir(rootPath).catch(() => []);
   const rootFileNames = rootFiles.map((f) => typeof f === "string" ? f : f.name);
   const hasRootReadme = rootFileNames.some((f) => f.toLowerCase() === "readme.md");
   const hasDocsFolder = rootFileNames.some((f) => f.toLowerCase() === "docs");
@@ -30590,8 +31788,8 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   let scripts;
   let monorepo;
   let runtimeVersion;
-  const rootPkgPath = path17.join(rootPath, "package.json");
-  const rootPkgContent = await fs17.readFile(rootPkgPath, "utf8").catch(() => "");
+  const rootPkgPath = path20.join(rootPath, "package.json");
+  const rootPkgContent = await fs20.readFile(rootPkgPath, "utf8").catch(() => "");
   if (rootPkgContent) {
     try {
       const rootPkg = JSON.parse(rootPkgContent);
@@ -30621,16 +31819,16 @@ async function analyseRepository(rootPath = process.cwd(), options) {
         for (const glob2 of workspaceGlobs) {
           if (glob2.endsWith("*")) {
             const baseDir = glob2.replace(/\/?\*$/, "");
-            const basePath = path17.join(rootPath, baseDir);
-            const entries = await fs17.readdir(basePath, { withFileTypes: true }).catch(() => []);
+            const basePath = path20.join(rootPath, baseDir);
+            const entries = await fs20.readdir(basePath, { withFileTypes: true }).catch(() => []);
             for (const entry of entries) {
               if (entry.isDirectory()) {
-                resolvedPackages.push(path17.join(baseDir, entry.name));
+                resolvedPackages.push(path20.join(baseDir, entry.name));
               }
             }
           } else {
-            const fullPath = path17.join(rootPath, glob2);
-            const stat4 = await fs17.stat(fullPath).catch(() => null);
+            const fullPath = path20.join(rootPath, glob2);
+            const stat4 = await fs20.stat(fullPath).catch(() => null);
             if (stat4?.isDirectory()) {
               resolvedPackages.push(glob2);
             }
@@ -30651,19 +31849,19 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     } catch {
     }
   }
-  const nvmrcPath = path17.join(rootPath, ".nvmrc");
-  const nvmrcContent = await fs17.readFile(nvmrcPath, "utf8").catch(() => "");
+  const nvmrcPath = path20.join(rootPath, ".nvmrc");
+  const nvmrcContent = await fs20.readFile(nvmrcPath, "utf8").catch(() => "");
   if (nvmrcContent.trim()) {
     runtimeVersion = { source: ".nvmrc", version: nvmrcContent.trim() };
   } else {
-    const nodeVersionPath = path17.join(rootPath, ".node-version");
-    const nodeVersionContent = await fs17.readFile(nodeVersionPath, "utf8").catch(() => "");
+    const nodeVersionPath = path20.join(rootPath, ".node-version");
+    const nodeVersionContent = await fs20.readFile(nodeVersionPath, "utf8").catch(() => "");
     if (nodeVersionContent.trim()) {
       runtimeVersion = { source: ".node-version", version: nodeVersionContent.trim() };
     }
   }
   const SOURCE_DIR_CANDIDATES = ["src", "lib", "app", "packages", "server", "client"];
-  const rootEntries = await fs17.readdir(rootPath, { withFileTypes: true }).catch(() => []);
+  const rootEntries = await fs20.readdir(rootPath, { withFileTypes: true }).catch(() => []);
   const sourceDirectories = [];
   for (const entry of rootEntries) {
     if (entry.isDirectory() && SOURCE_DIR_CANDIDATES.includes(entry.name)) {
@@ -30679,8 +31877,8 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   }
   let ci;
   if (rootFileNames.includes(".github") || rootEntries.some((e) => e.isDirectory() && e.name === ".github")) {
-    const githubPath = path17.join(rootPath, ".github", "workflows");
-    const workflowEntries = await fs17.readdir(githubPath).catch(() => []);
+    const githubPath = path20.join(rootPath, ".github", "workflows");
+    const workflowEntries = await fs20.readdir(githubPath).catch(() => []);
     if (workflowEntries.length > 0) {
       ci = { platform: "github-actions", configPath: ".github/workflows/" };
     }
@@ -30745,8 +31943,8 @@ function parseTsconfig(content) {
   }
 }
 async function resolveTsconfigStrict(rootPath) {
-  const tsconfigPath = path17.join(rootPath, "tsconfig.json");
-  const content = await fs17.readFile(tsconfigPath, "utf8").catch(() => "");
+  const tsconfigPath = path20.join(rootPath, "tsconfig.json");
+  const content = await fs20.readFile(tsconfigPath, "utf8").catch(() => "");
   if (!content) return void 0;
   const tsconfig = parseTsconfig(content);
   if (!tsconfig) return void 0;
@@ -30759,8 +31957,8 @@ async function resolveTsconfigStrict(rootPath) {
     }
   }
   if (tsconfig.extends) {
-    const extPath = path17.resolve(rootPath, tsconfig.extends);
-    const extContent = await fs17.readFile(extPath, "utf8").catch(() => "");
+    const extPath = path20.resolve(rootPath, tsconfig.extends);
+    const extContent = await fs20.readFile(extPath, "utf8").catch(() => "");
     if (extContent) {
       const ext2 = parseTsconfig(extContent);
       if (ext2?.compilerOptions) {
@@ -30773,8 +31971,8 @@ async function resolveTsconfigStrict(rootPath) {
   }
   if (tsconfig.references?.length) {
     for (const ref of tsconfig.references) {
-      const refPath = path17.join(rootPath, ref.path, "tsconfig.json");
-      const refContent = await fs17.readFile(refPath, "utf8").catch(() => "");
+      const refPath = path20.join(rootPath, ref.path, "tsconfig.json");
+      const refContent = await fs20.readFile(refPath, "utf8").catch(() => "");
       if (refContent) {
         const refConfig = parseTsconfig(refContent);
         if (refConfig?.compilerOptions?.strict !== void 0) {
@@ -30793,7 +31991,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     return;
   }
   try {
-    const entries = await fs17.readdir(dir, { withFileTypes: true });
+    const entries = await fs20.readdir(dir, { withFileTypes: true });
     const files = [];
     const dirs = [];
     for (const entry of entries) {
@@ -30805,7 +32003,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     }
     await callback(dir, files);
     for (const subdir of dirs) {
-      const fullPath = path17.join(dir, subdir);
+      const fullPath = path20.join(dir, subdir);
       await walkDirectory(fullPath, callback, options, currentDepth + 1);
     }
   } catch {
@@ -31141,8 +32339,8 @@ var init_library_client = __esm({
       /**
        * Get agent by path (new agent system)
        */
-      async getAgentByPath(token, path36) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path36}`, {
+      async getAgentByPath(token, path42) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path42}`, {
           method: "GET",
           headers: {
             "Accept": "application/json",
@@ -31158,8 +32356,8 @@ var init_library_client = __esm({
       /**
        * Store agent at specified path (new agent system)
        */
-      async storeAgent(token, path36, agent) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path36}`, {
+      async storeAgent(token, path42, agent) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path42}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -31174,8 +32372,8 @@ var init_library_client = __esm({
       /**
        * Archive agent at specified path (new agent system)
        */
-      async archiveAgent(token, path36) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path36}`, {
+      async archiveAgent(token, path42) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path42}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -31265,9 +32463,9 @@ var init_library_client = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/agents-md-service.ts
-import { promises as fs18 } from "fs";
+import { promises as fs21 } from "fs";
 import { createHash as createHash3 } from "crypto";
-import path18 from "path";
+import path21 from "path";
 var MARKER_START, MARKER_END, AgentsMdService;
 var init_agents_md_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/agents-md-service.ts"() {
@@ -31366,10 +32564,10 @@ ${MARKER_END}`;
         };
       }
       async extractReadmeExcerpt() {
-        const readmePath = path18.join(this.repoPath, "README.md");
+        const readmePath = path21.join(this.repoPath, "README.md");
         let content;
         try {
-          content = await fs18.readFile(readmePath, "utf8");
+          content = await fs21.readFile(readmePath, "utf8");
         } catch {
           return void 0;
         }
@@ -31588,7 +32786,7 @@ ${MARKER_END}`;
         if (analysis.linting?.plugins && analysis.linting.plugins.length > 0) return true;
         return false;
       }
-      formatCIPlatform(platform) {
+      formatCIPlatform(platform2) {
         const platformNames = {
           "github-actions": "GitHub Actions",
           "gitlab-ci": "GitLab CI",
@@ -31596,14 +32794,14 @@ ${MARKER_END}`;
           "jenkins": "Jenkins",
           "travis": "Travis CI"
         };
-        return platformNames[platform] || platform;
+        return platformNames[platform2] || platform2;
       }
       generatePackagesSection(packageDescriptions) {
         const lines = [];
         lines.push("## Packages");
         lines.push("");
         for (const pkg of packageDescriptions) {
-          const name = pkg.name || path18.basename(pkg.path);
+          const name = pkg.name || path21.basename(pkg.path);
           const desc = pkg.description ? ` - ${pkg.description}` : "";
           lines.push(`- **\`${name}\`** (\`${pkg.path}\`)${desc}`);
         }
@@ -31616,12 +32814,12 @@ ${MARKER_END}`;
        */
       async generatePackageContent(packagePath, rootAnalysis, existingContent) {
         const scriptAnalyzer = new ScriptAnalyzer();
-        let pkgName = path18.basename(packagePath);
+        let pkgName = path21.basename(packagePath);
         let pkgDescription;
         let scripts = {};
         try {
-          const pkgJsonPath = path18.join(packagePath, "package.json");
-          const raw2 = await fs18.readFile(pkgJsonPath, "utf-8");
+          const pkgJsonPath = path21.join(packagePath, "package.json");
+          const raw2 = await fs21.readFile(pkgJsonPath, "utf-8");
           const pkgJson = JSON.parse(raw2);
           pkgName = pkgJson.name || pkgName;
           pkgDescription = pkgJson.description;
@@ -31753,9 +32951,9 @@ ${MARKER_END}`;
 });
 
 // packages/tiny-brain-core/src/services/analysis/config-setup-service.ts
-import { promises as fs19 } from "node:fs";
-import { existsSync as existsSync4 } from "node:fs";
-import * as path19 from "node:path";
+import { promises as fs22 } from "node:fs";
+import { existsSync as existsSync7 } from "node:fs";
+import * as path22 from "node:path";
 var HOOK_SIGNATURE, EXEC_HELPER_CONTENT, HOOK_NAMES, SKILL_PERMISSIONS, CONTEXT_START_MARKER, CONTEXT_END_MARKER, SILENT_LOGGER, ConfigSetupService;
 var init_config_setup_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/config-setup-service.ts"() {
@@ -31841,10 +33039,10 @@ esac
        * Creates directories that do not yet exist.
        */
       async initializeDirectories(flags) {
-        const prdInitialized = flags.enableSDD ? await this.createDirectoryIfMissing(path19.join("docs", "prd")) : false;
-        const adrInitialized = flags.enableADR ? await this.createDirectoryIfMissing(path19.join("docs", "adr")) : false;
-        const qualityInitialized = flags.enableQuality ? await this.createDirectoryIfMissing(path19.join(".tiny-brain", "quality")) : false;
-        const fixesInitialized = flags.enableSDD ? await this.createDirectoryWithProgress(path19.join(".tiny-brain", "fixes"), "progress.json") : false;
+        const prdInitialized = flags.enableSDD ? await this.createDirectoryIfMissing(path22.join("docs", "prd")) : false;
+        const adrInitialized = flags.enableADR ? await this.createDirectoryIfMissing(path22.join("docs", "adr")) : false;
+        const qualityInitialized = flags.enableQuality ? await this.createDirectoryIfMissing(path22.join(".tiny-brain", "quality")) : false;
+        const fixesInitialized = flags.enableSDD ? await this.createDirectoryWithProgress(path22.join(".tiny-brain", "fixes"), "progress.json") : false;
         return { prdInitialized, adrInitialized, qualityInitialized, fixesInitialized };
       }
       /**
@@ -31852,10 +33050,10 @@ esac
        * Idempotent — skips entries that already exist.
        */
       async ensureGitignoreEntries() {
-        const gitignorePath = path19.join(this.repoPath, ".gitignore");
+        const gitignorePath = path22.join(this.repoPath, ".gitignore");
         let content = "";
         try {
-          content = await fs19.readFile(gitignorePath, "utf-8");
+          content = await fs22.readFile(gitignorePath, "utf-8");
         } catch {
         }
         const entries = [
@@ -31870,7 +33068,7 @@ esac
           "# tiny-brain operational data (auto-added by analyse)",
           ...missing
         ].join("\n") + "\n";
-        await fs19.appendFile(gitignorePath, block, "utf-8");
+        await fs22.appendFile(gitignorePath, block, "utf-8");
         this.logger.info(`Added ${missing.length} entries to .gitignore`);
       }
       /**
@@ -31882,33 +33080,33 @@ esac
           this.logger.debug("No hooksSourceDir provided, skipping git hooks installation");
           return false;
         }
-        const gitDir = path19.join(this.repoPath, ".git");
-        if (!existsSync4(gitDir)) {
+        const gitDir = path22.join(this.repoPath, ".git");
+        if (!existsSync7(gitDir)) {
           this.logger.debug("Not a git repository, skipping git hooks initialization");
           return false;
         }
-        if (!existsSync4(this.hooksSourceDir)) {
+        if (!existsSync7(this.hooksSourceDir)) {
           this.logger.debug(`Hook templates not found at ${this.hooksSourceDir}, skipping`);
           return false;
         }
-        const gitHooksDir = path19.join(gitDir, "hooks");
-        await fs19.mkdir(gitHooksDir, { recursive: true });
+        const gitHooksDir = path22.join(gitDir, "hooks");
+        await fs22.mkdir(gitHooksDir, { recursive: true });
         let anyInstalled = false;
         for (const hookName of HOOK_NAMES) {
-          const srcHook = path19.join(this.hooksSourceDir, hookName);
-          const destHook = path19.join(gitHooksDir, hookName);
-          if (!existsSync4(srcHook)) {
+          const srcHook = path22.join(this.hooksSourceDir, hookName);
+          const destHook = path22.join(gitHooksDir, hookName);
+          if (!existsSync7(srcHook)) {
             continue;
           }
-          if (existsSync4(destHook)) {
+          if (existsSync7(destHook)) {
             try {
-              const existingContent = await fs19.readFile(destHook, "utf-8");
+              const existingContent = await fs22.readFile(destHook, "utf-8");
               if (!existingContent.includes(HOOK_SIGNATURE)) {
                 this.logger.debug(`Skipping ${hookName} - custom hook already exists`);
                 continue;
               }
-              const srcStat = await fs19.stat(srcHook);
-              const destStat = await fs19.stat(destHook);
+              const srcStat = await fs22.stat(srcHook);
+              const destStat = await fs22.stat(destHook);
               if (srcStat.mtime <= destStat.mtime) {
                 continue;
               }
@@ -31916,8 +33114,8 @@ esac
               continue;
             }
           }
-          await fs19.copyFile(srcHook, destHook);
-          await fs19.chmod(destHook, 493);
+          await fs22.copyFile(srcHook, destHook);
+          await fs22.chmod(destHook, 493);
           anyInstalled = true;
           this.logger.info(`Installed git hook: ${hookName}`);
         }
@@ -31933,9 +33131,9 @@ esac
        * and outputs the correct exec command (pnpm exec, npx, yarn exec, bunx).
        */
       async installExecHelper(gitHooksDir) {
-        const helperPath = path19.join(gitHooksDir, "tiny-brain-exec");
-        await fs19.writeFile(helperPath, EXEC_HELPER_CONTENT, "utf-8");
-        await fs19.chmod(helperPath, 493);
+        const helperPath = path22.join(gitHooksDir, "tiny-brain-exec");
+        await fs22.writeFile(helperPath, EXEC_HELPER_CONTENT, "utf-8");
+        await fs22.chmod(helperPath, 493);
         this.logger.debug("Installed tiny-brain-exec helper");
       }
       /**
@@ -31944,13 +33142,13 @@ esac
        */
       async injectSkillPermissions() {
         try {
-          const settingsDir = path19.join(this.repoPath, ".claude");
-          const settingsPath = path19.join(settingsDir, "settings.json");
-          await fs19.mkdir(settingsDir, { recursive: true });
+          const settingsDir = path22.join(this.repoPath, ".claude");
+          const settingsPath = path22.join(settingsDir, "settings.json");
+          await fs22.mkdir(settingsDir, { recursive: true });
           let settings = {};
-          if (existsSync4(settingsPath)) {
+          if (existsSync7(settingsPath)) {
             try {
-              const content = await fs19.readFile(settingsPath, "utf-8");
+              const content = await fs22.readFile(settingsPath, "utf-8");
               settings = JSON.parse(content);
             } catch {
               this.logger.warn("Failed to parse existing settings.json, will create new one");
@@ -31973,7 +33171,7 @@ esac
             }
           }
           if (addedPermissions.length > 0) {
-            await fs19.writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+            await fs22.writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
             this.logger.info(`Added ${addedPermissions.length} skill permissions to .claude/settings.json`);
           }
           return addedPermissions;
@@ -32015,10 +33213,10 @@ version: ${this.version}
 
 ${workflowContent}${CONTEXT_END_MARKER}
 `;
-        const claudeMdPath = path19.join(this.repoPath, "CLAUDE.md");
+        const claudeMdPath = path22.join(this.repoPath, "CLAUDE.md");
         let existingContent = "";
         try {
-          existingContent = await fs19.readFile(claudeMdPath, "utf-8");
+          existingContent = await fs22.readFile(claudeMdPath, "utf-8");
         } catch {
         }
         if (existingContent.includes(CONTEXT_START_MARKER)) {
@@ -32038,8 +33236,8 @@ ${workflowContent}${CONTEXT_END_MARKER}
         } else {
           existingContent = existingContent.trimEnd() + "\n\n" + repoBlock;
         }
-        await fs19.mkdir(path19.dirname(claudeMdPath), { recursive: true });
-        await fs19.writeFile(claudeMdPath, existingContent, "utf-8");
+        await fs22.mkdir(path22.dirname(claudeMdPath), { recursive: true });
+        await fs22.writeFile(claudeMdPath, existingContent, "utf-8");
         this.logger.info("Updated workflow sections in CLAUDE.md");
         return true;
       }
@@ -32048,8 +33246,8 @@ ${workflowContent}${CONTEXT_END_MARKER}
        */
       async readConfigFlags() {
         try {
-          const configPath = path19.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs19.readFile(configPath, "utf-8");
+          const configPath = path22.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs22.readFile(configPath, "utf-8");
           const config = JSON.parse(content);
           return {
             enableSDD: config.preferences?.repo?.enableSDD ?? true,
@@ -32071,8 +33269,8 @@ ${workflowContent}${CONTEXT_END_MARKER}
        */
       async isAgenticCodingEnabled() {
         try {
-          const configPath = path19.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs19.readFile(configPath, "utf-8");
+          const configPath = path22.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs22.readFile(configPath, "utf-8");
           const config = JSON.parse(content);
           return config.preferences?.repo?.enableAgenticCoding ?? false;
         } catch {
@@ -32084,8 +33282,8 @@ ${workflowContent}${CONTEXT_END_MARKER}
        */
       async detectMonorepo() {
         try {
-          const analysisPath = path19.join(this.repoPath, ".tiny-brain", "analysis.json");
-          const content = await fs19.readFile(analysisPath, "utf-8");
+          const analysisPath = path22.join(this.repoPath, ".tiny-brain", "analysis.json");
+          const content = await fs22.readFile(analysisPath, "utf-8");
           const analysis = JSON.parse(content);
           return !!analysis.monorepo;
         } catch {
@@ -32097,12 +33295,12 @@ ${workflowContent}${CONTEXT_END_MARKER}
        * Returns true if the directory was created, false if it already existed.
        */
       async createDirectoryIfMissing(relativePath) {
-        const fullPath = path19.join(this.repoPath, relativePath);
-        if (existsSync4(fullPath)) {
+        const fullPath = path22.join(this.repoPath, relativePath);
+        if (existsSync7(fullPath)) {
           return false;
         }
         try {
-          await fs19.mkdir(fullPath, { recursive: true });
+          await fs22.mkdir(fullPath, { recursive: true });
           this.logger.info(`Created ${relativePath}/ directory`);
           return true;
         } catch (error) {
@@ -32117,10 +33315,10 @@ ${workflowContent}${CONTEXT_END_MARKER}
        */
       async createDirectoryWithProgress(relativePath, progressFile) {
         const dirCreated = await this.createDirectoryIfMissing(relativePath);
-        const progressPath = path19.join(this.repoPath, relativePath, progressFile);
-        if (!existsSync4(progressPath)) {
+        const progressPath = path22.join(this.repoPath, relativePath, progressFile);
+        if (!existsSync7(progressPath)) {
           try {
-            await fs19.writeFile(progressPath, JSON.stringify({ fixes: [], lastSynced: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), "utf-8");
+            await fs22.writeFile(progressPath, JSON.stringify({ fixes: [], lastSynced: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), "utf-8");
             this.logger.info(`Created ${relativePath}/${progressFile}`);
           } catch (error) {
             this.logger.warn(
@@ -32550,9 +33748,9 @@ Write tests and production code directly in the main session. Follow the RED/GRE
 
 // packages/tiny-brain-core/src/services/analysis/analysis-service.ts
 import { readFile as readFile8, writeFile as writeFile2 } from "fs/promises";
-import { existsSync as existsSync5 } from "fs";
-import { fileURLToPath as fileURLToPath3 } from "url";
-import { dirname as dirname4, join as join12 } from "path";
+import { existsSync as existsSync8 } from "fs";
+import { fileURLToPath as fileURLToPath4 } from "url";
+import { dirname as dirname8, join as join18 } from "path";
 var AnalysisService;
 var init_analysis_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/analysis-service.ts"() {
@@ -32589,7 +33787,7 @@ var init_analysis_service = __esm({
        */
       async isAgenticCodingEnabled() {
         try {
-          const configPath = join12(this.repoPath, ".tiny-brain", "config.json");
+          const configPath = join18(this.repoPath, ".tiny-brain", "config.json");
           const content = await readFile8(configPath, "utf-8");
           const config = JSON.parse(content);
           return config.preferences?.repo?.enableAgenticCoding ?? false;
@@ -32602,7 +33800,7 @@ var init_analysis_service = __esm({
        */
       async isManageAgentsMdEnabled() {
         try {
-          const configPath = join12(this.repoPath, ".tiny-brain", "config.json");
+          const configPath = join18(this.repoPath, ".tiny-brain", "config.json");
           const content = await readFile8(configPath, "utf-8");
           const config = JSON.parse(content);
           return config.preferences?.repo?.manageAgentsMd ?? true;
@@ -32790,7 +33988,7 @@ var init_analysis_service = __esm({
        */
       async generateAgentsMd(analysis) {
         const agentsMdService = new AgentsMdService(this.repoPath);
-        const agentsMdPath = join12(this.repoPath, "AGENTS.md");
+        const agentsMdPath = join18(this.repoPath, "AGENTS.md");
         let existingContent;
         try {
           existingContent = await readFile8(agentsMdPath, "utf-8");
@@ -32821,12 +34019,12 @@ var init_analysis_service = __esm({
        */
       resolveHooksDir() {
         try {
-          const currentFile = fileURLToPath3(import.meta.url);
-          const currentDir = dirname4(currentFile);
-          const hooksDir = join12(currentDir, "..", "..", "..", "templates", "hooks");
-          const srcHooksDir = join12(currentDir, "..", "..", "..", "..", "templates", "hooks");
-          if (existsSync5(hooksDir)) return hooksDir;
-          if (existsSync5(srcHooksDir)) return srcHooksDir;
+          const currentFile = fileURLToPath4(import.meta.url);
+          const currentDir = dirname8(currentFile);
+          const hooksDir = join18(currentDir, "..", "..", "..", "templates", "hooks");
+          const srcHooksDir = join18(currentDir, "..", "..", "..", "..", "templates", "hooks");
+          if (existsSync8(hooksDir)) return hooksDir;
+          if (existsSync8(srcHooksDir)) return srcHooksDir;
           return void 0;
         } catch {
           return void 0;
@@ -32856,11 +34054,11 @@ var init_analysis_service = __esm({
        */
       async getPackageVersion() {
         try {
-          const currentFile = fileURLToPath3(import.meta.url);
-          const currentDir = dirname4(currentFile);
+          const currentFile = fileURLToPath4(import.meta.url);
+          const currentDir = dirname8(currentFile);
           const paths = [
-            join12(currentDir, "..", "..", "..", "package.json"),
-            join12(currentDir, "..", "..", "..", "..", "package.json")
+            join18(currentDir, "..", "..", "..", "package.json"),
+            join18(currentDir, "..", "..", "..", "..", "package.json")
           ];
           for (const p of paths) {
             try {
@@ -32881,8 +34079,8 @@ var init_analysis_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/config-health-service.ts
-import { promises as fs20 } from "fs";
-import path20 from "path";
+import { promises as fs23 } from "fs";
+import path23 from "path";
 var HOOK_SIGNATURE2, REQUIRED_PERMISSIONS, CONTEXT_START_MARKER2, CONTEXT_END_MARKER2, ConfigHealthService;
 var init_config_health_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/config-health-service.ts"() {
@@ -32902,10 +34100,10 @@ var init_config_health_service = __esm({
       settingsPath;
       constructor(repoPath) {
         this.repoPath = repoPath;
-        this.gitDir = path20.join(repoPath, ".git");
-        this.hooksDir = path20.join(this.gitDir, "hooks");
-        this.claudeMdPath = path20.join(repoPath, "CLAUDE.md");
-        this.settingsPath = path20.join(repoPath, ".claude", "settings.json");
+        this.gitDir = path23.join(repoPath, ".git");
+        this.hooksDir = path23.join(this.gitDir, "hooks");
+        this.claudeMdPath = path23.join(repoPath, "CLAUDE.md");
+        this.settingsPath = path23.join(repoPath, ".claude", "settings.json");
       }
       _hooksResolved = false;
       /**
@@ -32917,20 +34115,20 @@ var init_config_health_service = __esm({
         if (this._hooksResolved) return;
         this._hooksResolved = true;
         try {
-          const stats = await fs20.stat(this.gitDir);
+          const stats = await fs23.stat(this.gitDir);
           if (stats.isFile()) {
-            const localHooksDir = path20.join(this.repoPath, ".claude", "hooks");
+            const localHooksDir = path23.join(this.repoPath, ".claude", "hooks");
             try {
-              await fs20.stat(localHooksDir);
+              await fs23.stat(localHooksDir);
               this.hooksDir = localHooksDir;
               return;
             } catch {
             }
-            const content = await fs20.readFile(this.gitDir, "utf-8");
+            const content = await fs23.readFile(this.gitDir, "utf-8");
             const match3 = content.match(/^gitdir:\s*(.+)$/m);
             if (match3) {
-              const resolvedGitDir = path20.resolve(this.repoPath, match3[1].trim());
-              this.hooksDir = path20.join(resolvedGitDir, "hooks");
+              const resolvedGitDir = path23.resolve(this.repoPath, match3[1].trim());
+              this.hooksDir = path23.join(resolvedGitDir, "hooks");
             }
           }
         } catch {
@@ -32940,11 +34138,11 @@ var init_config_health_service = __esm({
        * Check status of a single git hook
        */
       async checkHook(hookName) {
-        const hookPath = path20.join(this.hooksDir, hookName);
+        const hookPath = path23.join(this.hooksDir, hookName);
         try {
-          const stats = await fs20.stat(hookPath);
+          const stats = await fs23.stat(hookPath);
           const isExecutable = (stats.mode & 64) !== 0;
-          const content = await fs20.readFile(hookPath, "utf-8");
+          const content = await fs23.readFile(hookPath, "utf-8");
           const isSigned = content.includes(HOOK_SIGNATURE2);
           return {
             name: hookName,
@@ -32987,7 +34185,7 @@ var init_config_health_service = __esm({
        */
       async checkContextBlock() {
         try {
-          const content = await fs20.readFile(this.claudeMdPath, "utf-8");
+          const content = await fs23.readFile(this.claudeMdPath, "utf-8");
           const hasStartMarker = content.includes(CONTEXT_START_MARKER2);
           const hasEndMarker = content.includes(CONTEXT_END_MARKER2);
           const present = hasStartMarker && hasEndMarker;
@@ -33038,7 +34236,7 @@ var init_config_health_service = __esm({
        */
       async checkSkillPermissions() {
         try {
-          const content = await fs20.readFile(this.settingsPath, "utf-8");
+          const content = await fs23.readFile(this.settingsPath, "utf-8");
           const settings = JSON.parse(content);
           const allowedPermissions = settings.permissions?.allow || [];
           const missing = REQUIRED_PERMISSIONS.filter(
@@ -33111,7 +34309,7 @@ var init_config_health_service = __esm({
        */
       async directoryExists(relativePath) {
         try {
-          const stats = await fs20.stat(path20.join(this.repoPath, relativePath));
+          const stats = await fs23.stat(path23.join(this.repoPath, relativePath));
           return stats.isDirectory();
         } catch {
           return false;
@@ -33122,7 +34320,7 @@ var init_config_health_service = __esm({
        */
       async checkIsGitRepo() {
         try {
-          const stats = await fs20.stat(this.gitDir);
+          const stats = await fs23.stat(this.gitDir);
           return stats.isDirectory() || stats.isFile();
         } catch {
           return false;
@@ -33145,8 +34343,8 @@ var init_config_health_service = __esm({
           manageAgentsMd: true
         };
         try {
-          const configPath = path20.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs20.readFile(configPath, "utf-8");
+          const configPath = path23.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs23.readFile(configPath, "utf-8");
           const config = JSON.parse(content);
           const repo = config.repo ?? {};
           const flag = (key) => {
@@ -33243,8 +34441,8 @@ var init_capability_engine = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/recommendation-service.ts
-import path21 from "path";
-import fs21 from "fs/promises";
+import path24 from "path";
+import fs24 from "fs/promises";
 import childProcess from "child_process";
 var RecommendationService;
 var init_recommendation_service = __esm({
@@ -33257,11 +34455,11 @@ var init_recommendation_service = __esm({
       capabilityDeps;
       constructor(repoPath, capabilityDeps) {
         this.repoPath = repoPath;
-        this.recommendationsDir = path21.join(repoPath, ".tiny-brain", "recommendations");
+        this.recommendationsDir = path24.join(repoPath, ".tiny-brain", "recommendations");
         this.capabilityDeps = capabilityDeps;
       }
       async ensureDirectory() {
-        await fs21.mkdir(this.recommendationsDir, { recursive: true });
+        await fs24.mkdir(this.recommendationsDir, { recursive: true });
       }
       async writeRecommendations(recs, fetchedAt) {
         await this.ensureDirectory();
@@ -33270,13 +34468,13 @@ var init_recommendation_service = __esm({
           lastFetchedAt: fetchedAt,
           recommendations: recs
         };
-        const filePath = path21.join(this.recommendationsDir, "recommendations.json");
-        await fs21.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
+        const filePath = path24.join(this.recommendationsDir, "recommendations.json");
+        await fs24.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
       }
       async readRecommendations() {
-        const filePath = path21.join(this.recommendationsDir, "recommendations.json");
+        const filePath = path24.join(this.recommendationsDir, "recommendations.json");
         try {
-          const content = await fs21.readFile(filePath, "utf-8");
+          const content = await fs24.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return null;
@@ -33330,9 +34528,9 @@ var init_recommendation_service = __esm({
         return installed;
       }
       async readInstalledRecommendations() {
-        const filePath = path21.join(this.recommendationsDir, "installed.json");
+        const filePath = path24.join(this.recommendationsDir, "installed.json");
         try {
-          const content = await fs21.readFile(filePath, "utf-8");
+          const content = await fs24.readFile(filePath, "utf-8");
           const file = JSON.parse(content);
           return [...file.installed];
         } catch {
@@ -33370,15 +34568,15 @@ var init_recommendation_service = __esm({
         return `.claude/skills/${skillName}/SKILL.md`;
       }
       async installAgent(rec) {
-        const agentsDir = path21.join(this.repoPath, ".claude", "agents");
-        await fs21.mkdir(agentsDir, { recursive: true });
-        await fs21.writeFile(path21.join(agentsDir, `${rec.id}.md`), rec.source, "utf-8");
+        const agentsDir = path24.join(this.repoPath, ".claude", "agents");
+        await fs24.mkdir(agentsDir, { recursive: true });
+        await fs24.writeFile(path24.join(agentsDir, `${rec.id}.md`), rec.source, "utf-8");
         return `.claude/agents/${rec.id}.md`;
       }
       async installHook(rec) {
-        const hooksDir = path21.join(this.repoPath, ".claude", "hooks");
-        await fs21.mkdir(hooksDir, { recursive: true });
-        await fs21.writeFile(path21.join(hooksDir, `${rec.id}.json`), rec.source, "utf-8");
+        const hooksDir = path24.join(this.repoPath, ".claude", "hooks");
+        await fs24.mkdir(hooksDir, { recursive: true });
+        await fs24.writeFile(path24.join(hooksDir, `${rec.id}.json`), rec.source, "utf-8");
         return `.claude/hooks/${rec.id}.json`;
       }
       async mergeRecommendations(incoming, fetchedAt) {
@@ -33411,8 +34609,8 @@ var init_recommendation_service = __esm({
           version: "1.0",
           dismissed: [...existing, dismissed]
         };
-        const filePath = path21.join(this.recommendationsDir, "dismissed.json");
-        await fs21.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
+        const filePath = path24.join(this.recommendationsDir, "dismissed.json");
+        await fs24.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
       }
       async restoreRecommendation(recommendationId) {
         await this.ensureDirectory();
@@ -33422,13 +34620,13 @@ var init_recommendation_service = __esm({
           version: "1.0",
           dismissed: filtered
         };
-        const filePath = path21.join(this.recommendationsDir, "dismissed.json");
-        await fs21.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
+        const filePath = path24.join(this.recommendationsDir, "dismissed.json");
+        await fs24.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
       }
       async readDismissedRecommendations() {
-        const filePath = path21.join(this.recommendationsDir, "dismissed.json");
+        const filePath = path24.join(this.recommendationsDir, "dismissed.json");
         try {
-          const content = await fs21.readFile(filePath, "utf-8");
+          const content = await fs24.readFile(filePath, "utf-8");
           const file = JSON.parse(content);
           return [...file.dismissed];
         } catch {
@@ -33455,17 +34653,17 @@ var init_recommendation_service = __esm({
           version: "1.0",
           installed: [...existing, installed]
         };
-        const filePath = path21.join(this.recommendationsDir, "installed.json");
-        await fs21.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
+        const filePath = path24.join(this.recommendationsDir, "installed.json");
+        await fs24.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
       }
     };
   }
 });
 
 // packages/tiny-brain-core/src/services/analysis/capability-step-helpers.ts
-import fs22 from "fs/promises";
+import fs25 from "fs/promises";
 import childProcess2 from "child_process";
-import path22 from "path";
+import path25 from "path";
 function execFileAsync(cmd, args, opts) {
   return new Promise((resolve3, reject) => {
     childProcess2.execFile(cmd, [...args], { ...opts, encoding: "utf-8" }, (err, stdout, stderr) => {
@@ -33477,8 +34675,8 @@ function execFileAsync(cmd, args, opts) {
 async function npmInstall(packages, opts) {
   const description = `Install npm packages: ${packages.join(", ")}`;
   try {
-    const pkgJsonPath = path22.join(opts.repoPath, "package.json");
-    const pkgJson = JSON.parse(await fs22.readFile(pkgJsonPath, "utf-8"));
+    const pkgJsonPath = path25.join(opts.repoPath, "package.json");
+    const pkgJson = JSON.parse(await fs25.readFile(pkgJsonPath, "utf-8"));
     const allDeps = {
       ...pkgJson.dependencies,
       ...pkgJson.devDependencies
@@ -33497,20 +34695,20 @@ async function npmInstall(packages, opts) {
   }
 }
 async function writeConfigFile(filePath, content, opts) {
-  const relativePath = path22.relative(opts.repoPath, filePath);
+  const relativePath = path25.relative(opts.repoPath, filePath);
   const description = `Write config file: ${relativePath}`;
   try {
     let exists = true;
     try {
-      await fs22.access(filePath);
+      await fs25.access(filePath);
     } catch {
       exists = false;
     }
     if (exists && opts.overwrite !== true) {
       return { stepIndex: 0, description, status: "skipped" };
     }
-    await fs22.mkdir(path22.dirname(filePath), { recursive: true });
-    await fs22.writeFile(filePath, content, "utf-8");
+    await fs25.mkdir(path25.dirname(filePath), { recursive: true });
+    await fs25.writeFile(filePath, content, "utf-8");
     return { stepIndex: 0, description, status: "completed", installedPath: relativePath };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -33518,19 +34716,19 @@ async function writeConfigFile(filePath, content, opts) {
   }
 }
 async function appendToFile(filePath, content, opts) {
-  const relativePath = path22.relative(opts.repoPath, filePath);
+  const relativePath = path25.relative(opts.repoPath, filePath);
   const description = `Append to file: ${relativePath}`;
   try {
     let existing = "";
     try {
-      existing = await fs22.readFile(filePath, "utf-8");
+      existing = await fs25.readFile(filePath, "utf-8");
     } catch {
     }
     if (existing.includes(content.trim())) {
       return { stepIndex: 0, description, status: "skipped" };
     }
-    await fs22.mkdir(path22.dirname(filePath), { recursive: true });
-    await fs22.appendFile(filePath, content, "utf-8");
+    await fs25.mkdir(path25.dirname(filePath), { recursive: true });
+    await fs25.appendFile(filePath, content, "utf-8");
     return { stepIndex: 0, description, status: "completed", installedPath: relativePath };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -33561,11 +34759,11 @@ var init_capability_step_helpers = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/capabilities/mutation-testing.ts
-import { existsSync as existsSync6 } from "fs";
-import path23 from "path";
+import { existsSync as existsSync9 } from "fs";
+import path26 from "path";
 function detectSourceDirs(packagePath) {
   const candidates = ["src", "server", "lib"];
-  return candidates.filter((dir) => existsSync6(path23.join(packagePath, dir)));
+  return candidates.filter((dir) => existsSync9(path26.join(packagePath, dir)));
 }
 function buildMutatePaths(sourceDirs) {
   const dirs = sourceDirs.length > 0 ? sourceDirs : ["src"];
@@ -33636,11 +34834,11 @@ npx stryker run --mutate "src/path/to/file.ts"
         if (packages.length > 0) {
           for (const pkg of packages) {
             onProgress({ stepIndex, description: `Write stryker config for ${pkg}`, status: "running" });
-            const packagePath = path23.join(repoPath, pkg);
+            const packagePath = path26.join(repoPath, pkg);
             const sourceDirs = detectSourceDirs(packagePath);
             const mutatePaths = buildMutatePaths(sourceDirs);
             const configContent = generateStrykerConfig(testRunner, mutatePaths);
-            const configPath = path23.join(packagePath, "stryker.config.mjs");
+            const configPath = path26.join(packagePath, "stryker.config.mjs");
             const writeResult = await writeConfigFile(configPath, configContent, { repoPath });
             results.push({ ...writeResult, stepIndex });
             onProgress({ stepIndex, description: `Write stryker config for ${pkg}`, status: writeResult.status === "failed" ? "failed" : "completed" });
@@ -33651,14 +34849,14 @@ npx stryker run --mutate "src/path/to/file.ts"
           const sourceDirs = detectSourceDirs(repoPath);
           const mutatePaths = buildMutatePaths(sourceDirs);
           const configContent = generateStrykerConfig(testRunner, mutatePaths);
-          const configPath = path23.join(repoPath, "stryker.config.mjs");
+          const configPath = path26.join(repoPath, "stryker.config.mjs");
           const writeResult = await writeConfigFile(configPath, configContent, { repoPath });
           results.push({ ...writeResult, stepIndex });
           onProgress({ stepIndex, description: "Write stryker config", status: writeResult.status === "failed" ? "failed" : "completed" });
           stepIndex++;
         }
         onProgress({ stepIndex, description: "Write mutant-tester agent", status: "running" });
-        const agentPath = path23.join(repoPath, ".claude", "agents", "mutant-tester.md");
+        const agentPath = path26.join(repoPath, ".claude", "agents", "mutant-tester.md");
         const agentResult = await writeConfigFile(agentPath, MUTANT_TESTER_AGENT, { repoPath });
         results.push({ ...agentResult, stepIndex });
         onProgress({ stepIndex, description: "Write mutant-tester agent", status: agentResult.status === "failed" ? "failed" : "completed" });
@@ -33669,7 +34867,7 @@ npx stryker run --mutate "src/path/to/file.ts"
         onProgress({ stepIndex, description: "Enable mutation testing", status: configResult.status === "failed" ? "failed" : "completed" });
         stepIndex++;
         onProgress({ stepIndex, description: "Add .stryker-tmp to .gitignore", status: "running" });
-        const gitignorePath = path23.join(repoPath, ".gitignore");
+        const gitignorePath = path26.join(repoPath, ".gitignore");
         const gitignoreContent = "\n# Stryker mutation testing sandbox\n.stryker-tmp/\n";
         const gitignoreResult = await appendToFile(gitignorePath, gitignoreContent, { repoPath });
         results.push({ ...gitignoreResult, stepIndex });
@@ -33681,7 +34879,7 @@ npx stryker run --mutate "src/path/to/file.ts"
 });
 
 // packages/tiny-brain-core/src/services/analysis/capabilities/security-scanning.ts
-import path24 from "path";
+import path27 from "path";
 var NPM_AUDIT_HOOK, dependencyAuditInstaller;
 var init_security_scanning = __esm({
   "packages/tiny-brain-core/src/services/analysis/capabilities/security-scanning.ts"() {
@@ -33705,7 +34903,7 @@ fi
         const results = [];
         let stepIndex = 0;
         onProgress({ stepIndex, description: "Write npm audit pre-push hook", status: "running" });
-        const hookPath = path24.join(repoPath, ".husky", "pre-push");
+        const hookPath = path27.join(repoPath, ".husky", "pre-push");
         const writeResult = await writeConfigFile(hookPath, NPM_AUDIT_HOOK, { repoPath });
         results.push({ ...writeResult, stepIndex });
         onProgress({ stepIndex, description: "Write npm audit pre-push hook", status: writeResult.status === "failed" ? "failed" : "completed" });
@@ -33738,8 +34936,8 @@ var init_registry = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/skill-validation-service.ts
-import { promises as fs23 } from "node:fs";
-import * as path25 from "node:path";
+import { promises as fs26 } from "node:fs";
+import * as path28 from "node:path";
 function parseFrontmatter(content) {
   if (!content.startsWith("---")) {
     return { metadata: null, body: content };
@@ -33781,10 +34979,10 @@ function hasUsageContext(description) {
 async function countFilesRecursive(dirPath) {
   let count = 0;
   try {
-    const entries = await fs23.readdir(dirPath, { withFileTypes: true });
+    const entries = await fs26.readdir(dirPath, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        count += await countFilesRecursive(path25.join(dirPath, entry.name));
+        count += await countFilesRecursive(path28.join(dirPath, entry.name));
       } else if (entry.isFile()) {
         count += 1;
       }
@@ -33795,16 +34993,16 @@ async function countFilesRecursive(dirPath) {
 }
 async function containsSecrets(dirPath) {
   try {
-    const entries = await fs23.readdir(dirPath, { withFileTypes: true });
+    const entries = await fs26.readdir(dirPath, { withFileTypes: true });
     for (const entry of entries) {
-      const entryPath = path25.join(dirPath, entry.name);
+      const entryPath = path28.join(dirPath, entry.name);
       if (entry.isDirectory()) {
         if (await containsSecrets(entryPath)) {
           return true;
         }
       } else if (entry.isFile()) {
         try {
-          const content = await fs23.readFile(entryPath, "utf-8");
+          const content = await fs26.readFile(entryPath, "utf-8");
           for (const pattern of SECRET_PATTERNS) {
             if (pattern.test(content)) {
               return true;
@@ -33885,7 +35083,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                await fs23.access(path25.join(skillPath, "SKILL.md"));
+                await fs26.access(path28.join(skillPath, "SKILL.md"));
                 return {
                   id: "skill-md-exists",
                   name: "SKILL.md exists",
@@ -33911,7 +35109,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -33947,7 +35145,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -34002,7 +35200,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -34048,7 +35246,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -34092,9 +35290,9 @@ var init_skill_validation_service = __esm({
             description: "Check that the directory name matches the name field and is kebab-case",
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
-              const dirName = path25.basename(skillPath);
+              const dirName = path28.basename(skillPath);
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null || typeof metadata["name"] !== "string") {
                   return {
@@ -34142,7 +35340,7 @@ var init_skill_validation_service = __esm({
               const found = [];
               for (const dirName of OPTIONAL_DIRS) {
                 try {
-                  const stat4 = await fs23.stat(path25.join(skillPath, dirName));
+                  const stat4 = await fs26.stat(path28.join(skillPath, dirName));
                   if (stat4.isDirectory()) {
                     found.push(dirName);
                   }
@@ -34183,7 +35381,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -34238,7 +35436,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -34303,7 +35501,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
               try {
-                const content = await fs23.readFile(path25.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs26.readFile(path28.join(skillPath, "SKILL.md"), "utf-8");
                 const { body } = parseFrontmatter(content);
                 if (body.trim() === "") {
                   return {
@@ -34414,7 +35612,7 @@ var init_skill_validation_service = __esm({
        * @returns Validation result with all checks, score, and grade
        */
       async validateSkill(skillPath) {
-        const skillName = path25.basename(skillPath);
+        const skillName = path28.basename(skillPath);
         const structuralRules = this.buildStructuralRules();
         const contentRules = this.buildContentRules();
         const allRules = [...structuralRules, ...contentRules];
@@ -34434,6 +35632,1286 @@ var init_skill_validation_service = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/modules/analysis/analysis-diff.ts
+function compareAnalysis(oldAnalysis, newAnalysis) {
+  const techStackChanges = detectTechStackChanges(
+    {
+      languages: oldAnalysis.languages,
+      frameworks: oldAnalysis.frameworks,
+      buildTools: oldAnalysis.buildTools,
+      testingTools: oldAnalysis.testingTools
+    },
+    {
+      languages: newAnalysis.languages,
+      frameworks: newAnalysis.frameworks,
+      buildTools: newAnalysis.buildTools,
+      testingTools: newAnalysis.testingTools
+    }
+  );
+  const hasChanges = techStackChanges.added.length > 0 || techStackChanges.removed.length > 0;
+  return {
+    hasChanges,
+    techStackChanges
+  };
+}
+function detectTechStackChanges(oldStack, newStack) {
+  const oldItems = /* @__PURE__ */ new Set([
+    ...oldStack.languages,
+    ...oldStack.frameworks,
+    ...oldStack.buildTools,
+    ...oldStack.testingTools
+  ]);
+  const newItems = /* @__PURE__ */ new Set([
+    ...newStack.languages,
+    ...newStack.frameworks,
+    ...newStack.buildTools,
+    ...newStack.testingTools
+  ]);
+  const added = [];
+  const removed = [];
+  for (const item of newItems) {
+    if (!oldItems.has(item)) {
+      added.push(item);
+    }
+  }
+  for (const item of oldItems) {
+    if (!newItems.has(item)) {
+      removed.push(item);
+    }
+  }
+  return { added, removed };
+}
+function formatTechStackChanges(diff) {
+  if (diff.added.length === 0 && diff.removed.length === 0) {
+    return "";
+  }
+  const lines = ["\u{1F4CA} Tech stack changes detected:"];
+  for (const item of diff.added) {
+    lines.push(`  \u2728 ${item} (new)`);
+  }
+  for (const item of diff.removed) {
+    lines.push(`  \u274C ${item} (removed)`);
+  }
+  return lines.join("\n");
+}
+function formatAgentChanges(updates) {
+  if (updates.length === 0) {
+    return "\u{1F916} Agents up to date";
+  }
+  const lines = ["\u{1F916} Agent updates applied:"];
+  for (const update of updates) {
+    if (update.type === "update") {
+      const description = update.description ? ` (${update.description})` : "";
+      lines.push(`  \u2705 ${update.name} v${update.fromVersion} \u2192 v${update.toVersion}${description}`);
+    } else if (update.type === "new") {
+      lines.push(`  \u2728 ${update.name} v${update.toVersion} (new)`);
+    } else if (update.type === "remove") {
+      const description = update.description ? ` (${update.description})` : "";
+      lines.push(`  \u{1F5D1}\uFE0F ${update.name}${description}`);
+    }
+  }
+  return lines.join("\n");
+}
+var init_analysis_diff = __esm({
+  "packages/tiny-brain-core/src/modules/analysis/analysis-diff.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/utils/package-version.ts
+import { readFileSync } from "fs";
+import { join as join20, dirname as dirname9 } from "path";
+import { fileURLToPath as fileURLToPath5 } from "url";
+function getPackageVersion() {
+  const __filename = fileURLToPath5(import.meta.url);
+  const __dirname2 = dirname9(__filename);
+  const packagePath = join20(__dirname2, "..", "..", "package.json");
+  try {
+    const packageJson = JSON.parse(readFileSync(packagePath, "utf-8"));
+    return packageJson.version;
+  } catch (error) {
+    throw new Error(`Failed to read package version: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+var init_package_version = __esm({
+  "packages/tiny-brain-core/src/utils/package-version.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/repo/repo-service.ts
+import * as fs27 from "fs/promises";
+import { existsSync as existsSync10, readFileSync as readFileSync2 } from "fs";
+import * as path29 from "path";
+import { fileURLToPath as fileURLToPath6 } from "url";
+var RepoService;
+var init_repo_service = __esm({
+  "packages/tiny-brain-core/src/services/repo/repo-service.ts"() {
+    "use strict";
+    init_repo_utils();
+    init_config_service();
+    RepoService = class _RepoService {
+      constructor(context) {
+        this.context = context;
+        const contextWithRepo = {
+          ...context,
+          repositoryRoot: context.repositoryRoot || this.getRepositoryRoot()
+        };
+        this.configService = new ConfigService(contextWithRepo);
+      }
+      static REPO_BLOCK_START = "## tiny-brain - start";
+      static REPO_BLOCK_END = "## tiny-brain - end";
+      configService;
+      /**
+       * Get repository root using the repo-utils helper
+       * This is used as fallback when context.repositoryRoot is not set
+       */
+      getRepositoryRoot() {
+        try {
+          return getRepoRoot();
+        } catch {
+          return void 0;
+        }
+      }
+      /**
+       * Read the repository block from context file (for legacy migration)
+       */
+      async readRepoBlockFromContextFile(contextFilePath = "CLAUDE.md") {
+        try {
+          const repoRoot = getRepoRoot();
+          const fullPath = path29.join(repoRoot, contextFilePath);
+          const content = await fs27.readFile(fullPath, "utf-8");
+          const startMarker = _RepoService.REPO_BLOCK_START;
+          const endMarker = _RepoService.REPO_BLOCK_END;
+          const startIndex = content.indexOf(startMarker);
+          if (startIndex === -1) {
+            return null;
+          }
+          const endIndex = content.indexOf(endMarker, startIndex);
+          if (endIndex === -1) {
+            const nextSectionIndex = content.indexOf("\n## ", startIndex + 1);
+            if (nextSectionIndex > -1) {
+              return content.substring(startIndex, nextSectionIndex).trimEnd();
+            }
+            return content.substring(startIndex).trimEnd();
+          }
+          return content.substring(startIndex, endIndex + endMarker.length).trimEnd();
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            return null;
+          }
+          throw error;
+        }
+      }
+      /**
+       * Extract version from tiny-brain block frontmatter
+       * @param content - The content containing the tiny-brain block
+       * @returns Version string or null if not found/invalid
+       */
+      extractTinyBrainVersion(content) {
+        const versionRegex = /## tiny-brain - start\n---\nversion: ([0-9]+\.[0-9]+\.[0-9]+)/;
+        const match3 = content.match(versionRegex);
+        return match3 ? match3[1] : null;
+      }
+      /**
+       * Check if we're in a repository context
+       */
+      isInRepository() {
+        try {
+          getRepoRoot();
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      /**
+       * Check if repository is initialized (has .tiny-brain/analysis.json)
+       * This is the new initialization check - no longer checks CLAUDE.md
+       */
+      async isRepositoryInitialized() {
+        if (!this.isInRepository()) {
+          return false;
+        }
+        try {
+          const repoRoot = getRepoRoot();
+          const analysisPath = path29.join(repoRoot, ".tiny-brain", "analysis.json");
+          return existsSync10(analysisPath);
+        } catch {
+          return false;
+        }
+      }
+      /**
+       * Get the analysis version from package.json
+       */
+      getAnalysisVersion() {
+        try {
+          const currentFilePath = fileURLToPath6(import.meta.url);
+          const packageJsonPath = path29.join(path29.dirname(currentFilePath), "../../../package.json");
+          const packageJson = JSON.parse(readFileSync2(packageJsonPath, "utf-8"));
+          return packageJson.version || "0.0.0";
+        } catch (error) {
+          this.context.logger.warn("Failed to read package version:", error);
+          return "0.0.0";
+        }
+      }
+      /**
+       * Write workflow sections to CLAUDE.md based on config flags
+       *
+       * Writes the following sections when their respective flags are enabled:
+       * - Commit Message Format (when SDD enabled)
+       * - TDD Workflow (when TDD enabled)
+       * - Progress Tracking Auto-Commit Configuration (when SDD enabled)
+       * - Operational Tracking Directory (when SDD enabled)
+       */
+      async writeWorkflowSections(options = {}) {
+        const { contextPath = "CLAUDE.md" } = options;
+        const enableSDD = await this.configService.isSDDEnabled();
+        const enableTDD = await this.configService.isTDDEnabled();
+        const enableAgentic = await this.configService.isAgenticCodingEnabled();
+        if (!enableSDD && !enableTDD) {
+          return;
+        }
+        let workflowContent = "";
+        workflowContent += this.formatRepoContextSection(enableAgentic, options.isMonorepo);
+        if (enableSDD) {
+          workflowContent += this.formatCommitMessageSection();
+        }
+        if (enableTDD) {
+          workflowContent += this.formatTDDWorkflowSection();
+        }
+        if (enableSDD) {
+          workflowContent += this.formatProgressTrackingSection();
+        }
+        if (enableSDD) {
+          workflowContent += this.formatWorktreeMergeSection();
+        }
+        if (enableSDD) {
+          workflowContent += this.formatOperationalTrackingSection();
+        }
+        const version = this.getAnalysisVersion();
+        const repoBlock = `${_RepoService.REPO_BLOCK_START}
+---
+version: ${version}
+---
+
+${workflowContent}${_RepoService.REPO_BLOCK_END}
+`;
+        const repoRoot = getRepoRoot();
+        const fullPath = path29.join(repoRoot, contextPath);
+        let existingContent = "";
+        try {
+          existingContent = await fs27.readFile(fullPath, "utf-8");
+        } catch {
+        }
+        const startMarker = _RepoService.REPO_BLOCK_START;
+        const endMarker = _RepoService.REPO_BLOCK_END;
+        if (existingContent.includes(startMarker)) {
+          const startIndex = existingContent.indexOf(startMarker);
+          const endIndex = existingContent.indexOf(endMarker, startIndex);
+          if (endIndex > -1) {
+            const afterEnd = existingContent.substring(endIndex + endMarker.length);
+            existingContent = existingContent.substring(0, startIndex) + repoBlock + afterEnd;
+          } else {
+            const nextSectionIndex = existingContent.indexOf("\n## ", startIndex + 1);
+            if (nextSectionIndex > -1) {
+              existingContent = existingContent.substring(0, startIndex) + repoBlock + existingContent.substring(nextSectionIndex);
+            } else {
+              existingContent = existingContent.substring(0, startIndex) + repoBlock;
+            }
+          }
+        } else {
+          existingContent = existingContent.trimEnd() + "\n\n" + repoBlock;
+        }
+        await fs27.mkdir(path29.dirname(fullPath), { recursive: true });
+        await fs27.writeFile(fullPath, existingContent, "utf-8");
+        this.context.logger.info(`Updated workflow sections in ${contextPath}`);
+      }
+      /**
+       * Format the Repository Context section
+       * When agentic coding is enabled, includes a mandatory agent delegation section
+       */
+      formatRepoContextSection(enableAgenticCoding, isMonorepo) {
+        let content = `## Repository Context
+
+`;
+        if (isMonorepo) {
+          content += `Before starting work, read the root \`AGENTS.md\` for comprehensive project context (tech stack, commands, structure).
+When working in a specific package, also read that package's \`AGENTS.md\` for package-specific details.
+`;
+        } else {
+          content += `Before starting work, read \`AGENTS.md\` for comprehensive project context (tech stack, commands, structure).
+`;
+        }
+        content += `Also read \`.tiny-brain/analysis.json\` for detailed detection data and test patterns.
+
+`;
+        if (enableAgenticCoding) {
+          content += `## TDD Implementation
+
+Write tests and production code directly in the main session. Follow the RED/GREEN/REFACTOR cycle:
+
+1. **RED**: Write failing tests, commit with \`test:\` prefix
+2. **GREEN**: Write minimum implementation to pass tests, commit with \`feat:\` prefix
+   - The review pipeline triggers automatically after feat: commits (via pipeline command)
+   - Handle refactoring from review as \`refactor:\` commits
+3. Run \`npx tiny-brain commit progress\` when the TDD cycle is complete
+
+`;
+        }
+        return content;
+      }
+      /**
+       * Format the Commit Message Format section
+       */
+      formatCommitMessageSection() {
+        return `## Commit Message Format
+
+### CRITICAL: Commit Header Requirements
+
+**BEFORE EVERY COMMIT**, check if you're working on tracked work:
+
+1. **Active PRDs?** Check \`.tiny-brain/progress/\` for \`in_progress\` status
+2. **Open Fixes?** Check \`.tiny-brain/fixes/progress.json\` for \`not_started\` or \`in_progress\` status
+
+**If YES, you MUST include tracking headers or the commit will be REJECTED.**
+
+### For PRD-tracked work:
+\`\`\`
+feat(scope): description
+
+PRD: {prd-id}
+Feature: {feature-id}
+Task: {exact task description from progress.json}
+
+Description of changes...
+\`\`\`
+
+### For Fix-tracked work:
+\`\`\`
+feat(scope): description
+
+Fix: {fix-id}
+Task: {exact task description from fix document}
+
+Description of changes...
+\`\`\`
+
+### Commit Types
+| Type | When | Headers Required? |
+|------|------|-------------------|
+| \`test:\` | Writing failing tests (TDD RED) | Yes |
+| \`feat:\` | Implementation (TDD GREEN) | Yes |
+| \`fix:\` | Bug fixes | Yes |
+| \`refactor:\` | Code improvement | Yes |
+| \`chore:\` | Maintenance (untracked) | No |
+| \`untracked:\` | Work not related to any PRD or Fix | No |
+
+**WARNING:** The commit-msg hook will reject commits missing required headers.
+
+### Fix Status Workflow
+
+Fix documents have four statuses: \`not_started\` \u2192 \`in_progress\` \u2192 \`completed\` | \`superseded\`
+
+**When starting work on a fix:**
+1. Open the fix file: \`.tiny-brain/fixes/{fix-id}.md\`
+2. Update frontmatter: \`status: in_progress\`
+3. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
+
+**After each commit:**
+1. Update the completed task(s) in the markdown:
+   \`\`\`markdown
+   ### 1. Task description
+   status: completed
+   commitSha: abc1234
+   \`\`\`
+2. If one commit addresses multiple tasks, use the same commitSha for all of them
+3. If a task is no longer needed (work done elsewhere or obsolete), mark it superseded:
+   \`\`\`markdown
+   ### 3. Obsolete task
+   status: superseded
+   commitSha: null
+   \`\`\`
+4. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
+
+**When all tasks are complete:**
+1. **ONLY set \`status: completed\`** when ALL tasks are accounted for:
+   - 100% of tasks must have either \`status: completed\` (with commitSha) or \`status: superseded\`
+   - Example: A fix with 5 tasks could be: 3 completed + 2 superseded = completed
+   - A fix with incomplete tasks stays \`in_progress\`
+2. Update YAML frontmatter:
+   - Set \`status: completed\`
+   - Set \`resolved: YYYY-MM-DDTHH:mm:ss.sssZ\` (ISO timestamp)
+   - Add \`resolution\` object:
+     \`\`\`yaml
+     resolution:
+       rootCause: Brief description of what caused the issue
+       fix:
+         - First fix action taken
+         - Second fix action taken
+       filesModified:
+         - path/to/file1.ts
+         - path/to/file2.ts
+     \`\`\`
+3. Run: \`npx tiny-brain sync-progress .tiny-brain/fixes/{fix-id}.md\`
+
+**Note:** The markdown file is the source of truth. The \`sync-progress\` command updates \`progress.json\` from the markdown.
+
+`;
+      }
+      /**
+       * Format the TDD Workflow section
+       */
+      formatTDDWorkflowSection() {
+        return `## TDD Workflow
+
+IMPORTANT: This repository follows strict Test-Driven Development (TDD) with a 3-phase commit workflow.
+
+**Red \u2192 Green \u2192 Refactor Cycle:**
+
+1. **Red Phase** (\`test:\` or \`test(scope):\` commits):
+   - **CRITICAL \u2014 you MUST run before writing tests:**
+     \`npx tiny-brain task-start --task '...' [--fix ID | --prd ID --feature ID]\`
+   - For tasks that don't need tests (config, shell scripts, docs, templates), skip RED:
+     \`npx tiny-brain task-start --task '...' [--fix ID | --prd ID --feature ID] --phase green\`
+     This sets \`testCommitSha: 'skipped'\` and goes straight to Green phase.
+   - Write failing tests first
+   - Tests SHOULD fail (that's the point!)
+   - Use: \`git commit -m "test: ..."\` or \`git commit -m "test(api): ..."\`
+   - Git hook automatically runs typecheck + lint but SKIPS tests
+   - Tracked in: \`testCommitSha\` field
+
+2. **Green Phase** (\`feat:\` or \`feat(scope):\` commits):
+   - Phase is derived automatically from commit SHAs (no manual step needed)
+   - Implement minimum code to make tests pass
+   - Use: \`git commit -m "feat: ..."\` or \`git commit -m "feat(auth): ..."\`
+   - Git hook automatically runs full checks (typecheck + lint + test)
+   - Tracked in: \`commitSha\` field
+   - **After commit:** adversarial review starts automatically
+
+3. **Refactor Phase** (\`refactor:\` or \`refactor(scope):\` commits - optional):
+   - Triggered by adversarial review suggestions
+   - Improve code quality without changing behavior
+   - Use: \`git commit -m "refactor: ..."\` or \`git commit -m "refactor(plan): ..."\`
+   - Git hook automatically runs full checks (typecheck + lint + test)
+   - **After commit:** post-commit hook automatically records refactor completion
+
+4. **Progress Commit** (end of cycle):
+   - After the full RED\u2192GREEN\u2192REFACTOR cycle is complete
+   - Run: \`npx tiny-brain commit-progress\`
+
+**What you must do manually:** Only \`task-start\` before writing tests. Everything else is automated by hooks.
+
+**What you must NOT do:** Do not manually manage phase transitions \u2014 they are derived from commit SHAs.
+
+`;
+      }
+      /**
+       * Format the Progress Tracking Auto-Commit Configuration section
+       */
+      formatProgressTrackingSection() {
+        return `## Progress Tracking Auto-Commit Configuration
+
+By default, tiny-brain uses **manual mode** for progress.json commits. This means after tracking a task commit, you must manually stage and commit the progress.json updates. This keeps your working tree clean and gives you full control over what gets committed.
+
+### Default Behavior (Manual Mode)
+
+When you complete a task with a \`feat:\` or \`test:\` commit:
+1. The post-commit hook updates progress.json automatically
+2. You'll see a friendly message with instructions
+3. Commit the progress.json changes by running:
+   \`\`\`bash
+   npx tiny-brain commit-progress
+   \`\`\`
+
+### Enabling Auto-Commit
+
+Auto-commit automatically creates a second commit containing progress.json updates after each tracked task commit.
+
+**Enable globally (all repos):**
+\`\`\`bash
+npx tiny-brain config preferences set autoCommitProgress true
+\`\`\`
+
+**Enable for current repo only:**
+\`\`\`bash
+npx tiny-brain config preferences set autoCommitProgress true --repo
+\`\`\`
+
+**Disable auto-commit:**
+\`\`\`bash
+npx tiny-brain config preferences set autoCommitProgress false
+\`\`\`
+
+**Check current setting:**
+\`\`\`bash
+npx tiny-brain config preferences get autoCommitProgress
+\`\`\`
+
+### When to Use Each Mode
+
+**Use Manual Mode (default) when:**
+- Working in a team - keeps progress updates separate from feature commits
+- You want full control over what gets committed
+- You prefer to batch progress updates
+- You're concerned about commit history noise
+
+**Use Auto-Commit Mode when:**
+- Working solo or in small teams where commit noise is acceptable
+- You want progress always synced with remote
+- You frequently switch machines and need up-to-date progress
+- You forget to commit progress.json regularly
+
+### Configuration Hierarchy
+
+Settings follow this precedence (highest to lowest):
+1. Per-repository config (\`.git/tiny-brain/preferences.json\`)
+2. Global config (\`~/.tiny-brain/config/preferences.json\`)
+3. Default values (manual mode)
+
+This allows you to set a global preference but override it per repository as needed.
+
+`;
+      }
+      /**
+       * Format the Worktree Merge Workflow section
+       */
+      formatWorktreeMergeSection() {
+        return `## Worktree Merge Workflow
+
+When merging a worktree branch back into the main branch, \`progress.json\` files may conflict because both branches tracked different task completions. The \`post-merge\` git hook handles this automatically.
+
+### How It Works
+
+1. After a merge, the hook detects if any \`.tiny-brain/progress/*.json\` or \`.tiny-brain/fixes/progress.json\` files changed
+2. If so, it re-runs \`npx tiny-brain sync-progress\` on all markdown sources to regenerate progress.json
+3. The regenerated files are staged and committed as \`chore: re-sync progress after merge\`
+
+### Handling Merge Conflicts in progress.json
+
+If you encounter a merge conflict in progress.json:
+1. Accept either version (it doesn't matter which)
+2. Complete the merge
+3. The post-merge hook will regenerate progress.json from the markdown sources automatically
+
+### Manual Re-sync
+
+If the hook doesn't run or you need to re-sync manually:
+\`\`\`bash
+npx tiny-brain sync-progress docs/prd/*/features/*.md
+npx tiny-brain sync-progress .tiny-brain/fixes/*.md
+\`\`\`
+
+`;
+      }
+      /**
+       * Format the Operational Tracking Directory section
+       */
+      formatOperationalTrackingSection() {
+        return `## Operational Tracking Directory (.tiny-brain/)
+
+The \`.tiny-brain/\` directory stores operational tracking data separate from documentation:
+
+\`\`\`
+.tiny-brain/
+\u251C\u2500\u2500 analysis.json       # Detected tech stack and repo analysis
+\u251C\u2500\u2500 tech/               # Technology-specific context files
+\u2502   \u251C\u2500\u2500 config.json     # Tech context mode configuration
+\u2502   \u2514\u2500\u2500 {name}.md       # One file per detected technology
+\u251C\u2500\u2500 progress/           # PRD progress tracking
+\u2502   \u2514\u2500\u2500 {prd-id}.json   # One file per PRD
+\u2514\u2500\u2500 fixes/              # Fix progress tracking
+    \u2514\u2500\u2500 progress.json   # Aggregated fix tracking
+\`\`\`
+
+**Key distinction:**
+- **Documentation** (in \`docs/\`) - PRD markdown, feature specs, fix analysis - permanent, reviewed
+- **Operational tracking** (in \`.tiny-brain/\`) - progress.json files - transient, auto-generated
+
+### Gitignore Options
+
+Teams can choose whether to track progress files in git:
+
+**Option 1: Track progress (default)** - Keep \`.tiny-brain/\` in git for visibility across team members.
+
+**Option 2: Ignore progress** - Add to \`.gitignore\` to reduce PR noise:
+\`\`\`gitignore
+# Ignore operational tracking (optional)
+.tiny-brain/progress/
+.tiny-brain/fixes/progress.json
+\`\`\`
+
+**Option 3: Ignore all** - Ignore entire directory:
+\`\`\`gitignore
+.tiny-brain/
+\`\`\`
+
+`;
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/analysis/analyse-service.ts
+import { fileURLToPath as fileURLToPath7 } from "url";
+import { dirname as dirname11, join as join22 } from "path";
+import { existsSync as existsSync11 } from "fs";
+import { readFile as readFile10, readdir as readdir7, writeFile as writeFile4 } from "fs/promises";
+var AnalyseService;
+var init_analyse_service = __esm({
+  "packages/tiny-brain-core/src/services/analysis/analyse-service.ts"() {
+    "use strict";
+    init_analyser();
+    init_analysis_diff();
+    init_config_service();
+    init_config_setup_service();
+    init_repo_config_service();
+    init_library_client();
+    init_tech_context_service();
+    init_agents_md_service();
+    init_recommendation_service();
+    init_analyzer_detection_service();
+    init_analyzer_registry();
+    init_package_version();
+    init_repo_service();
+    AnalyseService = class {
+      constructor(context, deps) {
+        this.context = context;
+        this.deps = deps ?? {
+          analyseRepository,
+          configService: new ConfigService(context),
+          repoService: new RepoService(context),
+          libraryClient: new LibraryClient(),
+          recommendationService: new RecommendationService(process.cwd()),
+          techContextService: new TechContextService(process.cwd()),
+          createRepoConfigService: (c) => new RepoConfigService(c),
+          createConfigSetupService: (opts) => new ConfigSetupService(opts)
+        };
+      }
+      deps;
+      /**
+       * Perform repository analysis with unified behavior for initialized/uninitialized repos
+       */
+      async performAnalysis(options = {}) {
+        const { dryRun = false, contextPath = "CLAUDE.md" } = options;
+        const currentAnalysis = await this.deps.analyseRepository(process.cwd());
+        this.context.logger.info(`Repository analysis complete: ${currentAnalysis.languages.join(", ")}`);
+        await this.registerRepository();
+        const configSetupResult = await this.performConfigSetup();
+        const prdInitialized = configSetupResult?.prdInitialized ?? false;
+        const adrInitialized = configSetupResult?.adrInitialized ?? false;
+        const qualityInitialized = configSetupResult?.qualityInitialized ?? false;
+        const fixesInitialized = configSetupResult?.fixesInitialized ?? false;
+        const gitHooksInstalled = configSetupResult?.gitHooksInstalled ?? false;
+        const skillPermissionsAdded = configSetupResult?.skillPermissionsAdded ?? [];
+        const analysisInput = {
+          languages: currentAnalysis.languages,
+          frameworks: currentAnalysis.frameworks,
+          testingTools: currentAnalysis.testingTools,
+          buildTools: currentAnalysis.buildTools,
+          hasTests: currentAnalysis.hasTests,
+          testFileCount: currentAnalysis.testFileCount,
+          testPatterns: currentAnalysis.testPatterns,
+          isPolyglot: currentAnalysis.isPolyglot,
+          primaryLanguage: currentAnalysis.primaryLanguage,
+          documentationPattern: currentAnalysis.documentationPattern,
+          documentationLocations: currentAnalysis.documentationLocations,
+          // Rich metadata
+          packageManager: currentAnalysis.packageManager,
+          scripts: currentAnalysis.scripts,
+          linting: currentAnalysis.linting,
+          monorepo: currentAnalysis.monorepo,
+          projectName: currentAnalysis.projectName,
+          sourceDirectories: currentAnalysis.sourceDirectories
+        };
+        const detectionService = new AnalyzerDetectionService(process.cwd());
+        const detectedAnalyzers = await detectionService.detectAnalyzers();
+        if (detectedAnalyzers.length > 0) {
+          analysisInput.analyzers = detectedAnalyzers.map((a) => {
+            const def = ANALYZER_REGISTRY.find((d) => d.id === a.analyzerId);
+            let pipelineCommand = null;
+            if (def?.variants) {
+              for (const variant of def.variants) {
+                if (variant.changedTemplate) {
+                  pipelineCommand = variant.changedTemplate;
+                  break;
+                }
+              }
+            }
+            return {
+              id: a.analyzerId,
+              name: a.name,
+              variant: null,
+              configPaths: [...a.configPaths],
+              commands: {
+                quality: a.commands[0],
+                pipeline: pipelineCommand
+              },
+              categories: [...a.categories],
+              emoji: def?.emoji,
+              color: def?.color
+            };
+          });
+        }
+        const stackChanged = await this.deps.techContextService.hasStackChanged(analysisInput);
+        const existingAnalysis = await this.deps.techContextService.readAnalysis();
+        const isFirstAnalysis = existingAnalysis === null;
+        if (!dryRun) {
+          await this.deps.techContextService.writeAnalysis(analysisInput);
+        }
+        let writtenTechContexts = [];
+        if (!dryRun) {
+          writtenTechContexts = await this.fetchAndWriteTechContexts(currentAnalysis);
+        }
+        let recommendations = [];
+        if (!dryRun) {
+          recommendations = await this.fetchAndWriteRecommendations(currentAnalysis);
+        }
+        const enableAgentic = await this.deps.configService.isAgenticCodingEnabled();
+        if (!dryRun) {
+          await this.deps.techContextService.syncAgents(enableAgentic);
+        }
+        let agentsMdStatus;
+        const manageAgentsMd = await this.deps.configService.isManageAgentsMdEnabled();
+        if (!dryRun && manageAgentsMd) {
+          agentsMdStatus = await this.generateAgentsMd(currentAnalysis);
+        }
+        const currentVersion = getPackageVersion();
+        const existingContent = await this.deps.repoService.readRepoBlockFromContextFile(contextPath);
+        const contextBlockVersion = existingContent ? this.deps.repoService.extractTinyBrainVersion(existingContent) ?? void 0 : void 0;
+        const contextBlockUpdated = existingContent ? this.needsTinyBrainUpdate(existingContent, currentVersion) : false;
+        if (isFirstAnalysis) {
+          this.context.logger.info("First analysis - no previous repository context found");
+          return {
+            analysis: currentAnalysis,
+            isFirstAnalysis: true,
+            dryRun,
+            contextPath,
+            enableAgenticCoding: enableAgentic,
+            prdInitialized,
+            adrInitialized,
+            qualityInitialized,
+            fixesInitialized,
+            gitHooksInstalled,
+            contextBlockVersion,
+            contextBlockUpdated,
+            skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
+            writtenTechContexts,
+            agentsMdStatus,
+            recommendations
+          };
+        }
+        if (!stackChanged) {
+          this.context.logger.info("No tech stack changes detected");
+          return {
+            analysis: currentAnalysis,
+            isFirstAnalysis: false,
+            dryRun,
+            contextPath,
+            enableAgenticCoding: enableAgentic,
+            prdInitialized,
+            adrInitialized,
+            qualityInitialized,
+            fixesInitialized,
+            gitHooksInstalled,
+            contextBlockVersion,
+            contextBlockUpdated,
+            skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
+            writtenTechContexts,
+            agentsMdStatus,
+            recommendations
+          };
+        }
+        const previousStack = existingAnalysis?.stack;
+        const techStackDiff = previousStack ? {
+          added: [
+            ...currentAnalysis.languages.filter((l) => !previousStack.languages.includes(l)),
+            ...currentAnalysis.frameworks.filter((f) => !previousStack.frameworks.includes(f)),
+            ...currentAnalysis.buildTools.filter((b) => !previousStack.build.includes(b)),
+            ...currentAnalysis.testingTools.filter((t) => !previousStack.testing.includes(t))
+          ],
+          removed: [
+            ...previousStack.languages.filter((l) => !currentAnalysis.languages.includes(l)),
+            ...previousStack.frameworks.filter((f) => !currentAnalysis.frameworks.includes(f)),
+            ...previousStack.build.filter((b) => !currentAnalysis.buildTools.includes(b)),
+            ...previousStack.testing.filter((t) => !currentAnalysis.testingTools.includes(t))
+          ]
+        } : { added: [], removed: [] };
+        this.context.logger.info(`Tech stack changes detected: +${techStackDiff.added.length} -${techStackDiff.removed.length}`);
+        return {
+          analysis: currentAnalysis,
+          isFirstAnalysis: false,
+          dryRun,
+          contextPath,
+          enableAgenticCoding: enableAgentic,
+          prdInitialized,
+          adrInitialized,
+          qualityInitialized,
+          fixesInitialized,
+          gitHooksInstalled,
+          contextBlockVersion,
+          contextBlockUpdated,
+          changes: {
+            techStackAdded: techStackDiff.added,
+            techStackRemoved: techStackDiff.removed
+          },
+          skillPermissionsAdded: skillPermissionsAdded.length > 0 ? skillPermissionsAdded : void 0,
+          writtenTechContexts,
+          agentsMdStatus,
+          recommendations
+        };
+      }
+      /**
+       * Generate AGENTS.md file in the repository root.
+       * For monorepos, also generates per-package AGENTS.md files.
+       */
+      async generateAgentsMd(analysis) {
+        const repoRoot = process.cwd();
+        const agentsMdService = new AgentsMdService(repoRoot);
+        const agentsMdPath = join22(repoRoot, "AGENTS.md");
+        let existingContent;
+        try {
+          existingContent = await readFile10(agentsMdPath, "utf-8");
+        } catch {
+        }
+        const readmeExcerpt = await agentsMdService.extractReadmeExcerpt();
+        let packageDescriptions;
+        if (analysis.monorepo?.packages && analysis.monorepo.packages.length > 0) {
+          packageDescriptions = await this.collectPackageDescriptions(repoRoot, analysis.monorepo.packages);
+        }
+        const result = await agentsMdService.generateContent({
+          analysis,
+          readmeExcerpt,
+          repoPath: repoRoot,
+          existingContent,
+          packageDescriptions
+        });
+        if (!existingContent) {
+          await writeFile4(agentsMdPath, result.content, "utf-8");
+          this.context.logger.info("Created AGENTS.md");
+        } else if (!result.contentChanged) {
+          this.context.logger.info("AGENTS.md is up to date");
+        } else {
+          await writeFile4(agentsMdPath, result.content, "utf-8");
+          this.context.logger.info("Updated AGENTS.md");
+        }
+        if (analysis.monorepo?.packages && analysis.monorepo.packages.length > 0) {
+          await this.generatePerPackageAgentsMd(repoRoot, analysis, agentsMdService);
+        }
+        if (!existingContent) return "created";
+        if (!result.contentChanged) return "up-to-date";
+        return "updated";
+      }
+      /**
+       * Read package.json from each workspace directory to collect names and descriptions
+       */
+      async collectPackageDescriptions(repoRoot, packages) {
+        const descriptions = [];
+        for (const pkgPath of packages) {
+          const fullPath = join22(repoRoot, pkgPath);
+          const pkgJsonPath = join22(fullPath, "package.json");
+          try {
+            const raw2 = await readFile10(pkgJsonPath, "utf-8");
+            const pkgJson = JSON.parse(raw2);
+            descriptions.push({
+              name: pkgJson.name,
+              path: pkgPath,
+              description: pkgJson.description
+            });
+          } catch {
+            descriptions.push({ path: pkgPath });
+          }
+        }
+        return descriptions;
+      }
+      /**
+       * Generate AGENTS.md for each workspace package in a monorepo
+       */
+      async generatePerPackageAgentsMd(repoRoot, analysis, agentsMdService) {
+        const packages = analysis.monorepo?.packages ?? [];
+        for (const pkgPath of packages) {
+          const fullPkgPath = join22(repoRoot, pkgPath);
+          const pkgAgentsMdPath = join22(fullPkgPath, "AGENTS.md");
+          let existingPkgContent;
+          try {
+            existingPkgContent = await readFile10(pkgAgentsMdPath, "utf-8");
+          } catch {
+          }
+          const pkgResult = await agentsMdService.generatePackageContent(
+            fullPkgPath,
+            analysis,
+            existingPkgContent
+          );
+          if (!existingPkgContent || pkgResult.contentChanged) {
+            await writeFile4(pkgAgentsMdPath, pkgResult.content, "utf-8");
+            this.context.logger.debug(`Wrote AGENTS.md for ${pkgPath}`);
+          }
+        }
+      }
+      /**
+       * Register repository in dashboard for visibility
+       * Called after successful analysis regardless of invocation method
+       */
+      async registerRepository() {
+        try {
+          const repoRoot = process.cwd();
+          const repoConfigService = this.deps.createRepoConfigService(this.context);
+          const repoName = repoRoot.split("/").pop() || "unknown";
+          const prdCount = await this.countPrdsInRepo(repoRoot);
+          await repoConfigService.registerRepo({
+            name: repoName,
+            path: repoRoot,
+            prdCount
+          });
+          this.context.logger.debug(`Registered repository: ${repoName}`);
+        } catch (error) {
+          this.context.logger.warn(`Failed to register repository: ${error instanceof Error ? error.message : "Unknown error"}`);
+        }
+      }
+      /**
+       * Count PRD directories in a repository
+       */
+      async countPrdsInRepo(repoPath) {
+        try {
+          const prdDir = join22(repoPath, "docs", "prd");
+          if (!existsSync11(prdDir)) {
+            return 0;
+          }
+          const entries = await readdir7(prdDir, { withFileTypes: true });
+          return entries.filter((e) => e.isDirectory() && !e.name.startsWith("_")).length;
+        } catch {
+          return 0;
+        }
+      }
+      /**
+       * Perform config setup using core ConfigSetupService.
+       * Delegates directory initialization, git hooks, skill permissions, and CLAUDE.md
+       * context block writing to the shared service.
+       */
+      async performConfigSetup() {
+        try {
+          const hooksSourceDir = this.resolveHooksDir();
+          const version = getPackageVersion();
+          const configSetup = this.deps.createConfigSetupService({
+            repoPath: process.cwd(),
+            version,
+            hooksSourceDir,
+            logger: {
+              info: (msg) => this.context.logger.info(msg),
+              debug: (msg) => this.context.logger.debug(msg),
+              warn: (msg) => this.context.logger.warn(msg)
+            }
+          });
+          return await configSetup.performSetup();
+        } catch (error) {
+          this.context.logger.warn(`Config setup failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+          return void 0;
+        }
+      }
+      /**
+       * Resolve hooks template directory.
+       *
+       * Templates ship with this package under `templates/hooks/`. The
+       * walk works for both compiled and source layouts:
+       *   - compiled: <pkg>/dist/services/analysis/analyse-service.js → ../../.. = <pkg>
+       *   - tests:    <pkg>/src/services/analysis/analyse-service.ts  → ../../.. = <pkg>
+       *
+       * If the directory isn't found, the caller (`performConfigSetup`)
+       * still completes — but git hooks won't be installed. We emit a
+       * `warn` so the silent-failure mode that produced the original
+       * post-relocation regression is loud the next time something
+       * shifts the dist layout.
+       */
+      resolveHooksDir() {
+        const __filename = fileURLToPath7(import.meta.url);
+        const __dirname2 = dirname11(__filename);
+        const hooksDir = join22(__dirname2, "..", "..", "..", "templates", "hooks");
+        if (existsSync11(hooksDir)) return hooksDir;
+        this.context.logger.warn(
+          `Hooks template directory not found at ${hooksDir}; git hooks will not be installed`
+        );
+        return void 0;
+      }
+      /**
+       * Fetch tech contexts from TBR and write them to .tiny-brain/tech/
+       * Only called when enableAgenticCoding=false
+       */
+      async fetchAndWriteTechContexts(analysis) {
+        try {
+          if (!this.context.authToken?.token) {
+            this.context.logger.debug("No auth token available for TBR API call");
+            return [];
+          }
+          const response = await this.deps.libraryClient.getTechContexts(analysis, this.context.authToken.token);
+          if (!response?.techContexts || response.techContexts.length === 0) {
+            this.context.logger.debug("No tech contexts returned from TBR");
+            return [];
+          }
+          const writtenContexts = [];
+          for (const techContext of response.techContexts) {
+            const name = techContext.frontmatter.name;
+            await this.deps.techContextService.writeTechFileRaw(name, techContext.raw);
+            writtenContexts.push(name);
+            this.context.logger.debug(`Wrote tech context: ${name}`);
+          }
+          this.context.logger.info(`Wrote ${writtenContexts.length} tech context(s) to .tiny-brain/tech/`);
+          return writtenContexts;
+        } catch (error) {
+          this.context.logger.warn(`Failed to fetch tech contexts from TBR: ${error instanceof Error ? error.message : "Unknown error"}`);
+          return [];
+        }
+      }
+      /**
+       * Fetch recommendations from TBR and write them via RecommendationService
+       */
+      async fetchAndWriteRecommendations(analysis) {
+        try {
+          if (!this.context.authToken?.token) {
+            this.context.logger.debug("No auth token available for recommendations API call");
+            return [];
+          }
+          const response = await this.deps.libraryClient.getRecommendations(analysis, this.context.authToken.token);
+          if (!response?.recommendations || response.recommendations.length === 0) {
+            this.context.logger.debug("No recommendations returned from TBR");
+            return [];
+          }
+          await this.deps.recommendationService.writeRecommendations(response.recommendations, response.fetchedAt);
+          this.context.logger.info(`Fetched ${response.recommendations.length} recommendation(s) from TBR`);
+          return response.recommendations;
+        } catch (error) {
+          this.context.logger.warn(`Failed to fetch recommendations from TBR: ${error instanceof Error ? error.message : "Unknown error"}`);
+          return [];
+        }
+      }
+      /**
+       * Format analysis output for display
+       */
+      formatAnalysisOutput(result) {
+        const lines = [];
+        if (result.dryRun) {
+          lines.push("[DRY RUN - No changes applied]\n");
+          if (result.changes) {
+            lines.push("Would apply the following changes:\n");
+          }
+        }
+        const currentVersion = getPackageVersion();
+        if (result.contextBlockUpdated) {
+          lines.push(`\u{1F4DD} Context block updated to v${currentVersion}`);
+          if (result.contextBlockVersion) {
+            lines.push(`  (was v${result.contextBlockVersion})
+`);
+          } else {
+            lines.push(`  (was not versioned)
+`);
+          }
+        } else if (result.contextBlockVersion) {
+          lines.push(`\u2705 Context block current (v${currentVersion})
+`);
+        } else if (!result.isFirstAnalysis) {
+          lines.push(`\u{1F4DD} Context block will be initialised with v${currentVersion}
+`);
+        }
+        if (result.isFirstAnalysis) {
+          lines.push(`\u{1F4C2} Repository: ${process.cwd()}`);
+          lines.push("\n\u{1F4CA} Tech stack:");
+          lines.push(`  Languages: ${result.analysis.languages.join(", ")}`);
+          lines.push(`  Frameworks: ${result.analysis.frameworks.join(", ")}`);
+          lines.push(`  Build Tools: ${result.analysis.buildTools.join(", ")}`);
+          lines.push(`  Testing Tools: ${result.analysis.testingTools.join(", ")}`);
+          if (result.analysis.packageManager) {
+            lines.push(`  Package Manager: ${result.analysis.packageManager}`);
+          }
+          if (result.analysis.documentationPattern) {
+            lines.push(`
+\u{1F4DA} Documentation: ${result.analysis.documentationPattern}`);
+            if (result.analysis.documentationLocations) {
+              lines.push(`  Locations: ${result.analysis.documentationLocations.join(", ")}`);
+            }
+          }
+          if (result.prdInitialized) {
+            lines.push("\n\u{1F4CB} PRD Structure: Initialized");
+            lines.push("  Created docs/prd/ directory");
+          }
+          if (result.adrInitialized) {
+            lines.push("\n\u{1F4D0} ADR Structure: Initialized");
+            lines.push("  Created docs/adr/ directory");
+          }
+          if (result.qualityInitialized) {
+            lines.push("\n\u{1F4CA} Quality Analysis: Initialized");
+            lines.push("  Created .tiny-brain/quality/ directory");
+          }
+          if (result.fixesInitialized) {
+            lines.push("\n\u{1F527} Fixes Tracking: Initialized");
+            lines.push("  Created .tiny-brain/fixes/ directory");
+          }
+          if (result.gitHooksInstalled) {
+            lines.push("\n\u{1FA9D} Git Hooks: Installed");
+            lines.push("  TDD workflow hooks in .git/hooks/");
+          }
+          if (result.skillPermissionsAdded && result.skillPermissionsAdded.length > 0) {
+            lines.push("\n\u{1F510} Skill Permissions: Added to .claude/settings.json");
+            lines.push(`  ${result.skillPermissionsAdded.length} permissions added for skill file operations`);
+          }
+          lines.push("\n\u{1F4DD} Tech Contexts Written:");
+          if (result.writtenTechContexts && result.writtenTechContexts.length > 0) {
+            lines.push(`  ${result.writtenTechContexts.join(", ")}`);
+          } else {
+            lines.push("  None");
+          }
+        } else if (result.changes) {
+          const techDiff = {
+            added: result.changes.techStackAdded,
+            removed: result.changes.techStackRemoved
+          };
+          const techChanges = formatTechStackChanges(techDiff);
+          if (techChanges) {
+            lines.push(techChanges);
+          }
+          lines.push("\n\u{1F4DD} Tech Contexts Written:");
+          if (result.writtenTechContexts && result.writtenTechContexts.length > 0) {
+            lines.push(`  ${result.writtenTechContexts.join(", ")}`);
+          } else {
+            lines.push("  None");
+          }
+        } else {
+          lines.push("\u{1F4CA} Repository analysis complete - no changes detected");
+          lines.push("\n\u{1F4DD} Tech Contexts Written:");
+          if (result.writtenTechContexts && result.writtenTechContexts.length > 0) {
+            lines.push(`  ${result.writtenTechContexts.join(", ")}`);
+          } else {
+            lines.push("  None");
+          }
+        }
+        this.appendRichMetadataOutput(lines, result.analysis);
+        if (result.agentsMdStatus) {
+          const statusLabel = result.agentsMdStatus === "created" ? "Created" : result.agentsMdStatus === "updated" ? "Updated" : "Up to date";
+          lines.push(`
+AGENTS.md: ${statusLabel}`);
+        }
+        if (result.recommendations && result.recommendations.length > 0) {
+          lines.push("\n\u{1F3AF} Recommendations:");
+          const groupLabels = { skill: "Skills", agent: "Agents", hook: "Hooks" };
+          const grouped = /* @__PURE__ */ new Map();
+          for (const rec of result.recommendations) {
+            const existing = grouped.get(rec.type) ?? [];
+            grouped.set(rec.type, [...existing, rec]);
+          }
+          for (const [type2, label] of Object.entries(groupLabels)) {
+            const recs = grouped.get(type2);
+            if (recs && recs.length > 0) {
+              lines.push(`
+  ${label}:`);
+              for (const rec of recs) {
+                lines.push(`    \u2022 ${rec.name} \u2014 ${rec.description}`);
+                lines.push(`      Reason: ${rec.reason}`);
+              }
+            }
+          }
+          lines.push("\n  Use `recommendations operation=accept` to install");
+        }
+        return lines.join("\n");
+      }
+      /**
+       * Append rich metadata sections to output lines
+       */
+      appendRichMetadataOutput(lines, analysis) {
+        if (analysis.packageManager) {
+          lines.push(`
+  Package Manager: ${analysis.packageManager}`);
+        }
+        const scripts = analysis.scripts;
+        if (scripts && (scripts.test?.command || scripts.build?.command || scripts.dev?.command || scripts.lint?.command || scripts.e2e?.command)) {
+          lines.push("\n\u{1F4CB} Commands:");
+          if (scripts.test?.command) lines.push(`  Test: ${scripts.test.command}`);
+          if (scripts.build?.command) lines.push(`  Build: ${scripts.build.command}`);
+          if (scripts.dev?.command) lines.push(`  Dev: ${scripts.dev.command}`);
+          if (scripts.lint?.command) lines.push(`  Lint: ${scripts.lint.command}`);
+          if (scripts.e2e?.command) lines.push(`  E2E: ${scripts.e2e.command}`);
+        }
+        if (analysis.linting) {
+          lines.push("\n\u{1F50D} Linting:");
+          if (analysis.linting.tool) {
+            lines.push(`  Tool: ${analysis.linting.tool}`);
+          }
+          if (analysis.linting.plugins && analysis.linting.plugins.length > 0) {
+            lines.push(`  Plugins: ${analysis.linting.plugins.join(", ")}`);
+          }
+        }
+        if (analysis.monorepo) {
+          lines.push("\n\u{1F4E6} Monorepo:");
+          if (analysis.monorepo.tool) {
+            lines.push(`  Tool: ${analysis.monorepo.tool}`);
+          }
+          if (analysis.monorepo.packages && analysis.monorepo.packages.length > 0) {
+            lines.push("  Packages:");
+            for (const pkg of analysis.monorepo.packages) {
+              lines.push(`    - ${pkg}`);
+            }
+          }
+        }
+      }
+      /**
+       * Compare two tech stacks and return differences
+       * Handles null previous analysis (first run)
+       */
+      compareTechStacks(previousAnalysis, currentAnalysis) {
+        if (!previousAnalysis) {
+          return {
+            added: [
+              ...currentAnalysis.languages,
+              ...currentAnalysis.frameworks,
+              ...currentAnalysis.buildTools,
+              ...currentAnalysis.testingTools
+            ],
+            removed: []
+          };
+        }
+        return detectTechStackChanges(
+          {
+            languages: previousAnalysis.languages || [],
+            frameworks: previousAnalysis.frameworks || [],
+            buildTools: previousAnalysis.buildTools || [],
+            testingTools: previousAnalysis.testingTools || []
+          },
+          {
+            languages: currentAnalysis.languages || [],
+            frameworks: currentAnalysis.frameworks || [],
+            buildTools: currentAnalysis.buildTools || [],
+            testingTools: currentAnalysis.testingTools || []
+          }
+        );
+      }
+      /**
+       * Check if tiny-brain block needs updating based on version
+       * @param existingContent - Content containing existing tiny-brain block
+       * @param currentVersion - Current package version
+       * @returns true if update needed (version mismatch or missing)
+       */
+      needsTinyBrainUpdate(existingContent, currentVersion) {
+        const existingVersion = this.deps.repoService.extractTinyBrainVersion(existingContent);
+        if (!existingVersion) {
+          return true;
+        }
+        return this.compareVersions(existingVersion, currentVersion) < 0;
+      }
+      /**
+       * Compare semantic versions (e.g., "0.11.0" vs "0.12.0")
+       * @param v1 - First version string
+       * @param v2 - Second version string
+       * @returns -1 if v1 < v2, 0 if equal, 1 if v1 > v2
+       */
+      compareVersions(v1, v2) {
+        const parts1 = v1.split(".").map(Number);
+        const parts2 = v2.split(".").map(Number);
+        for (let i = 0; i < 3; i++) {
+          if (parts1[i] < parts2[i]) return -1;
+          if (parts1[i] > parts2[i]) return 1;
+        }
+        return 0;
+      }
+    };
+  }
+});
+
 // packages/tiny-brain-core/src/services/analysis/index.ts
 var init_analysis = __esm({
   "packages/tiny-brain-core/src/services/analysis/index.ts"() {
@@ -34447,6 +36925,7 @@ var init_analysis = __esm({
     init_capability_engine();
     init_registry();
     init_skill_validation_service();
+    init_analyse_service();
   }
 });
 
@@ -34708,14 +37187,14 @@ var init_pipeline = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/pipeline-telemetry.ts
-import fs24 from "node:fs";
-import path26 from "node:path";
+import fs28 from "node:fs";
+import path30 from "node:path";
 function writePipelineTelemetry(repoPath, entry) {
   try {
-    const dir = path26.join(repoPath, ".tiny-brain", "telemetry");
-    const file = path26.join(dir, "pipeline-advancement.jsonl");
-    fs24.mkdirSync(dir, { recursive: true });
-    fs24.appendFileSync(file, JSON.stringify(entry) + "\n");
+    const dir = path30.join(repoPath, ".tiny-brain", "telemetry");
+    const file = path30.join(dir, "pipeline-advancement.jsonl");
+    fs28.mkdirSync(dir, { recursive: true });
+    fs28.appendFileSync(file, JSON.stringify(entry) + "\n");
   } catch {
   }
 }
@@ -34743,14 +37222,14 @@ var init_event_types = __esm({
 });
 
 // packages/tiny-brain-core/src/services/telemetry/event-store.ts
-import fs25 from "node:fs";
-import path27 from "node:path";
+import fs29 from "node:fs";
+import path31 from "node:path";
 import readline from "node:readline";
 function eventsPath(repoPath) {
-  return path27.join(repoPath, TELEMETRY_DIR, EVENTS_FILE);
+  return path31.join(repoPath, TELEMETRY_DIR, EVENTS_FILE);
 }
 function ensureDir(repoPath) {
-  fs25.mkdirSync(path27.join(repoPath, TELEMETRY_DIR), { recursive: true });
+  fs29.mkdirSync(path31.join(repoPath, TELEMETRY_DIR), { recursive: true });
 }
 function hasTaskRef(obj) {
   const ref = obj["taskRef"];
@@ -34778,19 +37257,19 @@ function appendEvent(repoPath, event) {
   ensureDir(repoPath);
   const filePath = eventsPath(repoPath);
   const line = JSON.stringify(event) + "\n";
-  const fd = fs25.openSync(filePath, "a");
+  const fd = fs29.openSync(filePath, "a");
   try {
-    fs25.writeSync(fd, line);
-    fs25.fsyncSync(fd);
+    fs29.writeSync(fd, line);
+    fs29.fsyncSync(fd);
   } finally {
-    fs25.closeSync(fd);
+    fs29.closeSync(fd);
   }
 }
 async function readEventsForTask(repoPath, taskRef) {
   const filePath = eventsPath(repoPath);
-  if (!fs25.existsSync(filePath)) return [];
+  if (!fs29.existsSync(filePath)) return [];
   const events = [];
-  const stream3 = fs25.createReadStream(filePath, { encoding: "utf-8" });
+  const stream3 = fs29.createReadStream(filePath, { encoding: "utf-8" });
   const rl = readline.createInterface({ input: stream3, crlfDelay: Infinity });
   for await (const line of rl) {
     const event = parseLine(line);
@@ -34803,8 +37282,8 @@ async function readEventsForTask(repoPath, taskRef) {
 }
 async function* readAllEvents(repoPath, opts) {
   const filePath = eventsPath(repoPath);
-  if (!fs25.existsSync(filePath)) return;
-  const stream3 = fs25.createReadStream(filePath, { encoding: "utf-8" });
+  if (!fs29.existsSync(filePath)) return;
+  const stream3 = fs29.createReadStream(filePath, { encoding: "utf-8" });
   const rl = readline.createInterface({ input: stream3, crlfDelay: Infinity });
   for await (const line of rl) {
     const event = parseLine(line);
@@ -34819,7 +37298,7 @@ var init_event_store = __esm({
     "use strict";
     init_event_types();
     init_event_types();
-    TELEMETRY_DIR = path27.join(".tiny-brain", "telemetry");
+    TELEMETRY_DIR = path31.join(".tiny-brain", "telemetry");
     EVENTS_FILE = "events.jsonl";
   }
 });
@@ -35167,8 +37646,8 @@ var init_review_watcher = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/reminder-inbox.ts
-import * as fs26 from "fs";
-import * as path28 from "path";
+import * as fs30 from "fs";
+import * as path32 from "path";
 import { randomBytes as randomBytes2 } from "crypto";
 var ReminderInbox;
 var init_reminder_inbox = __esm({
@@ -35181,14 +37660,14 @@ var init_reminder_inbox = __esm({
       }
       telemetry;
       async write(reminder) {
-        await fs26.promises.mkdir(this.inboxDir, { recursive: true });
+        await fs30.promises.mkdir(this.inboxDir, { recursive: true });
         const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
         const random = randomBytes2(4).toString("hex");
         const basename3 = `${timestamp2}-${random}`;
-        const tmpPath = path28.join(this.inboxDir, `${basename3}.tmp`);
-        const finalPath = path28.join(this.inboxDir, `${basename3}.reminder`);
-        await fs26.promises.writeFile(tmpPath, reminder, "utf-8");
-        await fs26.promises.rename(tmpPath, finalPath);
+        const tmpPath = path32.join(this.inboxDir, `${basename3}.tmp`);
+        const finalPath = path32.join(this.inboxDir, `${basename3}.reminder`);
+        await fs30.promises.writeFile(tmpPath, reminder, "utf-8");
+        await fs30.promises.rename(tmpPath, finalPath);
         try {
           await Promise.resolve(this.telemetry.onReminderWritten?.({ reminderId: basename3 }));
         } catch {
@@ -35198,7 +37677,7 @@ var init_reminder_inbox = __esm({
       async drain() {
         let entries;
         try {
-          entries = await fs26.promises.readdir(this.inboxDir);
+          entries = await fs30.promises.readdir(this.inboxDir);
         } catch (err) {
           if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
             return [];
@@ -35208,10 +37687,10 @@ var init_reminder_inbox = __esm({
         const reminderFiles = entries.filter((f) => f.endsWith(".reminder")).sort();
         const results = [];
         for (const file of reminderFiles) {
-          const filePath = path28.join(this.inboxDir, file);
+          const filePath = path32.join(this.inboxDir, file);
           try {
-            const content = await fs26.promises.readFile(filePath, "utf-8");
-            await fs26.promises.unlink(filePath);
+            const content = await fs30.promises.readFile(filePath, "utf-8");
+            await fs30.promises.unlink(filePath);
             results.push(content);
             try {
               const reminderId = file.slice(0, -".reminder".length);
@@ -35246,8 +37725,8 @@ var init_repo_config = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
-import * as fs27 from "fs/promises";
-import * as path29 from "path";
+import * as fs31 from "fs/promises";
+import * as path33 from "path";
 var SkillLoader;
 var init_skill_loader = __esm({
   "packages/tiny-brain-core/src/services/api/skill-loader.ts"() {
@@ -35264,9 +37743,9 @@ var init_skill_loader = __esm({
         if (cached) {
           return cached;
         }
-        const skillPath = path29.join(this.skillsPath, skillName);
-        const skillFile = path29.join(skillPath, "SKILL.md");
-        const content = await fs27.readFile(skillFile, "utf-8");
+        const skillPath = path33.join(this.skillsPath, skillName);
+        const skillFile = path33.join(skillPath, "SKILL.md");
+        const content = await fs31.readFile(skillFile, "utf-8");
         const { metadata, body } = this.parseFrontmatter(content);
         const templates = await this.loadTemplates(skillPath);
         const skill = {
@@ -35306,14 +37785,14 @@ var init_skill_loader = __esm({
         return { metadata, body };
       }
       async loadTemplates(skillPath) {
-        const templatesPath = path29.join(skillPath, "templates");
+        const templatesPath = path33.join(skillPath, "templates");
         const templates = {};
         try {
-          const entries = await fs27.readdir(templatesPath, { withFileTypes: true });
+          const entries = await fs31.readdir(templatesPath, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isFile() && entry.name.endsWith(".md")) {
-              const templatePath = path29.join(templatesPath, entry.name);
-              const content = await fs27.readFile(templatePath, "utf-8");
+              const templatePath = path33.join(templatesPath, entry.name);
+              const content = await fs31.readFile(templatePath, "utf-8");
               templates[entry.name] = content;
             }
           }
@@ -36072,92 +38551,6 @@ var init_persona3 = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/modules/analysis/analysis-diff.ts
-function compareAnalysis(oldAnalysis, newAnalysis) {
-  const techStackChanges = detectTechStackChanges(
-    {
-      languages: oldAnalysis.languages,
-      frameworks: oldAnalysis.frameworks,
-      buildTools: oldAnalysis.buildTools,
-      testingTools: oldAnalysis.testingTools
-    },
-    {
-      languages: newAnalysis.languages,
-      frameworks: newAnalysis.frameworks,
-      buildTools: newAnalysis.buildTools,
-      testingTools: newAnalysis.testingTools
-    }
-  );
-  const hasChanges = techStackChanges.added.length > 0 || techStackChanges.removed.length > 0;
-  return {
-    hasChanges,
-    techStackChanges
-  };
-}
-function detectTechStackChanges(oldStack, newStack) {
-  const oldItems = /* @__PURE__ */ new Set([
-    ...oldStack.languages,
-    ...oldStack.frameworks,
-    ...oldStack.buildTools,
-    ...oldStack.testingTools
-  ]);
-  const newItems = /* @__PURE__ */ new Set([
-    ...newStack.languages,
-    ...newStack.frameworks,
-    ...newStack.buildTools,
-    ...newStack.testingTools
-  ]);
-  const added = [];
-  const removed = [];
-  for (const item of newItems) {
-    if (!oldItems.has(item)) {
-      added.push(item);
-    }
-  }
-  for (const item of oldItems) {
-    if (!newItems.has(item)) {
-      removed.push(item);
-    }
-  }
-  return { added, removed };
-}
-function formatTechStackChanges(diff) {
-  if (diff.added.length === 0 && diff.removed.length === 0) {
-    return "";
-  }
-  const lines = ["\u{1F4CA} Tech stack changes detected:"];
-  for (const item of diff.added) {
-    lines.push(`  \u2728 ${item} (new)`);
-  }
-  for (const item of diff.removed) {
-    lines.push(`  \u274C ${item} (removed)`);
-  }
-  return lines.join("\n");
-}
-function formatAgentChanges(updates) {
-  if (updates.length === 0) {
-    return "\u{1F916} Agents up to date";
-  }
-  const lines = ["\u{1F916} Agent updates applied:"];
-  for (const update of updates) {
-    if (update.type === "update") {
-      const description = update.description ? ` (${update.description})` : "";
-      lines.push(`  \u2705 ${update.name} v${update.fromVersion} \u2192 v${update.toVersion}${description}`);
-    } else if (update.type === "new") {
-      lines.push(`  \u2728 ${update.name} v${update.toVersion} (new)`);
-    } else if (update.type === "remove") {
-      const description = update.description ? ` (${update.description})` : "";
-      lines.push(`  \u{1F5D1}\uFE0F ${update.name}${description}`);
-    }
-  }
-  return lines.join("\n");
-}
-var init_analysis_diff = __esm({
-  "packages/tiny-brain-core/src/modules/analysis/analysis-diff.ts"() {
-    "use strict";
-  }
-});
-
 // packages/tiny-brain-core/src/modules/memory/types.ts
 var init_types14 = __esm({
   "packages/tiny-brain-core/src/modules/memory/types.ts"() {
@@ -36592,17 +38985,17 @@ var init_parallel_executor = __esm({
 });
 
 // packages/tiny-brain-core/src/utils/git.ts
-import { exec as exec4, execSync } from "child_process";
-import path30 from "path";
+import { exec as exec4, execSync as execSync2 } from "child_process";
+import path34 from "path";
 import { promisify as promisify4 } from "util";
 function buildWorktreeInfo(commonDirOut, toplevelOut, branchOut) {
   const worktreePath = String(toplevelOut).trim();
   const branch = String(branchOut).trim();
   const commonDirTrimmed = String(commonDirOut).trim();
-  const resolvedCommonDir = path30.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path30.resolve(worktreePath, commonDirTrimmed);
-  const mainRepoPath = path30.dirname(resolvedCommonDir);
+  const resolvedCommonDir = path34.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path34.resolve(worktreePath, commonDirTrimmed);
+  const mainRepoPath = path34.dirname(resolvedCommonDir);
   const isWorktree = mainRepoPath !== worktreePath;
-  const worktreeName = isWorktree ? path30.basename(worktreePath) : "";
+  const worktreeName = isWorktree ? path34.basename(worktreePath) : "";
   return { isWorktree, worktreePath, mainRepoPath, branch, worktreeName };
 }
 async function detectRepositoryRoot() {
@@ -36615,7 +39008,7 @@ async function detectRepositoryRoot() {
 }
 function detectRepositoryRootSync() {
   try {
-    const result = execSync("git rev-parse --show-toplevel", SYNC_EXEC_DEFAULTS);
+    const result = execSync2("git rev-parse --show-toplevel", SYNC_EXEC_DEFAULTS);
     return result.trim();
   } catch {
     return void 0;
@@ -36635,9 +39028,9 @@ async function detectWorktreeInfo(cwd) {
 function detectWorktreeInfoSync(cwd) {
   try {
     const execOpts = { ...SYNC_EXEC_DEFAULTS, cwd };
-    const commonDirOut = execSync("git rev-parse --git-common-dir", execOpts);
-    const toplevelOut = execSync("git rev-parse --show-toplevel", execOpts);
-    const branchOut = execSync("git branch --show-current", execOpts);
+    const commonDirOut = execSync2("git rev-parse --git-common-dir", execOpts);
+    const toplevelOut = execSync2("git rev-parse --show-toplevel", execOpts);
+    const branchOut = execSync2("git branch --show-current", execOpts);
     return buildWorktreeInfo(commonDirOut, toplevelOut, branchOut);
   } catch {
     return null;
@@ -36668,6 +39061,7 @@ var init_utils2 = __esm({
     init_object();
     init_parallel_executor();
     init_git();
+    init_repo_utils();
     init_commit_parser();
     init_json_repair();
     init_adr_pattern_detector();
@@ -36703,6 +39097,5214 @@ var init_constants = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/handlers/types.ts
+var init_types15 = __esm({
+  "packages/tiny-brain-core/src/handlers/types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/personas.types.ts
+var init_personas_types = __esm({
+  "packages/tiny-brain-core/src/handlers/personas.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/personas.handlers.ts
+async function personasList(input, ctx) {
+  const service = new PersonaService(ctx);
+  const activePersona = ctx.activePersona?.id;
+  try {
+    if (input.includeArchived !== void 0) {
+      const personas2 = await service.listPersonas({ includeArchived: input.includeArchived });
+      return {
+        ok: true,
+        data: {
+          personas: personas2.map((name) => ({
+            name,
+            source: "local",
+            isActive: name === activePersona
+          })),
+          activePersona
+        }
+      };
+    }
+    const mode = input.mode ?? "all";
+    const personas = await service.listPersonasWithMode(mode);
+    return { ok: true, data: { personas, activePersona } };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to list personas"), cause);
+  }
+}
+async function personasCreate(input, ctx) {
+  const service = new PersonaService(ctx);
+  try {
+    const existing = await service.loadPersona({ personaName: input.personaName });
+    if (existing) {
+      return failure(`Persona "${input.personaName}" already exists`);
+    }
+    const profile = createDefaultProfile(
+      input.personaName,
+      (/* @__PURE__ */ new Date()).toISOString(),
+      input.description,
+      input.style
+    );
+    await service.createPersona({ personaName: input.personaName, profile });
+    return { ok: true, data: { personaName: input.personaName } };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to create persona"), cause);
+  }
+}
+async function personasUpdate(input, ctx) {
+  const service = new PersonaService(ctx);
+  const { personaName, data } = input;
+  try {
+    if (typeof data.name === "string" && data.name !== personaName) {
+      await service.renamePersona({ personaName, newPersonaName: data.name });
+      return { ok: true, data: { renamed: true, from: personaName, to: data.name } };
+    }
+    const learningEvaluation = PersonaLearningService.evaluateUpdateForLearning(data, ctx);
+    let insightsUpdated = false;
+    let learningType;
+    let learningConfidence;
+    if (learningEvaluation.hasLearning && learningEvaluation.extractedLearning) {
+      ctx.logger.info(`Learning opportunity detected for persona "${personaName}"`, {
+        learningType: learningEvaluation.learningType,
+        confidence: learningEvaluation.confidence,
+        extractedLearning: learningEvaluation.extractedLearning
+      });
+      await service.updateInsights({
+        personaName,
+        insights: learningEvaluation.extractedLearning
+      });
+      insightsUpdated = true;
+      learningType = learningEvaluation.learningType;
+      learningConfidence = learningEvaluation.confidence;
+    }
+    let profileUpdated = false;
+    if (typeof data.profile === "string") {
+      await service.savePersona({ personaName, profile: data.profile });
+      profileUpdated = true;
+    }
+    if (insightsUpdated || profileUpdated) {
+      return {
+        ok: true,
+        data: {
+          renamed: false,
+          insightsUpdated,
+          profileUpdated,
+          fallbackAppend: false,
+          learningType,
+          learningConfidence
+        }
+      };
+    }
+    const existingPersona = await service.loadPersona({ personaName });
+    if (!existingPersona) {
+      return failure(`Persona "${personaName}" not found`);
+    }
+    const profileString = await ctx.storage.getPersonaFile(personaName, "profile.md", ctx.userId);
+    const updates = JSON.stringify(data, null, 2);
+    const updatedProfile = `${profileString ?? ""}
+
+## Updates
+${updates}`;
+    await service.savePersona({ personaName, profile: updatedProfile });
+    return {
+      ok: true,
+      data: {
+        renamed: false,
+        insightsUpdated: false,
+        profileUpdated: false,
+        fallbackAppend: true
+      }
+    };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to update persona"), cause);
+  }
+}
+async function personasArchive(input, ctx) {
+  const service = new PersonaService(ctx);
+  try {
+    const existing = await service.loadPersona({ personaName: input.personaName });
+    if (!existing) {
+      return failure(`Persona "${input.personaName}" not found`);
+    }
+    await service.archivePersona({ personaName: input.personaName, reason: input.reason });
+    return { ok: true, data: { personaName: input.personaName } };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to archive persona"), cause);
+  }
+}
+async function personasShow(input, ctx) {
+  const service = new PersonaService(ctx);
+  try {
+    const result = await service.loadPersona({ personaName: input.personaName });
+    if (!result) {
+      return failure(`Persona "${input.personaName}" not found`);
+    }
+    const files = await service.listPersonaFiles({ personaName: input.personaName });
+    const profileContent = await ctx.storage.getPersonaFile(
+      input.personaName,
+      "profile.md",
+      ctx.userId
+    );
+    return {
+      ok: true,
+      data: {
+        personaName: input.personaName,
+        persona: result.persona,
+        profileContent,
+        files
+      }
+    };
+  } catch (cause) {
+    return failure(errorMessage(cause, "Failed to show persona"), cause);
+  }
+}
+var failure, errorMessage;
+var init_personas_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/personas.handlers.ts"() {
+    "use strict";
+    init_persona_service();
+    init_persona_learning_service();
+    init_persona2();
+    failure = (error, cause) => ({
+      ok: false,
+      error,
+      cause
+    });
+    errorMessage = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/rules.types.ts
+var init_rules_types = __esm({
+  "packages/tiny-brain-core/src/handlers/rules.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/rules.handlers.ts
+function requireUserId(ctx) {
+  if (!ctx.userId) return failure2("User ID is required");
+  return ctx.userId;
+}
+async function rulesAdd(input, ctx) {
+  if (!input.content) return failure2("content is required for add operation");
+  const userId = requireUserId(ctx);
+  if (typeof userId !== "string") return userId;
+  try {
+    const service = new RulesService(ctx);
+    const result = await service.addRule(input.content, userId);
+    if (!result.success) return failure2(result.message);
+    if (result.rule === void 0 || result.totalRules === void 0) {
+      return failure2("RulesService.addRule returned success without rule data");
+    }
+    return { ok: true, data: { rule: result.rule, totalRules: result.totalRules } };
+  } catch (cause) {
+    return failure2(errorMessage2(cause, "Failed to add rule"), cause);
+  }
+}
+async function rulesList(input, ctx) {
+  const userId = requireUserId(ctx);
+  if (typeof userId !== "string") return userId;
+  try {
+    const service = new RulesService(ctx);
+    const result = await service.listRules(input.query, userId);
+    return { ok: true, data: { rules: result.rules, totalRules: result.totalRules } };
+  } catch (cause) {
+    return failure2(errorMessage2(cause, "Failed to list rules"), cause);
+  }
+}
+async function rulesShow(ctx) {
+  const userId = requireUserId(ctx);
+  if (typeof userId !== "string") return userId;
+  try {
+    const service = new RulesService(ctx);
+    const data = await service.getAllRules(userId);
+    return {
+      ok: true,
+      data: {
+        rules: data.rules,
+        metadata: {
+          createdAt: data.metadata.createdAt,
+          updatedAt: data.metadata.updatedAt
+        }
+      }
+    };
+  } catch (cause) {
+    return failure2(errorMessage2(cause, "Failed to show rules"), cause);
+  }
+}
+async function rulesRemove(input, ctx) {
+  if (!input.query) return failure2("query is required for remove operation");
+  const userId = requireUserId(ctx);
+  if (typeof userId !== "string") return userId;
+  try {
+    const service = new RulesService(ctx);
+    const result = await service.removeRule(input.query, userId);
+    if (!result.success) return failure2(result.message);
+    if (result.removedRule === void 0 || result.remainingRules === void 0) {
+      return failure2("RulesService.removeRule returned success without rule data");
+    }
+    return {
+      ok: true,
+      data: { removedRule: result.removedRule, remainingRules: result.remainingRules }
+    };
+  } catch (cause) {
+    return failure2(errorMessage2(cause, "Failed to remove rule"), cause);
+  }
+}
+var failure2, errorMessage2;
+var init_rules_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/rules.handlers.ts"() {
+    "use strict";
+    init_rules_service();
+    failure2 = (error, cause) => ({
+      ok: false,
+      error,
+      cause
+    });
+    errorMessage2 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/rules.formatters.ts
+function numberedList(rules) {
+  return rules.map((rule, i) => `${i + 1}. ${rule}`).join("\n");
+}
+function formatRulesList(data, query) {
+  if (data.rules.length === 0) {
+    return query ? `No rules found matching "${query}"` : "No rules found";
+  }
+  return `Found ${data.totalRules} rule(s):
+
+${numberedList(data.rules)}`;
+}
+function formatRulesShow(data) {
+  if (data.rules.length === 0) {
+    return "No rules defined yet.";
+  }
+  return [
+    "# Golden Rules",
+    "",
+    numberedList(data.rules),
+    "",
+    "---",
+    `Created: ${data.metadata.createdAt}`,
+    `Last updated: ${data.metadata.updatedAt}`,
+    `Total rules: ${data.rules.length}`
+  ].join("\n");
+}
+var init_rules_formatters = __esm({
+  "packages/tiny-brain-core/src/handlers/rules.formatters.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/recommendations.types.ts
+var init_recommendations_types = __esm({
+  "packages/tiny-brain-core/src/handlers/recommendations.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/recommendations.handlers.ts
+function requireRepoRoot(ctx) {
+  if (!ctx.repositoryRoot) {
+    return failure3("Repository root is required for recommendations");
+  }
+  return ctx.repositoryRoot;
+}
+async function recommendationsList(ctx) {
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const pending = await service.getPendingRecommendations();
+    const grouped = /* @__PURE__ */ new Map();
+    for (const rec of pending) {
+      const list = grouped.get(rec.type) ?? [];
+      list.push(rec);
+      grouped.set(rec.type, list);
+    }
+    const groups = Array.from(grouped.entries()).map(([type2, recommendations]) => ({
+      type: type2,
+      label: TYPE_LABELS[type2] ?? type2,
+      recommendations
+    }));
+    return { ok: true, data: { groups, totalPending: pending.length } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to list recommendations"), cause);
+  }
+}
+async function processItems(service, items, action) {
+  const file = await service.readRecommendations();
+  if (!file) {
+    throw new Error("No recommendations file found. Run `analyse` first.");
+  }
+  const results = [];
+  for (const name of items) {
+    const match3 = file.recommendations.find(
+      (r) => r.name.toLowerCase() === name.toLowerCase()
+    );
+    if (!match3) {
+      results.push({ name, status: "not_found" });
+      continue;
+    }
+    results.push(await action(match3));
+  }
+  return results;
+}
+async function recommendationsAccept(input, ctx) {
+  if (!input.items || input.items.length === 0) {
+    return failure3("items is required for accept operation");
+  }
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const results = await processItems(service, input.items, async (rec) => {
+      try {
+        await service.acceptRecommendation(rec);
+        return { name: rec.name, status: "accepted" };
+      } catch (err) {
+        return {
+          name: rec.name,
+          status: "failed",
+          error: err instanceof Error ? err.message : "Unknown error"
+        };
+      }
+    });
+    return { ok: true, data: { results } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to accept recommendations"), cause);
+  }
+}
+async function recommendationsDismiss(input, ctx) {
+  if (!input.items || input.items.length === 0) {
+    return failure3("items is required for dismiss operation");
+  }
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const results = await processItems(service, input.items, async (rec) => {
+      await service.dismissRecommendation(rec.id);
+      return { name: rec.name, status: "dismissed" };
+    });
+    return { ok: true, data: { results } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to dismiss recommendations"), cause);
+  }
+}
+async function recommendationsRestore(input, ctx) {
+  if (!input.items || input.items.length === 0) {
+    return failure3("items is required for restore operation");
+  }
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const dismissed = await service.readDismissedRecommendations();
+    const dismissedIds = new Set(dismissed.map((d) => d.recommendationId));
+    const results = await processItems(service, input.items, async (rec) => {
+      if (!dismissedIds.has(rec.id)) {
+        return { name: rec.name, status: "not_dismissed" };
+      }
+      await service.restoreRecommendation(rec.id);
+      return { name: rec.name, status: "restored" };
+    });
+    return { ok: true, data: { results } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to restore recommendations"), cause);
+  }
+}
+async function recommendationsGraduated(ctx) {
+  const root = requireRepoRoot(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new RecommendationService(root);
+    const installed = await service.readInstalledRecommendations();
+    return { ok: true, data: { installed } };
+  } catch (cause) {
+    return failure3(errorMessage3(cause, "Failed to read graduated recommendations"), cause);
+  }
+}
+var failure3, errorMessage3, TYPE_LABELS;
+var init_recommendations_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/recommendations.handlers.ts"() {
+    "use strict";
+    init_recommendation_service();
+    failure3 = (error, cause) => ({
+      ok: false,
+      error,
+      cause
+    });
+    errorMessage3 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+    TYPE_LABELS = {
+      skill: "Skills",
+      agent: "Agents",
+      capability: "Capabilities",
+      hook: "Hooks"
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/recommendations.formatters.ts
+function formatRecommendationsList(data) {
+  if (data.totalPending === 0) {
+    return "No pending recommendations. Run `analyse` to fetch new recommendations.";
+  }
+  const lines = ["# Pending Recommendations", ""];
+  for (const group of data.groups) {
+    lines.push(`## ${group.label}`, "");
+    for (const rec of group.recommendations) {
+      lines.push(`- **${rec.name}**: ${rec.description}`);
+      lines.push(`  _Reason: ${rec.reason}_`);
+    }
+    lines.push("");
+  }
+  lines.push("---", "", "Use `accept` with item names to install recommendations.");
+  return lines.join("\n");
+}
+function formatActionResults(title, results) {
+  const lines = [`# ${title}`, ""];
+  for (const r of results) {
+    switch (r.status) {
+      case "accepted":
+        lines.push(`- **${r.name}**: Accepted`);
+        break;
+      case "dismissed":
+        lines.push(`- **${r.name}**: Dismissed`);
+        break;
+      case "restored":
+        lines.push(`- **${r.name}**: Restored`);
+        break;
+      case "not_found":
+        lines.push(`- **${r.name}**: Not found (unrecognized name)`);
+        break;
+      case "not_dismissed":
+        lines.push(`- **${r.name}**: Not dismissed (nothing to restore)`);
+        break;
+      case "failed":
+        lines.push(`- **${r.name}**: Failed - ${r.error ?? "unknown"}`);
+        break;
+    }
+  }
+  return lines.join("\n");
+}
+function formatGraduated(data) {
+  if (data.installed.length === 0) {
+    return "No graduated recommendations yet. Use `accept` to install recommendations.";
+  }
+  const lines = ["# Graduated Recommendations", ""];
+  for (const item of data.installed) {
+    const { origin } = item;
+    lines.push(`- **${origin.recommendationName}** (${origin.type})`);
+    lines.push(`  Source: ${origin.source}`);
+    lines.push(`  Accepted: ${origin.acceptedAt}`);
+    if (item.installedVersion) {
+      lines.push(`  Version: v${item.installedVersion}`);
+    }
+    if (item.stepResults && item.stepResults.length > 0) {
+      lines.push("  Steps:");
+      for (const step of item.stepResults) {
+        const pathInfo = step.installedPath ? ` \u2192 ${step.installedPath}` : "";
+        lines.push(`    - ${step.description} (${step.status})${pathInfo}`);
+      }
+    }
+  }
+  return lines.join("\n");
+}
+var init_recommendations_formatters = __esm({
+  "packages/tiny-brain-core/src/handlers/recommendations.formatters.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/quality.types.ts
+var init_quality_types = __esm({
+  "packages/tiny-brain-core/src/handlers/quality.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/quality.handlers.ts
+import { promises as fs32 } from "fs";
+import path35 from "path";
+function requireRepoRoot2(ctx) {
+  if (!ctx.repositoryRoot) {
+    return failure4(
+      "Repository root not found. Quality tool requires a git repository context."
+    );
+  }
+  return ctx.repositoryRoot;
+}
+async function qualitySave(input, ctx) {
+  if (input.score === void 0) return failure4("score is required for save operation");
+  if (!input.grade) return failure4("grade is required for save operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const saveInput = SaveQualityRunInputSchema.parse({
+      score: input.score,
+      grade: input.grade,
+      issues: input.issues ?? [],
+      recommendations: input.recommendations ?? [],
+      context: input.context
+    });
+    const result = await service.saveRunResult(saveInput);
+    return {
+      ok: true,
+      data: {
+        runId: result.runId,
+        filePath: result.filePath,
+        score: input.score,
+        grade: input.grade,
+        issueCount: input.issues?.length ?? 0
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to save quality run"), cause);
+  }
+}
+async function qualityHistory(input, ctx) {
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const runs = await service.getPreviousRuns(input.limit);
+    return { ok: true, data: { runs } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to read quality history"), cause);
+  }
+}
+async function qualityDetails(input, ctx) {
+  if (!input.runId) return failure4("runId is required for details operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const run2 = await service.getRunDetails(input.runId);
+    if (!run2) return failure4(`Quality run not found: ${input.runId}`);
+    return { ok: true, data: { run: run2 } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to read run details"), cause);
+  }
+}
+async function qualityCompare(input, ctx) {
+  if (!input.baseRunId) return failure4("baseRunId is required for compare operation");
+  if (!input.targetRunId) return failure4("targetRunId is required for compare operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const comparison = await service.compareRuns(input.baseRunId, input.targetRunId);
+    if (!comparison) {
+      return failure4(
+        `One or both runs not found: ${input.baseRunId}, ${input.targetRunId}`
+      );
+    }
+    return { ok: true, data: { comparison } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to compare runs"), cause);
+  }
+}
+async function qualityPlan(input, ctx) {
+  if (!input.sourceRunId) return failure4("sourceRunId is required for plan operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const run2 = await service.getRunDetails(input.sourceRunId);
+    if (!run2) return failure4(`Quality run not found: ${input.sourceRunId}`);
+    const plan = QualityService.generateImprovementPlan(run2, input.targetGrade);
+    const result = await service.saveImprovementPlan(plan);
+    return {
+      ok: true,
+      data: { planId: result.planId, filePath: result.filePath, plan }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to generate improvement plan"), cause);
+  }
+}
+async function qualityPlanDetails(input, ctx) {
+  if (!input.planId) return failure4("planId is required for plan-details operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  const plansDir = path35.join(root, ".tiny-brain", "quality", "plans");
+  const filePath = path35.join(plansDir, `${input.planId}.md`);
+  let content;
+  try {
+    content = await fs32.readFile(filePath, "utf-8");
+  } catch {
+    return failure4(`Improvement plan not found: ${input.planId}`);
+  }
+  const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+  if (!jsonMatch) {
+    return failure4(`Could not parse plan data from: ${input.planId}`);
+  }
+  try {
+    const plan = JSON.parse(jsonMatch[1]);
+    return { ok: true, data: { plan } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to parse plan JSON"), cause);
+  }
+}
+async function qualityImplementPlan(input, ctx) {
+  if (!input.planId) return failure4("planId is required for implement-plan operation");
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new QualityService(root);
+    const plan = await service.loadImprovementPlan(input.planId);
+    if (!plan) return failure4(`Improvement plan not found: ${input.planId}`);
+    const run2 = await service.getRunDetails(plan.sourceRunId);
+    if (!run2) return failure4(`Source quality run not found: ${plan.sourceRunId}`);
+    const fixIds = await service.generateFixesFromPlan(plan, run2.issues);
+    return { ok: true, data: { planId: input.planId, fixIds } };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to implement plan"), cause);
+  }
+}
+async function qualityDetectAnalyzers(ctx) {
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new AnalyzerDetectionService(root);
+    const analyzers = await service.detectAnalyzers();
+    return {
+      ok: true,
+      data: {
+        analyzers: analyzers.map((a) => ({
+          name: a.name,
+          analyzerId: a.analyzerId,
+          configPaths: [...a.configPaths],
+          categories: [...a.categories]
+        }))
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to detect analyzers"), cause);
+  }
+}
+async function qualityRunAnalyzers(input, ctx) {
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const runId = input.runId ?? generateRunId();
+    const runDir = path35.join(root, ".tiny-brain", "quality", "runs", runIdToPath(runId));
+    const outputPath = path35.join(runDir, "analysis.json");
+    const outputDir = path35.join(runDir, "analysers");
+    const cached = await readCachedAnalyzers(root);
+    const analyzers = cached ?? await new AnalyzerDetectionService(root).detectAnalyzers();
+    const results = analyzers.length === 0 ? {
+      issues: [],
+      executions: [],
+      totalDurationMs: 0,
+      summary: { total: 0, succeeded: 0, failed: 0, timedOut: 0, skipped: 0 }
+    } : await new AnalyzerExecutorService(root).executeAnalyzers(analyzers, outputDir);
+    await fs32.mkdir(runDir, { recursive: true });
+    await fs32.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
+    return {
+      ok: true,
+      data: {
+        runId,
+        outputPath,
+        outputDir,
+        summary: results.summary,
+        totalIssues: results.issues.length,
+        totalDurationMs: results.totalDurationMs
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to run analyzers"), cause);
+  }
+}
+function qualityMergeResults(input) {
+  try {
+    const result = mergeResults(input.analyzerIssues ?? [], input.llmIssues ?? []);
+    return {
+      ok: true,
+      data: {
+        issues: result.issues,
+        duplicatesRemoved: result.duplicatesRemoved,
+        sourceBreakdown: result.sourceBreakdown
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to merge results"), cause);
+  }
+}
+async function qualityAssembleRun(input, ctx) {
+  if (!input.runId) {
+    return failure4(
+      "runId is required for assemble-run operation (YYYY-MM-DD date prefix)"
+    );
+  }
+  const root = requireRepoRoot2(ctx);
+  if (typeof root !== "string") return root;
+  try {
+    const service = new AssemblyService(root);
+    const result = await service.assembleRun(input.runId, input.baseRunId);
+    return {
+      ok: true,
+      data: {
+        runId: result.runId,
+        score: result.score,
+        grade: result.grade,
+        issueCount: result.issueCount,
+        filePath: result.filePath,
+        planId: result.planId,
+        planFilePath: result.planFilePath,
+        incremental: result.incremental,
+        baseRunId: result.baseRunId,
+        filesAnalyzed: result.filesAnalyzed,
+        filesCarriedForward: result.filesCarriedForward,
+        sourceBreakdown: result.sourceBreakdown,
+        categoryBreakdown: result.categoryBreakdown
+      }
+    };
+  } catch (cause) {
+    return failure4(errorMessage4(cause, "Failed to assemble run"), cause);
+  }
+}
+var failure4, errorMessage4;
+var init_quality_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/quality.handlers.ts"() {
+    "use strict";
+    init_quality2();
+    init_quality();
+    failure4 = (error, cause) => ({
+      ok: false,
+      error,
+      cause
+    });
+    errorMessage4 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/quality.formatters.ts
+function formatQualitySave(data) {
+  return [
+    "\u2705 Quality run saved successfully!",
+    "",
+    `\u{1F4CA} Run ID: ${data.runId}`,
+    `\u{1F4C1} File: ${data.filePath}`,
+    `\u{1F4C8} Score: ${data.score}/100 (Grade: ${data.grade})`,
+    `\u{1F50D} Issues: ${data.issueCount}`,
+    "",
+    'Use "quality history" to see all runs.'
+  ].join("\n");
+}
+function formatQualityHistory(data) {
+  if (data.runs.length === 0) {
+    return "No quality runs found.\n\nRun a quality analysis first to create history.";
+  }
+  const lines = ["\u{1F4CA} Quality Run History", ""];
+  for (const run2 of data.runs) {
+    const gradeEmoji = run2.grade === "A" ? "\u{1F31F}" : run2.grade === "F" ? "\u274C" : "\u{1F4CB}";
+    lines.push(`${gradeEmoji} **${run2.date}** - Score: ${run2.score}/100 (${run2.grade})`);
+    lines.push(`   Run ID: ${run2.runId}`);
+    lines.push(`   Issues: ${run2.issueCount}`);
+    lines.push("");
+  }
+  lines.push('Use "quality details runId=<id>" to see full details.');
+  return lines.join("\n");
+}
+function formatQualityDetails(data) {
+  const { run: run2 } = data;
+  const lines = [
+    `\u{1F4CA} Quality Run Details: ${run2.runId}`,
+    "",
+    "## Summary",
+    `**Date:** ${run2.date}`,
+    `**Score:** ${run2.score}/100`,
+    `**Grade:** ${run2.grade}`,
+    `**Issues:** ${run2.issues.length}`,
+    ""
+  ];
+  if (run2.issues.length > 0) {
+    lines.push("## Issues by Category");
+    for (const [category, count] of Object.entries(run2.issuesByCategory)) {
+      if (count > 0) lines.push(`- ${category}: ${count}`);
+    }
+    lines.push("", "## Issue Details");
+    for (const issue of run2.issues) {
+      const location = issue.line ? `${issue.file}:${issue.line}` : issue.file;
+      lines.push(`- **[${issue.severity}]** ${issue.message}`);
+      lines.push(`  - Category: ${issue.category}`);
+      lines.push(`  - Location: \`${location}\``);
+      if (issue.suggestion) lines.push(`  - Suggestion: ${issue.suggestion}`);
+    }
+    lines.push("");
+  }
+  if (run2.recommendations.length > 0) {
+    lines.push("## Recommendations");
+    for (const rec of run2.recommendations) lines.push(`- ${rec}`);
+    lines.push("");
+  }
+  if (run2.context) {
+    lines.push("## Repository Context");
+    if (run2.context.languages?.length) {
+      lines.push(`- Languages: ${run2.context.languages.join(", ")}`);
+    }
+    if (run2.context.frameworks?.length) {
+      lines.push(`- Frameworks: ${run2.context.frameworks.join(", ")}`);
+    }
+    if (run2.context.projectType) {
+      lines.push(`- Project Type: ${run2.context.projectType}`);
+    }
+  }
+  return lines.join("\n");
+}
+function formatQualityCompare(data) {
+  const { comparison } = data;
+  const deltaSign = comparison.scoreDelta >= 0 ? "+" : "";
+  const lines = [
+    `\u{1F4CA} Run Comparison: ${comparison.baseRunId} \u2192 ${comparison.targetRunId}`,
+    "",
+    "## Summary",
+    `**Score Delta:** ${deltaSign}${comparison.scoreDelta}`,
+    `**Grade Change:** ${comparison.gradeChange.from} \u2192 ${comparison.gradeChange.to}`,
+    `**New Issues:** ${comparison.newIssues.length}`,
+    `**Resolved Issues:** ${comparison.resolvedIssues.length}`,
+    `**Persistent Issues:** ${comparison.persistentIssues.length}`,
+    ""
+  ];
+  const categoryEntries = Object.entries(comparison.categoryChanges);
+  if (categoryEntries.length > 0) {
+    lines.push("## Category Changes", "");
+    lines.push("| Category | Count Delta | Deduction Delta |");
+    lines.push("|----------|-------------|-----------------|");
+    for (const [category, changes] of categoryEntries) {
+      const cs = changes.countDelta >= 0 ? "+" : "";
+      const ds = changes.deductionDelta >= 0 ? "+" : "";
+      lines.push(
+        `| ${category} | ${cs}${changes.countDelta} | ${ds}${changes.deductionDelta.toFixed(1)} |`
+      );
+    }
+    lines.push("");
+  }
+  if (comparison.newIssues.length > 0) {
+    lines.push("## New Issues");
+    for (const issue of comparison.newIssues) {
+      lines.push(`- **[${issue.severity}]** ${issue.message} (${issue.file})`);
+    }
+    lines.push("");
+  }
+  if (comparison.resolvedIssues.length > 0) {
+    lines.push("## Resolved Issues");
+    for (const issue of comparison.resolvedIssues) {
+      lines.push(`- **[${issue.severity}]** ${issue.message} (${issue.file})`);
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+function formatQualityPlan(data) {
+  const { planId, filePath, plan } = data;
+  const totalInitiatives = plan.phases.reduce(
+    (sum, phase) => sum + phase.initiatives.length,
+    0
+  );
+  return [
+    "\u2705 Quality Improvement Plan generated successfully!",
+    "",
+    `\u{1F4CB} Plan ID: ${planId}`,
+    `\u{1F4C1} File: ${filePath}`,
+    `\u{1F4CA} Current Score: ${plan.currentScore}/100 (Grade ${plan.currentGrade})`,
+    `\u{1F3AF} Phases: ${plan.phases.length}`,
+    `\u{1F4E6} Initiatives: ${totalInitiatives}`,
+    `\u23F1\uFE0F Total Effort: ${plan.totalEffortHours} hours`,
+    "",
+    "## Executive Summary",
+    "",
+    plan.executiveSummary,
+    "",
+    'Use "quality plan-details planId=<id>" to see full plan details.'
+  ].join("\n");
+}
+function formatQualityPlanDetails(data) {
+  const { plan } = data;
+  const lines = [
+    `\u{1F4CB} Quality Improvement Plan: ${plan.planId}`,
+    "",
+    "## Summary",
+    `**Date:** ${plan.date}`,
+    `**Source Run:** ${plan.sourceRunId}`,
+    `**Current Score:** ${plan.currentScore}/100 (Grade ${plan.currentGrade})`,
+    `**Total Effort:** ${plan.totalEffortHours} hours`,
+    "",
+    "## Executive Summary",
+    "",
+    plan.executiveSummary,
+    ""
+  ];
+  if (plan.phases && plan.phases.length > 0) {
+    lines.push("## Phases", "");
+    for (const phase of plan.phases) {
+      lines.push(`### Phase ${phase.phase}: ${phase.name}`);
+      lines.push(
+        `**Projected Score:** ${phase.projectedScore}/100 (Grade ${phase.projectedGrade})`
+      );
+      lines.push(`**Effort:** ${phase.totalEffortHours} hours`);
+      lines.push(`**Initiatives:** ${phase.initiatives.length}`);
+      lines.push("");
+    }
+  }
+  if (plan.roiAnalysis) {
+    lines.push("## ROI Analysis");
+    lines.push(
+      `**Estimated Cost:** ${plan.roiAnalysis.currency} ${plan.roiAnalysis.estimatedCostToFix}`
+    );
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+function formatQualityImplementPlan(data) {
+  if (data.fixIds.length === 0) {
+    return "No initiatives found in plan. No fix documents created.";
+  }
+  const lines = [
+    `Created ${data.fixIds.length} fix document(s) from Quality Improvement Plan ${data.planId}`,
+    "",
+    "## Fixes Created",
+    "",
+    "| Fix ID | File |",
+    "|--------|------|"
+  ];
+  for (const fixId of data.fixIds) {
+    lines.push(`| ${fixId} | .tiny-brain/fixes/${fixId}.md |`);
+  }
+  lines.push("", "## Next Steps", "");
+  for (const fixId of data.fixIds) {
+    lines.push(`1. Run \`npx tiny-brain sync-progress .tiny-brain/fixes/${fixId}.md\``);
+  }
+  lines.push("2. Start working on fixes using the /fix workflow");
+  lines.push("3. Track progress in the dashboard");
+  return lines.join("\n");
+}
+function formatQualityDetectAnalyzers(data) {
+  if (data.analyzers.length === 0) {
+    return "No static analyzers detected in this repository.\n\nSupported analyzers: ESLint, TypeScript, npm audit, RuboCop, ruff.";
+  }
+  const lines = [`\u{1F50D} Detected ${data.analyzers.length} analyzer(s):`, ""];
+  for (const a of data.analyzers) {
+    lines.push(`- **${a.name}** (${a.analyzerId})`);
+    lines.push(`  Configs: ${a.configPaths.join(", ")}`);
+    lines.push(`  Categories: ${a.categories.join(", ")}`);
+  }
+  lines.push("", JSON.stringify(data.analyzers, null, 2));
+  return lines.join("\n");
+}
+function formatQualityRunAnalyzers(data) {
+  if (data.summary.total === 0) {
+    return [
+      "\u{1F527} No analyzers detected. Empty results written to file.",
+      `  Run ID: ${data.runId}`,
+      `  Output: ${data.outputPath}`
+    ].join("\n");
+  }
+  return [
+    `\u{1F527} Executed ${data.summary.total} analyzer(s):`,
+    `  Succeeded: ${data.summary.succeeded}`,
+    `  Failed: ${data.summary.failed}`,
+    `  Total issues: ${data.totalIssues}`,
+    `  Duration: ${data.totalDurationMs}ms`,
+    `  Run ID: ${data.runId}`,
+    `  Output: ${data.outputPath}`,
+    `  Raw files: ${data.outputDir}/`
+  ].join("\n");
+}
+function formatQualityMergeResults(data) {
+  return [
+    "\u{1F500} Merged results:",
+    `  Analyzer issues: ${data.sourceBreakdown.analyzer}`,
+    `  LLM issues: ${data.sourceBreakdown.llm}`,
+    `  Total (deduplicated): ${data.sourceBreakdown.total}`,
+    `  Duplicates removed: ${data.duplicatesRemoved}`,
+    "",
+    JSON.stringify(data, null, 2)
+  ].join("\n");
+}
+function formatQualityAssembleRun(data) {
+  const lines = [
+    "\u2705 Quality run assembled successfully!",
+    "",
+    `\u{1F4CA} Run ID: ${data.runId}`,
+    `\u{1F4C8} Score: ${data.score}/100 (Grade: ${data.grade})`,
+    `\u{1F50D} Issues: ${data.issueCount}`,
+    `\u{1F4C1} File: ${data.filePath}`
+  ];
+  if (data.planId) {
+    lines.push(`\u{1F4CB} Plan: ${data.planId}`);
+    if (data.planFilePath) lines.push(`\u{1F4C1} Plan File: ${data.planFilePath}`);
+  }
+  if (data.incremental) {
+    lines.push("", "### Incremental Analysis");
+    lines.push(`  Base run: ${data.baseRunId}`);
+    lines.push(`  Files analyzed: ${data.filesAnalyzed}`);
+    lines.push(`  Files carried forward: ${data.filesCarriedForward}`);
+  }
+  lines.push("", "### Source Breakdown");
+  lines.push(`  Analyzer: ${data.sourceBreakdown.analyzer}`);
+  lines.push(`  Specialist: ${data.sourceBreakdown.llm}`);
+  lines.push(`  Total: ${data.sourceBreakdown.total}`);
+  const categoryEntries = Object.entries(data.categoryBreakdown);
+  if (categoryEntries.length > 0) {
+    lines.push("", "### Category Breakdown");
+    for (const [category, count] of categoryEntries) {
+      lines.push(`  ${category}: ${count}`);
+    }
+  }
+  return lines.join("\n");
+}
+var init_quality_formatters = __esm({
+  "packages/tiny-brain-core/src/handlers/quality.formatters.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/config.types.ts
+var init_config_types = __esm({
+  "packages/tiny-brain-core/src/handlers/config.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/config.handlers.ts
+async function configList(ctx) {
+  try {
+    const service = new ConfigService(ctx);
+    const preferences = await service.getPreferences();
+    return { ok: true, data: { preferences } };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to list preferences"), cause);
+  }
+}
+async function configGet(input, ctx) {
+  if (!input.key) return failure5("key is required for get operation");
+  try {
+    const service = new ConfigService(ctx);
+    const result = await service.getPreferenceByKey(input.key);
+    if (!result.isValid) return failure5(result.error);
+    return { ok: true, data: { key: input.key, value: result.value } };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to get preference"), cause);
+  }
+}
+async function configShowSources(ctx) {
+  try {
+    const service = new ConfigService(ctx);
+    const sources = await service.getPreferenceSources();
+    return { ok: true, data: sources };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to read preference sources"), cause);
+  }
+}
+async function configSet2(input, ctx) {
+  if (!input.key) return failure5("key is required for set operation");
+  if (input.value === void 0) {
+    return failure5("value is required for set operation");
+  }
+  const scope = input.scope ?? "repo";
+  const value = input.value;
+  try {
+    const service = new ConfigService(ctx);
+    const result = await service.setPreferenceByKey(input.key, value, scope);
+    if (!result.success) return failure5(result.error);
+    let syncedAgenticTech = false;
+    if (input.key === "enableAgenticCoding" && scope === "repo" && ctx.repositoryRoot) {
+      const techContextService = new TechContextService(ctx.repositoryRoot);
+      await techContextService.syncAgents(value === "true");
+      syncedAgenticTech = true;
+    }
+    return {
+      ok: true,
+      data: { key: input.key, value, scope, syncedAgenticTech }
+    };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to set preference"), cause);
+  }
+}
+async function configReset(ctx) {
+  try {
+    const service = new ConfigService(ctx);
+    await service.resetPreferences();
+    return { ok: true, data: { reset: true } };
+  } catch (cause) {
+    return failure5(errorMessage5(cause, "Failed to reset preferences"), cause);
+  }
+}
+var failure5, errorMessage5;
+var init_config_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/config.handlers.ts"() {
+    "use strict";
+    init_config_service();
+    init_analysis();
+    failure5 = (error, cause) => ({
+      ok: false,
+      error,
+      cause
+    });
+    errorMessage5 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/config.formatters.ts
+function formatConfigList(data) {
+  const r = data.preferences.repo;
+  return [
+    "# Current Preferences",
+    "",
+    "## Feature Flags",
+    `- **autoCommitProgress**: ${r.autoCommitProgress}`,
+    `- **autoArchive**: ${r.autoArchive}`,
+    `- **enableAgenticCoding**: ${r.enableAgenticCoding}`,
+    `- **enableSDD**: ${r.enableSDD}`,
+    `- **enableTDD**: ${r.enableTDD}`,
+    `- **combineRedGreenCommits**: ${r.combineRedGreenCommits}`,
+    `- **enableAdversarial**: ${r.enableAdversarial}`,
+    `- **enableADR**: ${r.enableADR}`,
+    `- **enableQuality**: ${r.enableQuality}`,
+    `- **manageAgentsMd**: ${r.manageAgentsMd}`,
+    `- **defaultPersona**: ${r.defaultPersona}`,
+    "",
+    "## Directory Paths",
+    `- **docsDirectory**: \`${r.directories.docs}\``,
+    `- **adrDirectory**: \`${r.directories.adr}\``,
+    `- **prdDirectory**: \`${r.directories.prd}\``,
+    "",
+    "## Test Configuration",
+    `- **testPatterns**: ${JSON.stringify(r.testPatterns)}`,
+    "",
+    "---",
+    "",
+    "\u{1F4A1} **To modify preferences**, use the CLI:",
+    "```bash",
+    "npx tiny-brain config preferences set <key> <value>",
+    "npx tiny-brain config preferences reset",
+    "```"
+  ].join("\n");
+}
+function formatConfigGet(data) {
+  const value = typeof data.value === "object" ? JSON.stringify(data.value) : String(data.value);
+  return [
+    `# Preference: ${data.key}`,
+    "",
+    `**Value**: ${value}`,
+    "",
+    "---",
+    "",
+    "\u{1F4A1} **To modify this preference**, use the CLI:",
+    "```bash",
+    `npx tiny-brain config preferences set ${data.key} <value>`,
+    "```"
+  ].join("\n");
+}
+function formatConfigShowSources(data) {
+  const repoPrefs = data.repo.repo ?? {};
+  const globalPrefs = data.global.repo ?? {};
+  const getSource = (key) => {
+    if (key in repoPrefs && repoPrefs[key] !== void 0) return "Repository";
+    if (key in globalPrefs && globalPrefs[key] !== void 0) return "Global";
+    return "Default";
+  };
+  const repoDirs = repoPrefs.directories ?? {};
+  const globalDirs = globalPrefs.directories ?? {};
+  const getDirSource = (dirKey) => {
+    if (dirKey in repoDirs && repoDirs[dirKey] !== void 0) return "Repository";
+    if (dirKey in globalDirs && globalDirs[dirKey] !== void 0) return "Global";
+    return "Default";
+  };
+  const testPatternsSource = repoPrefs.testPatterns ? "Repository" : globalPrefs.testPatterns ? "Global" : "Default";
+  const m = data.merged.repo;
+  return [
+    "# Preference Sources",
+    "",
+    "## Feature Flags",
+    `- **autoCommitProgress**: ${m.autoCommitProgress} _(${getSource("autoCommitProgress")})_`,
+    `- **autoArchive**: ${m.autoArchive} _(${getSource("autoArchive")})_`,
+    `- **enableAgenticCoding**: ${m.enableAgenticCoding} _(${getSource("enableAgenticCoding")})_`,
+    `- **enableSDD**: ${m.enableSDD} _(${getSource("enableSDD")})_`,
+    `- **enableTDD**: ${m.enableTDD} _(${getSource("enableTDD")})_`,
+    `- **combineRedGreenCommits**: ${m.combineRedGreenCommits} _(${getSource("combineRedGreenCommits")})_`,
+    `- **enableAdversarial**: ${m.enableAdversarial} _(${getSource("enableAdversarial")})_`,
+    `- **enableADR**: ${m.enableADR} _(${getSource("enableADR")})_`,
+    `- **enableQuality**: ${m.enableQuality} _(${getSource("enableQuality")})_`,
+    `- **manageAgentsMd**: ${m.manageAgentsMd} _(${getSource("manageAgentsMd")})_`,
+    `- **defaultPersona**: ${m.defaultPersona} _(${getSource("defaultPersona")})_`,
+    "",
+    "## Directory Paths",
+    `- **docsDirectory**: \`${m.directories.docs}\` _(${getDirSource("docs")})_`,
+    `- **adrDirectory**: \`${m.directories.adr}\` _(${getDirSource("adr")})_`,
+    `- **prdDirectory**: \`${m.directories.prd}\` _(${getDirSource("prd")})_`,
+    "",
+    "## Test Configuration",
+    `- **testPatterns**: ${JSON.stringify(m.testPatterns)} _(${testPatternsSource})_`,
+    "",
+    "---",
+    "",
+    "## Config Files",
+    "- **Global**: `~/.tiny-brain/config/preferences.json`",
+    "- **Repository**: `[repo]/.tiny-brain/config.json`"
+  ].join("\n");
+}
+function formatConfigSet(data) {
+  const scopeLabel = data.scope === "global" ? "Global" : "Repository";
+  const lines = [
+    "# Preference Updated",
+    "",
+    `\u2705 **${data.key}** set to \`${data.value}\``,
+    "",
+    `\u{1F4C1} **Scope**: ${scopeLabel}`
+  ];
+  if (data.syncedAgenticTech) {
+    lines.push("", "\u{1F504} Synced tech-agent files based on the new value");
+  }
+  lines.push(
+    "",
+    "---",
+    "",
+    "\u{1F4A1} Use `config operation=show-sources` to see all preference sources."
+  );
+  return lines.join("\n");
+}
+function formatConfigReset(_data) {
+  return [
+    "# Preferences reset",
+    "",
+    "\u2705 All preferences have been reset to their default values.",
+    "",
+    "---",
+    "",
+    "\u{1F4A1} Use `config operation=list` to see current preference values."
+  ].join("\n");
+}
+var init_config_formatters = __esm({
+  "packages/tiny-brain-core/src/handlers/config.formatters.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/as.types.ts
+var init_as_types = __esm({
+  "packages/tiny-brain-core/src/handlers/as.types.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/_persona-activation.ts
+async function loadPersonaWithName(ctx, personaName) {
+  const profileContent = await ctx.storage.getPersonaFile(
+    personaName,
+    "profile.md",
+    ctx.userId
+  );
+  if (!profileContent) return null;
+  const parsed = parsePersonaMarkdown(profileContent);
+  parsed.name = personaName;
+  return { parsed, rawProfile: profileContent };
+}
+function parsePersonaWithName(rawProfile, personaName) {
+  const parsed = parsePersonaMarkdown(rawProfile);
+  parsed.name = personaName;
+  return parsed;
+}
+async function activatePersona(ctx, personaName, rawProfile) {
+  if (!ctx.updateActivePersona) return ctx;
+  const next = await ctx.updateActivePersona({
+    id: personaName,
+    userContent: { profile: rawProfile }
+  });
+  if (next && typeof next === "object" && "storage" in next && "logger" in next) {
+    return next;
+  }
+  if (next !== void 0) {
+    ctx.logger.warn(
+      `updateActivePersona returned an unrecognised shape (no storage/logger) \u2014 falling back to existing context`
+    );
+  }
+  return ctx;
+}
+var init_persona_activation = __esm({
+  "packages/tiny-brain-core/src/handlers/_persona-activation.ts"() {
+    "use strict";
+    init_persona_markdown();
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/as.handlers.ts
+function validatePersonaName(raw2, field) {
+  const trimmed = raw2.trim();
+  if (!trimmed) {
+    return { ok: false, error: `${field} is required` };
+  }
+  if (/\s/.test(trimmed)) {
+    return {
+      ok: false,
+      error: `${field} must not contain whitespace (got "${raw2}")`
+    };
+  }
+  if (trimmed.startsWith("library:")) {
+    return {
+      ok: false,
+      error: `${field} must not use the library: prefix (library imports are MCP-only)`
+    };
+  }
+  return { ok: true, value: trimmed };
+}
+async function asShowCurrent(ctx) {
+  try {
+    const service = new PersonaService(ctx);
+    const activeId = ctx.activePersona?.id?.trim() ?? "";
+    if (!activeId) {
+      if (ctx.activePersona?.id && !activeId) {
+        ctx.logger.warn(
+          `[asShowCurrent] activePersona.id was whitespace-only ("${ctx.activePersona.id}") \u2014 treating as no-active`
+        );
+      }
+      const availablePersonas = await service.listPersonas({}) ?? [];
+      return {
+        ok: true,
+        data: { kind: "no-active-persona", availablePersonas }
+      };
+    }
+    const loaded = await loadPersonaWithName(ctx, activeId);
+    if (!loaded) {
+      return failure6(
+        `Active persona '${activeId}' has no profile.md in storage; clear or recreate it`
+      );
+    }
+    const persona = await buildPersonaContext(ctx, loaded.parsed);
+    return {
+      ok: true,
+      data: { kind: "show-current", personaName: activeId, persona }
+    };
+  } catch (cause) {
+    return failure6(errorMessage6(cause, "Failed to show current persona"), cause);
+  }
+}
+async function asSwitchPersona(input, ctx) {
+  const nameCheck = validatePersonaName(input.personaName, "personaName");
+  if (!nameCheck.ok) return failure6(nameCheck.error);
+  const personaName = nameCheck.value;
+  let newName;
+  if (input.newName !== void 0) {
+    const newNameCheck = validatePersonaName(input.newName, "newName");
+    if (!newNameCheck.ok) return failure6(newNameCheck.error);
+    newName = newNameCheck.value;
+  }
+  try {
+    const service = new PersonaService(ctx);
+    const exists = await service.personaExists({ personaName });
+    if (exists) {
+      if (newName) {
+        await service.renamePersona({
+          personaName,
+          newPersonaName: newName
+        });
+        const loaded3 = await loadPersonaWithName(ctx, newName);
+        if (!loaded3) {
+          return failure6(
+            `Persona was renamed from '${personaName}' to '${newName}' but the new profile could not be loaded`
+          );
+        }
+        const updated3 = await activatePersona(ctx, newName, loaded3.rawProfile);
+        const persona3 = await buildPersonaContext(updated3, loaded3.parsed);
+        return {
+          ok: true,
+          data: {
+            kind: "renamed",
+            from: personaName,
+            to: newName,
+            persona: persona3
+          }
+        };
+      }
+      const loaded2 = await loadPersonaWithName(ctx, personaName);
+      if (!loaded2) {
+        return failure6(`Failed to load persona '${personaName}'`);
+      }
+      const updated2 = await activatePersona(ctx, personaName, loaded2.rawProfile);
+      const persona2 = await buildPersonaContext(updated2, loaded2.parsed);
+      return {
+        ok: true,
+        data: { kind: "switched", personaName, persona: persona2 }
+      };
+    }
+    if (!input.confirmCreate) {
+      const availablePersonas = await service.listPersonas({}) ?? [];
+      return {
+        ok: true,
+        data: {
+          kind: "requires-confirmation",
+          personaName,
+          availablePersonas
+        }
+      };
+    }
+    const profileString = createDefaultProfile(
+      personaName,
+      (/* @__PURE__ */ new Date()).toISOString()
+    );
+    await service.createPersona({ personaName, profile: profileString });
+    const loaded = await loadPersonaWithName(ctx, personaName);
+    if (!loaded) {
+      return failure6(
+        `Persona '${personaName}' was created but the new profile could not be loaded`
+      );
+    }
+    const updated = await activatePersona(ctx, personaName, loaded.rawProfile);
+    const persona = await buildPersonaContext(updated, loaded.parsed);
+    return {
+      ok: true,
+      data: { kind: "created-and-switched", personaName, persona }
+    };
+  } catch (cause) {
+    return failure6(errorMessage6(cause, "Failed to switch persona"), cause);
+  }
+}
+var failure6, errorMessage6;
+var init_as_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/as.handlers.ts"() {
+    "use strict";
+    init_persona_service();
+    init_persona_context();
+    init_persona2();
+    init_persona_activation();
+    failure6 = (error, cause) => cause === void 0 ? { ok: false, error } : { ok: false, error, cause };
+    errorMessage6 = (cause, fallback) => cause instanceof Error ? cause.message : fallback;
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/as-import-library.handler.ts
+function normaliseLibraryResponse(raw2) {
+  if (typeof raw2 === "string") {
+    return raw2 ? { systemBlock: raw2 } : null;
+  }
+  if (!raw2 || typeof raw2 !== "object") return null;
+  const outer = raw2;
+  const inner = outer.persona && typeof outer.persona === "object" ? outer.persona : {};
+  const systemBlock = pickString(inner.systemBlock, outer.systemBlock);
+  if (!systemBlock) return null;
+  return {
+    systemBlock,
+    id: pickString(inner.id, outer.id),
+    name: pickString(inner.name, outer.name),
+    description: pickString(inner.description, outer.description),
+    version: pickString(inner.version, outer.version)
+  };
+}
+function validateInput(input) {
+  const libraryName = input.libraryName?.trim() ?? "";
+  if (!libraryName) {
+    return failure7("libraryName is required");
+  }
+  const localName = input.localName?.trim() ?? "";
+  if (!localName) {
+    return failure7("localName is required");
+  }
+  if (/\s/.test(localName)) {
+    return failure7(
+      `localName must not contain whitespace (got "${input.localName}")`
+    );
+  }
+  if (localName.startsWith("library:")) {
+    return failure7(
+      "localName must not use the library: prefix (it is the local storage name)"
+    );
+  }
+  const authToken = input.authToken?.trim() ?? "";
+  if (!authToken) {
+    return failure7("authentication required to fetch library personas");
+  }
+  return { ok: true, data: { libraryName, localName, authToken } };
+}
+async function asImportLibraryPersona(input, ctx) {
+  const validation = validateInput(input);
+  if (!validation.ok) return validation;
+  const { libraryName, localName, authToken } = validation.data;
+  let response;
+  try {
+    const libraryClient = new LibraryClient();
+    response = await libraryClient.getPersona(libraryName, authToken, false);
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : "Unknown error";
+    return failure7(`Failed to fetch library persona: ${message}`, cause);
+  }
+  const normalised = normaliseLibraryResponse(response);
+  if (!normalised) {
+    return failure7(
+      "Library persona response is missing a usable systemBlock / profile body"
+    );
+  }
+  try {
+    const personaService = new PersonaService(ctx);
+    const enhanced = personaService.addUserBlock(
+      { systemBlock: normalised.systemBlock },
+      localName
+    );
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const metadata = {
+      id: localName,
+      name: localName,
+      description: normalised.description ?? `${normalised.name ?? libraryName} persona`,
+      created: now,
+      lastUpdated: now,
+      sourceLibrary: {
+        id: normalised.id ?? libraryName,
+        name: libraryName,
+        version: normalised.version ?? "1.0.0",
+        importedAt: now
+      }
+    };
+    await personaService.create(localName, enhanced, metadata);
+    const parsed = parsePersonaWithName(enhanced.systemBlock, localName);
+    const updatedCtx = await activatePersona(
+      ctx,
+      localName,
+      enhanced.systemBlock
+    );
+    const persona = await buildPersonaContext(updatedCtx, parsed);
+    return {
+      ok: true,
+      data: {
+        kind: "created-and-switched",
+        personaName: localName,
+        persona
+      }
+    };
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : "Unknown error";
+    return failure7(`Failed to import library persona: ${message}`, cause);
+  }
+}
+var failure7, pickString;
+var init_as_import_library_handler = __esm({
+  "packages/tiny-brain-core/src/handlers/as-import-library.handler.ts"() {
+    "use strict";
+    init_library_client();
+    init_persona_service();
+    init_persona_context();
+    init_persona_activation();
+    failure7 = (error, cause) => cause === void 0 ? { ok: false, error } : { ok: false, error, cause };
+    pickString = (...candidates) => {
+      for (const c of candidates) if (typeof c === "string") return c;
+      return void 0;
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/handlers/index.ts
+var init_handlers = __esm({
+  "packages/tiny-brain-core/src/handlers/index.ts"() {
+    "use strict";
+    init_types15();
+    init_personas_types();
+    init_personas_handlers();
+    init_rules_types();
+    init_rules_handlers();
+    init_rules_formatters();
+    init_recommendations_types();
+    init_recommendations_handlers();
+    init_recommendations_formatters();
+    init_quality_types();
+    init_quality_handlers();
+    init_quality_formatters();
+    init_config_types();
+    init_config_handlers();
+    init_config_formatters();
+    init_as_types();
+    init_as_handlers();
+    init_as_import_library_handler();
+  }
+});
+
+// packages/tiny-brain-core/src/agents/types.ts
+var AgentFormat;
+var init_types16 = __esm({
+  "packages/tiny-brain-core/src/agents/types.ts"() {
+    "use strict";
+    AgentFormat = /* @__PURE__ */ ((AgentFormat2) => {
+      AgentFormat2["CLAUDE_CODE"] = "claude-code";
+      AgentFormat2["OPENAI"] = "openai";
+      AgentFormat2["LANGCHAIN"] = "langchain";
+      AgentFormat2["MARKDOWN"] = "markdown";
+      AgentFormat2["JSON"] = "json";
+      return AgentFormat2;
+    })(AgentFormat || {});
+  }
+});
+
+// packages/tiny-brain-core/src/agents/formatters/claude-code-formatter.ts
+var ClaudeCodeFormatter;
+var init_claude_code_formatter = __esm({
+  "packages/tiny-brain-core/src/agents/formatters/claude-code-formatter.ts"() {
+    "use strict";
+    init_types16();
+    ClaudeCodeFormatter = class {
+      format = "claude-code" /* CLAUDE_CODE */;
+      getRepoContextFilePath() {
+        return "CLAUDE.md";
+      }
+      getAgentInstallPath() {
+        return ".claude/agents";
+      }
+      /**
+       * Format TBR agent JSON directly to Claude Code format
+       */
+      formatTbrAgent(agentData) {
+        const frontmatter = this.generateTbrFrontmatter(agentData);
+        const content = this.generateTbrContent(agentData);
+        return {
+          format: this.format,
+          filename: `${agentData.name}.md`,
+          content: `---
+${frontmatter}---
+
+${content}`,
+          metadata: {
+            platform: "claude-code",
+            version: agentData.details.version || "1.0.0"
+          }
+        };
+      }
+      generateTbrFrontmatter(agent) {
+        const lines = [];
+        lines.push(`name: ${agent.name}`);
+        lines.push(`description: ${this.escapeYaml(agent.details.description)}`);
+        return lines.join("\n") + "\n";
+      }
+      generateTbrContent(agent) {
+        const sections = [];
+        if (agent.mindset) {
+          sections.push(agent.mindset);
+        }
+        sections.push(`## Your Single Purpose
+${agent.details.description}`);
+        if (agent.boundaries) {
+          if (agent.boundaries.will?.length > 0) {
+            sections.push(`## What You Will Do
+${agent.boundaries.will.map((b) => `- ${b}`).join("\n")}`);
+          }
+          if (agent.boundaries.wont?.length > 0) {
+            sections.push(`## What You Won't Do
+${agent.boundaries.wont.map((b) => `- ${b}`).join("\n")}`);
+          }
+        }
+        if (agent.tasks && agent.tasks.length > 0) {
+          sections.push(`## Your Capabilities
+${agent.tasks.map((t) => `- ${t}`).join("\n")}`);
+        }
+        if (agent.flow) {
+          if (agent.flow.phases && agent.flow.phases.length > 0) {
+            const phaseList = agent.flow.phases.map((p) => {
+              let item = `- ${p.name}`;
+              if (p.tollgate) item += ` (Tollgate: ${p.tollgate})`;
+              return item;
+            }).join("\n");
+            sections.push(`## Your Workflow
+${phaseList}`);
+          }
+          if (agent.flow.priorities && agent.flow.priorities.length > 0) {
+            sections.push(`## Priorities
+${agent.flow.priorities.map((p) => `- ${p}`).join("\n")}`);
+          }
+        }
+        if (agent.output) {
+          let outputSection = `## Output Format
+Format: ${agent.output.format}
+`;
+          if (agent.output.includes && agent.output.includes.length > 0) {
+            outputSection += `
+Should include:
+${agent.output.includes.map((i) => `- ${i}`).join("\n")}`;
+          }
+          sections.push(outputSection);
+        }
+        if (agent.details.notes && agent.details.notes.length > 0) {
+          sections.push(`## Important Notes
+${agent.details.notes.map((n) => `- ${n}`).join("\n")}`);
+        }
+        return sections.join("\n\n");
+      }
+      formatAgent(agent) {
+        const frontmatter = this.generateFrontmatter(agent);
+        const content = this.generateContent(agent);
+        return {
+          format: this.format,
+          filename: `${agent.id}.md`,
+          content: `---
+${frontmatter}---
+
+${content}`,
+          metadata: {
+            platform: "claude-code",
+            version: agent.version || "1.0.0"
+          }
+        };
+      }
+      formatAgents(agents) {
+        return agents.map((agent) => this.formatAgent(agent));
+      }
+      generateFrontmatter(agent) {
+        const lines = [];
+        lines.push(`name: ${agent.id}`);
+        lines.push(`description: ${this.escapeYaml(agent.description)}`);
+        if (agent.tools && agent.tools.length > 0) {
+          lines.push(`tools: ${agent.tools.join(", ")}`);
+        }
+        return lines.join("\n") + "\n";
+      }
+      generateContent(agent) {
+        const sections = [];
+        sections.push(agent.systemPrompt);
+        if (agent.purpose) {
+          sections.push(`## Your Single Purpose
+${agent.purpose}`);
+        }
+        if (agent.capabilities.length > 0) {
+          sections.push(`## Your Capabilities
+${agent.capabilities.map((c) => `- ${c}`).join("\n")}`);
+        }
+        if (agent.examples && agent.examples.length > 0) {
+          sections.push(this.formatExamples(agent.examples));
+        }
+        if (agent.dependencies && agent.dependencies.length > 0) {
+          sections.push(`## Dependencies
+This agent requires: ${agent.dependencies.join(", ")}`);
+        }
+        return sections.join("\n\n");
+      }
+      formatExamples(examples) {
+        const exampleSections = examples.map((ex) => {
+          let section = "### Example";
+          if (ex.description) {
+            section += `: ${ex.description}`;
+          }
+          section += "\n\n**Input:**\n```\n" + ex.input + "\n```\n\n";
+          section += "**Output:**\n```\n" + ex.output + "\n```";
+          return section;
+        });
+        return `## Examples
+
+${exampleSections.join("\n\n")}`;
+      }
+      escapeYaml(str2) {
+        if (str2.includes(":") || str2.includes('"') || str2.includes("'") || str2.includes("\n")) {
+          return `"${str2.replace(/"/g, '\\"')}"`;
+        }
+        return str2;
+      }
+      parseAgent(content) {
+        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        if (!frontmatterMatch) {
+          throw new Error("Invalid Claude Code agent format: missing frontmatter");
+        }
+        const frontmatter = this.parseFrontmatter(frontmatterMatch[1]);
+        const markdown = content.slice(frontmatterMatch[0].length).trim();
+        return {
+          id: frontmatter.name,
+          name: frontmatter.name,
+          description: frontmatter.description,
+          tools: frontmatter.tools ? frontmatter.tools.split(",").map((t) => t.trim()) : [],
+          systemPrompt: markdown,
+          purpose: this.extractSection(markdown, "Your Single Purpose"),
+          capabilities: this.extractListSection(markdown, "Your Capabilities"),
+          examples: this.extractExamples(markdown),
+          dependencies: this.extractListSection(markdown, "Dependencies")
+        };
+      }
+      parseFrontmatter(yaml) {
+        const result = {};
+        const lines = yaml.split("\n");
+        for (const line of lines) {
+          const match3 = line.match(/^(\w+):\s*(.+)$/);
+          if (match3) {
+            result[match3[1]] = match3[2].replace(/^["']|["']$/g, "");
+          }
+        }
+        return result;
+      }
+      extractSection(markdown, heading) {
+        const regex = new RegExp(`## ${heading}\\n([^#]+)`, "i");
+        const match3 = markdown.match(regex);
+        return match3 ? match3[1].trim() : "";
+      }
+      extractListSection(markdown, heading) {
+        const section = this.extractSection(markdown, heading);
+        if (!section) return [];
+        return section.split("\n").filter((line) => line.startsWith("-")).map((line) => line.replace(/^-\s*/, "").trim());
+      }
+      extractExamples(_markdown) {
+        return [];
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/agents/formatters/formatter-factory.ts
+var FormatterFactory;
+var init_formatter_factory = __esm({
+  "packages/tiny-brain-core/src/agents/formatters/formatter-factory.ts"() {
+    "use strict";
+    init_types16();
+    init_claude_code_formatter();
+    init_platform_config_adapter();
+    FormatterFactory = class {
+      static formatters = /* @__PURE__ */ new Map([
+        ["claude-code" /* CLAUDE_CODE */, new ClaudeCodeFormatter()]
+      ]);
+      /**
+       * Get formatter for a specific platform
+       */
+      static getFormatter(format) {
+        const formatter = this.formatters.get(format);
+        if (!formatter) {
+          throw new Error(`No formatter available for format: ${format}`);
+        }
+        return formatter;
+      }
+      /**
+       * Register a custom formatter
+       */
+      static registerFormatter(format, formatter) {
+        this.formatters.set(format, formatter);
+      }
+      /**
+       * Get all available formats
+       */
+      static getAvailableFormats() {
+        return Array.from(this.formatters.keys());
+      }
+      /**
+       * Detect format based on platform or environment
+       */
+      static detectFormat(platform2) {
+        if (platform2) {
+          switch (platform2.toLowerCase()) {
+            case "claude":
+            case "claude-code":
+            case "claude-desktop":
+            case "anthropic":
+              return "claude-code" /* CLAUDE_CODE */;
+            default:
+              throw new Error(`Unsupported platform: ${platform2}. Only Claude Code is currently supported.`);
+          }
+        }
+        const detectedPlatform = PlatformConfigAdapter.detectPlatform();
+        switch (detectedPlatform) {
+          case "claude-code":
+          case "claude-desktop":
+            return "claude-code" /* CLAUDE_CODE */;
+          default:
+            throw new Error(`Unsupported platform: ${detectedPlatform}. Only Claude Code is currently supported.`);
+        }
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/agent/agent-installation-service.ts
+import * as fs33 from "fs/promises";
+import * as path36 from "path";
+import * as crypto5 from "crypto";
+var AgentInstallationService;
+var init_agent_installation_service = __esm({
+  "packages/tiny-brain-core/src/services/agent/agent-installation-service.ts"() {
+    "use strict";
+    init_library_client();
+    init_repo_utils();
+    AgentInstallationService = class {
+      constructor(context) {
+        this.context = context;
+        this.libraryClient = new LibraryClient();
+        void this.libraryClient;
+      }
+      libraryClient;
+      /**
+       * Download agent content from the library
+       * Note: This is a placeholder implementation since getAgentContent doesn't exist in LibraryClient yet
+       */
+      async downloadAgentContent(agentName, version) {
+        try {
+          const content = this.generateMockAgentContent(agentName, version);
+          return {
+            content,
+            version,
+            checksum: crypto5.createHash("sha256").update(content).digest("hex")
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Unknown error";
+          this.context.logger.error(`Failed to download agent ${agentName}:`, error);
+          throw new Error(`Failed to download agent content: ${message}`);
+        }
+      }
+      /**
+       * Generate mock agent content (placeholder until API is available)
+       */
+      generateMockAgentContent(agentName, version) {
+        const title = agentName.split("-").map(
+          (word) => word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(" ");
+        return `# ${title}
+
+Downloaded agent from library.
+
+## Your Single Purpose
+Specialized ${agentName.replace(/-/g, " ")} functionality
+
+## What You Will Do
+- Implement ${agentName.replace(/-/g, " ")} features
+- Follow best practices
+- Write comprehensive tests
+
+## What You Won't Do
+- Work outside specialization
+- Skip documentation
+- Ignore error handling
+
+<!-- Agent Metadata -->
+<!-- Version: ${version} -->
+<!-- Generated: ${(/* @__PURE__ */ new Date()).toISOString()} -->
+<!-- Source: tiny-brain-library -->
+`;
+      }
+      /**
+       * Install an agent to .claude/agents/
+       */
+      async installAgent(agentInfo) {
+        try {
+          const repoRoot = getRepoRoot();
+          const agentsDir = path36.join(repoRoot, ".claude", "agents");
+          await fs33.mkdir(agentsDir, { recursive: true });
+          let content = agentInfo.content;
+          if (!content) {
+            const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
+            content = downloaded.content;
+          }
+          const filePath = path36.join(agentsDir, `${agentInfo.name}.md`);
+          await fs33.writeFile(filePath, content, "utf-8");
+          this.context.logger.info(`Successfully installed agent: ${agentInfo.name}`);
+          return { success: true };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : "Unknown error";
+          this.context.logger.error(`Failed to install ${agentInfo.name}:`, error);
+          if (errorMsg.includes("permission denied") || errorMsg.includes("EACCES")) {
+            return {
+              success: false,
+              error: errorMsg,
+              suggestion: "Check directory permissions for .claude/agents/"
+            };
+          }
+          return {
+            success: false,
+            error: errorMsg
+          };
+        }
+      }
+      /**
+       * Update an existing agent, preserving customizations
+       */
+      async updateAgent(agentInfo) {
+        try {
+          const repoRoot = getRepoRoot();
+          const filePath = path36.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
+          const existingContent = await fs33.readFile(filePath, "utf-8");
+          const hasCustomizations = this.detectCustomizations(existingContent);
+          let backupCreated = false;
+          if (hasCustomizations) {
+            const backupPath = `${filePath}.backup.${Date.now()}`;
+            await fs33.writeFile(backupPath, existingContent, "utf-8");
+            backupCreated = true;
+            this.context.logger.info(`Created backup of customized agent: ${backupPath}`);
+          }
+          let newContent = agentInfo.content;
+          if (!newContent) {
+            const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
+            newContent = downloaded.content;
+          }
+          const updatedContent = this.updateAgentMetadata(newContent, agentInfo.version);
+          await fs33.writeFile(filePath, updatedContent, "utf-8");
+          this.context.logger.info(`Successfully updated agent: ${agentInfo.name} to v${agentInfo.version}`);
+          return {
+            updated: true,
+            hadCustomizations: hasCustomizations,
+            backupCreated
+          };
+        } catch (error) {
+          this.context.logger.error(`Failed to update agent ${agentInfo.name}:`, error);
+          throw error;
+        }
+      }
+      /**
+       * Remove an agent safely
+       */
+      async removeAgent(agentName) {
+        try {
+          const repoRoot = getRepoRoot();
+          const filePath = path36.join(repoRoot, ".claude", "agents", `${agentName}.md`);
+          await fs33.access(filePath);
+          await fs33.unlink(filePath);
+          this.context.logger.info(`Successfully removed agent: ${agentName}`);
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            this.context.logger.warn(`Agent file not found: ${agentName}.md`);
+            return;
+          }
+          this.context.logger.error(`Failed to remove agent ${agentName}:`, error);
+          throw error;
+        }
+      }
+      /**
+       * Install multiple agents efficiently
+       */
+      async batchInstall(agentsToInstall) {
+        const results = {
+          successful: [],
+          failed: []
+        };
+        const repoRoot = getRepoRoot();
+        const agentsDir = path36.join(repoRoot, ".claude", "agents");
+        await fs33.mkdir(agentsDir, { recursive: true });
+        for (const agent of agentsToInstall) {
+          try {
+            const result = await this.installAgent(agent);
+            if (result.success) {
+              results.successful.push(agent.name);
+            } else {
+              results.failed.push(agent.name);
+              this.context.logger.error(`Batch install failed for ${agent.name}: ${result.error}`);
+            }
+          } catch (error) {
+            results.failed.push(agent.name);
+            this.context.logger.error(`Batch install error for ${agent.name}:`, error);
+          }
+        }
+        this.context.logger.info(`Batch install complete: ${results.successful.length} successful, ${results.failed.length} failed`);
+        return results;
+      }
+      /**
+       * Validate agent content integrity
+       */
+      async validateAgentContent(content, expectedChecksum) {
+        const validation = {
+          isValid: false,
+          hasRequiredSections: false,
+          hasMetadata: false,
+          checksumValid: true
+        };
+        const requiredSections = [
+          "## Your Single Purpose",
+          "## What You Will Do",
+          "## What You Won't Do"
+        ];
+        validation.hasRequiredSections = requiredSections.every(
+          (section) => content.includes(section)
+        );
+        validation.hasMetadata = content.includes("<!-- Agent Metadata -->") && content.includes("<!-- Version:") && content.includes("<!-- Generated:");
+        if (expectedChecksum) {
+          const actualChecksum = crypto5.createHash("sha256").update(content).digest("hex");
+          validation.checksumValid = actualChecksum === expectedChecksum;
+        }
+        validation.isValid = validation.hasRequiredSections && validation.hasMetadata && validation.checksumValid;
+        return validation;
+      }
+      /**
+       * Get list of installed agents with metadata
+       */
+      async getInstalledAgents() {
+        try {
+          const repoRoot = getRepoRoot();
+          const agentsDir = path36.join(repoRoot, ".claude", "agents");
+          const files = await fs33.readdir(agentsDir);
+          const agentFiles = files.filter((file) => file.endsWith(".md"));
+          const installedAgents = [];
+          for (const file of agentFiles) {
+            try {
+              const filePath = path36.join(agentsDir, file);
+              const content = await fs33.readFile(filePath, "utf-8");
+              const agentName = file.replace(".md", "");
+              const metadata = this.extractAgentMetadata(content);
+              installedAgents.push({
+                name: agentName,
+                version: metadata.version || "1.0.0",
+                lastUpdated: metadata.generated || (/* @__PURE__ */ new Date()).toISOString()
+              });
+            } catch (error) {
+              this.context.logger.warn(`Failed to read agent metadata from ${file}:`, error);
+            }
+          }
+          return installedAgents.sort((a, b) => a.name.localeCompare(b.name));
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            return [];
+          }
+          this.context.logger.error("Failed to get installed agents:", error);
+          throw error;
+        }
+      }
+      /**
+       * Detect if agent content has customizations
+       */
+      detectCustomizations(content) {
+        if (content.includes("<!-- Customized: true -->")) {
+          return true;
+        }
+        const customizationSignals = [
+          "Custom modifications",
+          "Custom purpose",
+          "Custom functionality",
+          "User-modified",
+          "Local changes"
+        ];
+        return customizationSignals.some(
+          (signal) => content.toLowerCase().includes(signal.toLowerCase())
+        );
+      }
+      /**
+       * Update agent metadata (version and timestamp)
+       */
+      updateAgentMetadata(content, version) {
+        let updatedContent = content;
+        const versionRegex = /<!-- Version: (.+?) -->/;
+        updatedContent = updatedContent.replace(versionRegex, `<!-- Version: ${version} -->`);
+        const timestampRegex = /<!-- Generated: (.+?) -->/;
+        updatedContent = updatedContent.replace(timestampRegex, `<!-- Generated: ${(/* @__PURE__ */ new Date()).toISOString()} -->`);
+        return updatedContent;
+      }
+      /**
+       * Extract agent metadata from content
+       */
+      extractAgentMetadata(content) {
+        const metadata = {};
+        const versionMatch = content.match(/<!-- Version: (.+?) -->/);
+        if (versionMatch) {
+          metadata.version = versionMatch[1];
+        }
+        const generatedMatch = content.match(/<!-- Generated: (.+?) -->/);
+        if (generatedMatch) {
+          metadata.generated = generatedMatch[1];
+        }
+        return metadata;
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/repo/repo-registration.ts
+function resolveRepoRegistration(cwd, worktreeInfo) {
+  if (worktreeInfo && worktreeInfo.isWorktree) {
+    const repoName2 = worktreeInfo.mainRepoPath.split("/").pop() || "unknown";
+    return {
+      name: repoName2,
+      path: cwd,
+      worktree: {
+        mainRepoPath: worktreeInfo.mainRepoPath,
+        branch: worktreeInfo.branch,
+        worktreeName: worktreeInfo.worktreeName
+      },
+      mainRepositoryRoot: worktreeInfo.mainRepoPath
+    };
+  }
+  const repoName = cwd.split("/").pop() || "unknown";
+  return { name: repoName, path: cwd };
+}
+var init_repo_registration = __esm({
+  "packages/tiny-brain-core/src/services/repo/repo-registration.ts"() {
+    "use strict";
+  }
+});
+
+// node_modules/semver/internal/constants.js
+var require_constants = __commonJS({
+  "node_modules/semver/internal/constants.js"(exports, module) {
+    "use strict";
+    var SEMVER_SPEC_VERSION = "2.0.0";
+    var MAX_LENGTH = 256;
+    var MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER || /* istanbul ignore next */
+    9007199254740991;
+    var MAX_SAFE_COMPONENT_LENGTH = 16;
+    var MAX_SAFE_BUILD_LENGTH = MAX_LENGTH - 6;
+    var RELEASE_TYPES = [
+      "major",
+      "premajor",
+      "minor",
+      "preminor",
+      "patch",
+      "prepatch",
+      "prerelease"
+    ];
+    module.exports = {
+      MAX_LENGTH,
+      MAX_SAFE_COMPONENT_LENGTH,
+      MAX_SAFE_BUILD_LENGTH,
+      MAX_SAFE_INTEGER,
+      RELEASE_TYPES,
+      SEMVER_SPEC_VERSION,
+      FLAG_INCLUDE_PRERELEASE: 1,
+      FLAG_LOOSE: 2
+    };
+  }
+});
+
+// node_modules/semver/internal/debug.js
+var require_debug = __commonJS({
+  "node_modules/semver/internal/debug.js"(exports, module) {
+    "use strict";
+    var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
+    };
+    module.exports = debug;
+  }
+});
+
+// node_modules/semver/internal/re.js
+var require_re = __commonJS({
+  "node_modules/semver/internal/re.js"(exports, module) {
+    "use strict";
+    var {
+      MAX_SAFE_COMPONENT_LENGTH,
+      MAX_SAFE_BUILD_LENGTH,
+      MAX_LENGTH
+    } = require_constants();
+    var debug = require_debug();
+    exports = module.exports = {};
+    var re = exports.re = [];
+    var safeRe = exports.safeRe = [];
+    var src = exports.src = [];
+    var safeSrc = exports.safeSrc = [];
+    var t = exports.t = {};
+    var R = 0;
+    var LETTERDASHNUMBER = "[a-zA-Z0-9-]";
+    var safeRegexReplacements = [
+      ["\\s", 1],
+      ["\\d", MAX_LENGTH],
+      [LETTERDASHNUMBER, MAX_SAFE_BUILD_LENGTH]
+    ];
+    var makeSafeRegex = (value) => {
+      for (const [token, max] of safeRegexReplacements) {
+        value = value.split(`${token}*`).join(`${token}{0,${max}}`).split(`${token}+`).join(`${token}{1,${max}}`);
+      }
+      return value;
+    };
+    var createToken = (name, value, isGlobal) => {
+      const safe = makeSafeRegex(value);
+      const index = R++;
+      debug(name, index, value);
+      t[name] = index;
+      src[index] = value;
+      safeSrc[index] = safe;
+      re[index] = new RegExp(value, isGlobal ? "g" : void 0);
+      safeRe[index] = new RegExp(safe, isGlobal ? "g" : void 0);
+    };
+    createToken("NUMERICIDENTIFIER", "0|[1-9]\\d*");
+    createToken("NUMERICIDENTIFIERLOOSE", "\\d+");
+    createToken("NONNUMERICIDENTIFIER", `\\d*[a-zA-Z-]${LETTERDASHNUMBER}*`);
+    createToken("MAINVERSION", `(${src[t.NUMERICIDENTIFIER]})\\.(${src[t.NUMERICIDENTIFIER]})\\.(${src[t.NUMERICIDENTIFIER]})`);
+    createToken("MAINVERSIONLOOSE", `(${src[t.NUMERICIDENTIFIERLOOSE]})\\.(${src[t.NUMERICIDENTIFIERLOOSE]})\\.(${src[t.NUMERICIDENTIFIERLOOSE]})`);
+    createToken("PRERELEASEIDENTIFIER", `(?:${src[t.NONNUMERICIDENTIFIER]}|${src[t.NUMERICIDENTIFIER]})`);
+    createToken("PRERELEASEIDENTIFIERLOOSE", `(?:${src[t.NONNUMERICIDENTIFIER]}|${src[t.NUMERICIDENTIFIERLOOSE]})`);
+    createToken("PRERELEASE", `(?:-(${src[t.PRERELEASEIDENTIFIER]}(?:\\.${src[t.PRERELEASEIDENTIFIER]})*))`);
+    createToken("PRERELEASELOOSE", `(?:-?(${src[t.PRERELEASEIDENTIFIERLOOSE]}(?:\\.${src[t.PRERELEASEIDENTIFIERLOOSE]})*))`);
+    createToken("BUILDIDENTIFIER", `${LETTERDASHNUMBER}+`);
+    createToken("BUILD", `(?:\\+(${src[t.BUILDIDENTIFIER]}(?:\\.${src[t.BUILDIDENTIFIER]})*))`);
+    createToken("FULLPLAIN", `v?${src[t.MAINVERSION]}${src[t.PRERELEASE]}?${src[t.BUILD]}?`);
+    createToken("FULL", `^${src[t.FULLPLAIN]}$`);
+    createToken("LOOSEPLAIN", `[v=\\s]*${src[t.MAINVERSIONLOOSE]}${src[t.PRERELEASELOOSE]}?${src[t.BUILD]}?`);
+    createToken("LOOSE", `^${src[t.LOOSEPLAIN]}$`);
+    createToken("GTLT", "((?:<|>)?=?)");
+    createToken("XRANGEIDENTIFIERLOOSE", `${src[t.NUMERICIDENTIFIERLOOSE]}|x|X|\\*`);
+    createToken("XRANGEIDENTIFIER", `${src[t.NUMERICIDENTIFIER]}|x|X|\\*`);
+    createToken("XRANGEPLAIN", `[v=\\s]*(${src[t.XRANGEIDENTIFIER]})(?:\\.(${src[t.XRANGEIDENTIFIER]})(?:\\.(${src[t.XRANGEIDENTIFIER]})(?:${src[t.PRERELEASE]})?${src[t.BUILD]}?)?)?`);
+    createToken("XRANGEPLAINLOOSE", `[v=\\s]*(${src[t.XRANGEIDENTIFIERLOOSE]})(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})(?:${src[t.PRERELEASELOOSE]})?${src[t.BUILD]}?)?)?`);
+    createToken("XRANGE", `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAIN]}$`);
+    createToken("XRANGELOOSE", `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAINLOOSE]}$`);
+    createToken("COERCEPLAIN", `${"(^|[^\\d])(\\d{1,"}${MAX_SAFE_COMPONENT_LENGTH}})(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?`);
+    createToken("COERCE", `${src[t.COERCEPLAIN]}(?:$|[^\\d])`);
+    createToken("COERCEFULL", src[t.COERCEPLAIN] + `(?:${src[t.PRERELEASE]})?(?:${src[t.BUILD]})?(?:$|[^\\d])`);
+    createToken("COERCERTL", src[t.COERCE], true);
+    createToken("COERCERTLFULL", src[t.COERCEFULL], true);
+    createToken("LONETILDE", "(?:~>?)");
+    createToken("TILDETRIM", `(\\s*)${src[t.LONETILDE]}\\s+`, true);
+    exports.tildeTrimReplace = "$1~";
+    createToken("TILDE", `^${src[t.LONETILDE]}${src[t.XRANGEPLAIN]}$`);
+    createToken("TILDELOOSE", `^${src[t.LONETILDE]}${src[t.XRANGEPLAINLOOSE]}$`);
+    createToken("LONECARET", "(?:\\^)");
+    createToken("CARETTRIM", `(\\s*)${src[t.LONECARET]}\\s+`, true);
+    exports.caretTrimReplace = "$1^";
+    createToken("CARET", `^${src[t.LONECARET]}${src[t.XRANGEPLAIN]}$`);
+    createToken("CARETLOOSE", `^${src[t.LONECARET]}${src[t.XRANGEPLAINLOOSE]}$`);
+    createToken("COMPARATORLOOSE", `^${src[t.GTLT]}\\s*(${src[t.LOOSEPLAIN]})$|^$`);
+    createToken("COMPARATOR", `^${src[t.GTLT]}\\s*(${src[t.FULLPLAIN]})$|^$`);
+    createToken("COMPARATORTRIM", `(\\s*)${src[t.GTLT]}\\s*(${src[t.LOOSEPLAIN]}|${src[t.XRANGEPLAIN]})`, true);
+    exports.comparatorTrimReplace = "$1$2$3";
+    createToken("HYPHENRANGE", `^\\s*(${src[t.XRANGEPLAIN]})\\s+-\\s+(${src[t.XRANGEPLAIN]})\\s*$`);
+    createToken("HYPHENRANGELOOSE", `^\\s*(${src[t.XRANGEPLAINLOOSE]})\\s+-\\s+(${src[t.XRANGEPLAINLOOSE]})\\s*$`);
+    createToken("STAR", "(<|>)?=?\\s*\\*");
+    createToken("GTE0", "^\\s*>=\\s*0\\.0\\.0\\s*$");
+    createToken("GTE0PRE", "^\\s*>=\\s*0\\.0\\.0-0\\s*$");
+  }
+});
+
+// node_modules/semver/internal/parse-options.js
+var require_parse_options = __commonJS({
+  "node_modules/semver/internal/parse-options.js"(exports, module) {
+    "use strict";
+    var looseOption = Object.freeze({ loose: true });
+    var emptyOpts = Object.freeze({});
+    var parseOptions = (options) => {
+      if (!options) {
+        return emptyOpts;
+      }
+      if (typeof options !== "object") {
+        return looseOption;
+      }
+      return options;
+    };
+    module.exports = parseOptions;
+  }
+});
+
+// node_modules/semver/internal/identifiers.js
+var require_identifiers = __commonJS({
+  "node_modules/semver/internal/identifiers.js"(exports, module) {
+    "use strict";
+    var numeric2 = /^[0-9]+$/;
+    var compareIdentifiers = (a, b) => {
+      if (typeof a === "number" && typeof b === "number") {
+        return a === b ? 0 : a < b ? -1 : 1;
+      }
+      const anum = numeric2.test(a);
+      const bnum = numeric2.test(b);
+      if (anum && bnum) {
+        a = +a;
+        b = +b;
+      }
+      return a === b ? 0 : anum && !bnum ? -1 : bnum && !anum ? 1 : a < b ? -1 : 1;
+    };
+    var rcompareIdentifiers = (a, b) => compareIdentifiers(b, a);
+    module.exports = {
+      compareIdentifiers,
+      rcompareIdentifiers
+    };
+  }
+});
+
+// node_modules/semver/classes/semver.js
+var require_semver = __commonJS({
+  "node_modules/semver/classes/semver.js"(exports, module) {
+    "use strict";
+    var debug = require_debug();
+    var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
+    var { safeRe: re, t } = require_re();
+    var parseOptions = require_parse_options();
+    var { compareIdentifiers } = require_identifiers();
+    var SemVer = class _SemVer {
+      constructor(version, options) {
+        options = parseOptions(options);
+        if (version instanceof _SemVer) {
+          if (version.loose === !!options.loose && version.includePrerelease === !!options.includePrerelease) {
+            return version;
+          } else {
+            version = version.version;
+          }
+        } else if (typeof version !== "string") {
+          throw new TypeError(`Invalid version. Must be a string. Got type "${typeof version}".`);
+        }
+        if (version.length > MAX_LENGTH) {
+          throw new TypeError(
+            `version is longer than ${MAX_LENGTH} characters`
+          );
+        }
+        debug("SemVer", version, options);
+        this.options = options;
+        this.loose = !!options.loose;
+        this.includePrerelease = !!options.includePrerelease;
+        const m = version.trim().match(options.loose ? re[t.LOOSE] : re[t.FULL]);
+        if (!m) {
+          throw new TypeError(`Invalid Version: ${version}`);
+        }
+        this.raw = version;
+        this.major = +m[1];
+        this.minor = +m[2];
+        this.patch = +m[3];
+        if (this.major > MAX_SAFE_INTEGER || this.major < 0) {
+          throw new TypeError("Invalid major version");
+        }
+        if (this.minor > MAX_SAFE_INTEGER || this.minor < 0) {
+          throw new TypeError("Invalid minor version");
+        }
+        if (this.patch > MAX_SAFE_INTEGER || this.patch < 0) {
+          throw new TypeError("Invalid patch version");
+        }
+        if (!m[4]) {
+          this.prerelease = [];
+        } else {
+          this.prerelease = m[4].split(".").map((id) => {
+            if (/^[0-9]+$/.test(id)) {
+              const num = +id;
+              if (num >= 0 && num < MAX_SAFE_INTEGER) {
+                return num;
+              }
+            }
+            return id;
+          });
+        }
+        this.build = m[5] ? m[5].split(".") : [];
+        this.format();
+      }
+      format() {
+        this.version = `${this.major}.${this.minor}.${this.patch}`;
+        if (this.prerelease.length) {
+          this.version += `-${this.prerelease.join(".")}`;
+        }
+        return this.version;
+      }
+      toString() {
+        return this.version;
+      }
+      compare(other) {
+        debug("SemVer.compare", this.version, this.options, other);
+        if (!(other instanceof _SemVer)) {
+          if (typeof other === "string" && other === this.version) {
+            return 0;
+          }
+          other = new _SemVer(other, this.options);
+        }
+        if (other.version === this.version) {
+          return 0;
+        }
+        return this.compareMain(other) || this.comparePre(other);
+      }
+      compareMain(other) {
+        if (!(other instanceof _SemVer)) {
+          other = new _SemVer(other, this.options);
+        }
+        if (this.major < other.major) {
+          return -1;
+        }
+        if (this.major > other.major) {
+          return 1;
+        }
+        if (this.minor < other.minor) {
+          return -1;
+        }
+        if (this.minor > other.minor) {
+          return 1;
+        }
+        if (this.patch < other.patch) {
+          return -1;
+        }
+        if (this.patch > other.patch) {
+          return 1;
+        }
+        return 0;
+      }
+      comparePre(other) {
+        if (!(other instanceof _SemVer)) {
+          other = new _SemVer(other, this.options);
+        }
+        if (this.prerelease.length && !other.prerelease.length) {
+          return -1;
+        } else if (!this.prerelease.length && other.prerelease.length) {
+          return 1;
+        } else if (!this.prerelease.length && !other.prerelease.length) {
+          return 0;
+        }
+        let i = 0;
+        do {
+          const a = this.prerelease[i];
+          const b = other.prerelease[i];
+          debug("prerelease compare", i, a, b);
+          if (a === void 0 && b === void 0) {
+            return 0;
+          } else if (b === void 0) {
+            return 1;
+          } else if (a === void 0) {
+            return -1;
+          } else if (a === b) {
+            continue;
+          } else {
+            return compareIdentifiers(a, b);
+          }
+        } while (++i);
+      }
+      compareBuild(other) {
+        if (!(other instanceof _SemVer)) {
+          other = new _SemVer(other, this.options);
+        }
+        let i = 0;
+        do {
+          const a = this.build[i];
+          const b = other.build[i];
+          debug("build compare", i, a, b);
+          if (a === void 0 && b === void 0) {
+            return 0;
+          } else if (b === void 0) {
+            return 1;
+          } else if (a === void 0) {
+            return -1;
+          } else if (a === b) {
+            continue;
+          } else {
+            return compareIdentifiers(a, b);
+          }
+        } while (++i);
+      }
+      // preminor will bump the version up to the next minor release, and immediately
+      // down to pre-release. premajor and prepatch work the same way.
+      inc(release, identifier, identifierBase) {
+        if (release.startsWith("pre")) {
+          if (!identifier && identifierBase === false) {
+            throw new Error("invalid increment argument: identifier is empty");
+          }
+          if (identifier) {
+            const match3 = `-${identifier}`.match(this.options.loose ? re[t.PRERELEASELOOSE] : re[t.PRERELEASE]);
+            if (!match3 || match3[1] !== identifier) {
+              throw new Error(`invalid identifier: ${identifier}`);
+            }
+          }
+        }
+        switch (release) {
+          case "premajor":
+            this.prerelease.length = 0;
+            this.patch = 0;
+            this.minor = 0;
+            this.major++;
+            this.inc("pre", identifier, identifierBase);
+            break;
+          case "preminor":
+            this.prerelease.length = 0;
+            this.patch = 0;
+            this.minor++;
+            this.inc("pre", identifier, identifierBase);
+            break;
+          case "prepatch":
+            this.prerelease.length = 0;
+            this.inc("patch", identifier, identifierBase);
+            this.inc("pre", identifier, identifierBase);
+            break;
+          // If the input is a non-prerelease version, this acts the same as
+          // prepatch.
+          case "prerelease":
+            if (this.prerelease.length === 0) {
+              this.inc("patch", identifier, identifierBase);
+            }
+            this.inc("pre", identifier, identifierBase);
+            break;
+          case "release":
+            if (this.prerelease.length === 0) {
+              throw new Error(`version ${this.raw} is not a prerelease`);
+            }
+            this.prerelease.length = 0;
+            break;
+          case "major":
+            if (this.minor !== 0 || this.patch !== 0 || this.prerelease.length === 0) {
+              this.major++;
+            }
+            this.minor = 0;
+            this.patch = 0;
+            this.prerelease = [];
+            break;
+          case "minor":
+            if (this.patch !== 0 || this.prerelease.length === 0) {
+              this.minor++;
+            }
+            this.patch = 0;
+            this.prerelease = [];
+            break;
+          case "patch":
+            if (this.prerelease.length === 0) {
+              this.patch++;
+            }
+            this.prerelease = [];
+            break;
+          // This probably shouldn't be used publicly.
+          // 1.0.0 'pre' would become 1.0.0-0 which is the wrong direction.
+          case "pre": {
+            const base = Number(identifierBase) ? 1 : 0;
+            if (this.prerelease.length === 0) {
+              this.prerelease = [base];
+            } else {
+              let i = this.prerelease.length;
+              while (--i >= 0) {
+                if (typeof this.prerelease[i] === "number") {
+                  this.prerelease[i]++;
+                  i = -2;
+                }
+              }
+              if (i === -1) {
+                if (identifier === this.prerelease.join(".") && identifierBase === false) {
+                  throw new Error("invalid increment argument: identifier already exists");
+                }
+                this.prerelease.push(base);
+              }
+            }
+            if (identifier) {
+              let prerelease = [identifier, base];
+              if (identifierBase === false) {
+                prerelease = [identifier];
+              }
+              if (compareIdentifiers(this.prerelease[0], identifier) === 0) {
+                if (isNaN(this.prerelease[1])) {
+                  this.prerelease = prerelease;
+                }
+              } else {
+                this.prerelease = prerelease;
+              }
+            }
+            break;
+          }
+          default:
+            throw new Error(`invalid increment argument: ${release}`);
+        }
+        this.raw = this.format();
+        if (this.build.length) {
+          this.raw += `+${this.build.join(".")}`;
+        }
+        return this;
+      }
+    };
+    module.exports = SemVer;
+  }
+});
+
+// node_modules/semver/functions/parse.js
+var require_parse = __commonJS({
+  "node_modules/semver/functions/parse.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var parse = (version, options, throwErrors = false) => {
+      if (version instanceof SemVer) {
+        return version;
+      }
+      try {
+        return new SemVer(version, options);
+      } catch (er) {
+        if (!throwErrors) {
+          return null;
+        }
+        throw er;
+      }
+    };
+    module.exports = parse;
+  }
+});
+
+// node_modules/semver/functions/valid.js
+var require_valid = __commonJS({
+  "node_modules/semver/functions/valid.js"(exports, module) {
+    "use strict";
+    var parse = require_parse();
+    var valid = (version, options) => {
+      const v = parse(version, options);
+      return v ? v.version : null;
+    };
+    module.exports = valid;
+  }
+});
+
+// node_modules/semver/functions/clean.js
+var require_clean = __commonJS({
+  "node_modules/semver/functions/clean.js"(exports, module) {
+    "use strict";
+    var parse = require_parse();
+    var clean = (version, options) => {
+      const s = parse(version.trim().replace(/^[=v]+/, ""), options);
+      return s ? s.version : null;
+    };
+    module.exports = clean;
+  }
+});
+
+// node_modules/semver/functions/inc.js
+var require_inc = __commonJS({
+  "node_modules/semver/functions/inc.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var inc = (version, release, options, identifier, identifierBase) => {
+      if (typeof options === "string") {
+        identifierBase = identifier;
+        identifier = options;
+        options = void 0;
+      }
+      try {
+        return new SemVer(
+          version instanceof SemVer ? version.version : version,
+          options
+        ).inc(release, identifier, identifierBase).version;
+      } catch (er) {
+        return null;
+      }
+    };
+    module.exports = inc;
+  }
+});
+
+// node_modules/semver/functions/diff.js
+var require_diff = __commonJS({
+  "node_modules/semver/functions/diff.js"(exports, module) {
+    "use strict";
+    var parse = require_parse();
+    var diff = (version1, version2) => {
+      const v1 = parse(version1, null, true);
+      const v2 = parse(version2, null, true);
+      const comparison = v1.compare(v2);
+      if (comparison === 0) {
+        return null;
+      }
+      const v1Higher = comparison > 0;
+      const highVersion = v1Higher ? v1 : v2;
+      const lowVersion = v1Higher ? v2 : v1;
+      const highHasPre = !!highVersion.prerelease.length;
+      const lowHasPre = !!lowVersion.prerelease.length;
+      if (lowHasPre && !highHasPre) {
+        if (!lowVersion.patch && !lowVersion.minor) {
+          return "major";
+        }
+        if (lowVersion.compareMain(highVersion) === 0) {
+          if (lowVersion.minor && !lowVersion.patch) {
+            return "minor";
+          }
+          return "patch";
+        }
+      }
+      const prefix = highHasPre ? "pre" : "";
+      if (v1.major !== v2.major) {
+        return prefix + "major";
+      }
+      if (v1.minor !== v2.minor) {
+        return prefix + "minor";
+      }
+      if (v1.patch !== v2.patch) {
+        return prefix + "patch";
+      }
+      return "prerelease";
+    };
+    module.exports = diff;
+  }
+});
+
+// node_modules/semver/functions/major.js
+var require_major = __commonJS({
+  "node_modules/semver/functions/major.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var major = (a, loose) => new SemVer(a, loose).major;
+    module.exports = major;
+  }
+});
+
+// node_modules/semver/functions/minor.js
+var require_minor = __commonJS({
+  "node_modules/semver/functions/minor.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var minor = (a, loose) => new SemVer(a, loose).minor;
+    module.exports = minor;
+  }
+});
+
+// node_modules/semver/functions/patch.js
+var require_patch = __commonJS({
+  "node_modules/semver/functions/patch.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var patch = (a, loose) => new SemVer(a, loose).patch;
+    module.exports = patch;
+  }
+});
+
+// node_modules/semver/functions/prerelease.js
+var require_prerelease = __commonJS({
+  "node_modules/semver/functions/prerelease.js"(exports, module) {
+    "use strict";
+    var parse = require_parse();
+    var prerelease = (version, options) => {
+      const parsed = parse(version, options);
+      return parsed && parsed.prerelease.length ? parsed.prerelease : null;
+    };
+    module.exports = prerelease;
+  }
+});
+
+// node_modules/semver/functions/compare.js
+var require_compare = __commonJS({
+  "node_modules/semver/functions/compare.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
+    module.exports = compare;
+  }
+});
+
+// node_modules/semver/functions/rcompare.js
+var require_rcompare = __commonJS({
+  "node_modules/semver/functions/rcompare.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var rcompare = (a, b, loose) => compare(b, a, loose);
+    module.exports = rcompare;
+  }
+});
+
+// node_modules/semver/functions/compare-loose.js
+var require_compare_loose = __commonJS({
+  "node_modules/semver/functions/compare-loose.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var compareLoose = (a, b) => compare(a, b, true);
+    module.exports = compareLoose;
+  }
+});
+
+// node_modules/semver/functions/compare-build.js
+var require_compare_build = __commonJS({
+  "node_modules/semver/functions/compare-build.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var compareBuild = (a, b, loose) => {
+      const versionA = new SemVer(a, loose);
+      const versionB = new SemVer(b, loose);
+      return versionA.compare(versionB) || versionA.compareBuild(versionB);
+    };
+    module.exports = compareBuild;
+  }
+});
+
+// node_modules/semver/functions/sort.js
+var require_sort = __commonJS({
+  "node_modules/semver/functions/sort.js"(exports, module) {
+    "use strict";
+    var compareBuild = require_compare_build();
+    var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
+    module.exports = sort;
+  }
+});
+
+// node_modules/semver/functions/rsort.js
+var require_rsort = __commonJS({
+  "node_modules/semver/functions/rsort.js"(exports, module) {
+    "use strict";
+    var compareBuild = require_compare_build();
+    var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
+    module.exports = rsort;
+  }
+});
+
+// node_modules/semver/functions/gt.js
+var require_gt = __commonJS({
+  "node_modules/semver/functions/gt.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var gt2 = (a, b, loose) => compare(a, b, loose) > 0;
+    module.exports = gt2;
+  }
+});
+
+// node_modules/semver/functions/lt.js
+var require_lt = __commonJS({
+  "node_modules/semver/functions/lt.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var lt = (a, b, loose) => compare(a, b, loose) < 0;
+    module.exports = lt;
+  }
+});
+
+// node_modules/semver/functions/eq.js
+var require_eq = __commonJS({
+  "node_modules/semver/functions/eq.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var eq = (a, b, loose) => compare(a, b, loose) === 0;
+    module.exports = eq;
+  }
+});
+
+// node_modules/semver/functions/neq.js
+var require_neq = __commonJS({
+  "node_modules/semver/functions/neq.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var neq = (a, b, loose) => compare(a, b, loose) !== 0;
+    module.exports = neq;
+  }
+});
+
+// node_modules/semver/functions/gte.js
+var require_gte = __commonJS({
+  "node_modules/semver/functions/gte.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var gte2 = (a, b, loose) => compare(a, b, loose) >= 0;
+    module.exports = gte2;
+  }
+});
+
+// node_modules/semver/functions/lte.js
+var require_lte = __commonJS({
+  "node_modules/semver/functions/lte.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var lte2 = (a, b, loose) => compare(a, b, loose) <= 0;
+    module.exports = lte2;
+  }
+});
+
+// node_modules/semver/functions/cmp.js
+var require_cmp = __commonJS({
+  "node_modules/semver/functions/cmp.js"(exports, module) {
+    "use strict";
+    var eq = require_eq();
+    var neq = require_neq();
+    var gt2 = require_gt();
+    var gte2 = require_gte();
+    var lt = require_lt();
+    var lte2 = require_lte();
+    var cmp = (a, op, b, loose) => {
+      switch (op) {
+        case "===":
+          if (typeof a === "object") {
+            a = a.version;
+          }
+          if (typeof b === "object") {
+            b = b.version;
+          }
+          return a === b;
+        case "!==":
+          if (typeof a === "object") {
+            a = a.version;
+          }
+          if (typeof b === "object") {
+            b = b.version;
+          }
+          return a !== b;
+        case "":
+        case "=":
+        case "==":
+          return eq(a, b, loose);
+        case "!=":
+          return neq(a, b, loose);
+        case ">":
+          return gt2(a, b, loose);
+        case ">=":
+          return gte2(a, b, loose);
+        case "<":
+          return lt(a, b, loose);
+        case "<=":
+          return lte2(a, b, loose);
+        default:
+          throw new TypeError(`Invalid operator: ${op}`);
+      }
+    };
+    module.exports = cmp;
+  }
+});
+
+// node_modules/semver/functions/coerce.js
+var require_coerce = __commonJS({
+  "node_modules/semver/functions/coerce.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var parse = require_parse();
+    var { safeRe: re, t } = require_re();
+    var coerce2 = (version, options) => {
+      if (version instanceof SemVer) {
+        return version;
+      }
+      if (typeof version === "number") {
+        version = String(version);
+      }
+      if (typeof version !== "string") {
+        return null;
+      }
+      options = options || {};
+      let match3 = null;
+      if (!options.rtl) {
+        match3 = version.match(options.includePrerelease ? re[t.COERCEFULL] : re[t.COERCE]);
+      } else {
+        const coerceRtlRegex = options.includePrerelease ? re[t.COERCERTLFULL] : re[t.COERCERTL];
+        let next;
+        while ((next = coerceRtlRegex.exec(version)) && (!match3 || match3.index + match3[0].length !== version.length)) {
+          if (!match3 || next.index + next[0].length !== match3.index + match3[0].length) {
+            match3 = next;
+          }
+          coerceRtlRegex.lastIndex = next.index + next[1].length + next[2].length;
+        }
+        coerceRtlRegex.lastIndex = -1;
+      }
+      if (match3 === null) {
+        return null;
+      }
+      const major = match3[2];
+      const minor = match3[3] || "0";
+      const patch = match3[4] || "0";
+      const prerelease = options.includePrerelease && match3[5] ? `-${match3[5]}` : "";
+      const build = options.includePrerelease && match3[6] ? `+${match3[6]}` : "";
+      return parse(`${major}.${minor}.${patch}${prerelease}${build}`, options);
+    };
+    module.exports = coerce2;
+  }
+});
+
+// node_modules/semver/internal/lrucache.js
+var require_lrucache = __commonJS({
+  "node_modules/semver/internal/lrucache.js"(exports, module) {
+    "use strict";
+    var LRUCache2 = class {
+      constructor() {
+        this.max = 1e3;
+        this.map = /* @__PURE__ */ new Map();
+      }
+      get(key) {
+        const value = this.map.get(key);
+        if (value === void 0) {
+          return void 0;
+        } else {
+          this.map.delete(key);
+          this.map.set(key, value);
+          return value;
+        }
+      }
+      delete(key) {
+        return this.map.delete(key);
+      }
+      set(key, value) {
+        const deleted = this.delete(key);
+        if (!deleted && value !== void 0) {
+          if (this.map.size >= this.max) {
+            const firstKey = this.map.keys().next().value;
+            this.delete(firstKey);
+          }
+          this.map.set(key, value);
+        }
+        return this;
+      }
+    };
+    module.exports = LRUCache2;
+  }
+});
+
+// node_modules/semver/classes/range.js
+var require_range = __commonJS({
+  "node_modules/semver/classes/range.js"(exports, module) {
+    "use strict";
+    var SPACE_CHARACTERS = /\s+/g;
+    var Range = class _Range {
+      constructor(range2, options) {
+        options = parseOptions(options);
+        if (range2 instanceof _Range) {
+          if (range2.loose === !!options.loose && range2.includePrerelease === !!options.includePrerelease) {
+            return range2;
+          } else {
+            return new _Range(range2.raw, options);
+          }
+        }
+        if (range2 instanceof Comparator) {
+          this.raw = range2.value;
+          this.set = [[range2]];
+          this.formatted = void 0;
+          return this;
+        }
+        this.options = options;
+        this.loose = !!options.loose;
+        this.includePrerelease = !!options.includePrerelease;
+        this.raw = range2.trim().replace(SPACE_CHARACTERS, " ");
+        this.set = this.raw.split("||").map((r) => this.parseRange(r.trim())).filter((c) => c.length);
+        if (!this.set.length) {
+          throw new TypeError(`Invalid SemVer Range: ${this.raw}`);
+        }
+        if (this.set.length > 1) {
+          const first2 = this.set[0];
+          this.set = this.set.filter((c) => !isNullSet(c[0]));
+          if (this.set.length === 0) {
+            this.set = [first2];
+          } else if (this.set.length > 1) {
+            for (const c of this.set) {
+              if (c.length === 1 && isAny(c[0])) {
+                this.set = [c];
+                break;
+              }
+            }
+          }
+        }
+        this.formatted = void 0;
+      }
+      get range() {
+        if (this.formatted === void 0) {
+          this.formatted = "";
+          for (let i = 0; i < this.set.length; i++) {
+            if (i > 0) {
+              this.formatted += "||";
+            }
+            const comps = this.set[i];
+            for (let k = 0; k < comps.length; k++) {
+              if (k > 0) {
+                this.formatted += " ";
+              }
+              this.formatted += comps[k].toString().trim();
+            }
+          }
+        }
+        return this.formatted;
+      }
+      format() {
+        return this.range;
+      }
+      toString() {
+        return this.range;
+      }
+      parseRange(range2) {
+        const memoOpts = (this.options.includePrerelease && FLAG_INCLUDE_PRERELEASE) | (this.options.loose && FLAG_LOOSE);
+        const memoKey = memoOpts + ":" + range2;
+        const cached = cache.get(memoKey);
+        if (cached) {
+          return cached;
+        }
+        const loose = this.options.loose;
+        const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
+        range2 = range2.replace(hr, hyphenReplace(this.options.includePrerelease));
+        debug("hyphen replace", range2);
+        range2 = range2.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
+        debug("comparator trim", range2);
+        range2 = range2.replace(re[t.TILDETRIM], tildeTrimReplace);
+        debug("tilde trim", range2);
+        range2 = range2.replace(re[t.CARETTRIM], caretTrimReplace);
+        debug("caret trim", range2);
+        let rangeList = range2.split(" ").map((comp) => parseComparator(comp, this.options)).join(" ").split(/\s+/).map((comp) => replaceGTE0(comp, this.options));
+        if (loose) {
+          rangeList = rangeList.filter((comp) => {
+            debug("loose invalid filter", comp, this.options);
+            return !!comp.match(re[t.COMPARATORLOOSE]);
+          });
+        }
+        debug("range list", rangeList);
+        const rangeMap = /* @__PURE__ */ new Map();
+        const comparators = rangeList.map((comp) => new Comparator(comp, this.options));
+        for (const comp of comparators) {
+          if (isNullSet(comp)) {
+            return [comp];
+          }
+          rangeMap.set(comp.value, comp);
+        }
+        if (rangeMap.size > 1 && rangeMap.has("")) {
+          rangeMap.delete("");
+        }
+        const result = [...rangeMap.values()];
+        cache.set(memoKey, result);
+        return result;
+      }
+      intersects(range2, options) {
+        if (!(range2 instanceof _Range)) {
+          throw new TypeError("a Range is required");
+        }
+        return this.set.some((thisComparators) => {
+          return isSatisfiable(thisComparators, options) && range2.set.some((rangeComparators) => {
+            return isSatisfiable(rangeComparators, options) && thisComparators.every((thisComparator) => {
+              return rangeComparators.every((rangeComparator) => {
+                return thisComparator.intersects(rangeComparator, options);
+              });
+            });
+          });
+        });
+      }
+      // if ANY of the sets match ALL of its comparators, then pass
+      test(version) {
+        if (!version) {
+          return false;
+        }
+        if (typeof version === "string") {
+          try {
+            version = new SemVer(version, this.options);
+          } catch (er) {
+            return false;
+          }
+        }
+        for (let i = 0; i < this.set.length; i++) {
+          if (testSet(this.set[i], version, this.options)) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+    module.exports = Range;
+    var LRU = require_lrucache();
+    var cache = new LRU();
+    var parseOptions = require_parse_options();
+    var Comparator = require_comparator();
+    var debug = require_debug();
+    var SemVer = require_semver();
+    var {
+      safeRe: re,
+      t,
+      comparatorTrimReplace,
+      tildeTrimReplace,
+      caretTrimReplace
+    } = require_re();
+    var { FLAG_INCLUDE_PRERELEASE, FLAG_LOOSE } = require_constants();
+    var isNullSet = (c) => c.value === "<0.0.0-0";
+    var isAny = (c) => c.value === "";
+    var isSatisfiable = (comparators, options) => {
+      let result = true;
+      const remainingComparators = comparators.slice();
+      let testComparator = remainingComparators.pop();
+      while (result && remainingComparators.length) {
+        result = remainingComparators.every((otherComparator) => {
+          return testComparator.intersects(otherComparator, options);
+        });
+        testComparator = remainingComparators.pop();
+      }
+      return result;
+    };
+    var parseComparator = (comp, options) => {
+      comp = comp.replace(re[t.BUILD], "");
+      debug("comp", comp, options);
+      comp = replaceCarets(comp, options);
+      debug("caret", comp);
+      comp = replaceTildes(comp, options);
+      debug("tildes", comp);
+      comp = replaceXRanges(comp, options);
+      debug("xrange", comp);
+      comp = replaceStars(comp, options);
+      debug("stars", comp);
+      return comp;
+    };
+    var isX = (id) => !id || id.toLowerCase() === "x" || id === "*";
+    var replaceTildes = (comp, options) => {
+      return comp.trim().split(/\s+/).map((c) => replaceTilde(c, options)).join(" ");
+    };
+    var replaceTilde = (comp, options) => {
+      const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
+      return comp.replace(r, (_, M, m, p, pr) => {
+        debug("tilde", comp, _, M, m, p, pr);
+        let ret;
+        if (isX(M)) {
+          ret = "";
+        } else if (isX(m)) {
+          ret = `>=${M}.0.0 <${+M + 1}.0.0-0`;
+        } else if (isX(p)) {
+          ret = `>=${M}.${m}.0 <${M}.${+m + 1}.0-0`;
+        } else if (pr) {
+          debug("replaceTilde pr", pr);
+          ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
+        } else {
+          ret = `>=${M}.${m}.${p} <${M}.${+m + 1}.0-0`;
+        }
+        debug("tilde return", ret);
+        return ret;
+      });
+    };
+    var replaceCarets = (comp, options) => {
+      return comp.trim().split(/\s+/).map((c) => replaceCaret(c, options)).join(" ");
+    };
+    var replaceCaret = (comp, options) => {
+      debug("caret", comp, options);
+      const r = options.loose ? re[t.CARETLOOSE] : re[t.CARET];
+      const z = options.includePrerelease ? "-0" : "";
+      return comp.replace(r, (_, M, m, p, pr) => {
+        debug("caret", comp, _, M, m, p, pr);
+        let ret;
+        if (isX(M)) {
+          ret = "";
+        } else if (isX(m)) {
+          ret = `>=${M}.0.0${z} <${+M + 1}.0.0-0`;
+        } else if (isX(p)) {
+          if (M === "0") {
+            ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
+          } else {
+            ret = `>=${M}.${m}.0${z} <${+M + 1}.0.0-0`;
+          }
+        } else if (pr) {
+          debug("replaceCaret pr", pr);
+          if (M === "0") {
+            if (m === "0") {
+              ret = `>=${M}.${m}.${p}-${pr} <${M}.${m}.${+p + 1}-0`;
+            } else {
+              ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
+            }
+          } else {
+            ret = `>=${M}.${m}.${p}-${pr} <${+M + 1}.0.0-0`;
+          }
+        } else {
+          debug("no pr");
+          if (M === "0") {
+            if (m === "0") {
+              ret = `>=${M}.${m}.${p}${z} <${M}.${m}.${+p + 1}-0`;
+            } else {
+              ret = `>=${M}.${m}.${p}${z} <${M}.${+m + 1}.0-0`;
+            }
+          } else {
+            ret = `>=${M}.${m}.${p} <${+M + 1}.0.0-0`;
+          }
+        }
+        debug("caret return", ret);
+        return ret;
+      });
+    };
+    var replaceXRanges = (comp, options) => {
+      debug("replaceXRanges", comp, options);
+      return comp.split(/\s+/).map((c) => replaceXRange(c, options)).join(" ");
+    };
+    var replaceXRange = (comp, options) => {
+      comp = comp.trim();
+      const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
+      return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
+        debug("xRange", comp, ret, gtlt, M, m, p, pr);
+        const xM = isX(M);
+        const xm = xM || isX(m);
+        const xp = xm || isX(p);
+        const anyX = xp;
+        if (gtlt === "=" && anyX) {
+          gtlt = "";
+        }
+        pr = options.includePrerelease ? "-0" : "";
+        if (xM) {
+          if (gtlt === ">" || gtlt === "<") {
+            ret = "<0.0.0-0";
+          } else {
+            ret = "*";
+          }
+        } else if (gtlt && anyX) {
+          if (xm) {
+            m = 0;
+          }
+          p = 0;
+          if (gtlt === ">") {
+            gtlt = ">=";
+            if (xm) {
+              M = +M + 1;
+              m = 0;
+              p = 0;
+            } else {
+              m = +m + 1;
+              p = 0;
+            }
+          } else if (gtlt === "<=") {
+            gtlt = "<";
+            if (xm) {
+              M = +M + 1;
+            } else {
+              m = +m + 1;
+            }
+          }
+          if (gtlt === "<") {
+            pr = "-0";
+          }
+          ret = `${gtlt + M}.${m}.${p}${pr}`;
+        } else if (xm) {
+          ret = `>=${M}.0.0${pr} <${+M + 1}.0.0-0`;
+        } else if (xp) {
+          ret = `>=${M}.${m}.0${pr} <${M}.${+m + 1}.0-0`;
+        }
+        debug("xRange return", ret);
+        return ret;
+      });
+    };
+    var replaceStars = (comp, options) => {
+      debug("replaceStars", comp, options);
+      return comp.trim().replace(re[t.STAR], "");
+    };
+    var replaceGTE0 = (comp, options) => {
+      debug("replaceGTE0", comp, options);
+      return comp.trim().replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], "");
+    };
+    var hyphenReplace = (incPr) => ($0, from, fM, fm, fp, fpr, fb, to, tM, tm, tp, tpr) => {
+      if (isX(fM)) {
+        from = "";
+      } else if (isX(fm)) {
+        from = `>=${fM}.0.0${incPr ? "-0" : ""}`;
+      } else if (isX(fp)) {
+        from = `>=${fM}.${fm}.0${incPr ? "-0" : ""}`;
+      } else if (fpr) {
+        from = `>=${from}`;
+      } else {
+        from = `>=${from}${incPr ? "-0" : ""}`;
+      }
+      if (isX(tM)) {
+        to = "";
+      } else if (isX(tm)) {
+        to = `<${+tM + 1}.0.0-0`;
+      } else if (isX(tp)) {
+        to = `<${tM}.${+tm + 1}.0-0`;
+      } else if (tpr) {
+        to = `<=${tM}.${tm}.${tp}-${tpr}`;
+      } else if (incPr) {
+        to = `<${tM}.${tm}.${+tp + 1}-0`;
+      } else {
+        to = `<=${to}`;
+      }
+      return `${from} ${to}`.trim();
+    };
+    var testSet = (set2, version, options) => {
+      for (let i = 0; i < set2.length; i++) {
+        if (!set2[i].test(version)) {
+          return false;
+        }
+      }
+      if (version.prerelease.length && !options.includePrerelease) {
+        for (let i = 0; i < set2.length; i++) {
+          debug(set2[i].semver);
+          if (set2[i].semver === Comparator.ANY) {
+            continue;
+          }
+          if (set2[i].semver.prerelease.length > 0) {
+            const allowed = set2[i].semver;
+            if (allowed.major === version.major && allowed.minor === version.minor && allowed.patch === version.patch) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+      return true;
+    };
+  }
+});
+
+// node_modules/semver/classes/comparator.js
+var require_comparator = __commonJS({
+  "node_modules/semver/classes/comparator.js"(exports, module) {
+    "use strict";
+    var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
+    var Comparator = class _Comparator {
+      static get ANY() {
+        return ANY;
+      }
+      constructor(comp, options) {
+        options = parseOptions(options);
+        if (comp instanceof _Comparator) {
+          if (comp.loose === !!options.loose) {
+            return comp;
+          } else {
+            comp = comp.value;
+          }
+        }
+        comp = comp.trim().split(/\s+/).join(" ");
+        debug("comparator", comp, options);
+        this.options = options;
+        this.loose = !!options.loose;
+        this.parse(comp);
+        if (this.semver === ANY) {
+          this.value = "";
+        } else {
+          this.value = this.operator + this.semver.version;
+        }
+        debug("comp", this);
+      }
+      parse(comp) {
+        const r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR];
+        const m = comp.match(r);
+        if (!m) {
+          throw new TypeError(`Invalid comparator: ${comp}`);
+        }
+        this.operator = m[1] !== void 0 ? m[1] : "";
+        if (this.operator === "=") {
+          this.operator = "";
+        }
+        if (!m[2]) {
+          this.semver = ANY;
+        } else {
+          this.semver = new SemVer(m[2], this.options.loose);
+        }
+      }
+      toString() {
+        return this.value;
+      }
+      test(version) {
+        debug("Comparator.test", version, this.options.loose);
+        if (this.semver === ANY || version === ANY) {
+          return true;
+        }
+        if (typeof version === "string") {
+          try {
+            version = new SemVer(version, this.options);
+          } catch (er) {
+            return false;
+          }
+        }
+        return cmp(version, this.operator, this.semver, this.options);
+      }
+      intersects(comp, options) {
+        if (!(comp instanceof _Comparator)) {
+          throw new TypeError("a Comparator is required");
+        }
+        if (this.operator === "") {
+          if (this.value === "") {
+            return true;
+          }
+          return new Range(comp.value, options).test(this.value);
+        } else if (comp.operator === "") {
+          if (comp.value === "") {
+            return true;
+          }
+          return new Range(this.value, options).test(comp.semver);
+        }
+        options = parseOptions(options);
+        if (options.includePrerelease && (this.value === "<0.0.0-0" || comp.value === "<0.0.0-0")) {
+          return false;
+        }
+        if (!options.includePrerelease && (this.value.startsWith("<0.0.0") || comp.value.startsWith("<0.0.0"))) {
+          return false;
+        }
+        if (this.operator.startsWith(">") && comp.operator.startsWith(">")) {
+          return true;
+        }
+        if (this.operator.startsWith("<") && comp.operator.startsWith("<")) {
+          return true;
+        }
+        if (this.semver.version === comp.semver.version && this.operator.includes("=") && comp.operator.includes("=")) {
+          return true;
+        }
+        if (cmp(this.semver, "<", comp.semver, options) && this.operator.startsWith(">") && comp.operator.startsWith("<")) {
+          return true;
+        }
+        if (cmp(this.semver, ">", comp.semver, options) && this.operator.startsWith("<") && comp.operator.startsWith(">")) {
+          return true;
+        }
+        return false;
+      }
+    };
+    module.exports = Comparator;
+    var parseOptions = require_parse_options();
+    var { safeRe: re, t } = require_re();
+    var cmp = require_cmp();
+    var debug = require_debug();
+    var SemVer = require_semver();
+    var Range = require_range();
+  }
+});
+
+// node_modules/semver/functions/satisfies.js
+var require_satisfies = __commonJS({
+  "node_modules/semver/functions/satisfies.js"(exports, module) {
+    "use strict";
+    var Range = require_range();
+    var satisfies = (version, range2, options) => {
+      try {
+        range2 = new Range(range2, options);
+      } catch (er) {
+        return false;
+      }
+      return range2.test(version);
+    };
+    module.exports = satisfies;
+  }
+});
+
+// node_modules/semver/ranges/to-comparators.js
+var require_to_comparators = __commonJS({
+  "node_modules/semver/ranges/to-comparators.js"(exports, module) {
+    "use strict";
+    var Range = require_range();
+    var toComparators = (range2, options) => new Range(range2, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
+    module.exports = toComparators;
+  }
+});
+
+// node_modules/semver/ranges/max-satisfying.js
+var require_max_satisfying = __commonJS({
+  "node_modules/semver/ranges/max-satisfying.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var Range = require_range();
+    var maxSatisfying = (versions2, range2, options) => {
+      let max = null;
+      let maxSV = null;
+      let rangeObj = null;
+      try {
+        rangeObj = new Range(range2, options);
+      } catch (er) {
+        return null;
+      }
+      versions2.forEach((v) => {
+        if (rangeObj.test(v)) {
+          if (!max || maxSV.compare(v) === -1) {
+            max = v;
+            maxSV = new SemVer(max, options);
+          }
+        }
+      });
+      return max;
+    };
+    module.exports = maxSatisfying;
+  }
+});
+
+// node_modules/semver/ranges/min-satisfying.js
+var require_min_satisfying = __commonJS({
+  "node_modules/semver/ranges/min-satisfying.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var Range = require_range();
+    var minSatisfying = (versions2, range2, options) => {
+      let min = null;
+      let minSV = null;
+      let rangeObj = null;
+      try {
+        rangeObj = new Range(range2, options);
+      } catch (er) {
+        return null;
+      }
+      versions2.forEach((v) => {
+        if (rangeObj.test(v)) {
+          if (!min || minSV.compare(v) === 1) {
+            min = v;
+            minSV = new SemVer(min, options);
+          }
+        }
+      });
+      return min;
+    };
+    module.exports = minSatisfying;
+  }
+});
+
+// node_modules/semver/ranges/min-version.js
+var require_min_version = __commonJS({
+  "node_modules/semver/ranges/min-version.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var Range = require_range();
+    var gt2 = require_gt();
+    var minVersion = (range2, loose) => {
+      range2 = new Range(range2, loose);
+      let minver = new SemVer("0.0.0");
+      if (range2.test(minver)) {
+        return minver;
+      }
+      minver = new SemVer("0.0.0-0");
+      if (range2.test(minver)) {
+        return minver;
+      }
+      minver = null;
+      for (let i = 0; i < range2.set.length; ++i) {
+        const comparators = range2.set[i];
+        let setMin = null;
+        comparators.forEach((comparator) => {
+          const compver = new SemVer(comparator.semver.version);
+          switch (comparator.operator) {
+            case ">":
+              if (compver.prerelease.length === 0) {
+                compver.patch++;
+              } else {
+                compver.prerelease.push(0);
+              }
+              compver.raw = compver.format();
+            /* fallthrough */
+            case "":
+            case ">=":
+              if (!setMin || gt2(compver, setMin)) {
+                setMin = compver;
+              }
+              break;
+            case "<":
+            case "<=":
+              break;
+            /* istanbul ignore next */
+            default:
+              throw new Error(`Unexpected operation: ${comparator.operator}`);
+          }
+        });
+        if (setMin && (!minver || gt2(minver, setMin))) {
+          minver = setMin;
+        }
+      }
+      if (minver && range2.test(minver)) {
+        return minver;
+      }
+      return null;
+    };
+    module.exports = minVersion;
+  }
+});
+
+// node_modules/semver/ranges/valid.js
+var require_valid2 = __commonJS({
+  "node_modules/semver/ranges/valid.js"(exports, module) {
+    "use strict";
+    var Range = require_range();
+    var validRange = (range2, options) => {
+      try {
+        return new Range(range2, options).range || "*";
+      } catch (er) {
+        return null;
+      }
+    };
+    module.exports = validRange;
+  }
+});
+
+// node_modules/semver/ranges/outside.js
+var require_outside = __commonJS({
+  "node_modules/semver/ranges/outside.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var Comparator = require_comparator();
+    var { ANY } = Comparator;
+    var Range = require_range();
+    var satisfies = require_satisfies();
+    var gt2 = require_gt();
+    var lt = require_lt();
+    var lte2 = require_lte();
+    var gte2 = require_gte();
+    var outside = (version, range2, hilo, options) => {
+      version = new SemVer(version, options);
+      range2 = new Range(range2, options);
+      let gtfn, ltefn, ltfn, comp, ecomp;
+      switch (hilo) {
+        case ">":
+          gtfn = gt2;
+          ltefn = lte2;
+          ltfn = lt;
+          comp = ">";
+          ecomp = ">=";
+          break;
+        case "<":
+          gtfn = lt;
+          ltefn = gte2;
+          ltfn = gt2;
+          comp = "<";
+          ecomp = "<=";
+          break;
+        default:
+          throw new TypeError('Must provide a hilo val of "<" or ">"');
+      }
+      if (satisfies(version, range2, options)) {
+        return false;
+      }
+      for (let i = 0; i < range2.set.length; ++i) {
+        const comparators = range2.set[i];
+        let high = null;
+        let low = null;
+        comparators.forEach((comparator) => {
+          if (comparator.semver === ANY) {
+            comparator = new Comparator(">=0.0.0");
+          }
+          high = high || comparator;
+          low = low || comparator;
+          if (gtfn(comparator.semver, high.semver, options)) {
+            high = comparator;
+          } else if (ltfn(comparator.semver, low.semver, options)) {
+            low = comparator;
+          }
+        });
+        if (high.operator === comp || high.operator === ecomp) {
+          return false;
+        }
+        if ((!low.operator || low.operator === comp) && ltefn(version, low.semver)) {
+          return false;
+        } else if (low.operator === ecomp && ltfn(version, low.semver)) {
+          return false;
+        }
+      }
+      return true;
+    };
+    module.exports = outside;
+  }
+});
+
+// node_modules/semver/ranges/gtr.js
+var require_gtr = __commonJS({
+  "node_modules/semver/ranges/gtr.js"(exports, module) {
+    "use strict";
+    var outside = require_outside();
+    var gtr = (version, range2, options) => outside(version, range2, ">", options);
+    module.exports = gtr;
+  }
+});
+
+// node_modules/semver/ranges/ltr.js
+var require_ltr = __commonJS({
+  "node_modules/semver/ranges/ltr.js"(exports, module) {
+    "use strict";
+    var outside = require_outside();
+    var ltr = (version, range2, options) => outside(version, range2, "<", options);
+    module.exports = ltr;
+  }
+});
+
+// node_modules/semver/ranges/intersects.js
+var require_intersects = __commonJS({
+  "node_modules/semver/ranges/intersects.js"(exports, module) {
+    "use strict";
+    var Range = require_range();
+    var intersects = (r1, r2, options) => {
+      r1 = new Range(r1, options);
+      r2 = new Range(r2, options);
+      return r1.intersects(r2, options);
+    };
+    module.exports = intersects;
+  }
+});
+
+// node_modules/semver/ranges/simplify.js
+var require_simplify = __commonJS({
+  "node_modules/semver/ranges/simplify.js"(exports, module) {
+    "use strict";
+    var satisfies = require_satisfies();
+    var compare = require_compare();
+    module.exports = (versions2, range2, options) => {
+      const set2 = [];
+      let first2 = null;
+      let prev = null;
+      const v = versions2.sort((a, b) => compare(a, b, options));
+      for (const version of v) {
+        const included = satisfies(version, range2, options);
+        if (included) {
+          prev = version;
+          if (!first2) {
+            first2 = version;
+          }
+        } else {
+          if (prev) {
+            set2.push([first2, prev]);
+          }
+          prev = null;
+          first2 = null;
+        }
+      }
+      if (first2) {
+        set2.push([first2, null]);
+      }
+      const ranges = [];
+      for (const [min, max] of set2) {
+        if (min === max) {
+          ranges.push(min);
+        } else if (!max && min === v[0]) {
+          ranges.push("*");
+        } else if (!max) {
+          ranges.push(`>=${min}`);
+        } else if (min === v[0]) {
+          ranges.push(`<=${max}`);
+        } else {
+          ranges.push(`${min} - ${max}`);
+        }
+      }
+      const simplified = ranges.join(" || ");
+      const original = typeof range2.raw === "string" ? range2.raw : String(range2);
+      return simplified.length < original.length ? simplified : range2;
+    };
+  }
+});
+
+// node_modules/semver/ranges/subset.js
+var require_subset = __commonJS({
+  "node_modules/semver/ranges/subset.js"(exports, module) {
+    "use strict";
+    var Range = require_range();
+    var Comparator = require_comparator();
+    var { ANY } = Comparator;
+    var satisfies = require_satisfies();
+    var compare = require_compare();
+    var subset = (sub, dom, options = {}) => {
+      if (sub === dom) {
+        return true;
+      }
+      sub = new Range(sub, options);
+      dom = new Range(dom, options);
+      let sawNonNull = false;
+      OUTER: for (const simpleSub of sub.set) {
+        for (const simpleDom of dom.set) {
+          const isSub = simpleSubset(simpleSub, simpleDom, options);
+          sawNonNull = sawNonNull || isSub !== null;
+          if (isSub) {
+            continue OUTER;
+          }
+        }
+        if (sawNonNull) {
+          return false;
+        }
+      }
+      return true;
+    };
+    var minimumVersionWithPreRelease = [new Comparator(">=0.0.0-0")];
+    var minimumVersion = [new Comparator(">=0.0.0")];
+    var simpleSubset = (sub, dom, options) => {
+      if (sub === dom) {
+        return true;
+      }
+      if (sub.length === 1 && sub[0].semver === ANY) {
+        if (dom.length === 1 && dom[0].semver === ANY) {
+          return true;
+        } else if (options.includePrerelease) {
+          sub = minimumVersionWithPreRelease;
+        } else {
+          sub = minimumVersion;
+        }
+      }
+      if (dom.length === 1 && dom[0].semver === ANY) {
+        if (options.includePrerelease) {
+          return true;
+        } else {
+          dom = minimumVersion;
+        }
+      }
+      const eqSet = /* @__PURE__ */ new Set();
+      let gt2, lt;
+      for (const c of sub) {
+        if (c.operator === ">" || c.operator === ">=") {
+          gt2 = higherGT(gt2, c, options);
+        } else if (c.operator === "<" || c.operator === "<=") {
+          lt = lowerLT(lt, c, options);
+        } else {
+          eqSet.add(c.semver);
+        }
+      }
+      if (eqSet.size > 1) {
+        return null;
+      }
+      let gtltComp;
+      if (gt2 && lt) {
+        gtltComp = compare(gt2.semver, lt.semver, options);
+        if (gtltComp > 0) {
+          return null;
+        } else if (gtltComp === 0 && (gt2.operator !== ">=" || lt.operator !== "<=")) {
+          return null;
+        }
+      }
+      for (const eq of eqSet) {
+        if (gt2 && !satisfies(eq, String(gt2), options)) {
+          return null;
+        }
+        if (lt && !satisfies(eq, String(lt), options)) {
+          return null;
+        }
+        for (const c of dom) {
+          if (!satisfies(eq, String(c), options)) {
+            return false;
+          }
+        }
+        return true;
+      }
+      let higher, lower;
+      let hasDomLT, hasDomGT;
+      let needDomLTPre = lt && !options.includePrerelease && lt.semver.prerelease.length ? lt.semver : false;
+      let needDomGTPre = gt2 && !options.includePrerelease && gt2.semver.prerelease.length ? gt2.semver : false;
+      if (needDomLTPre && needDomLTPre.prerelease.length === 1 && lt.operator === "<" && needDomLTPre.prerelease[0] === 0) {
+        needDomLTPre = false;
+      }
+      for (const c of dom) {
+        hasDomGT = hasDomGT || c.operator === ">" || c.operator === ">=";
+        hasDomLT = hasDomLT || c.operator === "<" || c.operator === "<=";
+        if (gt2) {
+          if (needDomGTPre) {
+            if (c.semver.prerelease && c.semver.prerelease.length && c.semver.major === needDomGTPre.major && c.semver.minor === needDomGTPre.minor && c.semver.patch === needDomGTPre.patch) {
+              needDomGTPre = false;
+            }
+          }
+          if (c.operator === ">" || c.operator === ">=") {
+            higher = higherGT(gt2, c, options);
+            if (higher === c && higher !== gt2) {
+              return false;
+            }
+          } else if (gt2.operator === ">=" && !satisfies(gt2.semver, String(c), options)) {
+            return false;
+          }
+        }
+        if (lt) {
+          if (needDomLTPre) {
+            if (c.semver.prerelease && c.semver.prerelease.length && c.semver.major === needDomLTPre.major && c.semver.minor === needDomLTPre.minor && c.semver.patch === needDomLTPre.patch) {
+              needDomLTPre = false;
+            }
+          }
+          if (c.operator === "<" || c.operator === "<=") {
+            lower = lowerLT(lt, c, options);
+            if (lower === c && lower !== lt) {
+              return false;
+            }
+          } else if (lt.operator === "<=" && !satisfies(lt.semver, String(c), options)) {
+            return false;
+          }
+        }
+        if (!c.operator && (lt || gt2) && gtltComp !== 0) {
+          return false;
+        }
+      }
+      if (gt2 && hasDomLT && !lt && gtltComp !== 0) {
+        return false;
+      }
+      if (lt && hasDomGT && !gt2 && gtltComp !== 0) {
+        return false;
+      }
+      if (needDomGTPre || needDomLTPre) {
+        return false;
+      }
+      return true;
+    };
+    var higherGT = (a, b, options) => {
+      if (!a) {
+        return b;
+      }
+      const comp = compare(a.semver, b.semver, options);
+      return comp > 0 ? a : comp < 0 ? b : b.operator === ">" && a.operator === ">=" ? b : a;
+    };
+    var lowerLT = (a, b, options) => {
+      if (!a) {
+        return b;
+      }
+      const comp = compare(a.semver, b.semver, options);
+      return comp < 0 ? a : comp > 0 ? b : b.operator === "<" && a.operator === "<=" ? b : a;
+    };
+    module.exports = subset;
+  }
+});
+
+// node_modules/semver/index.js
+var require_semver2 = __commonJS({
+  "node_modules/semver/index.js"(exports, module) {
+    "use strict";
+    var internalRe = require_re();
+    var constants = require_constants();
+    var SemVer = require_semver();
+    var identifiers = require_identifiers();
+    var parse = require_parse();
+    var valid = require_valid();
+    var clean = require_clean();
+    var inc = require_inc();
+    var diff = require_diff();
+    var major = require_major();
+    var minor = require_minor();
+    var patch = require_patch();
+    var prerelease = require_prerelease();
+    var compare = require_compare();
+    var rcompare = require_rcompare();
+    var compareLoose = require_compare_loose();
+    var compareBuild = require_compare_build();
+    var sort = require_sort();
+    var rsort = require_rsort();
+    var gt2 = require_gt();
+    var lt = require_lt();
+    var eq = require_eq();
+    var neq = require_neq();
+    var gte2 = require_gte();
+    var lte2 = require_lte();
+    var cmp = require_cmp();
+    var coerce2 = require_coerce();
+    var Comparator = require_comparator();
+    var Range = require_range();
+    var satisfies = require_satisfies();
+    var toComparators = require_to_comparators();
+    var maxSatisfying = require_max_satisfying();
+    var minSatisfying = require_min_satisfying();
+    var minVersion = require_min_version();
+    var validRange = require_valid2();
+    var outside = require_outside();
+    var gtr = require_gtr();
+    var ltr = require_ltr();
+    var intersects = require_intersects();
+    var simplifyRange = require_simplify();
+    var subset = require_subset();
+    module.exports = {
+      parse,
+      valid,
+      clean,
+      inc,
+      diff,
+      major,
+      minor,
+      patch,
+      prerelease,
+      compare,
+      rcompare,
+      compareLoose,
+      compareBuild,
+      sort,
+      rsort,
+      gt: gt2,
+      lt,
+      eq,
+      neq,
+      gte: gte2,
+      lte: lte2,
+      cmp,
+      coerce: coerce2,
+      Comparator,
+      Range,
+      satisfies,
+      toComparators,
+      maxSatisfying,
+      minSatisfying,
+      minVersion,
+      validRange,
+      outside,
+      gtr,
+      ltr,
+      intersects,
+      simplifyRange,
+      subset,
+      SemVer,
+      re: internalRe.re,
+      src: internalRe.src,
+      tokens: internalRe.t,
+      SEMVER_SPEC_VERSION: constants.SEMVER_SPEC_VERSION,
+      RELEASE_TYPES: constants.RELEASE_TYPES,
+      compareIdentifiers: identifiers.compareIdentifiers,
+      rcompareIdentifiers: identifiers.rcompareIdentifiers
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/agent/agent-service.ts
+var semver, AgentService;
+var init_agent_service = __esm({
+  "packages/tiny-brain-core/src/services/agent/agent-service.ts"() {
+    "use strict";
+    init_formatter_factory();
+    init_repo_utils();
+    semver = __toESM(require_semver2(), 1);
+    init_agent_installation_service();
+    AgentService = class {
+      constructor(context) {
+        this.context = context;
+      }
+      installationService;
+      /**
+       * Format agents for the current formatter type
+       */
+      formatAgents(agents, formatter) {
+        try {
+          const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+          if (!activeFormatter.formatTbrAgent) {
+            throw new Error(
+              `Formatter ${activeFormatter.constructor?.name || "unknown"} does not implement formatTbrAgent`
+            );
+          }
+          const formatTbr = activeFormatter.formatTbrAgent.bind(activeFormatter);
+          this.context.logger.debug("[AgentService] formatAgents", {
+            agentCount: agents.length,
+            formatter: activeFormatter.constructor?.name || "unknown"
+          });
+          return agents.map((agent) => formatTbr(agent));
+        } catch (error) {
+          this.context.logger.error("[AgentService] Error formatting agents:", error);
+          throw error;
+        }
+      }
+      /**
+       * Install formatted agents to the filesystem
+       */
+      async installAgents(formattedAgents, formatter) {
+        const fs40 = await import("fs/promises");
+        const path42 = await import("path");
+        const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+        const repoRoot = getRepoRoot();
+        const agentsPath = path42.join(repoRoot, activeFormatter.getAgentInstallPath());
+        this.context.logger.debug("[AgentService] Installing agents:", {
+          repoRoot,
+          agentsPath,
+          agentCount: formattedAgents.length
+        });
+        await fs40.mkdir(agentsPath, { recursive: true });
+        for (const agent of formattedAgents) {
+          const agentPath = path42.join(agentsPath, agent.filename);
+          await fs40.writeFile(agentPath, agent.content, "utf-8");
+          this.context.logger.info(`Agent '${agent.filename}' installed to ${agentPath}`);
+        }
+        this.context.logger.info(`Installed ${formattedAgents.length} agents to ${agentsPath}`);
+      }
+      /**
+       * Install agents with version checking and overwrite strategy
+       */
+      async installAgentsWithVersionCheck(agents, options = {}) {
+        const fs40 = await import("fs/promises");
+        const path42 = await import("path");
+        const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+        const formattedAgents = this.formatAgents(agents, formatter);
+        const repoRoot = getRepoRoot();
+        const agentsPath = path42.join(repoRoot, formatter.getAgentInstallPath());
+        const result = {
+          installed: [],
+          skipped: [],
+          updated: [],
+          errors: []
+        };
+        await fs40.mkdir(agentsPath, { recursive: true });
+        const installedAgents = await this.getInstalledAgents();
+        const installedMap = new Map(installedAgents.map((a) => [a.name, a]));
+        for (const agent of formattedAgents) {
+          const agentPath = path42.join(agentsPath, agent.filename);
+          const agentName = agent.filename.replace(".md", "");
+          try {
+            const fileExists = await fs40.access(agentPath).then(() => true).catch(() => false);
+            if (!fileExists) {
+              await fs40.writeFile(agentPath, agent.content, "utf-8");
+              result.installed.push(agentName);
+              this.context.logger.info(`Installed new agent: ${agentName}`);
+            } else {
+              const strategy = options.overwriteStrategy || "version-check";
+              if (strategy === "never") {
+                result.skipped.push(agentName);
+                this.context.logger.debug(`Skipped existing agent: ${agentName}`);
+              } else if (strategy === "always") {
+                if (options.backupExisting) {
+                  const backupPath = `${agentPath}.backup.${Date.now()}`;
+                  await fs40.copyFile(agentPath, backupPath);
+                }
+                await fs40.writeFile(agentPath, agent.content, "utf-8");
+                result.updated.push(agentName);
+                this.context.logger.info(`Updated agent (forced): ${agentName}`);
+              } else {
+                const installed = installedMap.get(agentName);
+                const newVersion = this.extractVersion(agent.content);
+                const installedVersion = installed?.version || "0.0.0";
+                if (semver.gt(newVersion, installedVersion)) {
+                  if (options.backupExisting) {
+                    const backupPath = `${agentPath}.backup.${Date.now()}`;
+                    await fs40.copyFile(agentPath, backupPath);
+                  }
+                  await fs40.writeFile(agentPath, agent.content, "utf-8");
+                  result.updated.push(agentName);
+                  this.context.logger.info(`Updated agent: ${agentName} (${installedVersion} -> ${newVersion})`);
+                } else {
+                  result.skipped.push(agentName);
+                  this.context.logger.debug(`Skipped agent (same or newer version): ${agentName} (current: ${installedVersion})`);
+                }
+              }
+            }
+          } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : "Unknown error";
+            result.errors.push({ agent: agentName, error: errorMsg });
+            this.context.logger.error(`Failed to install agent ${agentName}:`, error);
+          }
+        }
+        return result;
+      }
+      /**
+       * Remove agents from disk
+       */
+      async removeAgents(agentNames) {
+        const result = { removed: [], errors: [] };
+        const fs40 = await import("fs/promises");
+        const path42 = await import("path");
+        const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+        const repoRoot = getRepoRoot();
+        const agentsPath = path42.join(repoRoot, formatter.getAgentInstallPath());
+        for (const agentName of agentNames) {
+          try {
+            const agentFile = path42.join(agentsPath, `${agentName}.md`);
+            try {
+              await fs40.access(agentFile);
+            } catch {
+              result.errors.push(`Agent ${agentName} not found`);
+              continue;
+            }
+            await fs40.unlink(agentFile);
+            result.removed.push(agentName);
+            this.context.logger.info(`Removed agent: ${agentName}`);
+          } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : "Unknown error";
+            result.errors.push(`Failed to remove ${agentName}: ${errorMsg}`);
+            this.context.logger.error(`Failed to remove agent ${agentName}:`, error);
+          }
+        }
+        return result;
+      }
+      /**
+       * Get installed agents from disk
+       */
+      async getInstalledAgents() {
+        if (!this.installationService) {
+          this.installationService = new AgentInstallationService(this.context);
+        }
+        if (this.installationService) {
+          return await this.installationService.getInstalledAgents();
+        }
+        const fs40 = await import("fs/promises");
+        const path42 = await import("path");
+        const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+        const repoRoot = getRepoRoot();
+        const agentsPath = path42.join(repoRoot, formatter.getAgentInstallPath());
+        try {
+          const files = await fs40.readdir(agentsPath);
+          const agentFiles = files.filter((f) => f.endsWith(".md"));
+          const agents = [];
+          for (const file of agentFiles) {
+            const content = await fs40.readFile(path42.join(agentsPath, file), "utf-8");
+            const name = file.replace(".md", "");
+            const version = this.extractVersion(content);
+            agents.push({ name, version, lastUpdated: (/* @__PURE__ */ new Date()).toISOString() });
+          }
+          return agents;
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            return [];
+          }
+          throw error;
+        }
+      }
+      /**
+       * Extract version from agent content
+       */
+      extractVersion(content) {
+        const versionMatch = content.match(/<!-- Version: (.+?) -->/);
+        return versionMatch ? versionMatch[1] : "1.0.0";
+      }
+      /**
+       * Format and install agents in one operation
+       */
+      async formatAndInstallAgents(agents, formatter) {
+        const formattedAgents = this.formatAgents(agents, formatter);
+        await this.installAgents(formattedAgents, formatter);
+        return formattedAgents;
+      }
+      /**
+       * Get the default formatter
+       */
+      getDefaultFormatter() {
+        return FormatterFactory.getFormatter(FormatterFactory.detectFormat());
+      }
+      /**
+       * Detect formatter type from environment
+       */
+      detectFormatterType() {
+        return FormatterFactory.detectFormat();
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/library/system-persona-service.ts
+var SystemPersonaService;
+var init_system_persona_service = __esm({
+  "packages/tiny-brain-core/src/services/library/system-persona-service.ts"() {
+    "use strict";
+    init_base_service();
+    init_config();
+    SystemPersonaService = class extends BaseService {
+      tbrUrl;
+      // tiny-brain-remote for data
+      constructor(context) {
+        super(context);
+        this.tbrUrl = getTBRUrl();
+      }
+      /**
+       * Get auth token from context
+       */
+      getAuthToken() {
+        const token = this.context.authToken?.token || null;
+        this.log("debug", "getAuthToken called", {
+          hasAuthToken: !!this.context.authToken,
+          hasToken: !!token,
+          tokenPreview: token ? token.substring(0, 20) + "..." : "null",
+          contextKeys: Object.keys(this.context)
+        });
+        return token;
+      }
+      /**
+       * Make an MCP call to tiny-brain-remote
+       */
+      async callMCP(method, params) {
+        const token = this.getAuthToken();
+        if (!token) {
+          throw new Error("Not authenticated - no auth token in context");
+        }
+        const request = {
+          jsonrpc: "2.0",
+          method,
+          params,
+          id: Date.now()
+        };
+        const url = `${this.tbrUrl}/api/mcp`;
+        const headers = {
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/event-stream",
+          "Authorization": `Bearer ${token}`
+        };
+        this.log("debug", "Making MCP call to tiny-brain-remote", {
+          method,
+          url,
+          requestBody: request,
+          authHeader: headers.Authorization.substring(0, 30) + "..."
+        });
+        const response = await fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(request)
+        });
+        this.log("debug", "MCP response received", {
+          status: response.status,
+          statusText: response.statusText
+        });
+        if (!response.ok) {
+          throw new Error(`MCP call failed: ${response.status} ${response.statusText}`);
+        }
+        const text = await response.text();
+        this.log("debug", "MCP response text", {
+          length: text.length,
+          preview: text.substring(0, 200)
+        });
+        if (text.startsWith("event:")) {
+          const dataLine = text.split("\n").find((line) => line.startsWith("data: "));
+          if (dataLine) {
+            const jsonStr = dataLine.substring(6);
+            const data2 = JSON.parse(jsonStr);
+            this.log("debug", "Parsed SSE response", {
+              hasResult: !!data2.result,
+              hasError: !!data2.error,
+              resultIsError: data2.result?.isError,
+              fullResult: JSON.stringify(data2.result)
+              // Let's see the full result
+            });
+            if (data2.error) {
+              throw new Error(`MCP error: ${data2.error.message}`);
+            }
+            if (data2.result?.isError && data2.result?.content) {
+              const errorText = data2.result.content.filter((c) => c.type === "text").map((c) => c.text).join(" ");
+              throw new Error(`TBR error: ${errorText}`);
+            }
+            return data2.result;
+          }
+        }
+        const data = JSON.parse(text);
+        this.log("debug", "Parsed JSON response", {
+          hasResult: !!data.result,
+          hasError: !!data.error,
+          resultType: typeof data.result,
+          resultKeys: data.result ? Object.keys(data.result) : [],
+          resultIsError: data.result?.isError
+        });
+        if (data.error) {
+          throw new Error(`MCP error: ${data.error.message}`);
+        }
+        if (data.result?.isError && data.result?.content) {
+          const errorText = data.result.content.filter((c) => c.type === "text").map((c) => c.text).join(" ");
+          throw new Error(`TBR error: ${errorText}`);
+        }
+        return data.result;
+      }
+      /**
+       * Fetch all system personas
+       */
+      async fetchSystemPersonas() {
+        if (!this.getAuthToken()) {
+          this.log("info", "No auth token available, skipping system persona fetch");
+          return [];
+        }
+        try {
+          this.log("info", "Fetching system personas from tiny-brain-remote");
+          const result = await this.callMCP("tools/call", {
+            name: "system_personas",
+            arguments: {
+              operation: "list"
+            }
+          });
+          this.log("debug", "System personas result", {
+            hasResult: !!result,
+            resultType: typeof result,
+            resultKeys: result ? Object.keys(result) : [],
+            isError: result?.isError,
+            hasContent: !!result?.content
+          });
+          let personas = [];
+          if (result?.content && Array.isArray(result.content)) {
+            const textContent = result.content.find((c) => c.type === "text");
+            if (textContent?.text) {
+              try {
+                const parsed = JSON.parse(textContent.text);
+                this.log("debug", "Parsed personas response", {
+                  hasPersonas: !!parsed.personas,
+                  personasCount: parsed.personas?.length,
+                  firstPersona: parsed.personas?.[0]
+                });
+                personas = parsed.personas || [];
+                personas = personas.map((p) => {
+                  const metadata = p.metadata || p;
+                  return {
+                    id: `${metadata.category}-${metadata.subcategory}-${metadata.name}`,
+                    name: metadata.name,
+                    description: metadata.description || "",
+                    profile: p.details || p.profile || "",
+                    background: metadata.background || p.background,
+                    expertise: metadata.expertise || p.expertise || [],
+                    version: metadata.version || "1.0.0",
+                    lastUpdated: metadata.lastUpdated || (/* @__PURE__ */ new Date()).toISOString()
+                  };
+                });
+              } catch (parseError) {
+                this.log("error", "Failed to parse personas JSON", parseError);
+              }
+            }
+          } else if (result?.personas) {
+            personas = result.personas;
+          }
+          this.log("info", `Fetched ${personas.length} system personas`);
+          return personas;
+        } catch (error) {
+          this.log("error", "Failed to fetch system personas", error);
+          return [];
+        }
+      }
+      /**
+       * Fetch a specific system persona
+       */
+      async fetchSystemPersona(personaId) {
+        if (!this.getAuthToken()) {
+          this.log("info", "No auth token available, cannot fetch system persona");
+          return null;
+        }
+        try {
+          this.log("info", `Fetching system persona: ${personaId}`);
+          const parts = personaId.split("-");
+          let category;
+          let subcategory;
+          let name;
+          if (parts.length >= 3) {
+            category = parts[0];
+            subcategory = parts[1];
+            name = parts.slice(2).join("-");
+          } else if (parts.length === 2) {
+            category = parts[0];
+            subcategory = void 0;
+            name = parts[1];
+          } else {
+            category = parts[0];
+            subcategory = void 0;
+            name = parts[0];
+          }
+          const args = {
+            operation: "get",
+            category,
+            name
+          };
+          if (subcategory) {
+            args.subcategory = subcategory;
+          }
+          const result = await this.callMCP("tools/call", {
+            name: "system_personas",
+            arguments: args
+          });
+          let persona = null;
+          if (result?.content && Array.isArray(result.content)) {
+            const textContent = result.content.find((c) => c.type === "text");
+            if (textContent?.text) {
+              try {
+                const parsed = JSON.parse(textContent.text);
+                if (parsed) {
+                  persona = {
+                    id: personaId,
+                    name: parsed.name || name,
+                    description: parsed.description || "",
+                    profile: parsed.profile || "",
+                    background: parsed.background,
+                    expertise: parsed.expertise || [],
+                    version: parsed.version || "1.0.0",
+                    lastUpdated: parsed.lastUpdated || (/* @__PURE__ */ new Date()).toISOString()
+                  };
+                }
+              } catch (parseError) {
+                this.log("error", "Failed to parse persona JSON", parseError);
+              }
+            }
+          } else if (result && typeof result === "object" && result.name) {
+            persona = result;
+          }
+          if (!persona) {
+            this.log("warn", `System persona not found: ${personaId}`);
+            return null;
+          }
+          this.log("info", `Fetched system persona: ${personaId} (v${persona.version})`);
+          return persona;
+        } catch (error) {
+          this.log("error", `Failed to fetch system persona: ${personaId}`, error);
+          return null;
+        }
+      }
+      /**
+       * Check if authenticated
+       */
+      isAuthenticated() {
+        return !!this.getAuthToken();
+      }
+    };
+  }
+});
+
+// packages/tiny-brain-core/src/services/library/persona-sync-service.ts
+var PersonaSyncService;
+var init_persona_sync_service = __esm({
+  "packages/tiny-brain-core/src/services/library/persona-sync-service.ts"() {
+    "use strict";
+    init_base_service();
+    init_persona_markdown();
+    init_system_persona_service();
+    PersonaSyncService = class extends BaseService {
+      systemPersonaService;
+      userId;
+      constructor(context) {
+        super(context);
+        this.systemPersonaService = new SystemPersonaService(context);
+        this.userId = context.userId || "local-user";
+      }
+      /**
+       * Sync all system personas from the remote service
+       */
+      async syncAllPersonas() {
+        const result = {
+          synced: 0,
+          failed: 0,
+          errors: []
+        };
+        if (!this.systemPersonaService.isAuthenticated()) {
+          this.log("info", "Skipping persona sync - not authenticated");
+          return result;
+        }
+        try {
+          const systemPersonas = await this.systemPersonaService.fetchSystemPersonas();
+          if (systemPersonas.length === 0) {
+            this.log("info", "No system personas available to sync");
+            return result;
+          }
+          this.log("info", `Found ${systemPersonas.length} system personas to sync`);
+          const existingPersonaIds = await this.context.storage.listPersonas();
+          for (const systemPersona of systemPersonas) {
+            try {
+              const synced = await this.syncSinglePersona(systemPersona, existingPersonaIds);
+              if (synced) {
+                result.synced++;
+              }
+            } catch (error) {
+              result.failed++;
+              const errorMessage7 = `Failed to sync ${systemPersona.id}: ${error instanceof Error ? error.message : "Unknown error"}`;
+              result.errors.push(errorMessage7);
+              this.log("error", `Failed to sync persona: ${systemPersona.id}`, error);
+            }
+          }
+          await this.recordSyncMetadata(systemPersonas.map((p) => p.id));
+          this.log("info", "Persona sync completed", {
+            synced: result.synced,
+            failed: result.failed
+          });
+          return result;
+        } catch (error) {
+          this.log("error", "Failed to sync personas", error);
+          result.errors.push(`Sync failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+          return result;
+        }
+      }
+      /**
+       * Sync a specific persona by ID
+       */
+      async syncPersona(personaId) {
+        if (!this.systemPersonaService.isAuthenticated()) {
+          this.log("info", "Cannot sync persona - not authenticated");
+          return false;
+        }
+        try {
+          const systemPersona = await this.systemPersonaService.fetchSystemPersona(personaId);
+          if (!systemPersona) {
+            this.log("warn", `System persona not found: ${personaId}`);
+            return false;
+          }
+          const existingPersonaIds = await this.context.storage.listPersonas();
+          return await this.syncSinglePersona(systemPersona, existingPersonaIds);
+        } catch (error) {
+          this.log("error", `Failed to sync persona ${personaId}`, error);
+          return false;
+        }
+      }
+      /**
+       * Sync a single persona to local storage
+       */
+      async syncSinglePersona(systemPersona, existingPersonaIds) {
+        const personaExists = existingPersonaIds.includes(systemPersona.id);
+        if (personaExists) {
+          const existingProfile = await this.getLocalPersonaProfile(systemPersona.id);
+          if (existingProfile && !existingProfile.isSystemPersona) {
+            this.log("debug", `Skipping user-created persona: ${systemPersona.id}`);
+            return false;
+          }
+          if (existingProfile && existingProfile.version === systemPersona.version) {
+            this.log("debug", `Persona ${systemPersona.id} is up to date`);
+            return false;
+          }
+          this.log("info", `Updating system persona: ${systemPersona.id}`, {
+            oldVersion: existingProfile?.version,
+            newVersion: systemPersona.version
+          });
+        } else {
+          this.log("info", `Creating new system persona: ${systemPersona.id}`);
+        }
+        const personaProfile = {
+          id: systemPersona.id,
+          name: systemPersona.name,
+          description: systemPersona.description,
+          profile: systemPersona.profile,
+          background: systemPersona.background,
+          expertise: systemPersona.expertise,
+          version: systemPersona.version,
+          lastUpdated: systemPersona.lastUpdated,
+          isSystemPersona: true,
+          created: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        await this.context.storage.storePersonaFile(
+          systemPersona.id,
+          "profile.json",
+          JSON.stringify(personaProfile, null, 2),
+          this.userId
+        );
+        return true;
+      }
+      /**
+       * Get local persona profile
+       */
+      async getLocalPersonaProfile(personaId) {
+        try {
+          const profileContent = await this.context.storage.getPersonaFile(
+            personaId,
+            "profile.json",
+            this.userId
+          );
+          if (!profileContent) {
+            return null;
+          }
+          return JSON.parse(profileContent);
+        } catch (error) {
+          this.log("warn", `Failed to read persona profile: ${personaId}`, error);
+          return null;
+        }
+      }
+      /**
+       * Record sync metadata
+       */
+      async recordSyncMetadata(syncedPersonaIds) {
+        try {
+          const metadata = {
+            lastSync: (/* @__PURE__ */ new Date()).toISOString(),
+            syncedPersonas: syncedPersonaIds
+          };
+          await this.context.storage.storeUserData(
+            "system-sync.json",
+            JSON.stringify(metadata, null, 2),
+            this.userId
+          );
+        } catch (error) {
+          this.log("warn", "Failed to record sync metadata", error);
+        }
+      }
+      /**
+       * Get the last sync time
+       */
+      async getLastSyncTime() {
+        try {
+          const metadataContent = await this.context.storage.getUserData(
+            "system-sync.json",
+            this.userId
+          );
+          if (!metadataContent) {
+            return null;
+          }
+          const metadata = JSON.parse(metadataContent);
+          return new Date(metadata.lastSync);
+        } catch (error) {
+          this.log("warn", "Failed to parse sync metadata", error);
+          return null;
+        }
+      }
+      /**
+       * Check if the service is authenticated
+       */
+      isAuthenticated() {
+        return this.systemPersonaService.isAuthenticated();
+      }
+      /**
+       * Get the system persona service (for testing)
+       */
+      getSystemPersonaService() {
+        return this.systemPersonaService;
+      }
+      /**
+       * Clone a system persona with a new name
+       */
+      async cloneSystemPersona(systemPersonaId, newName) {
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const newPersonaId = newName.toLowerCase().replace(/\s+/g, "-");
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(systemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`System persona not found: ${systemPersonaId}`);
+        }
+        const existingPersonas = await this.context.storage.listPersonas();
+        if (existingPersonas.includes(newPersonaId)) {
+          throw new Error(`Persona with name "${newName}" already exists`);
+        }
+        await this.context.storage.createPersonaDirectories(newPersonaId, this.userId);
+        bootstrapPersona(
+          newName,
+          {
+            id: systemPersona.id,
+            name: systemPersona.name,
+            description: systemPersona.description,
+            version: systemPersona.version,
+            rules: [],
+            // Will be extracted from details
+            details: {
+              profile: systemPersona.profile || "",
+              background: systemPersona.background || "",
+              expertise: systemPersona.expertise?.join(", ") || ""
+            }
+          }
+        );
+        await this.context.storage.storePersonaFile(
+          newPersonaId,
+          "profile.json",
+          JSON.stringify({
+            id: newPersonaId,
+            name: newName,
+            description: systemPersona.description,
+            profile: systemPersona.profile,
+            background: systemPersona.background,
+            expertise: systemPersona.expertise,
+            // Fork tracking
+            sourceType: "fork",
+            parentSystemPersonaId: systemPersona.id,
+            parentSystemVersion: systemPersona.version,
+            forkedAt: (/* @__PURE__ */ new Date()).toISOString(),
+            // Preserve original for merging
+            originalSystemData: {
+              profile: systemPersona.profile,
+              background: systemPersona.background,
+              expertise: systemPersona.expertise
+            }
+          }, null, 2),
+          this.userId
+        );
+        return newPersonaId;
+      }
+      /**
+       * Check for updates to a forked persona
+       */
+      async checkForUpdates(personaId) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          return null;
+        }
+        const localPersona = JSON.parse(profileContent);
+        if (localPersona.sourceType !== "fork") {
+          this.log("info", `Persona "${personaId}" is not a fork of a system persona`);
+          return null;
+        }
+        if (!this.systemPersonaService.isAuthenticated()) {
+          return null;
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(localPersona.parentSystemPersonaId);
+        if (!systemPersona) {
+          return null;
+        }
+        const hasUpdate = systemPersona.version !== localPersona.parentSystemVersion;
+        return {
+          hasUpdate,
+          currentVersion: localPersona.parentSystemVersion,
+          latestVersion: systemPersona.version,
+          parentPersonaId: localPersona.parentSystemPersonaId,
+          ...hasUpdate && {
+            changes: {
+              profile: {
+                old: systemPersona.profile,
+                new: systemPersona.profile
+              }
+            }
+          }
+        };
+      }
+      /**
+       * Merge system updates into a forked persona
+       */
+      async mergeSystemUpdates(personaId, options) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          throw new Error(`Persona "${personaId}" not found`);
+        }
+        const localPersona = JSON.parse(profileContent);
+        if (localPersona.sourceType !== "fork") {
+          throw new Error(`Cannot merge: persona "${personaId}" is not a fork of a system persona`);
+        }
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(localPersona.parentSystemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`Parent system persona not found: ${localPersona.parentSystemPersonaId}`);
+        }
+        const merged = {
+          ...localPersona,
+          // Keep user's name and modifications
+          name: localPersona.name,
+          description: localPersona.description,
+          profile: localPersona.profile,
+          // Update non-modified fields
+          background: localPersona.background === localPersona.originalSystemData?.background ? systemPersona.background : localPersona.background,
+          // Merge expertise arrays
+          expertise: [
+            .../* @__PURE__ */ new Set([
+              ...systemPersona.expertise || [],
+              ...localPersona.expertise || []
+            ])
+          ],
+          // Update tracking
+          parentSystemVersion: systemPersona.version,
+          lastMerged: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        await this.context.storage.storePersonaFile(
+          personaId,
+          "profile.json",
+          JSON.stringify(merged, null, 2),
+          this.userId
+        );
+        return {
+          success: true,
+          merged,
+          conflicts: options?.conflictStrategy === "prefer-user" ? ["profile"] : []
+        };
+      }
+      /**
+       * Import a system persona for direct use
+       */
+      async importSystemPersona(systemPersonaId) {
+        if (!this.systemPersonaService.isAuthenticated()) {
+          return false;
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(systemPersonaId);
+        if (!systemPersona) {
+          return false;
+        }
+        const existingPersonas = await this.context.storage.listPersonas();
+        const personaExists = existingPersonas.includes(systemPersonaId);
+        if (personaExists) {
+          const existingContent = await this.context.storage.getPersonaFile(
+            systemPersonaId,
+            "profile.json",
+            this.userId
+          );
+          if (existingContent) {
+            const existing = JSON.parse(existingContent);
+            if (existing.version === systemPersona.version) {
+              return true;
+            }
+            this.log("info", `Updating system persona: ${systemPersonaId}`, {
+              oldVersion: existing.version,
+              newVersion: systemPersona.version
+            });
+          }
+        }
+        await this.context.storage.storePersonaFile(
+          systemPersonaId,
+          "profile.json",
+          JSON.stringify({
+            ...systemPersona,
+            sourceType: "system",
+            isSystemPersona: true
+          }, null, 2),
+          this.userId
+        );
+        return true;
+      }
+      /**
+       * Bootstrap a new persona from a system persona
+       */
+      async bootstrapPersona(options) {
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(options.systemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`System persona not found: ${options.systemPersonaId}`);
+        }
+        const newPersonaId = options.newName.toLowerCase().replace(/\s+/g, "-");
+        const existingPersonas = await this.context.storage.listPersonas();
+        if (existingPersonas.includes(newPersonaId)) {
+          throw new Error(`Persona with name "${options.newName}" already exists`);
+        }
+        await this.context.storage.createPersonaDirectories(newPersonaId, this.userId);
+        const now = (/* @__PURE__ */ new Date()).toISOString();
+        await this.context.storage.storePersonaFile(
+          newPersonaId,
+          "profile.json",
+          JSON.stringify({
+            id: newPersonaId,
+            name: options.newName,
+            description: systemPersona.description,
+            profile: systemPersona.profile,
+            background: options.personalizations?.background || systemPersona.background,
+            preferences: options.personalizations?.preferences,
+            expertise: systemPersona.expertise,
+            sourceType: "bootstrapped",
+            parentSystemPersonaId: systemPersona.id,
+            parentSystemVersion: systemPersona.version,
+            bootstrappedAt: now,
+            userCustomizedFields: Object.keys(options.personalizations || {}),
+            systemSnapshot: {
+              version: systemPersona.version,
+              description: systemPersona.description,
+              profile: systemPersona.profile,
+              background: systemPersona.background,
+              expertise: systemPersona.expertise
+            }
+          }, null, 2),
+          this.userId
+        );
+        return newPersonaId;
+      }
+      /**
+       * Update a bootstrapped persona from its parent system persona
+       */
+      async updateFromSystem(personaId) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          throw new Error(`Persona "${personaId}" not found`);
+        }
+        const existingPersona = JSON.parse(profileContent);
+        if (existingPersona.sourceType !== "bootstrapped") {
+          throw new Error(`Persona "${personaId}" was not bootstrapped from a system persona`);
+        }
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(existingPersona.parentSystemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`Parent system persona not found: ${existingPersona.parentSystemPersonaId}`);
+        }
+        if (systemPersona.version === existingPersona.parentSystemVersion) {
+          return {
+            success: true,
+            message: `Already up to date with system persona version ${systemPersona.version}`
+          };
+        }
+        const changes = {};
+        const skippedFields = [];
+        const updated = { ...existingPersona };
+        if (!existingPersona.userCustomizedFields.includes("description")) {
+          if (updated.description !== systemPersona.description) {
+            changes.description = { from: updated.description, to: systemPersona.description };
+            updated.description = systemPersona.description;
+          }
+        } else {
+          skippedFields.push("description");
+        }
+        if (!existingPersona.userCustomizedFields.includes("profile")) {
+          if (updated.profile !== systemPersona.profile) {
+            changes.profile = { from: updated.profile, to: systemPersona.profile };
+            updated.profile = systemPersona.profile;
+          }
+        } else {
+          skippedFields.push("profile");
+        }
+        if (!existingPersona.userCustomizedFields.includes("expertise")) {
+          if (JSON.stringify(updated.expertise) !== JSON.stringify(systemPersona.expertise)) {
+            changes.expertise = { from: updated.expertise, to: systemPersona.expertise };
+            updated.expertise = systemPersona.expertise;
+          }
+        }
+        updated.parentSystemVersion = systemPersona.version;
+        updated.systemSnapshot = {
+          version: systemPersona.version,
+          description: systemPersona.description,
+          profile: systemPersona.profile,
+          background: systemPersona.background,
+          expertise: systemPersona.expertise
+        };
+        await this.context.storage.storePersonaFile(
+          personaId,
+          "profile.json",
+          JSON.stringify(updated, null, 2),
+          this.userId
+        );
+        return {
+          success: true,
+          changes,
+          skippedFields,
+          ...skippedFields.length > 0 && {
+            message: "Some fields were skipped because they have been customized"
+          }
+        };
+      }
+      /**
+       * Mark a field as customized
+       */
+      async markFieldAsCustomized(personaId, field) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          throw new Error(`Persona "${personaId}" not found`);
+        }
+        const persona = JSON.parse(profileContent);
+        if (!persona.userCustomizedFields) {
+          persona.userCustomizedFields = [];
+        }
+        if (!persona.userCustomizedFields.includes(field)) {
+          persona.userCustomizedFields.push(field);
+        }
+        await this.context.storage.storePersonaFile(
+          personaId,
+          "profile.json",
+          JSON.stringify(persona, null, 2),
+          this.userId
+        );
+      }
+      /**
+       * Reset fields to system values
+       */
+      async resetToSystem(personaId, fields) {
+        const profileContent = await this.context.storage.getPersonaFile(
+          personaId,
+          "profile.json",
+          this.userId
+        );
+        if (!profileContent) {
+          throw new Error(`Persona "${personaId}" not found`);
+        }
+        const persona = JSON.parse(profileContent);
+        if (!this.systemPersonaService.isAuthenticated()) {
+          throw new Error("Not authenticated");
+        }
+        const systemPersona = await this.systemPersonaService.fetchSystemPersona(persona.parentSystemPersonaId);
+        if (!systemPersona) {
+          throw new Error(`Parent system persona not found`);
+        }
+        for (const field of fields) {
+          if (field === "profile") {
+            persona.profile = systemPersona.profile;
+          } else if (field === "background") {
+            persona.background = systemPersona.background;
+          }
+          if (persona.userCustomizedFields) {
+            persona.userCustomizedFields = persona.userCustomizedFields.filter((f) => f !== field);
+          }
+        }
+        await this.context.storage.storePersonaFile(
+          personaId,
+          "profile.json",
+          JSON.stringify(persona, null, 2),
+          this.userId
+        );
+      }
+    };
+  }
+});
+
 // packages/tiny-brain-core/src/index.ts
 var src_exports = {};
 __export(src_exports, {
@@ -36710,7 +44312,11 @@ __export(src_exports, {
   ADVERSARIAL_STEP: () => ADVERSARIAL_STEP,
   ANALYZER_REGISTRY: () => ANALYZER_REGISTRY,
   AgentFindingsSchema: () => AgentFindingsSchema,
+  AgentFormat: () => AgentFormat,
+  AgentInstallationService: () => AgentInstallationService,
+  AgentService: () => AgentService,
   AgentsMdService: () => AgentsMdService,
+  AnalyseService: () => AnalyseService,
   AnalysisService: () => AnalysisService,
   AnalyzerDefinitionSchema: () => AnalyzerDefinitionSchema,
   AnalyzerDetectionService: () => AnalyzerDetectionService,
@@ -36736,9 +44342,11 @@ __export(src_exports, {
   ChatAnalysisService: () => ChatAnalysisService,
   CheckDefinitionSchema: () => CheckDefinitionSchema,
   ClaudeCliClient: () => ClaudeCliClient,
+  ClaudeCodeFormatter: () => ClaudeCodeFormatter,
   ConfigHealthService: () => ConfigHealthService,
   ConfigService: () => ConfigService,
   ConfigSetupService: () => ConfigSetupService,
+  ConsoleLogger: () => ConsoleLogger,
   CredentialStorageService: () => CredentialStorageService,
   DEFAULT_EFFORT_HOURS: () => DEFAULT_EFFORT_HOURS,
   DEFAULT_PREFERENCES: () => DEFAULT_PREFERENCES,
@@ -36750,9 +44358,11 @@ __export(src_exports, {
   FileInvestigationResultSchema: () => FileInvestigationResultSchema,
   FileInvestigationSchema: () => FileInvestigationSchema,
   FileListingService: () => FileListingService,
+  FileLogger: () => FileLogger,
   FileTaskProgressSchema: () => FileTaskProgressSchema,
   FingerprintMatchSchema: () => FingerprintMatchSchema,
   FixService: () => FixService,
+  FormatterFactory: () => FormatterFactory,
   GRADE_THRESHOLDS: () => GRADE_THRESHOLDS,
   HooksService: () => HooksService,
   ImpactLevel: () => ImpactLevel,
@@ -36771,15 +44381,21 @@ __export(src_exports, {
   KeyedAnalyzerSectionSchema: () => KeyedAnalyzerSectionSchema,
   LOG_LEVEL_PRIORITY: () => LOG_LEVEL_PRIORITY,
   LibraryClient: () => LibraryClient,
+  LocalFilesystemStorageAdapter: () => LocalFilesystemStorageAdapter,
+  LocalStoragePathBuilder: () => LocalStoragePathBuilder,
   MatchResultSchema: () => MatchResultSchema,
   MemoryService: () => MemoryService,
   MessageDomain: () => MessageDomain,
   MessageIntent: () => MessageIntent,
   PROGRESS_SCHEMA_VERSION: () => PROGRESS_SCHEMA_VERSION,
+  PersonaEnhancer: () => PersonaEnhancer,
   PersonaLearningService: () => PersonaLearningService,
   PersonaService: () => PersonaService,
+  PersonaSyncService: () => PersonaSyncService,
   PipelineService: () => PipelineService,
   PlanningService: () => PlanningService,
+  PlatformConfigAdapter: () => PlatformConfigAdapter,
+  PlatformPathBuilder: () => PlatformPathBuilder,
   PluginDiscoveryService: () => PluginDiscoveryService,
   QualityCategory: () => QualityCategory,
   QualityGrade: () => QualityGrade,
@@ -36791,6 +44407,7 @@ __export(src_exports, {
   RecommendationService: () => RecommendationService,
   ReminderInbox: () => ReminderInbox,
   RepoConfigService: () => RepoConfigService,
+  RepoService: () => RepoService,
   ResponseValidationService: () => ResponseValidationService,
   Result: () => ResultHelpers,
   ReviewWatcher: () => ReviewWatcher,
@@ -36807,6 +44424,7 @@ __export(src_exports, {
   SourceBreakdownSchema: () => SourceBreakdownSchema,
   StrategyService: () => StrategyService,
   StructuredRecommendationSchema: () => StructuredRecommendationSchema,
+  SystemPersonaService: () => SystemPersonaService,
   TEST_PLAN_EMOJIS: () => TEST_PLAN_EMOJIS,
   TYPESCRIPT_HOOK_STEP: () => TYPESCRIPT_HOOK_STEP,
   TechContextService: () => TechContextService,
@@ -36822,6 +44440,9 @@ __export(src_exports, {
   appendEvent: () => appendEvent,
   applyBulkUpdates: () => applyBulkUpdates,
   applyEvent: () => applyEvent,
+  asImportLibraryPersona: () => asImportLibraryPersona,
+  asShowCurrent: () => asShowCurrent,
+  asSwitchPersona: () => asSwitchPersona,
   autoCorrect: () => autoCorrect,
   batchExecute: () => batchExecute,
   bootstrapPersona: () => bootstrapPersona,
@@ -36844,6 +44465,12 @@ __export(src_exports, {
   compact: () => compact,
   compareAnalysis: () => compareAnalysis,
   computeOverallScore: () => computeOverallScore,
+  configGet: () => configGet,
+  configList: () => configList,
+  configReset: () => configReset,
+  configSet: () => configSet2,
+  configShowSources: () => configShowSources,
+  createConsoleLogger: () => createConsoleLogger,
   createDefaultProfile: () => createDefaultProfile,
   createError: () => createError,
   createMemoryModule: () => createMemoryModule,
@@ -36882,14 +44509,36 @@ __export(src_exports, {
   extractTechnicalTerms: () => extractTechnicalTerms,
   findLatestQualityRunDir: () => findLatestQualityRunDir,
   findProjectRoot: () => findProjectRoot,
+  findRepoRoot: () => findRepoRoot,
   first: () => first,
+  formatActionResults: () => formatActionResults,
   formatActivationMessage: () => formatActivationMessage,
   formatAgentChanges: () => formatAgentChanges,
+  formatConfigGet: () => formatConfigGet,
+  formatConfigList: () => formatConfigList,
+  formatConfigReset: () => formatConfigReset,
+  formatConfigSet: () => formatConfigSet,
+  formatConfigShowSources: () => formatConfigShowSources,
+  formatGraduated: () => formatGraduated,
   formatPersona: () => formatPersona,
   formatPersonaContext: () => formatPersonaContext,
   formatPersonaList: () => formatPersonaList,
   formatPlan: () => formatPlan,
   formatPlanStructure: () => formatPlanStructure,
+  formatQualityAssembleRun: () => formatQualityAssembleRun,
+  formatQualityCompare: () => formatQualityCompare,
+  formatQualityDetails: () => formatQualityDetails,
+  formatQualityDetectAnalyzers: () => formatQualityDetectAnalyzers,
+  formatQualityHistory: () => formatQualityHistory,
+  formatQualityImplementPlan: () => formatQualityImplementPlan,
+  formatQualityMergeResults: () => formatQualityMergeResults,
+  formatQualityPlan: () => formatQualityPlan,
+  formatQualityPlanDetails: () => formatQualityPlanDetails,
+  formatQualityRunAnalyzers: () => formatQualityRunAnalyzers,
+  formatQualitySave: () => formatQualitySave,
+  formatRecommendationsList: () => formatRecommendationsList,
+  formatRulesList: () => formatRulesList,
+  formatRulesShow: () => formatRulesShow,
   formatSystemReminder: () => formatSystemReminder,
   formatTechStackChanges: () => formatTechStackChanges,
   formatThoughtOutput: () => formatThoughtOutput,
@@ -36913,9 +44562,11 @@ __export(src_exports, {
   getHookSteps: () => getHookSteps,
   getISOTimestamp: () => getISOTimestamp,
   getIntentConfidence: () => getIntentConfidence,
+  getPackageVersion: () => getPackageVersion,
   getPhaseDuration: () => getPhaseDuration,
   getQualityStepScores: () => getQualityStepScores,
   getRelativeTime: () => getRelativeTime,
+  getRepoRoot: () => getRepoRoot,
   getServiceUrls: () => getServiceUrls,
   getTBRUrl: () => getTBRUrl,
   getTBSUrl: () => getTBSUrl,
@@ -36962,19 +44613,45 @@ __export(src_exports, {
   parseTestPlan: () => parseTestPlan,
   parseTestPlanTable: () => parseTestPlanTable,
   pathToRunId: () => pathToRunId,
+  personasArchive: () => personasArchive,
+  personasCreate: () => personasCreate,
+  personasList: () => personasList,
+  personasShow: () => personasShow,
+  personasUpdate: () => personasUpdate,
   phaseToAction: () => phaseToAction,
   pick: () => pick,
   planContentStrategy: () => planContentStrategy,
   planResponseStructure: () => planResponseStructure,
   processThought: () => processThought,
+  qualityAssembleRun: () => qualityAssembleRun,
+  qualityCompare: () => qualityCompare,
+  qualityDetails: () => qualityDetails,
+  qualityDetectAnalyzers: () => qualityDetectAnalyzers,
+  qualityHistory: () => qualityHistory,
+  qualityImplementPlan: () => qualityImplementPlan,
+  qualityMergeResults: () => qualityMergeResults,
+  qualityPlan: () => qualityPlan,
+  qualityPlanDetails: () => qualityPlanDetails,
+  qualityRunAnalyzers: () => qualityRunAnalyzers,
+  qualitySave: () => qualitySave,
   readAllEvents: () => readAllEvents,
   readCachedAnalyzers: () => readCachedAnalyzers,
   readEventsForTask: () => readEventsForTask,
+  recommendationsAccept: () => recommendationsAccept,
+  recommendationsDismiss: () => recommendationsDismiss,
+  recommendationsGraduated: () => recommendationsGraduated,
+  recommendationsList: () => recommendationsList,
+  recommendationsRestore: () => recommendationsRestore,
   repairJsonEscapes: () => repairJsonEscapes,
   resolveFeatureFlags: () => resolveFeatureFlags,
   resolvePersistPath: () => resolvePersistPath,
   resolveQualityPersistPath: () => resolveQualityPersistPath,
+  resolveRepoRegistration: () => resolveRepoRegistration,
   resolveStep: () => resolveStep,
+  rulesAdd: () => rulesAdd,
+  rulesList: () => rulesList,
+  rulesRemove: () => rulesRemove,
+  rulesShow: () => rulesShow,
   runIdToPath: () => runIdToPath,
   runSingleAnalyser: () => runSingleAnalyser,
   scoreMemoryRelevance: () => scoreMemoryRelevance,
@@ -37002,8 +44679,15 @@ var init_src = __esm({
     init_types2();
     init_config();
     init_logger_interface();
+    init_console_logger();
+    init_file_logger();
+    init_storage_path_builder();
+    init_local_filesystem_adapter();
+    init_platform_path_builder();
+    init_platform_config_adapter();
     init_base_service();
     init_persona_service();
+    init_persona_enhancer();
     init_persona_learning_service();
     init_persona_context();
     init_memory_service();
@@ -37024,6 +44708,12 @@ var init_src = __esm({
     init_hooks();
     init_credential_storage_service();
     init_auth_token_service();
+    init_analysis();
+    init_analysis();
+    init_analysis();
+    init_analysis();
+    init_analysis();
+    init_analysis();
     init_analysis();
     init_types10();
     init_types11();
@@ -37066,6 +44756,17 @@ var init_src = __esm({
     init_context();
     init_utils2();
     init_constants();
+    init_handlers();
+    init_types16();
+    init_claude_code_formatter();
+    init_formatter_factory();
+    init_agent_installation_service();
+    init_repo_service();
+    init_repo_registration();
+    init_package_version();
+    init_agent_service();
+    init_system_persona_service();
+    init_persona_sync_service();
   }
 });
 
@@ -37741,26 +45442,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path36) => {
-  const paths = path36.split("/");
+var splitPath = (path42) => {
+  const paths = path42.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path36 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path36);
+  const { groups, path: path42 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path42);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path36) => {
+var extractGroupsFromPath = (path42) => {
   const groups = [];
-  path36 = path36.replace(/\{[^}]+\}/g, (match3, index) => {
+  path42 = path42.replace(/\{[^}]+\}/g, (match3, index) => {
     const mark = `@${index}`;
     groups.push([mark, match3]);
     return mark;
   });
-  return { groups, path: path36 };
+  return { groups, path: path42 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -37817,8 +45518,8 @@ var getPath = (request) => {
       const queryIndex = url.indexOf("?", i);
       const hashIndex = url.indexOf("#", i);
       const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
-      const path36 = url.slice(start, end);
-      return tryDecodeURI(path36.includes("%25") ? path36.replace(/%25/g, "%2525") : path36);
+      const path42 = url.slice(start, end);
+      return tryDecodeURI(path42.includes("%25") ? path42.replace(/%25/g, "%2525") : path42);
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -37835,11 +45536,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path36) => {
-  if (path36.charCodeAt(path36.length - 1) !== 63 || !path36.includes(":")) {
+var checkOptionalParameter = (path42) => {
+  if (path42.charCodeAt(path42.length - 1) !== 63 || !path42.includes(":")) {
     return null;
   }
-  const segments = path36.split("/");
+  const segments = path42.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -37980,9 +45681,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path36 = "/", matchResult = [[]]) {
+  constructor(request, path42 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path36;
+    this.path = path42;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -38719,8 +46420,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path36, ...handlers) => {
-      for (const p of [path36].flat()) {
+    this.on = (method, path42, ...handlers) => {
+      for (const p of [path42].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -38777,8 +46478,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path36, app) {
-    const subApp = this.basePath(path36);
+  route(path42, app) {
+    const subApp = this.basePath(path42);
     app.routes.map((r) => {
       let handler;
       if (app.errorHandler === errorHandler) {
@@ -38804,9 +46505,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path36) {
+  basePath(path42) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path36);
+    subApp._basePath = mergePath(this._basePath, path42);
     return subApp;
   }
   /**
@@ -38880,7 +46581,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path36, applicationHandler, options) {
+  mount(path42, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -38907,7 +46608,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path36);
+      const mergedPath = mergePath(this._basePath, path42);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -38922,14 +46623,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path36, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path42, "*"), handler);
     return this;
   }
-  #addRoute(method, path36, handler) {
+  #addRoute(method, path42, handler) {
     method = method.toUpperCase();
-    path36 = mergePath(this._basePath, path36);
-    const r = { basePath: this._basePath, path: path36, method, handler };
-    this.router.add(method, path36, [handler, r]);
+    path42 = mergePath(this._basePath, path42);
+    const r = { basePath: this._basePath, path: path42, method, handler };
+    this.router.add(method, path42, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -38942,10 +46643,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path36 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path36);
+    const path42 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path42);
     const c = new Context(request, {
-      path: path36,
+      path: path42,
       matchResult,
       env,
       executionCtx,
@@ -39045,7 +46746,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path36) {
+function match(method, path42) {
   const matchers = this.buildAllMatchers();
   const match22 = ((method2, path210) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -39061,7 +46762,7 @@ function match(method, path36) {
     return [matcher[1][index], match3];
   });
   this.match = match22;
-  return match22(method, path36);
+  return match22(method, path42);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -39176,12 +46877,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path36, index, pathErrorCheckOnly) {
+  insert(path42, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path36 = path36.replace(/\{[^}]+\}/g, (m) => {
+      path42 = path42.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -39192,7 +46893,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path36.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path42.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -39231,9 +46932,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path36) {
-  return wildcardRegExpCache[path36] ??= new RegExp(
-    path36 === "*" ? "" : `^${path36.replace(
+function buildWildcardRegExp(path42) {
+  return wildcardRegExpCache[path42] ??= new RegExp(
+    path42 === "*" ? "" : `^${path42.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -39255,17 +46956,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path36, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path42, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path36] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path42] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path36, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path42, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path36) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path42) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -39299,12 +47000,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path36) {
+function findMiddleware(middleware, path42) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path36)) {
+    if (buildWildcardRegExp(k).test(path42)) {
       return [...middleware[k]];
     }
   }
@@ -39318,7 +47019,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path36, handler) {
+  add(method, path42, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -39333,18 +47034,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path36 === "/*") {
-      path36 = "*";
+    if (path42 === "/*") {
+      path42 = "*";
     }
-    const paramCount = (path36.match(/\/:/g) || []).length;
-    if (/\*$/.test(path36)) {
-      const re = buildWildcardRegExp(path36);
+    const paramCount = (path42.match(/\/:/g) || []).length;
+    if (/\*$/.test(path42)) {
+      const re = buildWildcardRegExp(path42);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path36] ||= findMiddleware(middleware[m], path36) || findMiddleware(middleware[METHOD_NAME_ALL], path36) || [];
+          middleware[m][path42] ||= findMiddleware(middleware[m], path42) || findMiddleware(middleware[METHOD_NAME_ALL], path42) || [];
         });
       } else {
-        middleware[method][path36] ||= findMiddleware(middleware[method], path36) || findMiddleware(middleware[METHOD_NAME_ALL], path36) || [];
+        middleware[method][path42] ||= findMiddleware(middleware[method], path42) || findMiddleware(middleware[METHOD_NAME_ALL], path42) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -39362,7 +47063,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path36) || [path36];
+    const paths = checkOptionalParameter(path42) || [path42];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path210 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -39389,13 +47090,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path36) => [path36, r[method][path36]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path42) => [path42, r[method][path42]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path36) => [path36, r[METHOD_NAME_ALL][path36]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path42) => [path42, r[METHOD_NAME_ALL][path42]])
         );
       }
     });
@@ -39415,13 +47116,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path36, handler) {
+  add(method, path42, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path36, handler]);
+    this.#routes.push([method, path42, handler]);
   }
-  match(method, path36) {
+  match(method, path42) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -39436,7 +47137,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path36);
+        res = router.match(method, path42);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -39486,10 +47187,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path36, handler) {
+  insert(method, path42, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path36);
+    const parts = splitRoutingPath(path42);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -39538,12 +47239,12 @@ var Node2 = class _Node2 {
       }
     }
   }
-  search(method, path36) {
+  search(method, path42) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path36);
+    const parts = splitPath(path42);
     const curNodesQueue = [];
     const len = parts.length;
     let partOffsets = null;
@@ -39585,13 +47286,13 @@ var Node2 = class _Node2 {
           if (matcher instanceof RegExp) {
             if (partOffsets === null) {
               partOffsets = new Array(len);
-              let offset = path36[0] === "/" ? 1 : 0;
+              let offset = path42[0] === "/" ? 1 : 0;
               for (let p = 0; p < len; p++) {
                 partOffsets[p] = offset;
                 offset += parts[p].length + 1;
               }
             }
-            const restPathString = path36.substring(partOffsets[i]);
+            const restPathString = path42.substring(partOffsets[i]);
             const m = matcher.exec(restPathString);
             if (m) {
               params[name] = m[0];
@@ -39644,18 +47345,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path36, handler) {
-    const results = checkOptionalParameter(path36);
+  add(method, path42, handler) {
+    const results = checkOptionalParameter(path42);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path36, handler);
+    this.#node.insert(method, path42, handler);
   }
-  match(method, path36) {
-    return this.#node.search(method, path36);
+  match(method, path42) {
+    return this.#node.search(method, path42);
   }
 };
 
@@ -39871,10 +47572,10 @@ var createStreamBody = (stream3) => {
   });
   return body;
 };
-var getStats = (path36) => {
+var getStats = (path42) => {
   let stats;
   try {
-    stats = statSync(path36);
+    stats = statSync(path42);
   } catch {
   }
   return stats;
@@ -39903,21 +47604,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path36 = join(
+    let path42 = join(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path36);
+    let stats = getStats(path42);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path36 = join(path36, indexFile);
-      stats = getStats(path36);
+      path42 = join(path42, indexFile);
+      stats = getStats(path42);
     }
     if (!stats) {
-      await options.onNotFound?.(path36, c);
+      await options.onNotFound?.(path42, c);
       return next();
     }
-    const mimeType = getMimeType(path36);
+    const mimeType = getMimeType(path42);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -39927,12 +47628,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path36 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path42 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path36 = path36 + ENCODINGS[encoding];
+          path42 = path42 + ENCODINGS[encoding];
           break;
         }
       }
@@ -39946,7 +47647,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range2) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path36)), 200);
+      result = c.body(createStreamBody(createReadStream(path42)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -39957,20 +47658,20 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream3 = createReadStream(path36, { start, end });
+      const stream3 = createReadStream(path42, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
       result = c.body(createStreamBody(stream3), 206);
     }
-    await options.onFound?.(path36, c);
+    await options.onFound?.(path42, c);
     return result;
   };
 };
 
 // packages/tiny-brain-dashboard/server/app.ts
-import path33 from "node:path";
-import { fileURLToPath as fileURLToPath4 } from "node:url";
-import fs30 from "node:fs";
+import path39 from "node:path";
+import { fileURLToPath as fileURLToPath8 } from "node:url";
+import fs36 from "node:fs";
 
 // packages/tiny-brain-dashboard/server/services/bridge.service.ts
 init_src();
@@ -39995,7 +47696,7 @@ var ServiceBridge = class {
    */
   async analyseRepository(repoPath, onProgress) {
     const analysisService = new AnalysisService(repoPath, {
-      authToken: this.context.authToken,
+      authToken: this.context.authToken?.token,
       onProgress,
       logger: {
         info: (msg) => console.log(`[Analysis] ${msg}`),
@@ -40548,9 +48249,9 @@ var streamSSE = (c, cb, onError) => {
 
 // packages/tiny-brain-dashboard/server/routes/repos.routes.ts
 init_src();
-import { readdir as readdir8, readFile as readFile10, stat as stat3, writeFile as writeFile3, mkdir as mkdir2 } from "fs/promises";
-import { join as join16 } from "path";
-import { createHash as createHash4 } from "crypto";
+import { readdir as readdir10, readFile as readFile13, stat as stat3, writeFile as writeFile6, mkdir as mkdir4 } from "fs/promises";
+import { join as join26 } from "path";
+import { createHash as createHash5 } from "crypto";
 
 // packages/tiny-brain-dashboard/server/routes/provenance.ts
 function buildOriginMap(installed, type2, extractId) {
@@ -40569,7 +48270,7 @@ function attachAgentProvenance(agents, installed) {
   const originMap = buildOriginMap(
     installed,
     "agent",
-    (path36) => path36.replace(".claude/agents/", "").replace(".md", "")
+    (path42) => path42.replace(".claude/agents/", "").replace(".md", "")
   );
   return agents.map((agent) => {
     const origin = originMap.get(agent.id);
@@ -40580,7 +48281,7 @@ function attachSkillProvenance(skills, installed) {
   const originMap = buildOriginMap(
     installed,
     "skill",
-    (path36) => path36.replace(".claude/skills/", "").replace("/SKILL.md", "")
+    (path42) => path42.replace(".claude/skills/", "").replace("/SKILL.md", "")
   );
   return skills.map((skill) => {
     const origin = originMap.get(skill.id);
@@ -40591,7 +48292,7 @@ function attachHookProvenance(hooks, installed) {
   const originMap = buildOriginMap(
     installed,
     "hook",
-    (path36) => path36.replace(".claude/hooks/", "").replace(".json", "")
+    (path42) => path42.replace(".claude/hooks/", "").replace(".json", "")
   );
   return hooks.map((hook) => {
     const origin = originMap.get(hook.name);
@@ -40608,7 +48309,7 @@ function toRepoAnalysisFile(input) {
     testingTools: analysis.testingTools,
     buildTools: analysis.buildTools
   });
-  const analysisHash = createHash4("md5").update(hashInput).digest("hex").slice(0, 8);
+  const analysisHash = createHash5("md5").update(hashInput).digest("hex").slice(0, 8);
   const result = {
     version: "1.0",
     detectedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -40787,10 +48488,10 @@ function createRepoRoutes(bridge, sse) {
         console.log("[Feature API] Repository not found:", repoId);
         return c.json({ error: "Repository not found" }, 404);
       }
-      const featurePath = join16(repo.path, "docs", "prd", planId, "features", `${featureId}.md`);
+      const featurePath = join26(repo.path, "docs", "prd", planId, "features", `${featureId}.md`);
       console.log("[Feature API] Looking for file:", featurePath);
       try {
-        const content = await readFile10(featurePath, "utf-8");
+        const content = await readFile13(featurePath, "utf-8");
         const feature = parseFeatureMarkdown(content);
         console.log("[Feature API] Success - found", feature.tasks.length, "tasks");
         return c.json({ feature });
@@ -40850,8 +48551,8 @@ function createRepoRoutes(bridge, sse) {
       if (!fix) {
         return c.json({ error: "Fix not found" }, 404);
       }
-      const fixPath = join16(repo.path, fix.filePath);
-      const content = await readFile10(fixPath, "utf-8");
+      const fixPath = join26(repo.path, fix.filePath);
+      const content = await readFile13(fixPath, "utf-8");
       const tasks = parseTasksFromMarkdown(content);
       for (const task of tasks) {
         task.description = task.description.replace(/^status:\s*.+$/gm, "").replace(/^commitSha:\s*.+$/gm, "").trim();
@@ -40901,13 +48602,13 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const agentsPath = join16(repo.path, ".claude", "agents");
+      const agentsPath = join26(repo.path, ".claude", "agents");
       const agents = [];
       try {
-        const files = await readdir8(agentsPath);
+        const files = await readdir10(agentsPath);
         const mdFiles = files.filter((f) => f.endsWith(".md"));
         for (const file of mdFiles) {
-          const content = await readFile10(join16(agentsPath, file), "utf-8");
+          const content = await readFile13(join26(agentsPath, file), "utf-8");
           const frontmatter = parseFrontmatter2(content);
           const id = file.replace(".md", "");
           agents.push({
@@ -40939,15 +48640,15 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const skillsPath = join16(repo.path, ".claude", "skills");
+      const skillsPath = join26(repo.path, ".claude", "skills");
       const skills = [];
       try {
-        const entries = await readdir8(skillsPath, { withFileTypes: true });
+        const entries = await readdir10(skillsPath, { withFileTypes: true });
         const directories = entries.filter((e) => e.isDirectory());
         for (const dir of directories) {
-          const skillMdPath = join16(skillsPath, dir.name, "SKILL.md");
+          const skillMdPath = join26(skillsPath, dir.name, "SKILL.md");
           try {
-            const content = await readFile10(skillMdPath, "utf-8");
+            const content = await readFile13(skillMdPath, "utf-8");
             const frontmatter = parseFrontmatter2(content);
             skills.push({
               id: dir.name,
@@ -40980,7 +48681,7 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const skillPath = join16(repo.path, ".claude", "skills", skillName);
+      const skillPath = join26(repo.path, ".claude", "skills", skillName);
       try {
         const skillStat = await stat3(skillPath);
         if (!skillStat.isDirectory()) {
@@ -41007,12 +48708,12 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const analysisPath = join16(repo.path, ".tiny-brain", "analysis.json");
-      const agentsMdPath = join16(repo.path, "AGENTS.md");
+      const analysisPath = join26(repo.path, ".tiny-brain", "analysis.json");
+      const agentsMdPath = join26(repo.path, "AGENTS.md");
       let agentsMdStatus;
       try {
         const agentsStat = await stat3(agentsMdPath);
-        const agentsMdContent = await readFile10(agentsMdPath, "utf-8");
+        const agentsMdContent = await readFile13(agentsMdPath, "utf-8");
         agentsMdStatus = { exists: true, lastModified: agentsStat.mtime.toISOString(), content: agentsMdContent };
       } catch {
         agentsMdStatus = { exists: false };
@@ -41020,27 +48721,27 @@ function createRepoRoutes(bridge, sse) {
       const agentsMdFiles = [];
       agentsMdFiles.push({ path: "AGENTS.md", ...agentsMdStatus });
       try {
-        const content = await readFile10(analysisPath, "utf-8");
+        const content = await readFile13(analysisPath, "utf-8");
         const analysis = JSON.parse(content);
         let packageScripts;
         if (analysis?.monorepo?.packages) {
           packageScripts = [];
           for (const pkg of analysis.monorepo.packages) {
-            const pkgAgentsPath = join16(repo.path, pkg, "AGENTS.md");
+            const pkgAgentsPath = join26(repo.path, pkg, "AGENTS.md");
             try {
               const pkgStat = await stat3(pkgAgentsPath);
-              const pkgContent = await readFile10(pkgAgentsPath, "utf-8");
+              const pkgContent = await readFile13(pkgAgentsPath, "utf-8");
               agentsMdFiles.push({
-                path: join16(pkg, "AGENTS.md"),
+                path: join26(pkg, "AGENTS.md"),
                 exists: true,
                 lastModified: pkgStat.mtime.toISOString(),
                 content: pkgContent
               });
             } catch {
-              agentsMdFiles.push({ path: join16(pkg, "AGENTS.md"), exists: false });
+              agentsMdFiles.push({ path: join26(pkg, "AGENTS.md"), exists: false });
             }
             try {
-              const pkgJsonContent = await readFile10(join16(repo.path, pkg, "package.json"), "utf-8");
+              const pkgJsonContent = await readFile13(join26(repo.path, pkg, "package.json"), "utf-8");
               const pkgJson = JSON.parse(pkgJsonContent);
               if (pkgJson.scripts && Object.keys(pkgJson.scripts).length > 0) {
                 const entry = {
@@ -41123,20 +48824,20 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const qualityRunsPath = join16(repo.path, ".tiny-brain", "quality", "runs");
+      const qualityRunsPath = join26(repo.path, ".tiny-brain", "quality", "runs");
       const runs = [];
       try {
-        const entries = await readdir8(qualityRunsPath, { withFileTypes: true });
+        const entries = await readdir10(qualityRunsPath, { withFileTypes: true });
         for (const entry of entries) {
           if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)) {
             try {
-              const dateDirPath = join16(qualityRunsPath, entry.name);
-              const timeEntries = await readdir8(dateDirPath, { withFileTypes: true });
+              const dateDirPath = join26(qualityRunsPath, entry.name);
+              const timeEntries = await readdir10(dateDirPath, { withFileTypes: true });
               for (const timeEntry of timeEntries) {
                 if (timeEntry.isDirectory() && /^\d{2}-\d{2}$/.test(timeEntry.name)) {
-                  const qualityFile = join16(dateDirPath, timeEntry.name, "quality.md");
+                  const qualityFile = join26(dateDirPath, timeEntry.name, "quality.md");
                   try {
-                    const content = await readFile10(qualityFile, "utf-8");
+                    const content = await readFile13(qualityFile, "utf-8");
                     const frontmatter = parseFrontmatter2(content);
                     const runId = `${entry.name}T${timeEntry.name}`;
                     runs.push({
@@ -41156,7 +48857,7 @@ function createRepoRoutes(bridge, sse) {
         }
         for (const entry of entries) {
           if (!entry.isDirectory() && entry.name.endsWith("-quality.md")) {
-            const content = await readFile10(join16(qualityRunsPath, entry.name), "utf-8");
+            const content = await readFile13(join26(qualityRunsPath, entry.name), "utf-8");
             const frontmatter = parseFrontmatter2(content);
             const runId = entry.name.replace(".md", "");
             runs.push({
@@ -41191,9 +48892,9 @@ function createRepoRoutes(bridge, sse) {
         return c.json({ error: "Repository not found" }, 404);
       }
       const isNested = runId.includes("T");
-      const runPath = isNested ? join16(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "quality.md") : join16(repo.path, ".tiny-brain", "quality", "runs", `${runId}.md`);
+      const runPath = isNested ? join26(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "quality.md") : join26(repo.path, ".tiny-brain", "quality", "runs", `${runId}.md`);
       try {
-        const content = await readFile10(runPath, "utf-8");
+        const content = await readFile13(runPath, "utf-8");
         const frontmatter = parseFrontmatter2(content);
         const run2 = {
           runId,
@@ -41203,15 +48904,15 @@ function createRepoRoutes(bridge, sse) {
           issueCount: parseInt(frontmatter.issues_count || frontmatter.issue_count || "0", 10),
           rawContent: content
         };
-        const planPath = join16(repo.path, ".tiny-brain", "quality", "plans", `${runId}-plan.md`);
+        const planPath = join26(repo.path, ".tiny-brain", "quality", "plans", `${runId}-plan.md`);
         try {
-          run2.planContent = await readFile10(planPath, "utf-8");
+          run2.planContent = await readFile13(planPath, "utf-8");
         } catch {
         }
         if (isNested) {
-          const analysisPath = join16(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "analysis.json");
+          const analysisPath = join26(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "analysis.json");
           try {
-            const analysisContent = await readFile10(analysisPath, "utf-8");
+            const analysisContent = await readFile13(analysisPath, "utf-8");
             const parsed = JSON.parse(analysisContent);
             const isFlat = Array.isArray(parsed.issues) || Array.isArray(parsed.executions);
             if (!isFlat) {
@@ -41228,9 +48929,9 @@ function createRepoRoutes(bridge, sse) {
             }
           } catch {
           }
-          const coverageSummaryPath = join16(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "analysers", "coverage-0", "coverage-summary.json");
+          const coverageSummaryPath = join26(repo.path, ".tiny-brain", "quality", "runs", runId.replace("T", "/"), "analysers", "coverage-0", "coverage-summary.json");
           try {
-            const covContent = await readFile10(coverageSummaryPath, "utf-8");
+            const covContent = await readFile13(coverageSummaryPath, "utf-8");
             const covData = JSON.parse(covContent);
             if (covData.total?.statements) {
               run2.coverageMetrics = {
@@ -41268,10 +48969,10 @@ function createRepoRoutes(bridge, sse) {
         return c.json({ error: "Repository not found" }, 404);
       }
       const [date, time] = runId.split("T");
-      const agentsDir = join16(repo.path, ".tiny-brain", "quality", "runs", date, time, "agents");
+      const agentsDir = join26(repo.path, ".tiny-brain", "quality", "runs", date, time, "agents");
       let content;
       try {
-        content = await readFile10(join16(agentsDir, `${agentName}.json`), "utf-8");
+        content = await readFile13(join26(agentsDir, `${agentName}.json`), "utf-8");
       } catch (err) {
         if (err.code === "ENOENT") {
           return c.json({ error: "Agent output not found" }, 404);
@@ -41304,10 +49005,10 @@ function createRepoRoutes(bridge, sse) {
         return c.json({ error: "Repository not found" }, 404);
       }
       const [date, time] = runId.split("T");
-      const agentPath = join16(repo.path, ".tiny-brain", "quality", "runs", date, time, "agents", `${stepType}.json`);
+      const agentPath = join26(repo.path, ".tiny-brain", "quality", "runs", date, time, "agents", `${stepType}.json`);
       let agentContent;
       try {
-        agentContent = await readFile10(agentPath, "utf-8");
+        agentContent = await readFile13(agentPath, "utf-8");
       } catch (err) {
         if (err.code === "ENOENT") {
           return c.json({ error: "Agent output not found" }, 404);
@@ -41316,12 +49017,12 @@ function createRepoRoutes(bridge, sse) {
       }
       const agentOutput = JSON.parse(agentContent);
       const issues = Array.isArray(agentOutput) ? agentOutput : agentOutput.issues ?? [];
-      const qipPath = join16(repo.path, ".tiny-brain", "fixes", `qip-${stepType}.md`);
+      const qipPath = join26(repo.path, ".tiny-brain", "fixes", `qip-${stepType}.md`);
       const stepLabel = stepType.charAt(0).toUpperCase() + stepType.slice(1);
       let markdown;
       let created = false;
       try {
-        const existing = await readFile10(qipPath, "utf-8");
+        const existing = await readFile13(qipPath, "utf-8");
         markdown = updateQipMarkdown(existing, issues, runId);
       } catch {
         markdown = generateQipMarkdown(stepType, stepLabel, issues, runId);
@@ -41330,8 +49031,8 @@ function createRepoRoutes(bridge, sse) {
       if (!markdown) {
         return c.json({ fixId: `qip-${stepType}`, created: false, taskCount: 0 });
       }
-      await mkdir2(join16(repo.path, ".tiny-brain", "fixes"), { recursive: true });
-      await writeFile3(qipPath, markdown, "utf-8");
+      await mkdir4(join26(repo.path, ".tiny-brain", "fixes"), { recursive: true });
+      await writeFile6(qipPath, markdown, "utf-8");
       const taskCount = (markdown.match(/^### \d+\./gm) ?? []).length;
       return c.json({ fixId: `qip-${stepType}`, created, taskCount });
     } catch (error) {
@@ -41371,8 +49072,8 @@ function createRepoRoutes(bridge, sse) {
       if (!fix) {
         return c.json({ error: "QIP not found" }, 404);
       }
-      const fixPath = join16(repo.path, fix.filePath);
-      const content = await readFile10(fixPath, "utf-8");
+      const fixPath = join26(repo.path, fix.filePath);
+      const content = await readFile13(fixPath, "utf-8");
       const tasks = parseTasksFromMarkdown(content);
       for (const task of tasks) {
         task.description = task.description.replace(/^status:\s*.+$/gm, "").replace(/^commitSha:\s*.+$/gm, "").trim();
@@ -41466,10 +49167,10 @@ function createRepoRoutes(bridge, sse) {
       if ((STRING_FLAG_KEYS.has(body.key) || DIRECTORY_KEYS.has(body.key)) && typeof body.value !== "string") {
         return c.json({ error: "Value must be a string" }, 400);
       }
-      const configPath = join16(repo.path, ".tiny-brain", "config.json");
+      const configPath = join26(repo.path, ".tiny-brain", "config.json");
       let config = {};
       try {
-        const content = await readFile10(configPath, "utf-8");
+        const content = await readFile13(configPath, "utf-8");
         config = JSON.parse(content);
       } catch {
       }
@@ -41486,8 +49187,8 @@ function createRepoRoutes(bridge, sse) {
       } else {
         repoConfig[body.key] = body.value;
       }
-      await mkdir2(join16(repo.path, ".tiny-brain"), { recursive: true });
-      await writeFile3(configPath, JSON.stringify(config, null, 2));
+      await mkdir4(join26(repo.path, ".tiny-brain"), { recursive: true });
+      await writeFile6(configPath, JSON.stringify(config, null, 2));
       const configService = new ConfigService({ ...bridge.context, repositoryRoot: repo.path });
       const sources = await configService.getPreferenceSources();
       const merged = sources.merged.repo;
@@ -41538,8 +49239,8 @@ function createRepoRoutes(bridge, sse) {
       }
       let analysis;
       try {
-        const analysisPath = join16(repo.path, ".tiny-brain", "analysis.json");
-        const content = await readFile10(analysisPath, "utf-8");
+        const analysisPath = join26(repo.path, ".tiny-brain", "analysis.json");
+        const content = await readFile13(analysisPath, "utf-8");
         analysis = JSON.parse(content);
       } catch {
       }
@@ -41618,8 +49319,8 @@ function createRepoRoutes(bridge, sse) {
     }
     let analysis;
     try {
-      const analysisPath = join16(repo.path, ".tiny-brain", "analysis.json");
-      const content = await readFile10(analysisPath, "utf-8");
+      const analysisPath = join26(repo.path, ".tiny-brain", "analysis.json");
+      const content = await readFile13(analysisPath, "utf-8");
       analysis = JSON.parse(content);
     } catch {
     }
@@ -41734,10 +49435,10 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const prdPath = join16(repo.path, "docs", "prd", planId, "prd.md");
+      const prdPath = join26(repo.path, "docs", "prd", planId, "prd.md");
       let content;
       try {
-        content = await readFile10(prdPath, "utf-8");
+        content = await readFile13(prdPath, "utf-8");
       } catch (err) {
         if (err.code === "ENOENT") {
           return c.json({ error: "Plan file not found" }, 404);
@@ -41750,8 +49451,8 @@ function createRepoRoutes(bridge, sse) {
       } else {
         updatedContent = content.replace(/^(---\s*\n[\s\S]*?)\n---/, "$1\narchived: true\n---");
       }
-      await writeFile3(prdPath, updatedContent, "utf-8");
-      const result = await bridge.planning.syncPlanFromMarkdown(join16(repo.path, "docs", "prd", planId));
+      await writeFile6(prdPath, updatedContent, "utf-8");
+      const result = await bridge.planning.syncPlanFromMarkdown(join26(repo.path, "docs", "prd", planId));
       return c.json({ plan: result });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -41766,10 +49467,10 @@ function createRepoRoutes(bridge, sse) {
       if (!repo) {
         return c.json({ error: "Repository not found" }, 404);
       }
-      const prdPath = join16(repo.path, "docs", "prd", planId, "prd.md");
+      const prdPath = join26(repo.path, "docs", "prd", planId, "prd.md");
       let content;
       try {
-        content = await readFile10(prdPath, "utf-8");
+        content = await readFile13(prdPath, "utf-8");
       } catch (err) {
         if (err.code === "ENOENT") {
           return c.json({ error: "Plan file not found" }, 404);
@@ -41777,8 +49478,8 @@ function createRepoRoutes(bridge, sse) {
         throw err;
       }
       const updatedContent = content.replace(/^(---\s*\n[\s\S]*?)\narchived: true([\s\S]*?\n---)/, "$1$2");
-      await writeFile3(prdPath, updatedContent, "utf-8");
-      const result = await bridge.planning.syncPlanFromMarkdown(join16(repo.path, "docs", "prd", planId));
+      await writeFile6(prdPath, updatedContent, "utf-8");
+      const result = await bridge.planning.syncPlanFromMarkdown(join26(repo.path, "docs", "prd", planId));
       return c.json({ plan: result });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -41798,15 +49499,15 @@ function createRepoRoutes(bridge, sse) {
       if (!fix) {
         return c.json({ error: "Fix not found" }, 404);
       }
-      const fixPath = join16(repo.path, fix.filePath);
-      const content = await readFile10(fixPath, "utf-8");
+      const fixPath = join26(repo.path, fix.filePath);
+      const content = await readFile13(fixPath, "utf-8");
       let updatedContent;
       if (/^archived:\s*.+$/m.test(content)) {
         updatedContent = content.replace(/^archived:\s*.+$/m, "archived: true");
       } else {
         updatedContent = content.replace(/^(---\s*\n[\s\S]*?)\n---/, "$1\narchived: true\n---");
       }
-      await writeFile3(fixPath, updatedContent, "utf-8");
+      await writeFile6(fixPath, updatedContent, "utf-8");
       const updatedResult = await bridge.planning.getFixesProgress(repo.path);
       const updatedFix = updatedResult.fixes.find((f) => f.id === fixId);
       return c.json({ fix: updatedFix });
@@ -41828,10 +49529,10 @@ function createRepoRoutes(bridge, sse) {
       if (!fix) {
         return c.json({ error: "Fix not found" }, 404);
       }
-      const fixPath = join16(repo.path, fix.filePath);
-      const content = await readFile10(fixPath, "utf-8");
+      const fixPath = join26(repo.path, fix.filePath);
+      const content = await readFile13(fixPath, "utf-8");
       const updatedContent = content.replace(/^(---\s*\n[\s\S]*?)\narchived: true([\s\S]*?\n---)/, "$1$2");
-      await writeFile3(fixPath, updatedContent, "utf-8");
+      await writeFile6(fixPath, updatedContent, "utf-8");
       const updatedResult = await bridge.planning.getFixesProgress(repo.path);
       const updatedFix = updatedResult.fixes.find((f) => f.id === fixId);
       return c.json({ fix: updatedFix });
@@ -41844,7 +49545,7 @@ function createRepoRoutes(bridge, sse) {
 }
 
 // packages/tiny-brain-dashboard/server/routes/git.routes.ts
-import { execSync as execSync2 } from "node:child_process";
+import { execSync as execSync3 } from "node:child_process";
 function createGitRoutes(bridge) {
   const app = new Hono2();
   app.get("/commits/:sha", async (c) => {
@@ -41859,7 +49560,7 @@ function createGitRoutes(bridge) {
     }
     const repositoryRoot = repo.path;
     try {
-      const commitInfo = execSync2(
+      const commitInfo = execSync3(
         `git show --no-patch --format='%H%n%an%n%ae%n%aI%n%s%n%b' ${sha}`,
         { encoding: "utf-8", cwd: repositoryRoot }
       ).split("\n");
@@ -41872,7 +49573,7 @@ function createGitRoutes(bridge) {
       const message = body ? `${subject}
 
 ${body}` : subject;
-      const filesChangedOutput = execSync2(
+      const filesChangedOutput = execSync3(
         `git show --stat --format='' ${sha}`,
         { encoding: "utf-8", cwd: repositoryRoot }
       );
@@ -41886,8 +49587,8 @@ ${body}` : subject;
         filesChanged
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("bad object") || errorMessage.includes("unknown revision")) {
+      const errorMessage7 = error instanceof Error ? error.message : String(error);
+      if (errorMessage7.includes("bad object") || errorMessage7.includes("unknown revision")) {
         return c.json({ error: "Commit not found" }, 404);
       }
       console.error("Error fetching commit details:", error);
@@ -41901,8 +49602,8 @@ ${body}` : subject;
 
 // packages/tiny-brain-dashboard/server/routes/reviews.routes.ts
 init_src();
-import { readFile as readFile11 } from "node:fs/promises";
-import { join as join17 } from "node:path";
+import { readFile as readFile14 } from "node:fs/promises";
+import { join as join27 } from "node:path";
 var COMMIT_SHA_PATTERN = /^[a-f0-9]{7,40}$/;
 function createReviewRoutes(bridge) {
   const app = new Hono2();
@@ -41924,15 +49625,15 @@ function createReviewRoutes(bridge) {
       return c.json({ error: "Repository not found" }, 404);
     }
     const canonicalType = normalizeStepType(reviewType);
-    const reviewDir = join17(repo.path, ".tiny-brain", "reviews", canonicalType);
-    const reviewPath = join17(reviewDir, `${commitSha}.json`);
+    const reviewDir = join27(repo.path, ".tiny-brain", "reviews", canonicalType);
+    const reviewPath = join27(reviewDir, `${commitSha}.json`);
     let content;
     try {
-      content = await readFile11(reviewPath, "utf-8");
+      content = await readFile14(reviewPath, "utf-8");
     } catch {
       if (commitSha.length > 8) {
         try {
-          content = await readFile11(join17(reviewDir, `${commitSha.substring(0, 8)}.json`), "utf-8");
+          content = await readFile14(join27(reviewDir, `${commitSha.substring(0, 8)}.json`), "utf-8");
         } catch {
           return c.json({ error: "Review not found" }, 404);
         }
@@ -41951,8 +49652,8 @@ function createReviewRoutes(bridge) {
 
 // packages/tiny-brain-dashboard/server/routes/pipeline.routes.ts
 init_src();
-import { promises as fs28 } from "fs";
-import path31 from "path";
+import { promises as fs34 } from "fs";
+import path37 from "path";
 function validatePipelineStepArray(value, name, allowEmpty = true) {
   if (!Array.isArray(value)) return `${name} must be an array`;
   if (!allowEmpty && value.length === 0) return `${name} must be a non-empty array`;
@@ -41973,8 +49674,8 @@ function createPipelineRoutes(bridge) {
     const prefs = await configService.getPreferences();
     let installedCapabilities = [];
     try {
-      const installedPath = path31.join(repo.path, ".tiny-brain", "capabilities", "installed.json");
-      const data = await fs28.readFile(installedPath, "utf-8");
+      const installedPath = path37.join(repo.path, ".tiny-brain", "capabilities", "installed.json");
+      const data = await fs34.readFile(installedPath, "utf-8");
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) installedCapabilities = parsed;
     } catch {
@@ -42348,13 +50049,13 @@ ${JSON.stringify(userContext, null, 2)}
 }
 
 // packages/tiny-brain-dashboard/server/routes/capabilities.routes.ts
-import { promises as fs29 } from "fs";
-import path32 from "path";
+import { promises as fs35 } from "fs";
+import path38 from "path";
 function getCapabilitiesDir() {
   if (process.env.CLAUDE_PLUGIN_ROOT) {
-    return path32.join(process.env.CLAUDE_PLUGIN_ROOT, "capabilities");
+    return path38.join(process.env.CLAUDE_PLUGIN_ROOT, "capabilities");
   }
-  return path32.join(process.cwd(), "packages", "tiny-brain-plugin", "capabilities");
+  return path38.join(process.cwd(), "packages", "tiny-brain-plugin", "capabilities");
 }
 function parseFrontmatter3(content) {
   const match3 = content.match(/^---\n([\s\S]*?)\n---/);
@@ -42392,7 +50093,7 @@ function createCapabilitiesRoutes() {
     const capDir = getCapabilitiesDir();
     let files;
     try {
-      files = await fs29.readdir(capDir);
+      files = await fs35.readdir(capDir);
     } catch {
       return c.json({ capabilities: [] });
     }
@@ -42400,7 +50101,7 @@ function createCapabilitiesRoutes() {
     for (const file of files) {
       if (!file.endsWith(".md") || file.startsWith("_")) continue;
       try {
-        const content = await fs29.readFile(path32.join(capDir, file), "utf-8");
+        const content = await fs35.readFile(path38.join(capDir, file), "utf-8");
         const frontmatter = parseFrontmatter3(content);
         if (!frontmatter.id || !frontmatter.name) continue;
         capabilities.push({
@@ -42455,54 +50156,80 @@ function createQualityRoutes(bridge) {
 
 // packages/tiny-brain-dashboard/server/routes/telemetry.routes.ts
 init_src();
-function parseTaskRef(segments) {
-  if (segments.length < 1) return void 0;
-  const first2 = segments[0];
-  if (first2.startsWith("fix:")) {
-    const fix = first2.slice("fix:".length);
-    const task = segments[1];
-    if (!fix || !task) return void 0;
-    return { kind: "fix", fix, task };
+async function respondWithEvents(c, bridge, repoId, taskRef) {
+  const repo = await bridge.repoConfig.getRepo(repoId);
+  if (!repo) {
+    return c.json({ error: "Repository not found" }, 404);
   }
-  if (first2.startsWith("prd:")) {
-    const prd = first2.slice("prd:".length);
-    const feature = segments[1];
-    const task = segments[2];
-    if (!prd || !feature || !task) return void 0;
-    return { kind: "prd", prd, feature, task };
+  try {
+    const events = await readEventsForTask(repo.path, taskRef);
+    if (events.length === 0) {
+      return c.json({ error: "No telemetry events found for this task" }, 404);
+    }
+    return c.json({ events });
+  } catch (err) {
+    bridge.context.logger.error("Failed to read telemetry events", {
+      repoId,
+      taskRef,
+      error: String(err)
+    });
+    return c.json({ error: "Failed to read telemetry events" }, 500);
   }
-  return void 0;
 }
 function createTelemetryRoutes(bridge) {
   const app = new Hono2();
-  app.get("/:taskPath{.+}/telemetry", async (c) => {
+  app.get("/:kind/:task/telemetry", async (c) => {
     const repoId = c.req.param("repoId") ?? "";
-    const repo = await bridge.repoConfig.getRepo(repoId);
-    if (!repo) {
-      return c.json({ error: "Repository not found" }, 404);
+    const kind = c.req.param("kind") ?? "";
+    const task = c.req.param("task") ?? "";
+    if (!kind.startsWith("fix:")) {
+      return c.json(
+        { error: "Invalid task ref format. Use fix:<fixId>/<taskId>" },
+        400
+      );
     }
-    const taskPath = c.req.param("taskPath") ?? "";
-    const segments = taskPath.split("/");
-    const taskRef = parseTaskRef(segments);
-    if (!taskRef) {
-      return c.json({ error: "Invalid task ref format. Use fix:<fixId>/<taskId> or prd:<prdId>/<featureId>/<taskId>" }, 400);
+    const fix = kind.slice("fix:".length);
+    if (!fix || !task) {
+      return c.json(
+        { error: "Invalid task ref format. Use fix:<fixId>/<taskId>" },
+        400
+      );
     }
-    try {
-      const events = await readEventsForTask(repo.path, taskRef);
-      if (events.length === 0) {
-        return c.json({ error: "No telemetry events found for this task" }, 404);
-      }
-      return c.json({ events });
-    } catch (err) {
-      bridge.context.logger.error("Failed to read telemetry events", { repoId, taskPath, error: String(err) });
-      return c.json({ error: "Failed to read telemetry events" }, 500);
+    return respondWithEvents(c, bridge, repoId, { kind: "fix", fix, task });
+  });
+  app.get("/:badRef/telemetry", (c) => {
+    return c.json(
+      {
+        error: "Invalid task ref format. Use fix:<fixId>/<taskId> or prd:<prdId>/<featureId>/<taskId>"
+      },
+      400
+    );
+  });
+  app.get("/:kind/:feature/:task/telemetry", async (c) => {
+    const repoId = c.req.param("repoId") ?? "";
+    const kind = c.req.param("kind") ?? "";
+    const feature = c.req.param("feature") ?? "";
+    const task = c.req.param("task") ?? "";
+    if (!kind.startsWith("prd:")) {
+      return c.json(
+        { error: "Invalid task ref format. Use prd:<prdId>/<featureId>/<taskId>" },
+        400
+      );
     }
+    const prd = kind.slice("prd:".length);
+    if (!prd || !feature || !task) {
+      return c.json(
+        { error: "Invalid task ref format. Use prd:<prdId>/<featureId>/<taskId>" },
+        400
+      );
+    }
+    return respondWithEvents(c, bridge, repoId, { kind: "prd", prd, feature, task });
   });
   return app;
 }
 
 // packages/tiny-brain-dashboard/server/app.ts
-var __dirname = path33.dirname(fileURLToPath4(import.meta.url));
+var __dirname = path39.dirname(fileURLToPath8(import.meta.url));
 function createApp(context, sse, options = {}) {
   const app = new Hono2();
   const bridge = new ServiceBridge(context);
@@ -42567,7 +50294,7 @@ data: ${JSON.stringify(initialData)}
   const distPath = options.distPath ?? resolveDashboardStaticPath(__dirname);
   app.use("/assets/*", serveStatic({
     root: distPath,
-    rewriteRequestPath: (path36) => path36.replace("/assets", "/assets")
+    rewriteRequestPath: (path42) => path42.replace("/assets", "/assets")
   }));
   app.use("/favicon.png", serveStatic({
     root: distPath,
@@ -42594,17 +50321,17 @@ var notBuiltHtml = `<!DOCTYPE html>
 function resolveDashboardStaticPath(dir) {
   const envPath = process.env.TINY_BRAIN_DASHBOARD_STATIC_PATH;
   if (envPath) {
-    const resolved = path33.resolve(envPath);
-    if (fs30.existsSync(path33.join(resolved, "index.html"))) return resolved;
+    const resolved = path39.resolve(envPath);
+    if (fs36.existsSync(path39.join(resolved, "index.html"))) return resolved;
   }
-  const dashboardPath = path33.resolve(dir, "../dashboard");
-  if (fs30.existsSync(path33.join(dashboardPath, "index.html"))) return dashboardPath;
-  return path33.resolve(dir, "../dist");
+  const dashboardPath = path39.resolve(dir, "../dashboard");
+  if (fs36.existsSync(path39.join(dashboardPath, "index.html"))) return dashboardPath;
+  return path39.resolve(dir, "../dist");
 }
 function readIndexHtml(distPath) {
-  const indexPath = path33.join(distPath, "index.html");
+  const indexPath = path39.join(distPath, "index.html");
   try {
-    const html = fs30.readFileSync(indexPath, "utf-8");
+    const html = fs36.readFileSync(indexPath, "utf-8");
     return html.length > 0 ? html : null;
   } catch {
     return null;
@@ -42647,13 +50374,13 @@ data: ${JSON.stringify(data)}
 
 // packages/tiny-brain-dashboard/server/services/file-watcher.service.ts
 init_src();
-import * as path35 from "path";
-import * as fs33 from "fs";
-import * as os2 from "os";
+import * as path41 from "path";
+import * as fs39 from "fs";
+import * as os3 from "os";
 
 // packages/tiny-brain-dashboard/server/services/generic-file-watcher.ts
-import * as fs31 from "fs";
-import * as path34 from "path";
+import * as fs37 from "fs";
+import * as path40 from "path";
 import { EventEmitter as EventEmitter2 } from "events";
 var FileWatcherService = class extends EventEmitter2 {
   fsWatcher = null;
@@ -42682,14 +50409,14 @@ var FileWatcherService = class extends EventEmitter2 {
       ...this.options,
       ...options
     };
-    if (!fs31.existsSync(watchPath)) {
+    if (!fs37.existsSync(watchPath)) {
       throw new Error(`Watch path does not exist: ${watchPath}`);
     }
-    const stats = fs31.statSync(watchPath);
+    const stats = fs37.statSync(watchPath);
     if (!stats.isDirectory()) {
       throw new Error(`Watch path is not a directory: ${watchPath}`);
     }
-    this.fsWatcher = fs31.watch(
+    this.fsWatcher = fs37.watch(
       watchPath,
       { recursive: this.options.recursive },
       (eventType, filename) => {
@@ -42708,7 +50435,7 @@ var FileWatcherService = class extends EventEmitter2 {
    */
   handleWatchEvent(eventType, filename) {
     if (!filename || !this.watchPath) return;
-    const fullPath = path34.join(this.watchPath, filename);
+    const fullPath = path40.join(this.watchPath, filename);
     if (!this.options.fileFilter(fullPath)) return;
     const existingTimer = this.debounceTimers.get(filename);
     if (existingTimer) {
@@ -42728,7 +50455,7 @@ var FileWatcherService = class extends EventEmitter2 {
     try {
       if (eventType === "rename") {
         try {
-          const stats = await fs31.promises.stat(fullPath);
+          const stats = await fs37.promises.stat(fullPath);
           const change = {
             type: "added",
             filePath: fullPath,
@@ -42749,7 +50476,7 @@ var FileWatcherService = class extends EventEmitter2 {
           }
         }
       } else if (eventType === "change") {
-        const stats = await fs31.promises.stat(fullPath);
+        const stats = await fs37.promises.stat(fullPath);
         const change = {
           type: "modified",
           filePath: fullPath,
@@ -42793,13 +50520,13 @@ var FileWatcherService = class extends EventEmitter2 {
 };
 
 // packages/tiny-brain-dashboard/server/services/telemetry-tail.service.ts
-import * as fs32 from "fs";
+import * as fs38 from "fs";
 var TelemetryTailService = class {
   offsets = /* @__PURE__ */ new Map();
   async readNewEvents(filePath) {
     let stat4;
     try {
-      stat4 = await fs32.promises.stat(filePath);
+      stat4 = await fs38.promises.stat(filePath);
     } catch {
       return [];
     }
@@ -42808,7 +50535,7 @@ var TelemetryTailService = class {
       this.offsets.set(filePath, stat4.size);
       return [];
     }
-    const fd = await fs32.promises.open(filePath, "r");
+    const fd = await fs38.promises.open(filePath, "r");
     try {
       const buf = Buffer.alloc(stat4.size - offset);
       await fd.read(buf, 0, buf.length, offset);
@@ -42895,14 +50622,14 @@ var FileWatcher = class {
       repoPath
     };
     if (!this.plansSnapshot.has(repoId)) {
-      const progressDir = path35.join(repoPath, ".tiny-brain", "progress");
+      const progressDir = path41.join(repoPath, ".tiny-brain", "progress");
       const snapshot = /* @__PURE__ */ new Map();
       try {
-        const files = await fs33.promises.readdir(progressDir);
+        const files = await fs39.promises.readdir(progressDir);
         for (const file of files) {
           if (!file.endsWith(".json")) continue;
           try {
-            const content = await fs33.promises.readFile(path35.join(progressDir, file), "utf-8");
+            const content = await fs39.promises.readFile(path41.join(progressDir, file), "utf-8");
             const parsed = JSON.parse(content);
             if (parsed && parsed.id) {
               snapshot.set(parsed.id, content);
@@ -42920,9 +50647,9 @@ var FileWatcher = class {
       this.qualityCache.set(repoId, /* @__PURE__ */ new Map());
     }
     if (!this.fixesSnapshot.has(repoId)) {
-      const fixesPath = path35.join(repoPath, ".tiny-brain", "fixes", "progress.json");
+      const fixesPath = path41.join(repoPath, ".tiny-brain", "fixes", "progress.json");
       try {
-        const content = await fs33.promises.readFile(fixesPath, "utf-8");
+        const content = await fs39.promises.readFile(fixesPath, "utf-8");
         const parsed = JSON.parse(content);
         if (parsed && Array.isArray(parsed.fixes)) {
           const snapshot = /* @__PURE__ */ new Map();
@@ -42936,10 +50663,10 @@ var FileWatcher = class {
         this.context.logger.debug(`[FileWatcher] No fixes/progress.json to pre-warm for ${repoId}`);
       }
     }
-    const tinyBrainPath = path35.join(repoPath, ".tiny-brain");
-    if (!fs33.existsSync(tinyBrainPath)) {
+    const tinyBrainPath = path41.join(repoPath, ".tiny-brain");
+    if (!fs39.existsSync(tinyBrainPath)) {
       try {
-        await fs33.promises.mkdir(tinyBrainPath, { recursive: true });
+        await fs39.promises.mkdir(tinyBrainPath, { recursive: true });
         this.context.logger.info(`[FileWatcher] Created .tiny-brain directory for repo ${repoId}`);
       } catch (error) {
         this.context.logger.error(`[FileWatcher] Failed to create .tiny-brain for ${repoId}:`, error);
@@ -42958,10 +50685,10 @@ var FileWatcher = class {
     } catch (error) {
       this.context.logger.error(`[FileWatcher] Failed to start .tiny-brain watcher for ${repoId}:`, error);
     }
-    const docsPath = path35.join(repoPath, "docs");
-    if (!fs33.existsSync(docsPath)) {
+    const docsPath = path41.join(repoPath, "docs");
+    if (!fs39.existsSync(docsPath)) {
       try {
-        await fs33.promises.mkdir(docsPath, { recursive: true });
+        await fs39.promises.mkdir(docsPath, { recursive: true });
         this.context.logger.info(`[FileWatcher] Created docs directory for repo ${repoId}`);
       } catch (error) {
         this.context.logger.error(`[FileWatcher] Failed to create docs for ${repoId}:`, error);
@@ -42995,7 +50722,7 @@ var FileWatcher = class {
     const repoWatcher = this.repoWatchers.get(repoId);
     if (!repoWatcher) return;
     for (const worktree of worktrees) {
-      if (!fs33.existsSync(worktree.path)) {
+      if (!fs39.existsSync(worktree.path)) {
         this.context.logger.warn(`[FileWatcher] Worktree path does not exist, skipping: ${worktree.path}`);
         continue;
       }
@@ -43003,8 +50730,8 @@ var FileWatcher = class {
       let tinyBrainWatcher = null;
       let docsWatcher = null;
       const worktreeContext = { name: worktree.name, branch: worktree.branch };
-      const tinyBrainPath = path35.join(worktree.path, ".tiny-brain");
-      if (fs33.existsSync(tinyBrainPath)) {
+      const tinyBrainPath = path41.join(worktree.path, ".tiny-brain");
+      if (fs39.existsSync(tinyBrainPath)) {
         try {
           tinyBrainWatcher = new FileWatcherService(this.context.logger);
           tinyBrainWatcher.on("change", (change) => {
@@ -43020,8 +50747,8 @@ var FileWatcher = class {
           tinyBrainWatcher = null;
         }
       }
-      const docsPath = path35.join(worktree.path, "docs");
-      if (fs33.existsSync(docsPath)) {
+      const docsPath = path41.join(worktree.path, "docs");
+      if (fs39.existsSync(docsPath)) {
         try {
           docsWatcher = new FileWatcherService(this.context.logger);
           docsWatcher.on("change", (change) => {
@@ -43125,8 +50852,8 @@ var FileWatcher = class {
    * Start watching ~/.tiny-brain/repos/repos.json for new repo registrations
    */
   async startReposConfigWatcher() {
-    const reposDir = path35.join(os2.homedir(), ".tiny-brain", "repos");
-    if (!fs33.existsSync(reposDir)) {
+    const reposDir = path41.join(os3.homedir(), ".tiny-brain", "repos");
+    if (!fs39.existsSync(reposDir)) {
       this.context.logger.info(`[FileWatcher] Repos config directory does not exist: ${reposDir}`);
       return;
     }
@@ -43173,7 +50900,7 @@ var FileWatcher = class {
           const newWorktrees = updatedWorktrees.filter((wt) => !currentWorktreeNames.has(wt.name));
           const validNewWorktrees = [];
           for (const wt of newWorktrees) {
-            if (!fs33.existsSync(wt.path)) {
+            if (!fs39.existsSync(wt.path)) {
               this.context.logger.warn(`[FileWatcher] New worktree path does not exist, cleaning up: ${wt.path}`);
               try {
                 await this.repoConfigService.removeWorktree(repo.id, wt.name);
@@ -43241,7 +50968,7 @@ var FileWatcher = class {
         this.context.logger.info(`[FileWatcher] No SSE clients connected - skipping file processing`);
         return;
       }
-      const fileName = path35.basename(change.relativePath);
+      const fileName = path41.basename(change.relativePath);
       this.context.logger.debug(`[FileWatcher] File name:`, fileName);
       if (!fileName.endsWith(".json")) {
         this.context.logger.debug(`[FileWatcher] Not a valid progress file - skipping`);
@@ -43278,7 +51005,7 @@ var FileWatcher = class {
       }
       let newPlan;
       try {
-        const content = await fs33.promises.readFile(change.filePath, "utf-8");
+        const content = await fs39.promises.readFile(change.filePath, "utf-8");
         newPlan = JSON.parse(content);
       } catch (error) {
         this.context.logger.error(`Error reading progress file ${change.filePath}:`, error);
@@ -43340,7 +51067,7 @@ var FileWatcher = class {
       }
       let newData;
       try {
-        const content = await fs33.promises.readFile(change.filePath, "utf-8");
+        const content = await fs39.promises.readFile(change.filePath, "utf-8");
         newData = JSON.parse(content);
       } catch (error) {
         this.context.logger.error(`Error reading fixes progress file ${change.filePath}:`, error);
@@ -43408,7 +51135,7 @@ var FileWatcher = class {
         return;
       }
       const nestedMatch = change.relativePath.match(/^(\d{4}-\d{2}-\d{2})\/(\d{2}-\d{2})\/quality\.md$/);
-      const runId = nestedMatch ? `${nestedMatch[1]}T${nestedMatch[2]}` : path35.basename(change.relativePath).replace(/\.md$/, "");
+      const runId = nestedMatch ? `${nestedMatch[1]}T${nestedMatch[2]}` : path41.basename(change.relativePath).replace(/\.md$/, "");
       let repoCache = this.qualityCache.get(repoId);
       if (!repoCache) {
         repoCache = /* @__PURE__ */ new Map();
@@ -43427,7 +51154,7 @@ var FileWatcher = class {
       }
       const runData = { runId };
       try {
-        const content = await fs33.promises.readFile(change.filePath, "utf-8");
+        const content = await fs39.promises.readFile(change.filePath, "utf-8");
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         if (frontmatterMatch) {
           const frontmatter = frontmatterMatch[1];
@@ -43543,7 +51270,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs33.promises.readFile(change.filePath, "utf-8");
+        content = await fs39.promises.readFile(change.filePath, "utf-8");
       } catch (error) {
         this.context.logger.error(`Error reading PRD doc file ${change.filePath}:`, error);
         return;
@@ -43604,7 +51331,7 @@ var FileWatcher = class {
         return;
       }
       const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-      const fixId = path35.basename(change.relativePath, ".md");
+      const fixId = path41.basename(change.relativePath, ".md");
       if (change.type === "deleted") {
         await this.sse.broadcast("fix-doc-change", {
           eventType: "fix:doc:deleted",
@@ -43617,7 +51344,7 @@ var FileWatcher = class {
       }
       let content;
       try {
-        content = await fs33.promises.readFile(change.filePath, "utf-8");
+        content = await fs39.promises.readFile(change.filePath, "utf-8");
       } catch (error) {
         this.context.logger.error(`Error reading fix doc file ${change.filePath}:`, error);
         return;

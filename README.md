@@ -12,7 +12,7 @@ This repository contains public releases of tiny-brain for Claude Code.
 /plugin install tiny-brain@magic-ingredients
 ```
 
-## tiny-brain (v0.22.11)
+## tiny-brain (v0.23.1)
 
 AI-powered development workflows with TDD enforcement, planning, and quality tracking.
 
@@ -25,19 +25,14 @@ AI-powered development workflows with TDD enforcement, planning, and quality tra
 
 ## Alternative Installation Methods
 
-### DXT Extension
-- **Latest:** [Download DXT](./latest/tiny-brain-latest.dxt)
+### MCPB Bundle
+- **Latest:** [Download MCPB](./latest/tiny-brain-latest.mcpb)
 - **All Versions:** [Browse Releases](./releases/)
 
 ```bash
-curl -L -o tiny-brain.dxt \
-  "https://raw.githubusercontent.com/magic-ingredients/tiny-brain-releases/main/latest/tiny-brain-latest.dxt"
-dxt install tiny-brain.dxt
-```
-
-### NPM
-```bash
-npm install -g @magic-ingredients/tiny-brain-local
+curl -L -o tiny-brain.mcpb \
+  "https://raw.githubusercontent.com/magic-ingredients/tiny-brain-releases/main/latest/tiny-brain-latest.mcpb"
+mcpb install tiny-brain.mcpb
 ```
 
 ## API Endpoints
