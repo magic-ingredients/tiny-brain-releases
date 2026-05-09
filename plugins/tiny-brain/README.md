@@ -14,7 +14,7 @@ AI-powered development workflows with TDD enforcement, planning, and quality tra
 
 ## What's Included
 
-### Skills (5)
+### Skills (6)
 
 | Skill | Command | Description |
 |-------|---------|-------------|
@@ -23,18 +23,34 @@ AI-powered development workflows with TDD enforcement, planning, and quality tra
 | Fix | `/fix` | Document and track bug fixes with TDD workflow |
 | ADR | `/adr` | Create Architecture Decision Records |
 | Quality | `/quality` | Run comprehensive code quality analysis |
+| Install | `/install` | Install a review capability into the repo's pipeline |
 
-### Agents (7)
+### Agents (10)
+
+Wired into the default review pipeline:
 
 | Agent | Description |
 |-------|-------------|
-| `tiny-brain:planner` | PRD and feature planning specialist |
-| `tiny-brain:reviewer` | Code review and quality feedback (read-only) |
-| `tiny-brain:architect` | System design, ADRs, and technical decisions |
-| `tiny-brain:tdd-validator` | TDD compliance validation and enforcement |
-| `tiny-brain:security-reviewer` | Security analysis and vulnerability detection |
-| `tiny-brain:performance-engineer` | Performance optimization and analysis |
-| `tiny-brain:quality-coordinator` | Orchestrates quality analysis across categories |
+| `tiny-brain:adversarial-reviewer` | Critically reviews TDD red/green work from an isolated context |
+| `tiny-brain:analyzer-agent` | Runs static analysers and reports pass/fail against thresholds |
+| `tiny-brain:code-quality-reviewer` | Code quality, maintainability, architecture, documentation |
+| `tiny-brain:performance-reviewer` | Performance bottlenecks, N+1, memory leaks, optimisation |
+| `tiny-brain:security-reviewer` | OWASP Top 10, injection, auth, data exposure |
+| `tiny-brain:tdd-compliance-reviewer` | TDD compliance: test-first, coverage, red-green-refactor discipline |
+| `tiny-brain:testing-reviewer` | Assertion quality, flaky tests, mock discipline, test strategy |
+
+Used by the `/quality` skill (orchestrates the others):
+
+| Agent | Description |
+|-------|-------------|
+| `tiny-brain:quality-coordinator` | Orchestrates quality analysis, aggregates findings, computes scores |
+
+Available to add to your pipeline (not enabled by default — wire in via the dashboard SetupTab):
+
+| Agent | Description |
+|-------|-------------|
+| `tiny-brain:dependency-audit-reviewer` | Runs the project's audit tool, reports vulnerabilities + remediation |
+| `tiny-brain:mutation-reviewer` | Mutation testing via Stryker; reports surviving mutants and test gaps |
 
 ### MCP Tools
 
@@ -43,6 +59,7 @@ AI-powered development workflows with TDD enforcement, planning, and quality tra
 - **Planning Tools** - PRD creation, feature management, progress tracking
 - **Quality Tools** - Save and retrieve quality analysis results
 - **Rules Management** - Configure golden rules across personas
+- **Work Status** (`work`) - List PRDs and fixes by status; answers "in-prog fixes", "list all open PRDs", "what have I got in progress" in a single call
 
 ### Hooks
 
@@ -56,6 +73,7 @@ Real-time visualization of:
 - Fix tracking and task completion
 - Quality analysis trends
 - Agent and skill inventory
+- Starred repos surfaced under the Repos sidebar item for one-click access
 
 ## Quick Start
 

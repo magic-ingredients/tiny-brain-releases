@@ -24,4 +24,10 @@ if command -v $EXEC_CMD >/dev/null 2>&1; then
   rm -f "$HOOK_OUTPUT_FILE"
 fi
 
+# Lifecycle-driven prune sweep — independent of the push pipeline.
+# Reads its own config gate; never blocks the push.
+if [ -x "$HOOKS_DIR/prune-on-push.sh" ]; then
+  "$HOOKS_DIR/prune-on-push.sh" || true
+fi
+
 exit 0

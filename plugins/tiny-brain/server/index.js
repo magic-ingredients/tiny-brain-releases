@@ -449,8 +449,8 @@ var init_parseUtil = __esm({
     init_errors();
     init_en();
     makeIssue = (params) => {
-      const { data, path: path38, errorMaps, issueData } = params;
-      const fullPath = [...path38, ...issueData.path || []];
+      const { data, path: path41, errorMaps, issueData } = params;
+      const fullPath = [...path41, ...issueData.path || []];
       const fullIssue = {
         ...issueData,
         path: fullPath
@@ -758,11 +758,11 @@ var init_types = __esm({
     init_parseUtil();
     init_util();
     ParseInputLazyPath = class {
-      constructor(parent, value, path38, key) {
+      constructor(parent, value, path41, key) {
         this._cachedPath = [];
         this.parent = parent;
         this.data = value;
-        this._path = path38;
+        this._path = path41;
         this._key = key;
       }
       get path() {
@@ -7328,8 +7328,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path38) {
-      let input = path38;
+    function removeDotSegments(path41) {
+      let input = path41;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -7528,8 +7528,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path38, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path38 && path38 !== "/" ? path38 : void 0;
+        const [path41, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path41 && path41 !== "/" ? path41 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -16586,12 +16586,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs34, exportName) {
+    function addFormats(ajv, list, fs38, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs34[f]);
+        ajv.addFormat(f, fs38[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -17868,8 +17868,8 @@ var init_storage_path_builder = __esm({
       buildUserBasePath(_userId) {
         return this.basePath;
       }
-      extractPersonaId(path38) {
-        const parts = path38.split(/[/\\]/);
+      extractPersonaId(path41) {
+        const parts = path41.split(/[/\\]/);
         const personasIndex = parts.findIndex((part) => part === "personas");
         return personasIndex !== -1 && personasIndex + 1 < parts.length ? parts[personasIndex + 1] : null;
       }
@@ -20324,18 +20324,29 @@ function getActivePipeline(config2) {
   phases.push("complete");
   return phases;
 }
+function getActivePipelineForTask(task, config2) {
+  const phases = ["red"];
+  if (!config2.combineRedGreenCommits) {
+    phases.push("green");
+  }
+  const gates = task.pipelineSnapshot ?? (config2.reviewPipeline ? getReviewSteps(config2.reviewPipeline).map((s) => s.type) : []);
+  for (const gate of gates) {
+    phases.push(`review:${gate}`, `refactor:${gate}`);
+  }
+  phases.push("complete");
+  return phases;
+}
 function derivePhase(task, config2 = { combineRedGreenCommits: false }) {
   if (!task.redStartedAt) return "not_started";
   if (!task.testCommitSha) return "red";
   if (!task.commitSha) {
     return config2.combineRedGreenCommits ? "red" : "green";
   }
-  if (config2.reviewPipeline) {
-    for (const step of getReviewSteps(config2.reviewPipeline)) {
-      const record2 = task.reviews?.[step.type] ?? {};
-      if (!record2.reviewSha) return `review:${step.type}`;
-      if (!record2.refactorCommitSha) return `refactor:${step.type}`;
-    }
+  const gates = task.pipelineSnapshot ?? (config2.reviewPipeline ? getReviewSteps(config2.reviewPipeline).map((s) => s.type) : []);
+  for (const gate of gates) {
+    const record2 = task.reviews?.[gate] ?? {};
+    if (!record2.reviewSha) return `review:${gate}`;
+    if (!record2.refactorCommitSha) return `refactor:${gate}`;
   }
   return "complete";
 }
@@ -20364,13 +20375,12 @@ function isPhaseInProgress(task, phase, config2) {
     const type2 = phase.slice("review:".length);
     const record2 = task.reviews?.[type2] ?? {};
     if (!task.commitSha || record2.reviewSha) return false;
-    if (config2?.reviewPipeline) {
-      for (const priorStep of config2.reviewPipeline.filter((s) => !s.hook)) {
-        if (priorStep.type === type2) break;
-        const priorRecord = task.reviews?.[priorStep.type] ?? {};
-        if (!priorRecord.reviewSha) return false;
-        if (!priorRecord.refactorCommitSha) return false;
-      }
+    const priorGates = task.pipelineSnapshot ?? (config2?.reviewPipeline ? config2.reviewPipeline.filter((s) => !s.hook).map((s) => s.type) : []);
+    for (const priorType of priorGates) {
+      if (priorType === type2) break;
+      const priorRecord = task.reviews?.[priorType] ?? {};
+      if (!priorRecord.reviewSha) return false;
+      if (!priorRecord.refactorCommitSha) return false;
     }
     return true;
   }
@@ -20408,7 +20418,7 @@ function phaseProgress(task, config2 = { combineRedGreenCommits: false }) {
   const phase = derivePhase(task, config2);
   if (phase === "not_started") return 0;
   if (phase === "complete") return 1;
-  const pipeline = getActivePipeline(config2);
+  const pipeline = getActivePipelineForTask(task, config2);
   const totalSteps = pipeline.length;
   if (totalSteps <= 0) return 0;
   const currentIndex = pipeline.indexOf(phase);
@@ -21242,14 +21252,19 @@ var init_user_preferences = __esm({
         testPatterns: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
         reviewPipeline: [TYPESCRIPT_HOOK_STEP, ESLINT_HOOK_STEP, ADVERSARIAL_STEP],
         pushPipeline: [],
-        qualityPipeline: DEFAULT_QUALITY_TYPES.map(stringToStep)
+        qualityPipeline: DEFAULT_QUALITY_TYPES.map(stringToStep),
+        prune: {
+          onPush: false,
+          onPr: false,
+          afterDaysSinceArchive: null
+        }
       }
     };
   }
 });
 
 // packages/tiny-brain-core/src/types/user-preferences.schema.ts
-var AnalyzerThresholdSchema, PipelineEntrySchema, RepoConfigSchema, UserPreferencesSchema, DeepPartialRepoConfigSchema, PartialUserPreferencesSchema, PreferencesConfigSchema, PartialPreferencesConfigSchema;
+var AnalyzerThresholdSchema, PipelineEntrySchema, PruneConfigSchema, RepoConfigSchema, UserPreferencesSchema, DeepPartialRepoConfigSchema, PartialUserPreferencesSchema, PreferencesConfigSchema, PartialPreferencesConfigSchema;
 var init_user_preferences_schema = __esm({
   "packages/tiny-brain-core/src/types/user-preferences.schema.ts"() {
     "use strict";
@@ -21270,6 +21285,15 @@ var init_user_preferences_schema = __esm({
         hook: external_exports.enum(["pre-commit", "pre-push"]).optional()
       })
     ]);
+    PruneConfigSchema = external_exports.object({
+      onPush: external_exports.boolean().default(false),
+      onPr: external_exports.boolean().default(false),
+      afterDaysSinceArchive: external_exports.union([external_exports.number().int().nonnegative(), external_exports.null()]).default(null)
+    }).strict().default({
+      onPush: false,
+      onPr: false,
+      afterDaysSinceArchive: null
+    });
     RepoConfigSchema = external_exports.object({
       /**
        * Auto-archive completed PRDs and resolved fixes during sync
@@ -21346,7 +21370,11 @@ var init_user_preferences_schema = __esm({
        * Ordered list of capability types to run in quality analysis
        * Default: code-quality, coverage, dep-audit, performance, security, testing
        */
-      qualityPipeline: external_exports.array(PipelineEntrySchema).default(["code-quality", "coverage", "dependency-audit", "performance", "security", "testing"])
+      qualityPipeline: external_exports.array(PipelineEntrySchema).default(["code-quality", "coverage", "dependency-audit", "performance", "security", "testing"]),
+      /**
+       * Lifecycle-driven prune configuration
+       */
+      prune: PruneConfigSchema
     }).strict().default({
       autoArchive: true,
       autoCommitProgress: false,
@@ -21365,7 +21393,12 @@ var init_user_preferences_schema = __esm({
       reviewPipeline: ["typescript", "eslint", "adversarial"],
       pushPipeline: [],
       qualityPipeline: ["code-quality", "coverage", "dependency-audit", "performance", "security", "testing"],
-      testPatterns: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
+      testPatterns: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+      prune: {
+        onPush: false,
+        onPr: false,
+        afterDaysSinceArchive: null
+      }
     });
     UserPreferencesSchema = external_exports.object({
       /**
@@ -21391,7 +21424,13 @@ var init_user_preferences_schema = __esm({
       testPatterns: external_exports.array(external_exports.string()).optional(),
       reviewPipeline: external_exports.array(PipelineEntrySchema).optional(),
       pushPipeline: external_exports.array(PipelineEntrySchema).optional(),
-      qualityPipeline: external_exports.array(PipelineEntrySchema).optional()
+      qualityPipeline: external_exports.array(PipelineEntrySchema).optional(),
+      prune: external_exports.object({
+        onPush: external_exports.boolean().optional(),
+        onPr: external_exports.boolean().optional(),
+        afterDaysSinceArchive: external_exports.union([external_exports.number().int().nonnegative(), external_exports.null()]).optional()
+      }).strict().optional()
+      // Reject unknown fields under prune so typos surface on load
     }).passthrough();
     PartialUserPreferencesSchema = external_exports.object({
       repo: DeepPartialRepoConfigSchema.optional()
@@ -21410,7 +21449,7 @@ var init_user_preferences_schema = __esm({
 // packages/tiny-brain-core/src/services/config/config-service.ts
 import { readFile } from "fs/promises";
 import { join as join7 } from "path";
-var CONFIG_VERSION, PREFERENCES_CONFIG_PATH, REPO_CONFIG_PATH, PIPELINE_KEYS, PREFERENCE_KEYS, ConfigService;
+var CONFIG_VERSION, PREFERENCES_CONFIG_PATH, REPO_CONFIG_PATH, PIPELINE_KEYS, PREFERENCE_KEYS, PRUNE_KEY_MAP, DECIMAL_INTEGER_RE, ConfigService;
 var init_config_service = __esm({
   "packages/tiny-brain-core/src/services/config/config-service.ts"() {
     "use strict";
@@ -21422,11 +21461,18 @@ var init_config_service = __esm({
     REPO_CONFIG_PATH = ".tiny-brain/config.json";
     PIPELINE_KEYS = ["reviewPipeline", "pushPipeline", "qualityPipeline"];
     PREFERENCE_KEYS = {
-      boolean: ["autoArchive", "autoCommitProgress", "enableAgenticCoding", "enableSDD", "enableTDD", "enableADR", "enableQuality", "manageAgentsMd"],
+      boolean: ["autoArchive", "autoCommitProgress", "enableAgenticCoding", "enableSDD", "enableTDD", "enableADR", "enableQuality", "manageAgentsMd", "pruneOnPush", "pruneOnPr"],
       string: ["defaultPersona"],
       path: ["docsDirectory", "adrDirectory", "prdDirectory"],
-      array: ["testPatterns", ...PIPELINE_KEYS]
+      array: ["testPatterns", ...PIPELINE_KEYS],
+      numericNullable: ["pruneAfterDaysSinceArchive"]
     };
+    PRUNE_KEY_MAP = {
+      pruneOnPush: "onPush",
+      pruneOnPr: "onPr",
+      pruneAfterDaysSinceArchive: "afterDaysSinceArchive"
+    };
+    DECIMAL_INTEGER_RE = /^(0|[1-9][0-9]*)$/;
     ConfigService = class {
       constructor(context) {
         this.context = context;
@@ -21592,7 +21638,8 @@ var init_config_service = __esm({
           ...PREFERENCE_KEYS.boolean,
           ...PREFERENCE_KEYS.string,
           ...PREFERENCE_KEYS.path,
-          ...PREFERENCE_KEYS.array
+          ...PREFERENCE_KEYS.array,
+          ...PREFERENCE_KEYS.numericNullable
         ];
       }
       /**
@@ -21659,6 +21706,15 @@ var init_config_service = __esm({
           case "qualityPipeline":
             value = repo.qualityPipeline;
             break;
+          case "pruneOnPush":
+            value = repo.prune.onPush;
+            break;
+          case "pruneOnPr":
+            value = repo.prune.onPr;
+            break;
+          case "pruneAfterDaysSinceArchive":
+            value = repo.prune.afterDaysSinceArchive;
+            break;
           default:
             return {
               isValid: false,
@@ -21683,6 +21739,7 @@ var init_config_service = __esm({
         const stringKeys = PREFERENCE_KEYS.string;
         const pathKeys = PREFERENCE_KEYS.path;
         const arrayKeys = PREFERENCE_KEYS.array;
+        const numericNullableKeys = PREFERENCE_KEYS.numericNullable;
         let parsedValue;
         if (booleanKeys.includes(key)) {
           if (value !== "true" && value !== "false") {
@@ -21731,6 +21788,27 @@ var init_config_service = __esm({
               error: `${key} must be a valid JSON array`
             };
           }
+        } else if (numericNullableKeys.includes(key)) {
+          const trimmed = value.trim();
+          if (trimmed === "null" || trimmed === "") {
+            parsedValue = null;
+          } else if (trimmed.startsWith("-")) {
+            return {
+              success: false,
+              error: `${key} must be non-negative`
+            };
+          } else if (!DECIMAL_INTEGER_RE.test(trimmed)) {
+            const asNumber = Number(trimmed);
+            if (Number.isFinite(asNumber) && !Number.isInteger(asNumber)) {
+              return { success: false, error: `${key} must be an integer` };
+            }
+            return {
+              success: false,
+              error: `${key} must be a non-negative integer or null`
+            };
+          } else {
+            parsedValue = Number(trimmed);
+          }
         }
         if (scope === "repo" && !this.context.repositoryRoot) {
           return {
@@ -21740,7 +21818,16 @@ var init_config_service = __esm({
         }
         const currentRepo = await this.getPreference("repo");
         let updatedRepo;
-        if (booleanKeys.includes(key)) {
+        if (key in PRUNE_KEY_MAP) {
+          const pruneKey = PRUNE_KEY_MAP[key];
+          updatedRepo = {
+            ...currentRepo,
+            prune: {
+              ...currentRepo.prune,
+              [pruneKey]: parsedValue
+            }
+          };
+        } else if (booleanKeys.includes(key)) {
           updatedRepo = { ...currentRepo, [key]: parsedValue };
         } else if (stringKeys.includes(key)) {
           updatedRepo = { ...currentRepo, [key]: parsedValue };
@@ -21907,6 +21994,13 @@ var init_config_service = __esm({
               ...defaults2.repo.directories,
               ...global2.repo?.directories || {},
               ...repo.repo?.directories || {}
+            },
+            // Deep merge prune so a partial repo override doesn't clobber
+            // sibling fields from global/defaults.
+            prune: {
+              ...defaults2.repo.prune,
+              ...global2.repo?.prune || {},
+              ...repo.repo?.prune || {}
             }
           }
         };
@@ -21952,17 +22046,26 @@ var init_config_service = __esm({
         const configPath = join7(this.context.repositoryRoot, REPO_CONFIG_PATH);
         const configDir = join7(this.context.repositoryRoot, ".tiny-brain");
         const existing = await this.loadRepoConfig();
+        const mergedRepo = {
+          ...existing.repo || {},
+          ...preferences.repo || {}
+        };
+        if (existing.repo?.directories || preferences.repo?.directories) {
+          mergedRepo.directories = {
+            ...existing.repo?.directories || {},
+            ...preferences.repo?.directories || {}
+          };
+        }
+        if (existing.repo?.prune || preferences.repo?.prune) {
+          mergedRepo.prune = {
+            ...existing.repo?.prune || {},
+            ...preferences.repo?.prune || {}
+          };
+        }
         const merged = {
           ...existing,
           ...preferences,
-          repo: {
-            ...existing.repo || {},
-            ...preferences.repo || {},
-            directories: {
-              ...existing.repo?.directories || {},
-              ...preferences.repo?.directories || {}
-            }
-          }
+          repo: mergedRepo
         };
         await mkdir4(configDir, { recursive: true });
         const config2 = {
@@ -26376,12 +26479,12 @@ var init_esm6 = __esm({
       /**
        * Get the Path object referenced by the string path, resolved from this Path
        */
-      resolve(path38) {
-        if (!path38) {
+      resolve(path41) {
+        if (!path41) {
           return this;
         }
-        const rootPath = this.getRootString(path38);
-        const dir = path38.substring(rootPath.length);
+        const rootPath = this.getRootString(path41);
+        const dir = path41.substring(rootPath.length);
         const dirParts = dir.split(this.splitSep);
         const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
         return result;
@@ -27133,8 +27236,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path38) {
-        return win32.parse(path38).root;
+      getRootString(path41) {
+        return win32.parse(path41).root;
       }
       /**
        * @internal
@@ -27180,8 +27283,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path38) {
-        return path38.startsWith("/") ? "/" : "";
+      getRootString(path41) {
+        return path41.startsWith("/") ? "/" : "";
       }
       /**
        * @internal
@@ -27230,8 +27333,8 @@ var init_esm6 = __esm({
        *
        * @internal
        */
-      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs34 = defaultFS } = {}) {
-        this.#fs = fsFromOption(fs34);
+      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs38 = defaultFS } = {}) {
+        this.#fs = fsFromOption(fs38);
         if (cwd instanceof URL || cwd.startsWith("file://")) {
           cwd = fileURLToPath2(cwd);
         }
@@ -27270,11 +27373,11 @@ var init_esm6 = __esm({
       /**
        * Get the depth of a provided path, string, or the cwd
        */
-      depth(path38 = this.cwd) {
-        if (typeof path38 === "string") {
-          path38 = this.cwd.resolve(path38);
+      depth(path41 = this.cwd) {
+        if (typeof path41 === "string") {
+          path41 = this.cwd.resolve(path41);
         }
-        return path38.depth();
+        return path41.depth();
       }
       /**
        * Return the cache of child entries.  Exposed so subclasses can create
@@ -27761,9 +27864,9 @@ var init_esm6 = __esm({
         process3();
         return results;
       }
-      chdir(path38 = this.cwd) {
+      chdir(path41 = this.cwd) {
         const oldCwd = this.cwd;
-        this.cwd = typeof path38 === "string" ? this.cwd.resolve(path38) : path38;
+        this.cwd = typeof path41 === "string" ? this.cwd.resolve(path41) : path41;
         this.cwd[setAsCwd](oldCwd);
       }
     };
@@ -27789,8 +27892,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs34) {
-        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs34 });
+      newRoot(fs38) {
+        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs38 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -27818,8 +27921,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs34) {
-        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs34 });
+      newRoot(fs38) {
+        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs38 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -28138,8 +28241,8 @@ var init_processor = __esm({
       }
       // match, absolute, ifdir
       entries() {
-        return [...this.store.entries()].map(([path38, n]) => [
-          path38,
+        return [...this.store.entries()].map(([path41, n]) => [
+          path41,
           !!(n & 2),
           !!(n & 1)
         ]);
@@ -28352,9 +28455,9 @@ var init_walker = __esm({
       signal;
       maxDepth;
       includeChildMatches;
-      constructor(patterns, path38, opts) {
+      constructor(patterns, path41, opts) {
         this.patterns = patterns;
-        this.path = path38;
+        this.path = path41;
         this.opts = opts;
         this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
         this.includeChildMatches = opts.includeChildMatches !== false;
@@ -28373,11 +28476,11 @@ var init_walker = __esm({
           });
         }
       }
-      #ignored(path38) {
-        return this.seen.has(path38) || !!this.#ignore?.ignored?.(path38);
+      #ignored(path41) {
+        return this.seen.has(path41) || !!this.#ignore?.ignored?.(path41);
       }
-      #childrenIgnored(path38) {
-        return !!this.#ignore?.childrenIgnored?.(path38);
+      #childrenIgnored(path41) {
+        return !!this.#ignore?.childrenIgnored?.(path41);
       }
       // backpressure mechanism
       pause() {
@@ -28592,8 +28695,8 @@ var init_walker = __esm({
     };
     GlobWalker = class extends GlobUtil {
       matches = /* @__PURE__ */ new Set();
-      constructor(patterns, path38, opts) {
-        super(patterns, path38, opts);
+      constructor(patterns, path41, opts) {
+        super(patterns, path41, opts);
       }
       matchEmit(e) {
         this.matches.add(e);
@@ -28630,8 +28733,8 @@ var init_walker = __esm({
     };
     GlobStream = class extends GlobUtil {
       results;
-      constructor(patterns, path38, opts) {
-        super(patterns, path38, opts);
+      constructor(patterns, path41, opts) {
+        super(patterns, path41, opts);
         this.results = new Minipass({
           signal: this.signal,
           objectMode: true
@@ -33222,12 +33325,15 @@ var init_planning_service = __esm({
         const mergedTasks = tasks.map((task) => {
           const existingTask = existingFix?.tasks.find((t) => t.description === task.description);
           if (existingTask) {
+            const hasMarker = task.status === "superseded" || task.status === "completed";
             return {
               ...task,
-              status: existingTask.status,
+              status: hasMarker ? task.status : existingTask.status,
               testCommitSha: existingTask.testCommitSha,
               testCommittedAt: existingTask.testCommittedAt,
-              commitSha: existingTask.commitSha,
+              // For (sha) markers the marker's commitSha is canonical;
+              // for everything else, existing wins (history retained).
+              commitSha: hasMarker && task.commitSha ? task.commitSha : existingTask.commitSha,
               committedAt: existingTask.committedAt,
               refactorCommitSha: existingTask.refactorCommitSha,
               refactorCommittedAt: existingTask.refactorCommittedAt,
@@ -34885,1058 +34991,8 @@ var init_chat_analysis_service = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/modules/thinking/types.ts
-var init_types5 = __esm({
-  "packages/tiny-brain-core/src/modules/thinking/types.ts"() {
-    "use strict";
-  }
-});
-
-// packages/tiny-brain-core/src/modules/thinking/thought-validator.ts
-async function validateThought(input) {
-  try {
-    const errors = [];
-    const warnings = [];
-    if (!input.thought || input.thought.trim() === "") {
-      errors.push("Thought cannot be empty");
-    } else if (input.thought.length < 10) {
-      errors.push("Thought is too short (minimum 10 characters)");
-    }
-    if (input.confidenceLevel !== void 0) {
-      if (input.confidenceLevel < 0 || input.confidenceLevel > 1) {
-        errors.push("Confidence level must be between 0 and 1");
-      } else if (input.confidenceLevel < 0.5) {
-        warnings.push("Low confidence level detected");
-      }
-    } else {
-      warnings.push("No confidence level provided");
-    }
-    if (input.thoughtNumber !== void 0 && input.thoughtNumber < 1) {
-      errors.push("Thought number must be positive");
-    }
-    if (input.totalThoughts !== void 0 && input.totalThoughts < 1) {
-      errors.push("Total thoughts must be positive");
-    }
-    if (input.thoughtNumber !== void 0 && input.totalThoughts !== void 0 && input.thoughtNumber > input.totalThoughts) {
-      errors.push(`Thought number ${input.thoughtNumber} exceeds total thoughts ${input.totalThoughts}`);
-    }
-    if (input.isRevision && !input.revisesThought) {
-      warnings.push("Revision flagged but no thought number to revise specified");
-    }
-    const validatedThought = {
-      thought: input.thought || "",
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      thoughtNumber: input.thoughtNumber,
-      totalThoughts: input.totalThoughts,
-      nextThoughtNeeded: input.nextThoughtNeeded,
-      isRevision: input.isRevision,
-      revisesThought: input.revisesThought,
-      branchFromThought: input.branchFromThought,
-      branchId: input.branchId,
-      needsMoreThoughts: input.needsMoreThoughts,
-      contextAnchor: input.contextAnchor,
-      factualClaims: input.factualClaims,
-      evidenceBasis: input.evidenceBasis,
-      goalAlignment: input.goalAlignment,
-      confidenceLevel: input.confidenceLevel
-    };
-    const result = {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-      validatedThought
-    };
-    return ResultHelpers.ok(result);
-  } catch (error2) {
-    return ResultHelpers.err(
-      new Error(`Failed to validate thought: ${error2 instanceof Error ? error2.message : "Unknown error"}`)
-    );
-  }
-}
-async function processThought(thought, thoughtHistory) {
-  try {
-    if (!thought.timestamp) {
-      thought.timestamp = (/* @__PURE__ */ new Date()).toISOString();
-    }
-    if (thought.thoughtNumber === void 0) {
-      thought.thoughtNumber = thoughtHistory.length + 1;
-    }
-    if (thought.totalThoughts === void 0) {
-      thought.totalThoughts = Math.max(
-        thought.thoughtNumber,
-        ...thoughtHistory.map((t) => t.totalThoughts || 1)
-      );
-    }
-    let driftScore = 0;
-    if (thought.contextAnchor && thoughtHistory.length > 0) {
-      driftScore = Math.min(1, (thought.thoughtNumber || 1) / ((thought.totalThoughts || 1) * 2));
-    }
-    const contradictionCheck = thoughtHistory.length > 0;
-    const processedThought = {
-      ...thought,
-      driftScore: thought.driftScore !== void 0 ? thought.driftScore : driftScore,
-      contradictionCheck,
-      isRevision: thought.isRevision || false
-    };
-    return ResultHelpers.ok(processedThought);
-  } catch (error2) {
-    return ResultHelpers.err(
-      new Error(`Failed to process thought: ${error2 instanceof Error ? error2.message : "Unknown error"}`)
-    );
-  }
-}
-function formatThoughtOutput(thought, warnings = [], driftWarning) {
-  const lines = [];
-  if (thought.thoughtNumber !== void 0 && thought.totalThoughts !== void 0) {
-    lines.push(`## Thought ${thought.thoughtNumber}/${thought.totalThoughts}`);
-  } else if (thought.thoughtNumber !== void 0) {
-    lines.push(`## Thought ${thought.thoughtNumber}`);
-  } else {
-    lines.push("## Thought");
-  }
-  if (thought.isRevision) {
-    lines.push("**(Revision)**");
-  }
-  if (thought.branchId) {
-    lines.push(`Branch: ${thought.branchId}`);
-  }
-  if (thought.confidenceLevel !== void 0) {
-    lines.push(`Confidence: ${Math.round(thought.confidenceLevel * 100)}%`);
-  }
-  lines.push("");
-  lines.push(thought.thought);
-  if (warnings.length > 0) {
-    lines.push("");
-    lines.push("### Warnings");
-    warnings.forEach((w) => lines.push(`\u26A0\uFE0F ${w}`));
-  }
-  if (driftWarning) {
-    lines.push("");
-    lines.push(`\u{1F50D} Drift: ${driftWarning}`);
-  }
-  if (thought.needsMoreThoughts || thought.nextThoughtNeeded) {
-    lines.push("");
-    lines.push("*More analysis needed...*");
-  }
-  return lines.join("\n");
-}
-var init_thought_validator = __esm({
-  "packages/tiny-brain-core/src/modules/thinking/thought-validator.ts"() {
-    "use strict";
-    init_result();
-  }
-});
-
-// packages/tiny-brain-core/src/modules/thinking/consistency-checker.ts
-async function checkConsistency(thoughtHistory) {
-  try {
-    const contradictions = [];
-    if (thoughtHistory.length < 2) {
-      return ResultHelpers.ok({
-        isConsistent: true,
-        contradictions: [],
-        overallSeverity: "none",
-        suggestions: []
-      });
-    }
-    for (let i = 0; i < thoughtHistory.length - 1; i++) {
-      for (let j = i + 1; j < thoughtHistory.length; j++) {
-        const thought1 = thoughtHistory[i];
-        const thought2 = thoughtHistory[j];
-        const contradiction = detectContradiction(thought1.thought, thought2.thought);
-        if (contradiction) {
-          const severity = determineSeverity(thought1, thought2);
-          contradictions.push({
-            thought1Number: thought1.thoughtNumber || i + 1,
-            thought2Number: thought2.thoughtNumber || j + 1,
-            contradiction,
-            severity
-          });
-        }
-      }
-    }
-    let overallSeverity = "none";
-    if (contradictions.some((c) => c.severity === "high")) {
-      overallSeverity = "high";
-    } else if (contradictions.some((c) => c.severity === "medium")) {
-      overallSeverity = "medium";
-    } else if (contradictions.length > 0) {
-      overallSeverity = "low";
-    }
-    const suggestions = [];
-    if (overallSeverity === "high") {
-      suggestions.push("Consider revising your reasoning to resolve high-severity contradictions");
-    } else if (overallSeverity === "medium") {
-      suggestions.push("Review and reconcile moderate inconsistencies in your analysis");
-    } else if (overallSeverity === "low") {
-      suggestions.push("Minor inconsistencies detected - consider clarifying your position");
-    }
-    return ResultHelpers.ok({
-      isConsistent: contradictions.length === 0,
-      contradictions,
-      overallSeverity,
-      suggestions
-    });
-  } catch (error2) {
-    return ResultHelpers.err(
-      new Error(`Failed to check consistency: ${error2 instanceof Error ? error2.message : "Unknown error"}`)
-    );
-  }
-}
-function generateConsistencyReport(result) {
-  const lines = [];
-  lines.push("## Consistency Analysis");
-  lines.push("");
-  if (result.isConsistent) {
-    lines.push("\u2705 No contradictions found");
-    lines.push("All thoughts are consistent.");
-  } else {
-    lines.push(`\u26A0\uFE0F ${result.contradictions.length} contradictions found`);
-    if (result.overallSeverity) {
-      lines.push(`Overall severity: ${result.overallSeverity.toUpperCase()}`);
-    }
-    lines.push("");
-    lines.push("### Contradictions");
-    result.contradictions.forEach((c) => {
-      const thought1Num = c.thought1Number || c.thought1;
-      const thought2Num = c.thought2Number || c.thought2;
-      lines.push(`- Thoughts ${thought1Num} and ${thought2Num}: ${c.contradiction} (${c.severity})`);
-    });
-  }
-  if (result.suggestions && result.suggestions.length > 0) {
-    lines.push("");
-    lines.push("### Suggestions");
-    result.suggestions.forEach((s) => {
-      lines.push(`- ${s}`);
-    });
-  }
-  if (result.overallSeverity === "high") {
-    lines.push("");
-    lines.push("**Recommendation:** Consider revising your reasoning to address these contradictions.");
-  } else if (result.overallSeverity === "low") {
-    lines.push("");
-    lines.push("**Note:** Minor inconsistencies detected but overall reasoning is sound.");
-  }
-  return lines.join("\n");
-}
-function detectContradiction(text1, text2) {
-  const text1Lower = text1.toLowerCase();
-  const text2Lower = text2.toLowerCase();
-  if (text1Lower.includes("should use") && text2Lower.includes("should not use") || text1Lower.includes("should not use") && text2Lower.includes("should use")) {
-    const subject = extractSubject(text1, text2);
-    return `Conflicting recommendations about ${subject}`;
-  }
-  if (text1Lower.includes("sql database") && text2Lower.includes("should not use") && text2Lower.includes("sql database") || text2Lower.includes("sql database") && text1Lower.includes("should not use") && text1Lower.includes("sql database")) {
-    return "Conflicting decisions about SQL database usage";
-  }
-  if (text2Lower.startsWith("actually") || text2Lower.startsWith("however") || text2Lower.includes("instead")) {
-    return "Reversal or change in direction detected";
-  }
-  if (text1Lower.includes("prioritize") && text2Lower.includes("prioritize") || text1Lower.includes("optimize for") && text2Lower.includes("optimize for")) {
-    const priority1 = extractPriority(text1);
-    const priority2 = extractPriority(text2);
-    if (priority1 && priority2 && priority1 !== priority2) {
-      return `Conflicting priorities: ${priority1} vs ${priority2}`;
-    }
-  }
-  if (text1Lower.includes("restful") && text2Lower.includes("graphql") || text1Lower.includes("graphql") && text2Lower.includes("restful")) {
-    return "Conflicting API architecture choices";
-  }
-  if (text1Lower.includes("optimize for performance") && text2Lower.includes("prioritize readability") || text1Lower.includes("prioritize readability") && text2Lower.includes("optimize for performance")) {
-    return "Conflicting optimization priorities";
-  }
-  if ((text1Lower.includes("highly secure") || text1Lower.includes("must be") && text1Lower.includes("secure")) && (text2Lower.includes("security is not a priority") || text2Lower.includes("not a priority"))) {
-    return "Conflicting security priorities";
-  }
-  if (text1Lower.includes("must be") && text2Lower.includes("is not") || text1Lower.includes("is not") && text2Lower.includes("must be")) {
-    return "Contradictory assertions detected";
-  }
-  return null;
-}
-function extractSubject(text1, text2) {
-  const patterns = [
-    /(?:should use|should not use)\s+(.+?)(?:\s+for|\.|\s+instead|$)/i,
-    /(?:the|a|an)\s+(\w+(?:\s+\w+)?)\s+(?:should|must|needs)/i
-  ];
-  for (const pattern of patterns) {
-    const match1 = text1.match(pattern);
-    const match2 = text2.match(pattern);
-    if (match1 || match2) {
-      return (match1?.[1] || match2?.[1] || "the approach").trim();
-    }
-  }
-  return "the approach";
-}
-function extractPriority(text) {
-  const patterns = [
-    /prioritize\s+(.+?)(?:\s+over|\.|\s+instead|$)/i,
-    /optimize for\s+(.+?)(?:\.|$)/i
-  ];
-  for (const pattern of patterns) {
-    const match2 = text.match(pattern);
-    if (match2) {
-      return match2[1].trim();
-    }
-  }
-  return null;
-}
-function determineSeverity(thought1, thought2) {
-  const avgConfidence = ((thought1.confidenceLevel || 0.5) + (thought2.confidenceLevel || 0.5)) / 2;
-  if (avgConfidence > 0.8) {
-    return "high";
-  } else if (avgConfidence > 0.6) {
-    return "medium";
-  } else {
-    return "low";
-  }
-}
-var init_consistency_checker = __esm({
-  "packages/tiny-brain-core/src/modules/thinking/consistency-checker.ts"() {
-    "use strict";
-    init_result();
-  }
-});
-
-// packages/tiny-brain-core/src/modules/thinking/drift-analyzer.ts
-async function analyzeContextDrift(thoughtHistory, contextAnchor) {
-  try {
-    if (thoughtHistory.length === 0) {
-      return ResultHelpers.ok({
-        driftScore: 0,
-        driftTrend: [],
-        alignmentResult: {
-          alignmentScore: 1,
-          originalGoal: contextAnchor,
-          currentDirection: contextAnchor,
-          suggestions: []
-        },
-        suggestions: []
-      });
-    }
-    const contextKeywords = extractKeywords(contextAnchor);
-    const thoughtSimilarities = thoughtHistory.map(
-      (thought) => calculateSemanticSimilarity(thought.thought, contextKeywords)
-    );
-    const recentThoughts = thoughtSimilarities.slice(-3);
-    const avgSimilarity = recentThoughts.reduce((a, b) => a + b, 0) / recentThoughts.length;
-    let driftScore = 1 - avgSimilarity;
-    const latestThoughts = thoughtHistory.slice(-3);
-    const positionDrift = latestThoughts.reduce((sum, t) => {
-      return sum + (t.thoughtNumber || 1) / (t.totalThoughts || 1);
-    }, 0) / Math.max(1, latestThoughts.length);
-    driftScore = driftScore * 0.8 + positionDrift * 0.2;
-    const latestThought = thoughtHistory[thoughtHistory.length - 1];
-    const currentDirection = extractDirection(latestThought, thoughtHistory);
-    const alignmentResult = await checkGoalAlignment(thoughtHistory, contextAnchor);
-    let driftWarning;
-    if (driftScore > 0.7) {
-      driftWarning = "High drift detected - consider refocusing on original context";
-    } else if (driftScore > 0.5) {
-      driftWarning = "Moderate drift detected - stay aware of original goals";
-    }
-    const revisions = thoughtHistory.filter((t) => t.isRevision).length;
-    const revisionRate = Math.min(1, revisions / Math.max(1, thoughtHistory.length));
-    const branches = new Set(thoughtHistory.filter((t) => t.branchId).map((t) => t.branchId));
-    const suggestions = [];
-    if (driftScore > 0.5) {
-      suggestions.push("Review the original problem statement");
-      suggestions.push("Consider if current direction aligns with initial goals");
-    }
-    if (revisionRate > 0.3) {
-      suggestions.push("High revision rate may indicate uncertainty - consider consolidating thoughts");
-    }
-    if (branches.size > 2) {
-      suggestions.push("Multiple branches detected - consider focusing on most promising path");
-    }
-    const driftTrend = thoughtHistory.map((_, i) => {
-      const relevantThoughts = thoughtHistory.slice(0, i + 1);
-      const scores = relevantThoughts.map((t) => {
-        const positionRatio = (t.thoughtNumber || 1) / (t.totalThoughts || 1);
-        return positionRatio * 0.2;
-      });
-      return scores.reduce((a, b) => a + b, 0) / scores.length;
-    });
-    return ResultHelpers.ok({
-      driftScore,
-      driftTrend,
-      driftWarning,
-      alignmentResult: alignmentResult.success ? alignmentResult.data : {
-        alignmentScore: 1 - driftScore,
-        originalGoal: contextAnchor,
-        currentDirection,
-        suggestions: []
-      },
-      suggestions
-    });
-  } catch (error2) {
-    return ResultHelpers.err(
-      new Error(`Failed to analyze drift: ${error2 instanceof Error ? error2.message : "Unknown error"}`)
-    );
-  }
-}
-async function checkGoalAlignment(thoughtHistory, originalGoal) {
-  try {
-    if (thoughtHistory.length === 0) {
-      return ResultHelpers.ok({
-        alignmentScore: 1,
-        originalGoal,
-        currentDirection: originalGoal,
-        misalignedThoughts: [],
-        suggestions: []
-      });
-    }
-    const contextKeywords = extractKeywords(originalGoal);
-    let alignmentScore = 1;
-    const suggestions = [];
-    const misalignedThoughts = [];
-    const explicitScores = thoughtHistory.filter((t) => t.goalAlignment !== void 0).map((t) => t.goalAlignment);
-    if (explicitScores.length > 0) {
-      alignmentScore = explicitScores.reduce((a, b) => a + b, 0) / explicitScores.length;
-      thoughtHistory.forEach((t, i) => {
-        if (t.goalAlignment !== void 0 && t.goalAlignment < 0.5) {
-          misalignedThoughts.push(t.thoughtNumber || i + 1);
-        }
-      });
-    } else {
-      const thoughtAlignments = thoughtHistory.map((thought, i) => {
-        const similarity = calculateSemanticSimilarity(thought.thought, contextKeywords);
-        const alignment = similarity;
-        if (alignment < 0.5) {
-          misalignedThoughts.push(thought.thoughtNumber || i + 1);
-        }
-        return alignment;
-      });
-      if (thoughtAlignments.length > 0) {
-        alignmentScore = thoughtAlignments.reduce((a, b) => a + b, 0) / thoughtAlignments.length;
-      }
-    }
-    const latestThoughts = thoughtHistory.slice(-3);
-    const currentDirection = extractDirection(latestThoughts[latestThoughts.length - 1], thoughtHistory);
-    let driftWarning;
-    if (alignmentScore < 0.3) {
-      driftWarning = "Significant misalignment with original goal";
-      suggestions.push("Try to refocus on the original problem statement");
-      suggestions.push("Consider returning to the original problem statement");
-      suggestions.push("Evaluate if the current path is still relevant");
-    } else if (alignmentScore < 0.5) {
-      driftWarning = "Moderate misalignment detected";
-      suggestions.push("Try to refocus on the original problem statement");
-      suggestions.push("Review how current thoughts relate to original goal");
-    }
-    if (thoughtHistory.length > 5) {
-      const recentAlignments = thoughtHistory.slice(-5).filter((t) => t.goalAlignment !== void 0).map((t) => t.goalAlignment);
-      if (recentAlignments.length > 3) {
-        const variance = calculateVariance(recentAlignments);
-        if (variance > 0.1) {
-          suggestions.push("Alignment is oscillating - consider stabilizing approach");
-        }
-      }
-    }
-    return ResultHelpers.ok({
-      alignmentScore,
-      originalGoal,
-      currentDirection,
-      misalignedThoughts,
-      driftWarning,
-      suggestions
-    });
-  } catch (error2) {
-    return ResultHelpers.err(
-      new Error(`Failed to check goal alignment: ${error2 instanceof Error ? error2.message : "Unknown error"}`)
-    );
-  }
-}
-function extractKeywords(text) {
-  const words = text.toLowerCase().replace(/[^\w\s]/g, " ").split(/\s+/).filter((word) => word.length > 2).filter((word) => !["the", "and", "but", "for", "are", "with", "this", "that", "from", "they", "have", "been", "will", "would", "could", "should", "can"].includes(word));
-  return new Set(words);
-}
-function calculateSemanticSimilarity(thoughtText, contextKeywords) {
-  const thoughtWords = new Set(
-    thoughtText.toLowerCase().replace(/[^\w\s]/g, " ").split(/\s+/).filter((word) => word.length > 2)
-  );
-  let matchingWords = 0;
-  const totalContextWords = contextKeywords.size;
-  for (const contextWord of contextKeywords) {
-    for (const thoughtWord of thoughtWords) {
-      if (thoughtWord === contextWord) {
-        matchingWords += 1;
-        break;
-      } else if (thoughtWord.includes(contextWord) || contextWord.includes(thoughtWord) || // Handle common related terms
-      contextWord === "api" && (thoughtWord === "endpoint" || thoughtWord === "endpoints" || thoughtWord === "restful") || contextWord === "user" && (thoughtWord === "users" || thoughtWord === "authentication") || contextWord === "rest" && (thoughtWord === "restful" || thoughtWord === "api") || contextWord === "build" && (thoughtWord === "creating" || thoughtWord === "create" || thoughtWord === "need" || thoughtWord === "implement") || contextWord === "secure" && (thoughtWord === "security" || thoughtWord === "authentication" || thoughtWord === "password" || thoughtWord === "hashing" || thoughtWord === "two-factor") || contextWord === "authentication" && (thoughtWord === "jwt" || thoughtWord === "password" || thoughtWord === "auth" || thoughtWord === "two-factor" || thoughtWord === "bcrypt") || contextWord === "system" && (thoughtWord === "implement" || thoughtWord === "use" || thoughtWord === "should")) {
-        matchingWords += 0.8;
-        break;
-      }
-    }
-  }
-  if (totalContextWords === 0) return 0;
-  return Math.min(1, matchingWords / totalContextWords);
-}
-function extractDirection(thought, history) {
-  if (!thought) {
-    return "Unknown direction";
-  }
-  const text = thought.thought;
-  const directionPhrases = [
-    /focusing on (.+)/i,
-    /exploring (.+)/i,
-    /analyzing (.+)/i,
-    /considering (.+)/i,
-    /investigating (.+)/i
-  ];
-  for (const pattern of directionPhrases) {
-    const match2 = text.match(pattern);
-    if (match2) {
-      return match2[1].split(/[,.]/)[0].trim();
-    }
-  }
-  if (thought.branchId && thought.branchFromThought) {
-    const branchPoint = history.find((t) => t.thoughtNumber === thought.branchFromThought);
-    if (branchPoint) {
-      return `Branch ${thought.branchId}: Alternative approach from thought ${thought.branchFromThought}`;
-    }
-  }
-  const words = text.split(" ").slice(0, 10).join(" ");
-  return words.length > 50 ? words.substring(0, 50) + "..." : words;
-}
-function calculateVariance(values) {
-  if (values.length === 0) return 0;
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const squaredDiffs = values.map((v) => Math.pow(v - mean, 2));
-  const variance = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
-  return variance;
-}
-var init_drift_analyzer = __esm({
-  "packages/tiny-brain-core/src/modules/thinking/drift-analyzer.ts"() {
-    "use strict";
-    init_result();
-  }
-});
-
-// packages/tiny-brain-core/src/modules/thinking/insights-extractor.ts
-async function extractInsights(thoughtHistory) {
-  try {
-    const keyInsights = [];
-    const unresolved = [];
-    const conclusions = [];
-    if (thoughtHistory.length === 0) {
-      return ResultHelpers.ok({
-        keyInsights: [],
-        unresolved: [],
-        conclusions: [],
-        thoughtCount: 0,
-        averageConfidence: 0,
-        report: "No thoughts to analyze"
-      });
-    }
-    const highConfidenceThoughts = thoughtHistory.filter(
-      (t) => t.confidenceLevel && t.confidenceLevel >= 0.8
-    );
-    highConfidenceThoughts.forEach((t) => {
-      const insight = extractKeyPoint(t.thought);
-      if (insight && !keyInsights.includes(insight)) {
-        keyInsights.push(insight);
-      }
-    });
-    thoughtHistory.forEach((t) => {
-      if (t.needsMoreThoughts || t.nextThoughtNeeded) {
-        const question = extractQuestion(t.thought);
-        if (question && !unresolved.includes(question)) {
-          unresolved.push(question);
-        }
-      }
-      if (t.confidenceLevel && t.confidenceLevel < 0.5) {
-        const uncertainty = extractUncertainty(t.thought);
-        if (uncertainty && !unresolved.includes(uncertainty)) {
-          unresolved.push(uncertainty);
-        }
-      }
-    });
-    const finalThoughts = thoughtHistory.filter(
-      (t) => t.thoughtNumber === t.totalThoughts || !t.nextThoughtNeeded
-    );
-    finalThoughts.forEach((t) => {
-      const conclusion = extractConclusion(t.thought);
-      if (conclusion && !conclusions.includes(conclusion)) {
-        conclusions.push(conclusion);
-      }
-    });
-    const confidenceScores = thoughtHistory.filter((t) => t.confidenceLevel !== void 0).map((t) => t.confidenceLevel);
-    const averageConfidence = confidenceScores.length > 0 ? confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length : 0.5;
-    const report = generateInsightsReport({
-      keyInsights,
-      unresolved,
-      conclusions,
-      thoughtCount: thoughtHistory.length,
-      averageConfidence,
-      report: ""
-      // Will be filled below
-    });
-    return ResultHelpers.ok({
-      keyInsights,
-      unresolved,
-      conclusions,
-      thoughtCount: thoughtHistory.length,
-      averageConfidence,
-      report
-    });
-  } catch (error2) {
-    return ResultHelpers.err(
-      new Error(`Failed to extract insights: ${error2 instanceof Error ? error2.message : "Unknown error"}`)
-    );
-  }
-}
-async function analyzeThoughtHistory(thoughtHistory) {
-  try {
-    if (thoughtHistory.length === 0) {
-      return ResultHelpers.ok({
-        totalThoughts: 0,
-        revisions: 0,
-        branches: 0,
-        averageConfidence: 0,
-        driftTrend: [],
-        consistencyScore: 1
-      });
-    }
-    const revisions = thoughtHistory.filter((t) => t.isRevision).length;
-    const branches = new Set(
-      thoughtHistory.filter((t) => t.branchId).map((t) => t.branchId)
-    ).size;
-    const confidenceScores = thoughtHistory.filter((t) => t.confidenceLevel !== void 0).map((t) => t.confidenceLevel);
-    const averageConfidence = confidenceScores.length > 0 ? confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length : 0.5;
-    const driftTrend = thoughtHistory.filter((t) => t.driftScore !== void 0).map((t) => t.driftScore);
-    let consistencyScore = 1;
-    const revisionRate = revisions / thoughtHistory.length;
-    consistencyScore -= revisionRate * 0.3;
-    const branchComplexity = Math.min(1, branches / 5);
-    consistencyScore -= branchComplexity * 0.2;
-    if (driftTrend.length > 0) {
-      const avgDrift = driftTrend.reduce((a, b) => a + b, 0) / driftTrend.length;
-      consistencyScore -= avgDrift * 0.5;
-    }
-    consistencyScore = Math.max(0, Math.min(1, consistencyScore));
-    return ResultHelpers.ok({
-      totalThoughts: thoughtHistory.length,
-      revisions,
-      branches,
-      averageConfidence,
-      driftTrend,
-      consistencyScore
-    });
-  } catch (error2) {
-    return ResultHelpers.err(
-      new Error(`Failed to analyze thought history: ${error2 instanceof Error ? error2.message : "Unknown error"}`)
-    );
-  }
-}
-function generateThinkingReport(thoughtHistory) {
-  const lines = [];
-  lines.push("# Thinking Analysis Report");
-  lines.push("");
-  if (thoughtHistory.length === 0) {
-    lines.push("No thoughts to analyze.");
-    return lines.join("\n");
-  }
-  lines.push("## Overview");
-  lines.push(`- Total thoughts: ${thoughtHistory.length}`);
-  const revisions = thoughtHistory.filter((t) => t.isRevision).length;
-  if (revisions > 0) {
-    lines.push(`- Revisions: ${revisions}`);
-  }
-  const branches = new Set(thoughtHistory.filter((t) => t.branchId).map((t) => t.branchId)).size;
-  if (branches > 0) {
-    lines.push(`- Branches explored: ${branches}`);
-  }
-  lines.push("");
-  const confidenceScores = thoughtHistory.filter((t) => t.confidenceLevel !== void 0).map((t) => t.confidenceLevel);
-  if (confidenceScores.length > 0) {
-    const avgConfidence = confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length;
-    const maxConfidence = Math.max(...confidenceScores);
-    const minConfidence = Math.min(...confidenceScores);
-    lines.push("## Confidence Analysis");
-    lines.push(`- Average: ${Math.round(avgConfidence * 100)}%`);
-    lines.push(`- Range: ${Math.round(minConfidence * 100)}% - ${Math.round(maxConfidence * 100)}%`);
-    lines.push("");
-  }
-  const driftScores = thoughtHistory.filter((t) => t.driftScore !== void 0).map((t) => t.driftScore);
-  if (driftScores.length > 0) {
-    const avgDrift = driftScores.reduce((a, b) => a + b, 0) / driftScores.length;
-    lines.push("## Context Drift");
-    lines.push(`- Average drift: ${Math.round(avgDrift * 100)}%`);
-    if (avgDrift > 0.5) {
-      lines.push("- \u26A0\uFE0F High drift detected - consider refocusing");
-    } else if (avgDrift > 0.3) {
-      lines.push("- \u2139\uFE0F Moderate drift - stay aware of original goals");
-    } else {
-      lines.push("- \u2705 Low drift - well-focused analysis");
-    }
-    lines.push("");
-  }
-  const highConfidenceThoughts = thoughtHistory.filter((t) => t.confidenceLevel && t.confidenceLevel >= 0.8).slice(-3);
-  if (highConfidenceThoughts.length > 0) {
-    lines.push("## High-Confidence Thoughts");
-    highConfidenceThoughts.forEach((t) => {
-      lines.push(`- Thought ${t.thoughtNumber}: ${t.thought.substring(0, 100)}...`);
-    });
-    lines.push("");
-  }
-  return lines.join("\n");
-}
-function generateInsightsReport(summary) {
-  const lines = [];
-  lines.push("## Insights Summary");
-  lines.push("");
-  if (summary.keyInsights.length > 0) {
-    lines.push("### Key Insights");
-    summary.keyInsights.forEach((insight) => {
-      lines.push(`- ${insight}`);
-    });
-    lines.push("");
-  }
-  if (summary.conclusions.length > 0) {
-    lines.push("### Conclusions");
-    summary.conclusions.forEach((conclusion) => {
-      lines.push(`- ${conclusion}`);
-    });
-    lines.push("");
-  }
-  if (summary.unresolved.length > 0) {
-    lines.push("### Unresolved Questions");
-    summary.unresolved.forEach((question) => {
-      lines.push(`- ${question}`);
-    });
-    lines.push("");
-  }
-  lines.push("### Statistics");
-  lines.push(`- Total thoughts: ${summary.thoughtCount}`);
-  lines.push(`- Average confidence: ${Math.round(summary.averageConfidence * 100)}%`);
-  return lines.join("\n");
-}
-function extractKeyPoint(text) {
-  const patterns = [
-    /The key (?:point|insight|finding) is (.+)/i,
-    /It's (?:clear|evident|important) that (.+)/i,
-    /This (?:shows|demonstrates|indicates) that (.+)/i,
-    /We can conclude that (.+)/i
-  ];
-  for (const pattern of patterns) {
-    const match2 = text.match(pattern);
-    if (match2) {
-      return match2[1].split(/[,.]/)[0].trim();
-    }
-  }
-  const firstSentence = text.split(/[.!?]/)[0].trim();
-  if (firstSentence.length > 20 && firstSentence.length < 200) {
-    return firstSentence;
-  }
-  return null;
-}
-function extractQuestion(text) {
-  const questions = text.match(/[^.!?]*\?/g);
-  if (questions && questions.length > 0) {
-    return questions[0].trim();
-  }
-  const patterns = [
-    /(?:need to|should|must) (?:investigate|explore|understand) (.+)/i,
-    /(?:unclear|uncertain|unknown) (?:whether|if|how) (.+)/i
-  ];
-  for (const pattern of patterns) {
-    const match2 = text.match(pattern);
-    if (match2) {
-      return `Need to understand: ${match2[1].split(/[,.]/)[0].trim()}`;
-    }
-  }
-  return null;
-}
-function extractUncertainty(text) {
-  const patterns = [
-    /(?:not sure|uncertain|unclear) (?:about|whether|if) (.+)/i,
-    /(?:might|may|possibly|perhaps) (.+)/i
-  ];
-  for (const pattern of patterns) {
-    const match2 = text.match(pattern);
-    if (match2) {
-      return `Uncertain: ${match2[1].split(/[,.]/)[0].trim()}`;
-    }
-  }
-  return null;
-}
-function extractConclusion(text) {
-  const patterns = [
-    /(?:In conclusion|Therefore|Thus|Hence), (.+)/i,
-    /The (?:conclusion|result|outcome) is (.+)/i,
-    /This (?:means|implies|suggests) that (.+)/i
-  ];
-  for (const pattern of patterns) {
-    const match2 = text.match(pattern);
-    if (match2) {
-      return match2[1].split(/[,.]/)[0].trim();
-    }
-  }
-  const sentences = text.split(/[.!?]/).filter((s) => s.trim().length > 0);
-  if (sentences.length > 0) {
-    const lastSentence = sentences[sentences.length - 1].trim();
-    if (lastSentence.length > 20 && lastSentence.length < 200) {
-      return lastSentence;
-    }
-  }
-  return null;
-}
-var init_insights_extractor = __esm({
-  "packages/tiny-brain-core/src/modules/thinking/insights-extractor.ts"() {
-    "use strict";
-    init_result();
-  }
-});
-
-// packages/tiny-brain-core/src/modules/thinking/index.ts
-var init_thinking = __esm({
-  "packages/tiny-brain-core/src/modules/thinking/index.ts"() {
-    "use strict";
-    init_types5();
-    init_thought_validator();
-    init_consistency_checker();
-    init_drift_analyzer();
-    init_insights_extractor();
-  }
-});
-
-// packages/tiny-brain-core/src/services/thinking/thinking-service.ts
-var ThinkingService;
-var init_thinking_service = __esm({
-  "packages/tiny-brain-core/src/services/thinking/thinking-service.ts"() {
-    "use strict";
-    init_base_service();
-    init_result();
-    init_thinking();
-    ThinkingService = class extends BaseService {
-      constructor(context) {
-        super(context);
-      }
-      /**
-       * Start or resume a thinking session
-       */
-      async startSession(args = {}) {
-        const personaId = this.requireActivePersona();
-        const sessionId = args.sessionId || `thinking-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const contextAnchor = args.contextAnchor || "";
-        try {
-          const existing = await this.loadSession(sessionId, personaId);
-          if (existing) {
-            this.log("info", "Resumed thinking session", { sessionId, personaId });
-            return existing;
-          }
-          const session = {
-            id: sessionId,
-            personaId,
-            contextAnchor,
-            thoughtHistory: [],
-            created: (/* @__PURE__ */ new Date()).toISOString(),
-            lastUpdated: (/* @__PURE__ */ new Date()).toISOString(),
-            status: "active"
-          };
-          await this.saveSession(session);
-          this.log("info", "Started new thinking session", { sessionId, personaId, contextAnchor });
-          return session;
-        } catch (error2) {
-          this.log("error", "Failed to start thinking session", error2);
-          throw error2;
-        }
-      }
-      /**
-       * Add a thought to the session
-       */
-      async addThought(args) {
-        const personaId = this.requireActivePersona();
-        if (!args.sessionId || !args.thought) {
-          throw new Error("Session ID and thought are required");
-        }
-        try {
-          const session = await this.loadSession(args.sessionId, personaId);
-          if (!session) {
-            throw new Error(`Session not found: ${args.sessionId}`);
-          }
-          const validationResult = await validateThought(args.thought);
-          const validation = ResultHelpers.unwrap(validationResult);
-          if (!validation.isValid) {
-            return validation;
-          }
-          const processResult = await processThought(
-            validation.validatedThought,
-            session.thoughtHistory
-          );
-          const processedThought = ResultHelpers.unwrap(processResult);
-          session.thoughtHistory.push(processedThought);
-          session.lastUpdated = (/* @__PURE__ */ new Date()).toISOString();
-          if (!processedThought.nextThoughtNeeded && !processedThought.needsMoreThoughts) {
-            session.status = "completed";
-          }
-          await this.saveSession(session);
-          this.log("info", "Added thought to session", {
-            sessionId: args.sessionId,
-            thoughtNumber: processedThought.thoughtNumber,
-            totalThoughts: processedThought.totalThoughts
-          });
-          return validation;
-        } catch (error2) {
-          this.log("error", "Failed to add thought", error2);
-          throw error2;
-        }
-      }
-      /**
-       * Analyze the current thinking session
-       */
-      async analyzeSession(args) {
-        const personaId = this.requireActivePersona();
-        if (!args.sessionId) {
-          throw new Error("Session ID is required");
-        }
-        try {
-          const session = await this.loadSession(args.sessionId, personaId);
-          if (!session) {
-            throw new Error(`Session not found: ${args.sessionId}`);
-          }
-          const results = {};
-          if (args.includeConsistencyCheck) {
-            const consistencyResult = await checkConsistency(session.thoughtHistory);
-            results.consistency = ResultHelpers.unwrap(consistencyResult);
-          }
-          if (args.includeDriftAnalysis && session.contextAnchor) {
-            const driftResult = await analyzeContextDrift(
-              session.thoughtHistory,
-              session.contextAnchor
-            );
-            results.drift = ResultHelpers.unwrap(driftResult);
-          }
-          if (args.includeInsights) {
-            const insightsResult = await extractInsights(session.thoughtHistory);
-            results.insights = ResultHelpers.unwrap(insightsResult);
-          }
-          const historyResult = await analyzeThoughtHistory(session.thoughtHistory);
-          results.history = ResultHelpers.unwrap(historyResult);
-          this.log("debug", "Analyzed thinking session", {
-            sessionId: args.sessionId,
-            analyses: Object.keys(results)
-          });
-          return results;
-        } catch (error2) {
-          this.log("error", "Failed to analyze session", error2);
-          throw error2;
-        }
-      }
-      /**
-       * Generate a report for the thinking session
-       */
-      async generateReport(args) {
-        const personaId = this.requireActivePersona();
-        if (!args.sessionId) {
-          throw new Error("Session ID is required");
-        }
-        try {
-          const session = await this.loadSession(args.sessionId, personaId);
-          if (!session) {
-            throw new Error(`Session not found: ${args.sessionId}`);
-          }
-          const report = generateThinkingReport(session.thoughtHistory);
-          const lines = [
-            `# Thinking Session Report`,
-            ``,
-            `**Session ID:** ${session.id}`,
-            `**Status:** ${session.status}`,
-            `**Created:** ${new Date(session.created).toLocaleString()}`,
-            `**Last Updated:** ${new Date(session.lastUpdated).toLocaleString()}`,
-            ``,
-            session.contextAnchor ? `**Context:** ${session.contextAnchor}` : "",
-            session.contextAnchor ? `` : "",
-            report
-          ];
-          return lines.filter((line) => line !== void 0).join("\n");
-        } catch (error2) {
-          this.log("error", "Failed to generate report", error2);
-          throw error2;
-        }
-      }
-      /**
-       * Format the latest thought for display
-       */
-      async formatLatestThought(args) {
-        const personaId = this.requireActivePersona();
-        if (!args.sessionId) {
-          throw new Error("Session ID is required");
-        }
-        try {
-          const session = await this.loadSession(args.sessionId, personaId);
-          if (!session || session.thoughtHistory.length === 0) {
-            return "No thoughts in session";
-          }
-          const latestThought = session.thoughtHistory[session.thoughtHistory.length - 1];
-          let driftWarning;
-          if (session.contextAnchor && latestThought.driftScore && latestThought.driftScore > 0.5) {
-            driftWarning = `Context drift detected (${Math.round(latestThought.driftScore * 100)}%)`;
-          }
-          return formatThoughtOutput(latestThought, [], driftWarning);
-        } catch (error2) {
-          this.log("error", "Failed to format thought", error2);
-          throw error2;
-        }
-      }
-      /**
-       * List all thinking sessions for the persona
-       */
-      async listSessions() {
-        const personaId = this.requireActivePersona();
-        try {
-          const files = await this.storage.listPersonaFiles(personaId, this.userId);
-          const sessionFiles = files.filter(
-            (f) => f.startsWith("thinking/sessions/") && f.endsWith(".json")
-          );
-          const sessions = [];
-          for (const file of sessionFiles) {
-            const content = await this.storage.getPersonaFile(personaId, file, this.userId);
-            if (content) {
-              sessions.push(JSON.parse(content));
-            }
-          }
-          sessions.sort(
-            (a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
-          );
-          this.log("debug", `Listed ${sessions.length} thinking sessions for persona ${personaId}`);
-          return sessions;
-        } catch (error2) {
-          this.log("error", "Failed to list sessions", error2);
-          return [];
-        }
-      }
-      // Private helper methods
-      async saveSession(session) {
-        const filename = `thinking/sessions/${session.id}.json`;
-        await this.storage.storePersonaFile(
-          session.personaId,
-          filename,
-          JSON.stringify(session, null, 2),
-          this.userId
-        );
-        this.log("debug", `Saved thinking session: ${session.id}`);
-      }
-      async loadSession(sessionId, personaId) {
-        try {
-          const filename = `thinking/sessions/${sessionId}.json`;
-          const content = await this.storage.getPersonaFile(personaId, filename, this.userId);
-          if (!content) {
-            this.log("debug", `Session not found: ${sessionId}`);
-            return null;
-          }
-          return JSON.parse(content);
-        } catch (error2) {
-          this.log("error", "Failed to load session", error2);
-          return null;
-        }
-      }
-    };
-  }
-});
-
 // packages/tiny-brain-core/src/modules/response-validation/types.ts
-var init_types6 = __esm({
+var init_types5 = __esm({
   "packages/tiny-brain-core/src/modules/response-validation/types.ts"() {
     "use strict";
   }
@@ -36162,8 +35218,8 @@ function assessClarity(response) {
   return Math.max(0, Math.min(1, score));
 }
 function assessRelevance(response, question) {
-  const questionKeywords = extractKeywords2(question);
-  const responseKeywords = extractKeywords2(response);
+  const questionKeywords = extractKeywords(question);
+  const responseKeywords = extractKeywords(response);
   const overlap = questionKeywords.filter((k) => responseKeywords.includes(k));
   const relevanceScore = overlap.length / Math.max(1, questionKeywords.length);
   return Math.min(1, relevanceScore * 1.5);
@@ -36227,7 +35283,7 @@ function assessConciseness(response) {
   score -= Math.min(0.3, fillerCount * 0.1);
   return Math.max(0, Math.min(1, score));
 }
-function extractKeywords2(text) {
+function extractKeywords(text) {
   return text.toLowerCase().split(/\s+/).filter((w) => w.length > 3).filter((w) => ![
     "what",
     "when",
@@ -36245,7 +35301,7 @@ function extractKeywords2(text) {
   ].includes(w));
 }
 function extractTopic(text) {
-  const keywords = extractKeywords2(text);
+  const keywords = extractKeywords(text);
   return keywords.slice(0, 3).join(" ");
 }
 var init_response_validator = __esm({
@@ -36259,7 +35315,7 @@ var init_response_validator = __esm({
 var init_response_validation = __esm({
   "packages/tiny-brain-core/src/modules/response-validation/index.ts"() {
     "use strict";
-    init_types6();
+    init_types5();
     init_response_validator();
   }
 });
@@ -36434,7 +35490,7 @@ var init_response_validation_service = __esm({
 });
 
 // packages/tiny-brain-core/src/modules/strategy/types.ts
-var init_types7 = __esm({
+var init_types6 = __esm({
   "packages/tiny-brain-core/src/modules/strategy/types.ts"() {
     "use strict";
   }
@@ -37437,7 +36493,7 @@ var init_strategy_generator = __esm({
 var init_strategy = __esm({
   "packages/tiny-brain-core/src/modules/strategy/index.ts"() {
     "use strict";
-    init_types7();
+    init_types6();
     init_structure_planner();
     init_content_strategist();
     init_technique_selector();
@@ -37806,6 +36862,46 @@ var init_repo_config_service = __esm({
         await this.saveConfig(config2);
       }
       /**
+       * Mark a repo as starred or unstarred. Throws when the repoId is
+       * unknown — silent no-op would mask miswired UI calls.
+       *
+       * Read-modify-write inside a single async boundary; concurrent
+       * star toggles on different repos are safe because each call
+       * re-reads fresh and writes the whole config back. Cross-process
+       * locking is out of scope (consistent with the rest of this
+       * service).
+       */
+      async setStarred(repoId, starred) {
+        const config2 = await this.loadConfig();
+        const repo = config2.repos.find((r) => r.id === repoId);
+        if (!repo) {
+          throw new Error(`setStarred: repo not found: ${repoId}`);
+        }
+        repo.starred = starred;
+        await this.saveConfig(config2);
+      }
+      /**
+       * Return all starred repos, sorted by lastAccessed descending so
+       * the sidebar surfaces the most recently-used favourite first.
+       *
+       * Returns raw RepoInfo records — no PRD-stat enrichment. The
+       * sidebar surface only needs id + name + lastAccessed, and the
+       * call fires on every star toggle and SSE invalidation, so the
+       * fast path matters more than parity with listRepos.
+       *
+       * Sort uses the same Date-based comparator as listRepos to avoid
+       * lexical ordering drift across non-Z ISO offsets. Equal
+       * timestamps fall through to id ascending for a stable order.
+       */
+      async listStarred() {
+        const config2 = await this.loadConfig();
+        return config2.repos.filter((r) => r.starred).sort((a, b) => {
+          const diff = new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime();
+          if (diff !== 0) return diff;
+          return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+        });
+      }
+      /**
        * Update PRD count for a repo
        */
       async updatePrdCount(repoId, count) {
@@ -37857,8 +36953,8 @@ var init_repo_config_service = __esm({
       /**
        * Generate a unique repo ID from path
        */
-      generateRepoId(path38) {
-        const hash = createHash("sha256").update(path38).digest("hex");
+      generateRepoId(path41) {
+        const hash = createHash("sha256").update(path41).digest("hex");
         return `repo-${hash.substring(0, 12)}`;
       }
       /**
@@ -38194,7 +37290,7 @@ _To be determined after root cause analysis_
 });
 
 // packages/tiny-brain-core/src/services/fix/types.ts
-var init_types8 = __esm({
+var init_types7 = __esm({
   "packages/tiny-brain-core/src/services/fix/types.ts"() {
     "use strict";
   }
@@ -38758,7 +37854,7 @@ ${suggestion.context}`;
 });
 
 // packages/tiny-brain-core/src/services/adr/types.ts
-var init_types9 = __esm({
+var init_types8 = __esm({
   "packages/tiny-brain-core/src/services/adr/types.ts"() {
     "use strict";
   }
@@ -44809,8 +43905,8 @@ var init_library_client = __esm({
       /**
        * Get agent by path (new agent system)
        */
-      async getAgentByPath(token, path38) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path38}`, {
+      async getAgentByPath(token, path41) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path41}`, {
           method: "GET",
           headers: {
             "Accept": "application/json",
@@ -44826,8 +43922,8 @@ var init_library_client = __esm({
       /**
        * Store agent at specified path (new agent system)
        */
-      async storeAgent(token, path38, agent) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path38}`, {
+      async storeAgent(token, path41, agent) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path41}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -44842,8 +43938,8 @@ var init_library_client = __esm({
       /**
        * Archive agent at specified path (new agent system)
        */
-      async archiveAgent(token, path38) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path38}`, {
+      async archiveAgent(token, path41) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path41}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -45424,10 +44520,37 @@ ${MARKER_END}`;
 import { promises as fs22 } from "node:fs";
 import { existsSync as existsSync6 } from "node:fs";
 import * as path22 from "node:path";
-var HOOK_SIGNATURE, EXEC_HELPER_CONTENT, HOOK_NAMES, SKILL_PERMISSIONS, CONTEXT_START_MARKER, CONTEXT_END_MARKER, SILENT_LOGGER, ConfigSetupService;
+async function ensureTinyBrainGitignoreEntries(repoPath) {
+  const gitignorePath = path22.join(repoPath, ".gitignore");
+  let content = "";
+  try {
+    content = await fs22.readFile(gitignorePath, "utf-8");
+  } catch {
+  }
+  const presentEntries = new Set(
+    content.split("\n").map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("#"))
+  );
+  const missing = TINY_BRAIN_GITIGNORE_ENTRIES.filter((e) => !presentEntries.has(e));
+  if (missing.length === 0) return 0;
+  const hasHeader = content.split("\n").some((line) => line.trim() === TINY_BRAIN_GITIGNORE_HEADER);
+  const lines = [""];
+  if (!hasHeader) lines.push(TINY_BRAIN_GITIGNORE_HEADER);
+  lines.push(...missing);
+  const block = lines.join("\n") + "\n";
+  await fs22.appendFile(gitignorePath, block, "utf-8");
+  return missing.length;
+}
+var TINY_BRAIN_GITIGNORE_ENTRIES, TINY_BRAIN_GITIGNORE_HEADER, HOOK_SIGNATURE, EXEC_HELPER_CONTENT, HOOK_NAMES, SKILL_PERMISSIONS, CONTEXT_START_MARKER, CONTEXT_END_MARKER, SILENT_LOGGER, ConfigSetupService;
 var init_config_setup_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/config-setup-service.ts"() {
     "use strict";
+    TINY_BRAIN_GITIGNORE_ENTRIES = [
+      ".tiny-brain/fixes/",
+      ".tiny-brain/reviews/",
+      ".tiny-brain/telemetry/",
+      ".tiny-brain/prune.log"
+    ];
+    TINY_BRAIN_GITIGNORE_HEADER = "# tiny-brain operational data (auto-added)";
     HOOK_SIGNATURE = "Installed by: tiny-brain";
     EXEC_HELPER_CONTENT = `#!/bin/sh
 # tiny-brain-exec \u2014 package manager resolver
@@ -45520,26 +44643,10 @@ esac
        * Idempotent — skips entries that already exist.
        */
       async ensureGitignoreEntries() {
-        const gitignorePath = path22.join(this.repoPath, ".gitignore");
-        let content = "";
-        try {
-          content = await fs22.readFile(gitignorePath, "utf-8");
-        } catch {
+        const added = await ensureTinyBrainGitignoreEntries(this.repoPath);
+        if (added > 0) {
+          this.logger.info(`Added ${added} entries to .gitignore`);
         }
-        const entries = [
-          ".tiny-brain/fixes/",
-          ".tiny-brain/reviews/",
-          ".tiny-brain/telemetry/"
-        ];
-        const missing = entries.filter((e) => !content.includes(e));
-        if (missing.length === 0) return;
-        const block = [
-          "",
-          "# tiny-brain operational data (auto-added by analyse)",
-          ...missing
-        ].join("\n") + "\n";
-        await fs22.appendFile(gitignorePath, block, "utf-8");
-        this.logger.info(`Added ${missing.length} entries to .gitignore`);
       }
       /**
        * Install git hooks from source directory to .git/hooks/.
@@ -48573,6 +47680,16 @@ IMPORTANT: This repository follows strict Test-Driven Development (TDD) with a 3
 
 **What you must NOT do:** Do not manually manage phase transitions \u2014 they are derived from commit SHAs.
 
+### Three-path advancement architecture (belt-and-braces)
+
+After a review JSON lands at \`.tiny-brain/reviews/<gate>/<sha>.json\`, three independent paths converge on the same idempotent \`pipeline --decision\` call. Whichever fires first wins; the others become no-op telemetry lines. **Do not "simplify" by deleting any of these paths** \u2014 redundancy is the reliability story.
+
+- **Path A \u2014 agent (fast path, prompt-driven).** The review agent persists the review JSON and then calls \`npx tiny-brain pipeline --agent <gate> --decision <verdict> --sha <sha>\`. Latency: synchronous with the agent's tool call. Failure modes: agent dies, token budget exhausted, prompt drift.
+- **Path B \u2014 watcher (latency optimisation, in-process).** When the dashboard server is running, a file watcher observes \`reviews/**/*.json\` and calls the same \`pipeline --decision\`. Latency: sub-second after the file lands. Failure modes: dashboard not running, missed \`fs.watch\` event.
+- **Path C \u2014 post-commit reconcile (always-works guarantee).** The post-commit hook runs \`npx tiny-brain reconcile\` after every commit. It scans \`.tiny-brain/reviews/\` and calls \`pipeline --decision\` for any review whose decision hasn't been recorded. Latency: bounded by "next git commit." This is the **reliability contract** \u2014 as long as \`git commit\` exits, pipeline state is consistent with what's on disk.
+
+All three paths call the same \`pipeline --decision\`, which is idempotent on \`(taskId, gate, sha, decision)\`. Telemetry at \`.tiny-brain/telemetry/pipeline-advancement.jsonl\` records every call with its \`source\` and \`was_noop\` flag for visibility into which path wins under normal operation.
+
 `;
       }
       /**
@@ -49400,14 +48517,14 @@ var init_analysis = __esm({
 });
 
 // packages/tiny-brain-core/src/services/persona/types.ts
-var init_types10 = __esm({
+var init_types9 = __esm({
   "packages/tiny-brain-core/src/services/persona/types.ts"() {
     "use strict";
   }
 });
 
 // packages/tiny-brain-core/src/services/planning/types.ts
-var init_types11 = __esm({
+var init_types10 = __esm({
   "packages/tiny-brain-core/src/services/planning/types.ts"() {
     "use strict";
   }
@@ -49421,21 +48538,31 @@ function resolveStep(agent, pipeline) {
 function applyEvent(task, event, pipeline) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const t = { ...task, reviews: { ...task.reviews ?? {} } };
+  const captureSnapshot = () => {
+    if (t.pipelineSnapshot !== void 0) return;
+    t.pipelineSnapshot = pipeline.filter((s) => !s.hook).map((s) => s.type);
+  };
   if (event.agent === "red") {
     if (event.sha) {
+      captureSnapshot();
       t.testCommitSha = event.sha;
       t.redCompletedAt = now;
       t.greenStartedAt = now;
     } else if (!t.redStartedAt) {
+      captureSnapshot();
       t.redStartedAt = now;
     }
     return t;
   }
   if (event.agent === "green") {
     if (event.sha) {
-      t.commitSha = event.sha;
-      t.greenCompletedAt = now;
+      if (t.commitSha !== event.sha) {
+        captureSnapshot();
+        t.commitSha = event.sha;
+        t.greenCompletedAt = now;
+      }
     } else if (!t.greenStartedAt) {
+      captureSnapshot();
       t.redStartedAt = t.redStartedAt ?? now;
       t.testCommitSha = t.testCommitSha ?? "skipped";
       t.greenStartedAt = now;
@@ -49773,7 +48900,91 @@ var init_event_store = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/services/planning/atomic-progress-writer.ts
+import { promises as fs30 } from "fs";
+import path32 from "path";
+import { randomBytes as randomBytes2 } from "crypto";
+function resolveProgressPath(repoPath, scope) {
+  if (scope.kind === "prd") {
+    return path32.join(repoPath, ".tiny-brain", "progress", `${scope.prdId}.json`);
+  }
+  return path32.join(repoPath, ".tiny-brain", "fixes", "progress.json");
+}
+async function writeProgressJson(repoPath, scope, payload) {
+  const finalPath = resolveProgressPath(repoPath, scope);
+  const dir = path32.dirname(finalPath);
+  await fs30.mkdir(dir, { recursive: true });
+  const data = JSON.stringify(payload, null, 2);
+  const tmpPath = path32.join(
+    dir,
+    `${path32.basename(finalPath)}.${process.pid}.${randomBytes2(6).toString("hex")}.tmp`
+  );
+  await fs30.writeFile(tmpPath, data, "utf-8");
+  try {
+    await fs30.rename(tmpPath, finalPath);
+  } catch (err) {
+    try {
+      await fs30.unlink(tmpPath);
+    } catch {
+    }
+    throw err;
+  }
+}
+var init_atomic_progress_writer = __esm({
+  "packages/tiny-brain-core/src/services/planning/atomic-progress-writer.ts"() {
+    "use strict";
+  }
+});
+
+// packages/tiny-brain-core/src/services/planning/fix-task-updater.ts
+import { promises as fs31 } from "fs";
+function isPlainObject3(v) {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+function deepMerge(target, source) {
+  for (const key of Object.keys(source)) {
+    const next = source[key];
+    const prev = target[key];
+    if (isPlainObject3(prev) && isPlainObject3(next)) {
+      deepMerge(prev, next);
+    } else {
+      target[key] = next;
+    }
+  }
+}
+async function applyFixTaskUpdate(repoPath, fixId, taskId, delta) {
+  if ("id" in delta) {
+    throw new Error(`applyFixTaskUpdate: delta must not set 'id' (markdown-owned)`);
+  }
+  if ("description" in delta) {
+    throw new Error(`applyFixTaskUpdate: delta must not set 'description' (markdown-owned)`);
+  }
+  const progressPath = resolveProgressPath(repoPath, { kind: "fixes" });
+  const raw = await fs31.readFile(progressPath, "utf-8");
+  const progress = JSON.parse(raw);
+  const fix = (progress.fixes ?? []).find((f) => f.id === fixId);
+  if (!fix) {
+    throw new Error(`applyFixTaskUpdate: fix not found: ${fixId}`);
+  }
+  const task = (fix.tasks ?? []).find((t) => t.id === taskId);
+  if (!task) {
+    throw new Error(`applyFixTaskUpdate: task not found: ${taskId} in fix ${fixId}`);
+  }
+  deepMerge(task, delta);
+  progress.lastSynced = (/* @__PURE__ */ new Date()).toISOString();
+  await writeProgressJson(repoPath, { kind: "fixes" }, progress);
+}
+var init_fix_task_updater = __esm({
+  "packages/tiny-brain-core/src/services/planning/fix-task-updater.ts"() {
+    "use strict";
+    init_atomic_progress_writer();
+  }
+});
+
 // packages/tiny-brain-core/src/services/planning/pipeline-service.ts
+function jsonEq(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
 function toTaskUpdate(task) {
   const update = {};
   if (task.redStartedAt !== void 0) update.redStartedAt = task.redStartedAt;
@@ -49783,6 +48994,31 @@ function toTaskUpdate(task) {
   if (task.testCommitSha !== void 0) update.testCommitSha = task.testCommitSha;
   if (task.commitSha !== void 0) update.commitSha = task.commitSha;
   if (task.reviews) update.reviews = task.reviews;
+  if (task.pipelineSnapshot !== void 0) update.pipelineSnapshot = task.pipelineSnapshot;
+  return update;
+}
+function diffTaskUpdate(before, after) {
+  const update = {};
+  const flatKeys = ["redStartedAt", "redCompletedAt", "greenStartedAt", "greenCompletedAt", "testCommitSha", "commitSha"];
+  for (const key of flatKeys) {
+    if (before[key] !== after[key] && after[key] !== void 0) {
+      update[key] = after[key];
+    }
+  }
+  if (after.pipelineSnapshot !== void 0 && !jsonEq(before.pipelineSnapshot, after.pipelineSnapshot)) {
+    update.pipelineSnapshot = after.pipelineSnapshot;
+  }
+  const beforeReviews = before.reviews ?? {};
+  const afterReviews = after.reviews ?? {};
+  const reviewsDelta = {};
+  for (const gate of Object.keys(afterReviews)) {
+    if (!jsonEq(beforeReviews[gate], afterReviews[gate])) {
+      reviewsDelta[gate] = afterReviews[gate];
+    }
+  }
+  if (Object.keys(reviewsDelta).length > 0) {
+    update.reviews = reviewsDelta;
+  }
   return update;
 }
 function toPhaseDeriveInput(task) {
@@ -49793,7 +49029,8 @@ function toPhaseDeriveInput(task) {
     greenCompletedAt: typeof task.greenCompletedAt === "string" ? task.greenCompletedAt : void 0,
     testCommitSha: typeof task.testCommitSha === "string" ? task.testCommitSha : void 0,
     commitSha: typeof task.commitSha === "string" ? task.commitSha : void 0,
-    reviews: task.reviews ?? {}
+    reviews: task.reviews ?? {},
+    pipelineSnapshot: Array.isArray(task.pipelineSnapshot) ? task.pipelineSnapshot.filter((v) => typeof v === "string") : void 0
   };
 }
 var PipelineService;
@@ -49804,16 +49041,49 @@ var init_pipeline_service = __esm({
     init_phase_derivation();
     init_pipeline_telemetry();
     init_event_store();
+    init_fix_task_updater();
     PipelineService = class {
-      constructor(planningService, configService, repoPath = process.cwd()) {
+      constructor(planningService, configService, repoPath = process.cwd(), fixTaskUpdater = applyFixTaskUpdate) {
         this.planningService = planningService;
         this.configService = configService;
         this.repoPath = repoPath;
+        this.applyFixTaskUpdate = fixTaskUpdater;
       }
+      applyFixTaskUpdate;
       async advance(options) {
         const loaded = await this.loadTask(options);
         const pipeline = await this.loadPipeline();
         const phaseBefore = derivePhase(loaded.input, { combineRedGreenCommits: false, reviewPipeline: pipeline });
+        if (phaseBefore === "complete" && options.agent === "green" && options.sha && options.sha !== loaded.input.commitSha) {
+          const originalSha = loaded.input.commitSha;
+          const rejectedReminder = this.buildCompletedOverwriteReminder(options.sha, originalSha);
+          const taskRef2 = this.buildTaskRef(options);
+          if (taskRef2) {
+            try {
+              appendEvent(this.repoPath, {
+                kind: "pipeline.advance.rejected",
+                ts: (/* @__PURE__ */ new Date()).toISOString(),
+                taskRef: taskRef2,
+                reason: "task-already-complete",
+                rejectedSha: options.sha,
+                originalSha
+              });
+            } catch {
+            }
+          }
+          return {
+            phase: "complete",
+            // 'complete' is the truthful phase (the task IS complete); the
+            // rejection signal is `wasNoop: true` plus the systemReminder
+            // text. Consumers branching on `action` alone would mistake this
+            // for a successful completion — the CLI relies on the reminder.
+            action: "complete",
+            corrections: [],
+            task: loaded.input,
+            wasNoop: true,
+            systemReminder: rejectedReminder
+          };
+        }
         const event = {
           agent: options.agent,
           sha: options.sha,
@@ -49821,7 +49091,7 @@ var init_pipeline_service = __esm({
         };
         const result = advancePipeline(loaded.input, pipeline, event);
         const systemReminder = formatSystemReminder(result, this.buildContext(options));
-        await this.persistTask(loaded, result.task, result.phase);
+        await this.persistTask(loaded, loaded.input, result.task, result.phase);
         const taskRef = this.buildTaskRef(options);
         if (options.decision) {
           const ts = (/* @__PURE__ */ new Date()).toISOString();
@@ -49885,7 +49155,11 @@ var init_pipeline_service = __esm({
           kind: "fix",
           input: toPhaseDeriveInput(rawTask),
           rawTask,
-          fixesProgress
+          fixesProgress,
+          fixId,
+          // Resolve to the entry's actual id — the caller may have passed a
+          // description here (the loader supports either).
+          taskId: typeof rawTask.id === "string" ? rawTask.id : taskId
         };
       }
       async loadPrdTask(prdId, featureId, taskId) {
@@ -49906,15 +49180,15 @@ var init_pipeline_service = __esm({
           taskId: resolvedTaskId
         };
       }
-      async persistTask(loaded, updatedTask, phase) {
-        const update = toTaskUpdate(updatedTask);
-        if (phase === "complete") {
-          update.status = "completed";
-          update.completedAt = (/* @__PURE__ */ new Date()).toISOString();
-        } else if (phase !== "not_started") {
-          update.status = "in_progress";
-        }
+      async persistTask(loaded, before, after, phase) {
         if (loaded.kind === "prd") {
+          const update2 = toTaskUpdate(after);
+          if (phase === "complete") {
+            update2.status = "completed";
+            update2.completedAt = (/* @__PURE__ */ new Date()).toISOString();
+          } else if (phase !== "not_started") {
+            update2.status = "in_progress";
+          }
           await this.planningService.updatePlan({
             planId: loaded.planId,
             updates: {
@@ -49922,15 +49196,39 @@ var init_pipeline_service = __esm({
                 featureNumber: loaded.featureNumber,
                 updateTask: {
                   id: loaded.taskId,
-                  ...update
+                  ...update2
                 }
               }
             }
           });
-        } else {
-          Object.assign(loaded.rawTask, update);
-          await this.planningService.saveFixProgress(this.repoPath, loaded.fixesProgress);
+          return;
         }
+        const update = diffTaskUpdate(before, after);
+        const beforeStatus = typeof loaded.rawTask.status === "string" ? loaded.rawTask.status : void 0;
+        let nextStatus;
+        if (phase === "complete") nextStatus = "completed";
+        else if (phase !== "not_started") nextStatus = "in_progress";
+        if (nextStatus !== void 0 && nextStatus !== beforeStatus) {
+          update.status = nextStatus;
+          if (nextStatus === "completed") {
+            update.completedAt = (/* @__PURE__ */ new Date()).toISOString();
+          }
+        }
+        if (Object.keys(update).length === 0) {
+          return;
+        }
+        await this.applyFixTaskUpdate(this.repoPath, loaded.fixId, loaded.taskId, update);
+        Object.assign(loaded.rawTask, update);
+      }
+      buildCompletedOverwriteReminder(rejectedSha, originalSha) {
+        return [
+          "<system-reminder>",
+          `\u26A0\uFE0F  Task is already complete \u2014 ignoring 2nd green commit ${rejectedSha}.`,
+          `Original commit on this task: ${originalSha}.`,
+          `If this 2nd commit is a real follow-up, file a new task or reopen this one`,
+          `(the data model holds one cycle per task; appending a 2nd cycle is not supported).`,
+          "</system-reminder>"
+        ].join("\n");
       }
       emitLifecycleTelemetry(taskRef, options, phaseBefore, result) {
         const ts = (/* @__PURE__ */ new Date()).toISOString();
@@ -50116,38 +49414,87 @@ var init_review_watcher = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/reminder-inbox.ts
-import * as fs30 from "fs";
-import * as path32 from "path";
-import { randomBytes as randomBytes2 } from "crypto";
-var ReminderInbox;
+import * as fs32 from "fs";
+import * as path33 from "path";
+import { randomBytes as randomBytes3 } from "crypto";
+var DEFAULT_MAX_FILES, ReminderInbox;
 var init_reminder_inbox = __esm({
   "packages/tiny-brain-core/src/services/planning/reminder-inbox.ts"() {
     "use strict";
-    ReminderInbox = class {
-      constructor(inboxDir, telemetry) {
+    DEFAULT_MAX_FILES = 100;
+    ReminderInbox = class _ReminderInbox {
+      constructor(inboxDir, telemetry, options) {
         this.inboxDir = inboxDir;
         this.telemetry = telemetry ?? {};
+        this.maxFiles = _ReminderInbox.validateMaxFiles(options?.maxFiles);
       }
       telemetry;
+      maxFiles;
+      static validateMaxFiles(raw) {
+        if (raw === void 0) return DEFAULT_MAX_FILES;
+        if (!Number.isInteger(raw) || raw < 1) {
+          throw new RangeError(
+            `ReminderInbox: maxFiles must be a positive integer, got ${raw}`
+          );
+        }
+        return raw;
+      }
       async write(reminder) {
-        await fs30.promises.mkdir(this.inboxDir, { recursive: true });
+        await fs32.promises.mkdir(this.inboxDir, { recursive: true });
+        await this.evictOldestIfAtOrOverCap();
         const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-        const random = randomBytes2(4).toString("hex");
+        const random = randomBytes3(4).toString("hex");
         const basename2 = `${timestamp2}-${random}`;
-        const tmpPath = path32.join(this.inboxDir, `${basename2}.tmp`);
-        const finalPath = path32.join(this.inboxDir, `${basename2}.reminder`);
-        await fs30.promises.writeFile(tmpPath, reminder, "utf-8");
-        await fs30.promises.rename(tmpPath, finalPath);
+        const tmpPath = path33.join(this.inboxDir, `${basename2}.tmp`);
+        const finalPath = path33.join(this.inboxDir, `${basename2}.reminder`);
+        await fs32.promises.writeFile(tmpPath, reminder, "utf-8");
+        await fs32.promises.rename(tmpPath, finalPath);
         try {
           await Promise.resolve(this.telemetry.onReminderWritten?.({ reminderId: basename2 }));
         } catch {
         }
         return basename2;
       }
+      async evictOldestIfAtOrOverCap() {
+        let entries;
+        try {
+          entries = await fs32.promises.readdir(this.inboxDir);
+        } catch (err) {
+          if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
+            return;
+          }
+          throw err;
+        }
+        const reminderFiles = entries.filter((f) => f.endsWith(".reminder"));
+        if (reminderFiles.length < this.maxFiles) return;
+        const stats = await Promise.all(
+          reminderFiles.map(async (name) => {
+            try {
+              const stat3 = await fs32.promises.stat(path33.join(this.inboxDir, name));
+              return { name, mtimeMs: stat3.mtimeMs };
+            } catch {
+              return null;
+            }
+          })
+        );
+        const live = stats.filter((s) => s !== null);
+        live.sort((a, b) => {
+          if (a.mtimeMs !== b.mtimeMs) return a.mtimeMs - b.mtimeMs;
+          return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+        });
+        const evictCount = live.length - this.maxFiles + 1;
+        const victims = live.slice(0, evictCount);
+        for (const victim of victims) {
+          try {
+            await fs32.promises.unlink(path33.join(this.inboxDir, victim.name));
+          } catch {
+          }
+        }
+      }
       async drain() {
         let entries;
         try {
-          entries = await fs30.promises.readdir(this.inboxDir);
+          entries = await fs32.promises.readdir(this.inboxDir);
         } catch (err) {
           if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
             return [];
@@ -50157,10 +49504,10 @@ var init_reminder_inbox = __esm({
         const reminderFiles = entries.filter((f) => f.endsWith(".reminder")).sort();
         const results = [];
         for (const file of reminderFiles) {
-          const filePath = path32.join(this.inboxDir, file);
+          const filePath = path33.join(this.inboxDir, file);
           try {
-            const content = await fs30.promises.readFile(filePath, "utf-8");
-            await fs30.promises.unlink(filePath);
+            const content = await fs32.promises.readFile(filePath, "utf-8");
+            await fs32.promises.unlink(filePath);
             results.push(content);
             try {
               const reminderId = file.slice(0, -".reminder".length);
@@ -50180,10 +49527,290 @@ var init_reminder_inbox = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/services/thinking/types.ts
-var init_types12 = __esm({
-  "packages/tiny-brain-core/src/services/thinking/types.ts"() {
+// packages/tiny-brain-core/src/services/prune/prune.service.ts
+import { promises as fs33 } from "fs";
+import path34 from "path";
+async function pruneRepo(repoPath, opts) {
+  const dryRun = opts.dryRun === true;
+  const idFilter = opts.ids && opts.ids.length > 0 ? new Set(opts.ids) : null;
+  const fixesProgress = await loadFixesProgress(repoPath);
+  const fixes = fixesProgress.fixes ?? [];
+  const prunable = [];
+  const skipped = [];
+  const surviving = [];
+  for (const fix of fixes) {
+    if (idFilter && !idFilter.has(fix.id)) {
+      surviving.push(fix);
+      continue;
+    }
+    const eligibility = checkEligibility(fix, opts.afterDaysSinceArchive);
+    if (eligibility.kind === "skipped") {
+      skipped.push({ kind: "fix", id: fix.id, reason: eligibility.reason });
+      surviving.push(fix);
+      continue;
+    }
+    prunable.push(fix);
+  }
+  const survivingShas = collectShasAcross(surviving);
+  const pruned = [];
+  const errors = [];
+  for (const fix of prunable) {
+    try {
+      const item = await pruneOneFix(repoPath, fix, survivingShas, dryRun);
+      pruned.push(item);
+      if (!dryRun) {
+        await appendAuditLog(repoPath, {
+          ts: (/* @__PURE__ */ new Date()).toISOString(),
+          trigger: opts.trigger,
+          kind: "fix",
+          id: fix.id,
+          shas: item.shas,
+          reviewFilesDeleted: item.reviewFilesDeleted,
+          docDeleted: item.docDeleted,
+          docPath: path34.join(repoPath, ".tiny-brain", "fixes", `${fix.id}.md`)
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push({ kind: "fix", id: fix.id, error: message });
+    }
+  }
+  if (!dryRun && pruned.length > 0) {
+    const prunedIds = new Set(pruned.map((p) => p.id));
+    const remaining = fixes.filter((f) => !prunedIds.has(f.id));
+    await writeProgressJson(repoPath, { kind: "fixes" }, {
+      ...fixesProgress,
+      fixes: remaining,
+      lastSynced: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
+  return {
+    pruned,
+    skipped,
+    errors,
+    dryRun,
+    trigger: opts.trigger
+  };
+}
+function checkEligibility(fix, afterDaysSinceArchive) {
+  if (fix.archived !== true) {
+    return { kind: "skipped", reason: "not archived" };
+  }
+  const tasks = fix.tasks ?? [];
+  if (tasks.some((t) => !TERMINAL_TASK_STATUSES.has(t.status ?? ""))) {
+    return { kind: "skipped", reason: "has non-terminal tasks" };
+  }
+  if (typeof afterDaysSinceArchive === "number") {
+    if (!fix.resolved) {
+      return { kind: "skipped", reason: "missing `resolved` timestamp; cannot apply threshold" };
+    }
+    const resolvedMs = Date.parse(fix.resolved);
+    if (Number.isNaN(resolvedMs)) {
+      return { kind: "skipped", reason: `unparseable \`resolved\` value: ${fix.resolved}` };
+    }
+    const ageDays = (Date.now() - resolvedMs) / (24 * 60 * 60 * 1e3);
+    if (ageDays < afterDaysSinceArchive) {
+      return {
+        kind: "skipped",
+        reason: `resolved too recent (age ${ageDays.toFixed(1)}d < threshold ${afterDaysSinceArchive}d)`
+      };
+    }
+  }
+  return { kind: "eligible" };
+}
+function isRealSha(value) {
+  return typeof value === "string" && value.length > 0 && value !== SKIP_MARKER;
+}
+function collectShas(fix) {
+  const shas = /* @__PURE__ */ new Set();
+  for (const task of fix.tasks ?? []) {
+    if (isRealSha(task.commitSha)) shas.add(task.commitSha);
+    if (isRealSha(task.testCommitSha)) shas.add(task.testCommitSha);
+    if (isRealSha(task.refactorCommitSha)) shas.add(task.refactorCommitSha);
+    for (const record2 of Object.values(task.reviews ?? {})) {
+      if (isRealSha(record2.reviewSha)) shas.add(record2.reviewSha);
+      if (isRealSha(record2.refactorCommitSha)) shas.add(record2.refactorCommitSha);
+    }
+  }
+  return shas;
+}
+function collectShasAcross(fixes) {
+  const shas = /* @__PURE__ */ new Set();
+  for (const fix of fixes) {
+    for (const sha of collectShas(fix)) {
+      shas.add(sha);
+    }
+  }
+  return shas;
+}
+function collectGateShaPairs(fix) {
+  const seen = /* @__PURE__ */ new Set();
+  const pairs2 = [];
+  for (const task of fix.tasks ?? []) {
+    for (const [gate, record2] of Object.entries(task.reviews ?? {})) {
+      const candidates = [record2.reviewSha, record2.refactorCommitSha];
+      for (const candidate of candidates) {
+        if (!isRealSha(candidate)) continue;
+        const key = `${gate}|${candidate}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        pairs2.push({ gate, sha: candidate });
+      }
+    }
+  }
+  return pairs2;
+}
+async function pruneOneFix(repoPath, fix, survivingShas, dryRun) {
+  const allGatePairs = collectGateShaPairs(fix);
+  const deletablePairs = allGatePairs.filter((p) => !survivingShas.has(p.sha));
+  const deletedShas = /* @__PURE__ */ new Set();
+  let reviewFilesDeleted = 0;
+  for (const { gate, sha } of deletablePairs) {
+    const filePath = path34.join(repoPath, ".tiny-brain", "reviews", gate, `${sha}.json`);
+    if (dryRun) {
+      try {
+        await fs33.access(filePath);
+        reviewFilesDeleted += 1;
+        deletedShas.add(sha);
+      } catch {
+      }
+    } else {
+      try {
+        await fs33.unlink(filePath);
+        reviewFilesDeleted += 1;
+        deletedShas.add(sha);
+      } catch (err) {
+        if (!isENOENT(err)) throw err;
+      }
+    }
+  }
+  let docDeleted = false;
+  const docPath = path34.join(repoPath, ".tiny-brain", "fixes", `${fix.id}.md`);
+  if (dryRun) {
+    try {
+      await fs33.access(docPath);
+      docDeleted = true;
+    } catch {
+      docDeleted = false;
+    }
+  } else {
+    try {
+      await fs33.unlink(docPath);
+      docDeleted = true;
+    } catch (err) {
+      if (!isENOENT(err)) throw err;
+      docDeleted = false;
+    }
+  }
+  return {
+    kind: "fix",
+    id: fix.id,
+    shas: [...deletedShas],
+    reviewFilesDeleted,
+    docDeleted,
+    progressEntryDeleted: !dryRun
+  };
+}
+async function loadFixesProgress(repoPath) {
+  const progressPath = path34.join(repoPath, ".tiny-brain", "fixes", "progress.json");
+  try {
+    const raw = await fs33.readFile(progressPath, "utf-8");
+    return JSON.parse(raw);
+  } catch (err) {
+    if (isENOENT(err)) return { fixes: [] };
+    throw err;
+  }
+}
+async function appendAuditLog(repoPath, entry) {
+  const logPath = path34.join(repoPath, ".tiny-brain", "prune.log");
+  await fs33.mkdir(path34.dirname(logPath), { recursive: true });
+  await fs33.appendFile(logPath, `${JSON.stringify(entry)}
+`, "utf-8");
+}
+function isENOENT(err) {
+  return !!err && typeof err === "object" && "code" in err && err.code === "ENOENT";
+}
+var TERMINAL_TASK_STATUSES, SKIP_MARKER;
+var init_prune_service = __esm({
+  "packages/tiny-brain-core/src/services/prune/prune.service.ts"() {
     "use strict";
+    init_atomic_progress_writer();
+    TERMINAL_TASK_STATUSES = /* @__PURE__ */ new Set(["completed", "superseded"]);
+    SKIP_MARKER = "skipped";
+  }
+});
+
+// packages/tiny-brain-core/src/services/prune/prune-log.ts
+import { promises as fs34 } from "node:fs";
+import * as path35 from "node:path";
+function isPruneAuditEntry(value) {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value;
+  return typeof v.ts === "string" && ISO_UTC_RE.test(v.ts) && typeof v.trigger === "string" && (v.kind === "prd" || v.kind === "fix") && typeof v.id === "string" && Array.isArray(v.shas) && typeof v.reviewFilesDeleted === "number" && typeof v.docDeleted === "boolean";
+}
+async function readPruneLog(repoPath, options = {}) {
+  const logPath = path35.join(repoPath, ".tiny-brain", "prune.log");
+  let content;
+  try {
+    content = await readTail(logPath, MAX_BYTES_TO_READ);
+  } catch (err) {
+    if (err && typeof err === "object" && err.code === "ENOENT") {
+      return [];
+    }
+    throw err;
+  }
+  const limit = Math.max(1, Math.min(options.limit ?? DEFAULT_LIMIT, DEFAULT_LIMIT));
+  const normalised = content.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
+  const lines = normalised.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  if (content.length === MAX_BYTES_TO_READ && lines.length > 0) {
+    lines.shift();
+  }
+  const entries = [];
+  let skipped = 0;
+  for (const line of lines) {
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      skipped++;
+      continue;
+    }
+    if (!isPruneAuditEntry(parsed)) {
+      skipped++;
+      continue;
+    }
+    entries.push(parsed);
+  }
+  if (skipped > 0) {
+    console.error(`[prune-log] skipped ${skipped} malformed ${skipped === 1 ? "line" : "lines"} in ${logPath}`);
+  }
+  entries.sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0);
+  return entries.slice(0, limit);
+}
+async function readTail(filePath, cap) {
+  const handle = await fs34.open(filePath, "r");
+  try {
+    const stat3 = await handle.stat();
+    const size = stat3.size;
+    if (size <= cap) {
+      const buf2 = Buffer.alloc(size);
+      await handle.read(buf2, 0, size, 0);
+      return buf2.toString("utf-8");
+    }
+    const buf = Buffer.alloc(cap);
+    await handle.read(buf, 0, cap, size - cap);
+    return buf.toString("utf-8");
+  } finally {
+    await handle.close();
+  }
+}
+var DEFAULT_LIMIT, MAX_BYTES_TO_READ, ISO_UTC_RE;
+var init_prune_log = __esm({
+  "packages/tiny-brain-core/src/services/prune/prune-log.ts"() {
+    "use strict";
+    DEFAULT_LIMIT = 500;
+    MAX_BYTES_TO_READ = 4 * 1024 * 1024;
+    ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
   }
 });
 
@@ -50195,8 +49822,8 @@ var init_repo_config = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
-import * as fs31 from "fs/promises";
-import * as path33 from "path";
+import * as fs35 from "fs/promises";
+import * as path36 from "path";
 var SkillLoader;
 var init_skill_loader = __esm({
   "packages/tiny-brain-core/src/services/api/skill-loader.ts"() {
@@ -50213,9 +49840,9 @@ var init_skill_loader = __esm({
         if (cached2) {
           return cached2;
         }
-        const skillPath = path33.join(this.skillsPath, skillName);
-        const skillFile = path33.join(skillPath, "SKILL.md");
-        const content = await fs31.readFile(skillFile, "utf-8");
+        const skillPath = path36.join(this.skillsPath, skillName);
+        const skillFile = path36.join(skillPath, "SKILL.md");
+        const content = await fs35.readFile(skillFile, "utf-8");
         const { metadata, body } = this.parseFrontmatter(content);
         const templates = await this.loadTemplates(skillPath);
         const skill = {
@@ -50255,14 +49882,14 @@ var init_skill_loader = __esm({
         return { metadata, body };
       }
       async loadTemplates(skillPath) {
-        const templatesPath = path33.join(skillPath, "templates");
+        const templatesPath = path36.join(skillPath, "templates");
         const templates = {};
         try {
-          const entries = await fs31.readdir(templatesPath, { withFileTypes: true });
+          const entries = await fs35.readdir(templatesPath, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isFile() && entry.name.endsWith(".md")) {
-              const templatePath = path33.join(templatesPath, entry.name);
-              const content = await fs31.readFile(templatePath, "utf-8");
+              const templatePath = path36.join(templatesPath, entry.name);
+              const content = await fs35.readFile(templatePath, "utf-8");
               templates[entry.name] = content;
             }
           }
@@ -50944,7 +50571,7 @@ var init_persona2 = __esm({
 });
 
 // packages/tiny-brain-core/src/modules/persona/types.ts
-var init_types13 = __esm({
+var init_types11 = __esm({
   "packages/tiny-brain-core/src/modules/persona/types.ts"() {
     "use strict";
   }
@@ -51015,14 +50642,14 @@ var init_persona3 = __esm({
     "use strict";
     init_result();
     init_persona2();
-    init_types13();
+    init_types11();
     init_persona2();
     init_persona_markdown();
   }
 });
 
 // packages/tiny-brain-core/src/modules/memory/types.ts
-var init_types14 = __esm({
+var init_types12 = __esm({
   "packages/tiny-brain-core/src/modules/memory/types.ts"() {
     "use strict";
   }
@@ -51101,7 +50728,7 @@ var init_memory = __esm({
     init_result();
     init_memory_classifier();
     init_fact_extractor();
-    init_types14();
+    init_types12();
     init_memory_classifier();
     init_fact_extractor();
   }
@@ -51330,7 +50957,7 @@ function deepClone(obj) {
 function isEmpty(obj) {
   return Object.keys(obj).length === 0;
 }
-function deepMerge(target, ...sources) {
+function deepMerge2(target, ...sources) {
   if (!sources.length) return target;
   const source = sources.shift();
   if (!source) return target;
@@ -51338,12 +50965,12 @@ function deepMerge(target, ...sources) {
     const sourceValue = source[key];
     const targetValue = target[key];
     if (isObject4(sourceValue) && isObject4(targetValue)) {
-      target[key] = deepMerge(targetValue, sourceValue);
+      target[key] = deepMerge2(targetValue, sourceValue);
     } else {
       target[key] = sourceValue;
     }
   }
-  return deepMerge(target, ...sources);
+  return deepMerge2(target, ...sources);
 }
 function isObject4(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -51456,16 +51083,16 @@ var init_parallel_executor = __esm({
 
 // packages/tiny-brain-core/src/utils/git.ts
 import { exec as exec4, execSync as execSync2 } from "child_process";
-import path34 from "path";
+import path37 from "path";
 import { promisify as promisify4 } from "util";
 function buildWorktreeInfo(commonDirOut, toplevelOut, branchOut) {
   const worktreePath = String(toplevelOut).trim();
   const branch = String(branchOut).trim();
   const commonDirTrimmed = String(commonDirOut).trim();
-  const resolvedCommonDir = path34.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path34.resolve(worktreePath, commonDirTrimmed);
-  const mainRepoPath = path34.dirname(resolvedCommonDir);
+  const resolvedCommonDir = path37.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path37.resolve(worktreePath, commonDirTrimmed);
+  const mainRepoPath = path37.dirname(resolvedCommonDir);
   const isWorktree = mainRepoPath !== worktreePath;
-  const worktreeName = isWorktree ? path34.basename(worktreePath) : "";
+  const worktreeName = isWorktree ? path37.basename(worktreePath) : "";
   return { isWorktree, worktreePath, mainRepoPath, branch, worktreeName };
 }
 async function detectRepositoryRoot() {
@@ -51568,7 +51195,7 @@ var init_constants = __esm({
 });
 
 // packages/tiny-brain-core/src/handlers/types.ts
-var init_types15 = __esm({
+var init_types13 = __esm({
   "packages/tiny-brain-core/src/handlers/types.ts"() {
     "use strict";
   }
@@ -52103,8 +51730,8 @@ var init_quality_types = __esm({
 });
 
 // packages/tiny-brain-core/src/handlers/quality.handlers.ts
-import { promises as fs32 } from "fs";
-import path35 from "path";
+import { promises as fs36 } from "fs";
+import path38 from "path";
 function requireRepoRoot2(ctx) {
   if (!ctx.repositoryRoot) {
     return failure4(
@@ -52206,11 +51833,11 @@ async function qualityPlanDetails(input, ctx) {
   if (!input.planId) return failure4("planId is required for plan-details operation");
   const root = requireRepoRoot2(ctx);
   if (typeof root !== "string") return root;
-  const plansDir = path35.join(root, ".tiny-brain", "quality", "plans");
-  const filePath = path35.join(plansDir, `${input.planId}.md`);
+  const plansDir = path38.join(root, ".tiny-brain", "quality", "plans");
+  const filePath = path38.join(plansDir, `${input.planId}.md`);
   let content;
   try {
-    content = await fs32.readFile(filePath, "utf-8");
+    content = await fs36.readFile(filePath, "utf-8");
   } catch {
     return failure4(`Improvement plan not found: ${input.planId}`);
   }
@@ -52267,9 +51894,9 @@ async function qualityRunAnalyzers(input, ctx) {
   if (typeof root !== "string") return root;
   try {
     const runId = input.runId ?? generateRunId();
-    const runDir = path35.join(root, ".tiny-brain", "quality", "runs", runIdToPath(runId));
-    const outputPath = path35.join(runDir, "analysis.json");
-    const outputDir = path35.join(runDir, "analysers");
+    const runDir = path38.join(root, ".tiny-brain", "quality", "runs", runIdToPath(runId));
+    const outputPath = path38.join(runDir, "analysis.json");
+    const outputDir = path38.join(runDir, "analysers");
     const cached2 = await readCachedAnalyzers(root);
     const analyzers = cached2 ?? await new AnalyzerDetectionService(root).detectAnalyzers();
     const results = analyzers.length === 0 ? {
@@ -52278,8 +51905,8 @@ async function qualityRunAnalyzers(input, ctx) {
       totalDurationMs: 0,
       summary: { total: 0, succeeded: 0, failed: 0, timedOut: 0, skipped: 0 }
     } : await new AnalyzerExecutorService(root).executeAnalyzers(analyzers, outputDir);
-    await fs32.mkdir(runDir, { recursive: true });
-    await fs32.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
+    await fs36.mkdir(runDir, { recursive: true });
+    await fs36.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
     return {
       ok: true,
       data: {
@@ -53175,7 +52802,7 @@ var init_as_import_library_handler = __esm({
 var init_handlers = __esm({
   "packages/tiny-brain-core/src/handlers/index.ts"() {
     "use strict";
-    init_types15();
+    init_types13();
     init_personas_types();
     init_personas_handlers();
     init_rules_types();
@@ -53198,7 +52825,7 @@ var init_handlers = __esm({
 
 // packages/tiny-brain-core/src/agents/types.ts
 var AgentFormat;
-var init_types16 = __esm({
+var init_types14 = __esm({
   "packages/tiny-brain-core/src/agents/types.ts"() {
     "use strict";
     AgentFormat = /* @__PURE__ */ ((AgentFormat2) => {
@@ -53217,7 +52844,7 @@ var ClaudeCodeFormatter;
 var init_claude_code_formatter = __esm({
   "packages/tiny-brain-core/src/agents/formatters/claude-code-formatter.ts"() {
     "use strict";
-    init_types16();
+    init_types14();
     ClaudeCodeFormatter = class {
       format = "claude-code" /* CLAUDE_CODE */;
       getRepoContextFilePath() {
@@ -53424,7 +53051,7 @@ var FormatterFactory;
 var init_formatter_factory = __esm({
   "packages/tiny-brain-core/src/agents/formatters/formatter-factory.ts"() {
     "use strict";
-    init_types16();
+    init_types14();
     init_claude_code_formatter();
     init_platform_config_adapter();
     FormatterFactory = class {
@@ -53482,8 +53109,8 @@ var init_formatter_factory = __esm({
 });
 
 // packages/tiny-brain-core/src/services/agent/agent-installation-service.ts
-import * as fs33 from "fs/promises";
-import * as path36 from "path";
+import * as fs37 from "fs/promises";
+import * as path39 from "path";
 import * as crypto3 from "crypto";
 var AgentInstallationService;
 var init_agent_installation_service = __esm({
@@ -53552,15 +53179,15 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       async installAgent(agentInfo) {
         try {
           const repoRoot = getRepoRoot();
-          const agentsDir = path36.join(repoRoot, ".claude", "agents");
-          await fs33.mkdir(agentsDir, { recursive: true });
+          const agentsDir = path39.join(repoRoot, ".claude", "agents");
+          await fs37.mkdir(agentsDir, { recursive: true });
           let content = agentInfo.content;
           if (!content) {
             const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
             content = downloaded.content;
           }
-          const filePath = path36.join(agentsDir, `${agentInfo.name}.md`);
-          await fs33.writeFile(filePath, content, "utf-8");
+          const filePath = path39.join(agentsDir, `${agentInfo.name}.md`);
+          await fs37.writeFile(filePath, content, "utf-8");
           this.context.logger.info(`Successfully installed agent: ${agentInfo.name}`);
           return { success: true };
         } catch (error2) {
@@ -53585,13 +53212,13 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       async updateAgent(agentInfo) {
         try {
           const repoRoot = getRepoRoot();
-          const filePath = path36.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
-          const existingContent = await fs33.readFile(filePath, "utf-8");
+          const filePath = path39.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
+          const existingContent = await fs37.readFile(filePath, "utf-8");
           const hasCustomizations = this.detectCustomizations(existingContent);
           let backupCreated = false;
           if (hasCustomizations) {
             const backupPath = `${filePath}.backup.${Date.now()}`;
-            await fs33.writeFile(backupPath, existingContent, "utf-8");
+            await fs37.writeFile(backupPath, existingContent, "utf-8");
             backupCreated = true;
             this.context.logger.info(`Created backup of customized agent: ${backupPath}`);
           }
@@ -53601,7 +53228,7 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
             newContent = downloaded.content;
           }
           const updatedContent = this.updateAgentMetadata(newContent, agentInfo.version);
-          await fs33.writeFile(filePath, updatedContent, "utf-8");
+          await fs37.writeFile(filePath, updatedContent, "utf-8");
           this.context.logger.info(`Successfully updated agent: ${agentInfo.name} to v${agentInfo.version}`);
           return {
             updated: true,
@@ -53619,9 +53246,9 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       async removeAgent(agentName) {
         try {
           const repoRoot = getRepoRoot();
-          const filePath = path36.join(repoRoot, ".claude", "agents", `${agentName}.md`);
-          await fs33.access(filePath);
-          await fs33.unlink(filePath);
+          const filePath = path39.join(repoRoot, ".claude", "agents", `${agentName}.md`);
+          await fs37.access(filePath);
+          await fs37.unlink(filePath);
           this.context.logger.info(`Successfully removed agent: ${agentName}`);
         } catch (error2) {
           if (error2.code === "ENOENT") {
@@ -53641,8 +53268,8 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
           failed: []
         };
         const repoRoot = getRepoRoot();
-        const agentsDir = path36.join(repoRoot, ".claude", "agents");
-        await fs33.mkdir(agentsDir, { recursive: true });
+        const agentsDir = path39.join(repoRoot, ".claude", "agents");
+        await fs37.mkdir(agentsDir, { recursive: true });
         for (const agent of agentsToInstall) {
           try {
             const result = await this.installAgent(agent);
@@ -53692,14 +53319,14 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       async getInstalledAgents() {
         try {
           const repoRoot = getRepoRoot();
-          const agentsDir = path36.join(repoRoot, ".claude", "agents");
-          const files = await fs33.readdir(agentsDir);
+          const agentsDir = path39.join(repoRoot, ".claude", "agents");
+          const files = await fs37.readdir(agentsDir);
           const agentFiles = files.filter((file) => file.endsWith(".md"));
           const installedAgents = [];
           for (const file of agentFiles) {
             try {
-              const filePath = path36.join(agentsDir, file);
-              const content = await fs33.readFile(filePath, "utf-8");
+              const filePath = path39.join(agentsDir, file);
+              const content = await fs37.readFile(filePath, "utf-8");
               const agentName = file.replace(".md", "");
               const metadata = this.extractAgentMetadata(content);
               installedAgents.push({
@@ -55762,20 +55389,20 @@ var init_agent_service = __esm({
        * Install formatted agents to the filesystem
        */
       async installAgents(formattedAgents, formatter) {
-        const fs34 = await import("fs/promises");
-        const path38 = await import("path");
+        const fs38 = await import("fs/promises");
+        const path41 = await import("path");
         const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
         const repoRoot = getRepoRoot();
-        const agentsPath = path38.join(repoRoot, activeFormatter.getAgentInstallPath());
+        const agentsPath = path41.join(repoRoot, activeFormatter.getAgentInstallPath());
         this.context.logger.debug("[AgentService] Installing agents:", {
           repoRoot,
           agentsPath,
           agentCount: formattedAgents.length
         });
-        await fs34.mkdir(agentsPath, { recursive: true });
+        await fs38.mkdir(agentsPath, { recursive: true });
         for (const agent of formattedAgents) {
-          const agentPath = path38.join(agentsPath, agent.filename);
-          await fs34.writeFile(agentPath, agent.content, "utf-8");
+          const agentPath = path41.join(agentsPath, agent.filename);
+          await fs38.writeFile(agentPath, agent.content, "utf-8");
           this.context.logger.info(`Agent '${agent.filename}' installed to ${agentPath}`);
         }
         this.context.logger.info(`Installed ${formattedAgents.length} agents to ${agentsPath}`);
@@ -55784,28 +55411,28 @@ var init_agent_service = __esm({
        * Install agents with version checking and overwrite strategy
        */
       async installAgentsWithVersionCheck(agents, options = {}) {
-        const fs34 = await import("fs/promises");
-        const path38 = await import("path");
+        const fs38 = await import("fs/promises");
+        const path41 = await import("path");
         const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
         const formattedAgents = this.formatAgents(agents, formatter);
         const repoRoot = getRepoRoot();
-        const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
+        const agentsPath = path41.join(repoRoot, formatter.getAgentInstallPath());
         const result = {
           installed: [],
           skipped: [],
           updated: [],
           errors: []
         };
-        await fs34.mkdir(agentsPath, { recursive: true });
+        await fs38.mkdir(agentsPath, { recursive: true });
         const installedAgents = await this.getInstalledAgents();
         const installedMap = new Map(installedAgents.map((a) => [a.name, a]));
         for (const agent of formattedAgents) {
-          const agentPath = path38.join(agentsPath, agent.filename);
+          const agentPath = path41.join(agentsPath, agent.filename);
           const agentName = agent.filename.replace(".md", "");
           try {
-            const fileExists = await fs34.access(agentPath).then(() => true).catch(() => false);
+            const fileExists = await fs38.access(agentPath).then(() => true).catch(() => false);
             if (!fileExists) {
-              await fs34.writeFile(agentPath, agent.content, "utf-8");
+              await fs38.writeFile(agentPath, agent.content, "utf-8");
               result.installed.push(agentName);
               this.context.logger.info(`Installed new agent: ${agentName}`);
             } else {
@@ -55816,9 +55443,9 @@ var init_agent_service = __esm({
               } else if (strategy === "always") {
                 if (options.backupExisting) {
                   const backupPath = `${agentPath}.backup.${Date.now()}`;
-                  await fs34.copyFile(agentPath, backupPath);
+                  await fs38.copyFile(agentPath, backupPath);
                 }
-                await fs34.writeFile(agentPath, agent.content, "utf-8");
+                await fs38.writeFile(agentPath, agent.content, "utf-8");
                 result.updated.push(agentName);
                 this.context.logger.info(`Updated agent (forced): ${agentName}`);
               } else {
@@ -55828,9 +55455,9 @@ var init_agent_service = __esm({
                 if (semver.gt(newVersion, installedVersion)) {
                   if (options.backupExisting) {
                     const backupPath = `${agentPath}.backup.${Date.now()}`;
-                    await fs34.copyFile(agentPath, backupPath);
+                    await fs38.copyFile(agentPath, backupPath);
                   }
-                  await fs34.writeFile(agentPath, agent.content, "utf-8");
+                  await fs38.writeFile(agentPath, agent.content, "utf-8");
                   result.updated.push(agentName);
                   this.context.logger.info(`Updated agent: ${agentName} (${installedVersion} -> ${newVersion})`);
                 } else {
@@ -55852,21 +55479,21 @@ var init_agent_service = __esm({
        */
       async removeAgents(agentNames) {
         const result = { removed: [], errors: [] };
-        const fs34 = await import("fs/promises");
-        const path38 = await import("path");
+        const fs38 = await import("fs/promises");
+        const path41 = await import("path");
         const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
         const repoRoot = getRepoRoot();
-        const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
+        const agentsPath = path41.join(repoRoot, formatter.getAgentInstallPath());
         for (const agentName of agentNames) {
           try {
-            const agentFile = path38.join(agentsPath, `${agentName}.md`);
+            const agentFile = path41.join(agentsPath, `${agentName}.md`);
             try {
-              await fs34.access(agentFile);
+              await fs38.access(agentFile);
             } catch {
               result.errors.push(`Agent ${agentName} not found`);
               continue;
             }
-            await fs34.unlink(agentFile);
+            await fs38.unlink(agentFile);
             result.removed.push(agentName);
             this.context.logger.info(`Removed agent: ${agentName}`);
           } catch (error2) {
@@ -55887,17 +55514,17 @@ var init_agent_service = __esm({
         if (this.installationService) {
           return await this.installationService.getInstalledAgents();
         }
-        const fs34 = await import("fs/promises");
-        const path38 = await import("path");
+        const fs38 = await import("fs/promises");
+        const path41 = await import("path");
         const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
         const repoRoot = getRepoRoot();
-        const agentsPath = path38.join(repoRoot, formatter.getAgentInstallPath());
+        const agentsPath = path41.join(repoRoot, formatter.getAgentInstallPath());
         try {
-          const files = await fs34.readdir(agentsPath);
+          const files = await fs38.readdir(agentsPath);
           const agentFiles = files.filter((f) => f.endsWith(".md"));
           const agents = [];
           for (const file of agentFiles) {
-            const content = await fs34.readFile(path38.join(agentsPath, file), "utf-8");
+            const content = await fs38.readFile(path41.join(agentsPath, file), "utf-8");
             const name = file.replace(".md", "");
             const version2 = this.extractVersion(content);
             agents.push({ name, version: version2, lastUpdated: (/* @__PURE__ */ new Date()).toISOString() });
@@ -56896,20 +56523,19 @@ __export(src_exports, {
   StructuredRecommendationSchema: () => StructuredRecommendationSchema,
   SystemPersonaService: () => SystemPersonaService,
   TEST_PLAN_EMOJIS: () => TEST_PLAN_EMOJIS,
+  TINY_BRAIN_GITIGNORE_ENTRIES: () => TINY_BRAIN_GITIGNORE_ENTRIES,
   TYPESCRIPT_HOOK_STEP: () => TYPESCRIPT_HOOK_STEP,
   TechContextService: () => TechContextService,
   TechnicalDebtSummarySchema: () => TechnicalDebtSummarySchema,
-  ThinkingService: () => ThinkingService,
   advancePipeline: () => advancePipeline,
   analyseForCLI: () => analyseForCLI,
   analyseRepository: () => analyseRepository,
   analyzeComplexity: () => analyzeComplexity,
-  analyzeContextDrift: () => analyzeContextDrift,
   analyzeEmotionalTone: () => analyzeEmotionalTone,
-  analyzeThoughtHistory: () => analyzeThoughtHistory,
   appendEvent: () => appendEvent,
   applyBulkUpdates: () => applyBulkUpdates,
   applyEvent: () => applyEvent,
+  applyFixTaskUpdate: () => applyFixTaskUpdate,
   asImportLibraryPersona: () => asImportLibraryPersona,
   asShowCurrent: () => asShowCurrent,
   asSwitchPersona: () => asSwitchPersona,
@@ -56920,8 +56546,6 @@ __export(src_exports, {
   buildQualityScores: () => buildQualityScores,
   calculateComplexityScore: () => calculateComplexityScore,
   calculateStructuralComplexity: () => calculateStructuralComplexity,
-  checkConsistency: () => checkConsistency,
-  checkGoalAlignment: () => checkGoalAlignment,
   checkRequiresCodeSamples: () => checkRequiresCodeSamples,
   checkRequiresExamples: () => checkRequiresExamples,
   checkRequiresFactChecking: () => checkRequiresFactChecking,
@@ -56949,7 +56573,7 @@ __export(src_exports, {
   createParallelExecutor: () => createParallelExecutor,
   createPersonaModule: () => createPersonaModule,
   deepClone: () => deepClone,
-  deepMerge: () => deepMerge,
+  deepMerge: () => deepMerge2,
   deriveContainerStatus: () => deriveContainerStatus,
   derivePhase: () => derivePhase,
   detectADRPatterns: () => detectADRPatterns,
@@ -56959,6 +56583,7 @@ __export(src_exports, {
   detectTechStackChanges: () => detectTechStackChanges,
   detectWorktreeInfo: () => detectWorktreeInfo,
   detectWorktreeInfoSync: () => detectWorktreeInfoSync,
+  ensureTinyBrainGitignoreEntries: () => ensureTinyBrainGitignoreEntries,
   evaluateStrategy: () => evaluateStrategy,
   executeParallel: () => executeParallel,
   executeParallelMap: () => executeParallelMap,
@@ -56968,7 +56593,6 @@ __export(src_exports, {
   extractEntities: () => extractEntities,
   extractFact: () => extractFact,
   extractFeaturesFromText: () => extractFeaturesFromText,
-  extractInsights: () => extractInsights,
   extractIntentSignals: () => extractIntentSignals,
   extractKeyValuePairs: () => extractKeyValuePairs,
   extractLearningInsights: () => extractLearningInsights,
@@ -57011,11 +56635,9 @@ __export(src_exports, {
   formatRulesShow: () => formatRulesShow,
   formatSystemReminder: () => formatSystemReminder,
   formatTechStackChanges: () => formatTechStackChanges,
-  formatThoughtOutput: () => formatThoughtOutput,
   formatTimestamp: () => formatTimestamp,
   generateADRSuggestion: () => generateADRSuggestion,
   generateComplexityReasoning: () => generateComplexityReasoning,
-  generateConsistencyReport: () => generateConsistencyReport,
   generateHash: () => generateHash,
   generateId: () => generateId,
   generateMarkdown: () => generateMarkdown,
@@ -57024,7 +56646,6 @@ __export(src_exports, {
   generateResponseStrategy: () => generateResponseStrategy,
   generateRunId: () => generateRunId,
   generateStatusReport: () => generateStatusReport,
-  generateThinkingReport: () => generateThinkingReport,
   getActivePipeline: () => getActivePipeline,
   getBootstrapInfo: () => getBootstrapInfo,
   getCurrentTimestamp: () => getCurrentTimestamp,
@@ -57092,7 +56713,7 @@ __export(src_exports, {
   pick: () => pick2,
   planContentStrategy: () => planContentStrategy,
   planResponseStructure: () => planResponseStructure,
-  processThought: () => processThought,
+  pruneRepo: () => pruneRepo,
   qualityAssembleRun: () => qualityAssembleRun,
   qualityCompare: () => qualityCompare,
   qualityDetails: () => qualityDetails,
@@ -57107,6 +56728,7 @@ __export(src_exports, {
   readAllEvents: () => readAllEvents,
   readCachedAnalyzers: () => readCachedAnalyzers,
   readEventsForTask: () => readEventsForTask,
+  readPruneLog: () => readPruneLog,
   recommendationsAccept: () => recommendationsAccept,
   recommendationsDismiss: () => recommendationsDismiss,
   recommendationsGraduated: () => recommendationsGraduated,
@@ -57115,6 +56737,7 @@ __export(src_exports, {
   repairJsonEscapes: () => repairJsonEscapes,
   resolveFeatureFlags: () => resolveFeatureFlags,
   resolvePersistPath: () => resolvePersistPath,
+  resolveProgressPath: () => resolveProgressPath,
   resolveQualityPersistPath: () => resolveQualityPersistPath,
   resolveRepoRegistration: () => resolveRepoRegistration,
   resolveStep: () => resolveStep,
@@ -57140,8 +56763,8 @@ __export(src_exports, {
   updateSystemBlock: () => updateSystemBlock,
   updateUserBlock: () => updateUserBlock,
   validateResponse: () => validateResponse,
-  validateThought: () => validateThought,
-  wrapError: () => wrapError
+  wrapError: () => wrapError,
+  writeProgressJson: () => writeProgressJson
 });
 var init_src = __esm({
   "packages/tiny-brain-core/src/index.ts"() {
@@ -57164,15 +56787,14 @@ var init_src = __esm({
     init_rules_service();
     init_planning_service();
     init_chat_analysis_service();
-    init_thinking_service();
     init_response_validation_service();
     init_strategy_service();
     init_repo_config_service();
     init_config_service();
     init_fix_service();
-    init_types8();
+    init_types7();
     init_adr_service();
-    init_types9();
+    init_types8();
     init_plugin_discovery_service();
     init_quality2();
     init_hooks();
@@ -57185,8 +56807,8 @@ var init_src = __esm({
     init_analysis();
     init_analysis();
     init_analysis();
+    init_types9();
     init_types10();
-    init_types11();
     init_phase_derivation();
     init_pipeline_normalizer();
     init_pipeline_service();
@@ -57196,9 +56818,12 @@ var init_src = __esm({
     init_status_derivation();
     init_review_watcher();
     init_reminder_inbox();
+    init_atomic_progress_writer();
+    init_fix_task_updater();
+    init_prune_service();
+    init_prune_log();
     init_event_store();
     init_event_types();
-    init_types12();
     init_repo_config();
     init_user_preferences();
     init_library_client();
@@ -57208,7 +56833,7 @@ var init_src = __esm({
     init_registry2();
     init_persona3();
     init_persona2();
-    init_types13();
+    init_types11();
     init_persona_markdown();
     init_persona3();
     init_analysis_diff();
@@ -57216,10 +56841,9 @@ var init_src = __esm({
     init_memory();
     init_memory_classifier();
     init_fact_extractor();
-    init_types14();
+    init_types12();
     init_chat_analysis();
     init_planning();
-    init_thinking();
     init_response_validation();
     init_strategy();
     init_result();
@@ -57227,7 +56851,7 @@ var init_src = __esm({
     init_utils2();
     init_constants();
     init_handlers();
-    init_types16();
+    init_types14();
     init_claude_code_formatter();
     init_formatter_factory();
     init_agent_installation_service();
@@ -57311,8 +56935,8 @@ var require_package = __commonJS({
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs34 = __require("fs");
-    var path38 = __require("path");
+    var fs38 = __require("fs");
+    var path41 = __require("path");
     var os3 = __require("os");
     var crypto4 = __require("crypto");
     var packageJson = require_package();
@@ -57450,7 +57074,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs34.existsSync(filepath)) {
+            if (fs38.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -57458,15 +57082,15 @@ var require_main = __commonJS({
           possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
         }
       } else {
-        possibleVaultPath = path38.resolve(process.cwd(), ".env.vault");
+        possibleVaultPath = path41.resolve(process.cwd(), ".env.vault");
       }
-      if (fs34.existsSync(possibleVaultPath)) {
+      if (fs38.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path38.join(os3.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path41.join(os3.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -57483,7 +57107,7 @@ var require_main = __commonJS({
       return { parsed };
     }
     function configDotenv(options) {
-      const dotenvPath = path38.resolve(process.cwd(), ".env");
+      const dotenvPath = path41.resolve(process.cwd(), ".env");
       let encoding = "utf8";
       let processEnv = process.env;
       if (options && options.processEnv != null) {
@@ -57511,13 +57135,13 @@ var require_main = __commonJS({
       }
       let lastError;
       const parsedAll = {};
-      for (const path39 of optionPaths) {
+      for (const path42 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs34.readFileSync(path39, { encoding }));
+          const parsed = DotenvModule.parse(fs38.readFileSync(path42, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
-            _debug(`Failed to load ${path39} ${e.message}`);
+            _debug(`Failed to load ${path42} ${e.message}`);
           }
           lastError = e;
         }
@@ -57530,7 +57154,7 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative = path38.relative(process.cwd(), filePath);
+            const relative = path41.relative(process.cwd(), filePath);
             shortPaths.push(relative);
           } catch (e) {
             if (debug) {
@@ -57835,10 +57459,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path38) {
-  if (!path38)
+function getElementAtPath(obj, path41) {
+  if (!path41)
     return obj;
-  return path38.reduce((acc, key) => acc?.[key], obj);
+  return path41.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -58158,11 +57782,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path38, issues) {
+function prefixIssues(path41, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path38);
+    iss.path.unshift(path41);
     return iss;
   });
 }
@@ -62967,11 +62591,11 @@ var StdioServerTransport = class {
 // packages/tiny-brain-mcp/src/server.ts
 import { readFileSync as readFileSync4, appendFileSync, existsSync as existsSync12, mkdirSync as mkdirSync3 } from "fs";
 import { fileURLToPath as fileURLToPath8 } from "url";
-import { dirname as dirname13, join as join26 } from "path";
+import { dirname as dirname13, join as join27 } from "path";
 import { homedir as homedir4 } from "os";
 
 // packages/tiny-brain-mcp/src/core/mcp-server.ts
-import * as path37 from "path";
+import * as path40 from "path";
 import { existsSync as existsSync11, cpSync, readdirSync as readdirSync2, readFileSync as readFileSync3, writeFileSync, mkdirSync as mkdirSync2 } from "fs";
 import { execSync as execSync3 } from "child_process";
 
@@ -65772,6 +65396,197 @@ async function handleGraduated(ctx) {
   return createSuccessResult(formatGraduated(result.data));
 }
 
+// packages/tiny-brain-mcp/src/tools/work/work.tool.ts
+init_zod();
+init_src();
+
+// packages/tiny-brain-mcp/src/tools/work/format.ts
+var EMPTY_MESSAGE = "No work items match the current filter.";
+function statusMatches(itemStatus, filter2) {
+  if (filter2 === "all") return true;
+  return itemStatus === filter2;
+}
+function liveTasks(tasks) {
+  return tasks.filter((t) => t.status !== "superseded");
+}
+function taskCount(tasks) {
+  const live = liveTasks(tasks);
+  const done = live.filter((t) => t.status === "completed").length;
+  return { done, total: live.length };
+}
+function planTasks(plan) {
+  const out = [];
+  for (const feature of plan.features ?? []) {
+    for (const task of feature.tasks ?? []) {
+      out.push(task);
+    }
+  }
+  return out;
+}
+function formatPlanSummary(plan) {
+  const { done, total } = taskCount(planTasks(plan));
+  return `  ${plan.id.padEnd(40)} ${(plan.title ?? "").padEnd(40)} ${done}/${total} tasks`;
+}
+function formatFixSummary(fix) {
+  const { done, total } = taskCount(fix.tasks);
+  const sev = `[${fix.severity}]`.padEnd(10);
+  return `  ${sev} ${fix.id.padEnd(40)} ${(fix.title ?? "").padEnd(40)} ${done}/${total} tasks`;
+}
+function formatTaskDetail(task) {
+  const sha = task.commitSha ? ` (${task.commitSha.substring(0, 7)})` : "";
+  const status = task.status ?? "unknown";
+  const desc = task.description ?? task.id;
+  return `      [${status}]${sha} ${desc}`;
+}
+function formatPlanDetailed(plan) {
+  const head = formatPlanSummary(plan);
+  const tasks = planTasks(plan);
+  if (tasks.length === 0) return head;
+  const lines = [head];
+  for (const task of tasks) {
+    lines.push(formatTaskDetail(task));
+  }
+  return lines.join("\n");
+}
+function formatFixDetailed(fix) {
+  const head = formatFixSummary(fix);
+  if (fix.tasks.length === 0) return head;
+  const lines = [head];
+  for (const task of fix.tasks) {
+    lines.push(formatTaskDetail(task));
+  }
+  return lines.join("\n");
+}
+function formatWork(plans, fixes, options) {
+  const showPrd = options.kind === "prd" || options.kind === "both";
+  const showFix = options.kind === "fix" || options.kind === "both";
+  const matchedPlans = showPrd ? plans.filter((p) => statusMatches(p.status ?? "", options.status)) : [];
+  const matchedFixes = showFix ? fixes.fixes.filter((f) => statusMatches(f.status, options.status)) : [];
+  if (matchedPlans.length === 0 && matchedFixes.length === 0) {
+    return EMPTY_MESSAGE;
+  }
+  const sections = [];
+  if (showPrd && matchedPlans.length > 0) {
+    const lines = [`\u{1F4CB} PRDs (${options.status}, ${matchedPlans.length})`];
+    for (const plan of matchedPlans) {
+      lines.push(options.format === "detailed" ? formatPlanDetailed(plan) : formatPlanSummary(plan));
+    }
+    sections.push(lines.join("\n"));
+  }
+  if (showFix && matchedFixes.length > 0) {
+    const lines = [`\u{1F527} Fixes (${options.status}, ${matchedFixes.length})`];
+    for (const fix of matchedFixes) {
+      lines.push(options.format === "detailed" ? formatFixDetailed(fix) : formatFixSummary(fix));
+    }
+    sections.push(lines.join("\n"));
+  }
+  return sections.join("\n\n");
+}
+
+// packages/tiny-brain-mcp/src/tools/work/work.tool.ts
+var WorkArgsSchema = external_exports.object({
+  kind: external_exports.enum(["prd", "fix", "both"]).optional(),
+  status: external_exports.enum(["not_started", "in_progress", "completed", "archived", "all"]).optional(),
+  mine: external_exports.boolean().optional(),
+  format: external_exports.enum(["summary", "detailed"]).optional()
+});
+var TOOL_DESCRIPTION = `\u{1F4CB} WORK STATUS \u2014 list PRDs and fixes by status \u{1F4CB}
+
+Answers questions like "in-prog fixes", "list all open PRDs", "what have I got in progress" in a single call. Backed by PlanningService, reading the canonical progress files for fixes and PRDs.
+
+\u2705 ARGUMENTS (all optional):
+  \u2022 kind: 'prd' | 'fix' | 'both' (default 'both')
+  \u2022 status: 'not_started' | 'in_progress' | 'completed' | 'archived' | 'all' (default 'in_progress')
+  \u2022 mine: boolean \u2014 filter PRDs by git user email; ignored for fixes (default false)
+  \u2022 format: 'summary' | 'detailed' (default 'summary'; detailed expands the task list under each item)
+
+\u{1F3AF} EXAMPLES:
+  \u2022 {} \u2014 what's open right now (default in_progress, both kinds)
+  \u2022 { "kind": "fix", "status": "in_progress" } \u2014 in-prog fixes
+  \u2022 { "kind": "prd", "status": "in_progress" } \u2014 list all open PRDs
+  \u2022 { "status": "in_progress", "mine": true } \u2014 what have I got in progress
+  \u2022 { "kind": "fix", "status": "completed" } \u2014 recently completed fixes
+  \u2022 { "kind": "prd", "format": "detailed" } \u2014 open PRDs with their task lists`;
+var WorkTool = class {
+  static getToolDefinition() {
+    return {
+      name: "work",
+      description: TOOL_DESCRIPTION,
+      inputSchema: {
+        type: "object",
+        properties: {
+          kind: {
+            type: "string",
+            enum: ["prd", "fix", "both"],
+            description: "Which kinds of work items to include (default both)"
+          },
+          status: {
+            type: "string",
+            enum: ["not_started", "in_progress", "completed", "archived", "all"],
+            description: "Filter by status (default in_progress)"
+          },
+          mine: {
+            type: "boolean",
+            description: "Filter PRDs by current git user (no effect on fixes)"
+          },
+          format: {
+            type: "string",
+            enum: ["summary", "detailed"],
+            description: "summary lists items with task counts; detailed expands the task list"
+          }
+        },
+        required: []
+      }
+    };
+  }
+  static async execute(args, context) {
+    let parsed;
+    try {
+      parsed = WorkArgsSchema.parse(args);
+    } catch (error2) {
+      if (error2 instanceof external_exports.ZodError) {
+        return createErrorResult(
+          `Invalid arguments: ${error2.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")}`
+        );
+      }
+      return createErrorResult(error2 instanceof Error ? error2.message : "Unknown error");
+    }
+    const options = {
+      kind: parsed.kind ?? "both",
+      status: parsed.status ?? "in_progress",
+      mine: parsed.mine ?? false,
+      format: parsed.format ?? "summary"
+    };
+    try {
+      const planning = new PlanningService(context);
+      const repoPath = context.repositoryRoot ?? process.cwd();
+      const showPrd = options.kind === "prd" || options.kind === "both";
+      const showFix = options.kind === "fix" || options.kind === "both";
+      let plans = [];
+      if (showPrd) {
+        const wantArchived = options.status === "archived" || options.status === "all";
+        const wantActive = options.status !== "archived";
+        const collected = [];
+        if (wantActive) {
+          collected.push(...await planning.listPlans({ type: "active", mine: options.mine, repoPath }));
+        }
+        if (wantArchived) {
+          collected.push(...await planning.listPlans({ type: "archived", mine: options.mine, repoPath }));
+        }
+        plans = collected;
+      }
+      let fixes = { fixes: [], lastSynced: "" };
+      if (showFix) {
+        fixes = await planning.getFixesProgress(repoPath);
+      }
+      const text = formatWork(plans, fixes, options);
+      return createSuccessResult(text);
+    } catch (error2) {
+      return createErrorResult(error2 instanceof Error ? error2.message : "Unknown error");
+    }
+  }
+};
+
 // packages/tiny-brain-mcp/src/tools/tool-registry.ts
 var ToolRegistry = class {
   /**
@@ -65785,7 +65600,8 @@ var ToolRegistry = class {
       AnalyseTool.getToolDefinition(),
       QualityTool.getToolDefinition(),
       ConfigTool.getToolDefinition(),
-      RecommendationsTool.getToolDefinition()
+      RecommendationsTool.getToolDefinition(),
+      WorkTool.getToolDefinition()
     ];
   }
   /**
@@ -65799,199 +65615,10 @@ var ToolRegistry = class {
       analyse: AnalyseTool,
       quality: QualityTool,
       config: ConfigTool,
-      recommendations: RecommendationsTool
+      recommendations: RecommendationsTool,
+      work: WorkTool
     };
     return toolMap[name];
-  }
-};
-
-// packages/tiny-brain-mcp/src/prompts/thinking/thinking.prompt.ts
-init_zod();
-var ThinkThroughArgsSchema = external_exports.object({
-  problem: external_exports.string(),
-  context: external_exports.string().optional()
-});
-var ExplainReasoningArgsSchema = external_exports.object({
-  conclusion: external_exports.string().optional(),
-  depth: external_exports.enum(["brief", "detailed", "comprehensive"]).optional().default("detailed")
-});
-var ThinkingPrompt = class _ThinkingPrompt {
-  /**
-   * Get all thinking-related prompt definitions
-   */
-  static getPromptDefinitions() {
-    return [
-      {
-        name: "think_through",
-        description: "\u{1F914} Work through a problem step-by-step with structured reasoning",
-        arguments: [
-          {
-            name: "problem",
-            description: "The problem or question to think through",
-            required: true
-          }
-        ]
-      },
-      {
-        name: "explain_reasoning",
-        description: "\u{1F4AD} Explain the reasoning behind a conclusion or decision",
-        arguments: [
-          {
-            name: "conclusion",
-            description: "The conclusion or decision to explain",
-            required: true
-          },
-          {
-            name: "context",
-            description: "Additional context about the reasoning",
-            required: false
-          }
-        ]
-      }
-    ];
-  }
-  /**
-   * Main handler that routes to specific prompt handlers
-   * Note: ThinkingPrompt handlers are pure functions that don't use context
-   */
-  static async handle(name, args, _context) {
-    switch (name) {
-      case "think_through":
-        return _ThinkingPrompt.handleThinkThrough(args);
-      case "explain_reasoning":
-        return _ThinkingPrompt.handleExplainReasoning(args);
-      default:
-        throw new Error(`Unknown thinking prompt: ${name}`);
-    }
-  }
-  /**
-   * Handle think through prompt - generates structured reasoning prompt
-   */
-  static handleThinkThrough(args) {
-    try {
-      const validatedArgs = ThinkThroughArgsSchema.parse(args);
-      const { problem, context } = validatedArgs;
-      let thinkingPrompt = `Let me think through this problem step-by-step:
-
-**Problem:** ${problem}
-
-`;
-      if (context) {
-        thinkingPrompt += `**Context:** ${context}
-
-`;
-      }
-      thinkingPrompt += `**Analysis:**
-`;
-      thinkingPrompt += `1. **Understanding the Problem:** Let me break down what's being asked...
-
-`;
-      thinkingPrompt += `2. **Identifying Key Factors:** What are the important elements to consider?
-
-`;
-      thinkingPrompt += `3. **Exploring Solutions:** What approaches could work?
-
-`;
-      thinkingPrompt += `4. **Evaluating Options:** What are the pros and cons of each approach?
-
-`;
-      thinkingPrompt += `5. **Recommendation:** Based on this analysis, here's what I recommend...
-
-`;
-      thinkingPrompt += `Please provide your step-by-step analysis following this structure.`;
-      return {
-        description: "Work through a problem step-by-step",
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: thinkingPrompt
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
-  }
-  /**
-   * Handle explain reasoning prompt - generates prompt for reasoning explanation
-   */
-  static handleExplainReasoning(args) {
-    try {
-      const validatedArgs = ExplainReasoningArgsSchema.parse(args);
-      const { conclusion, depth } = validatedArgs;
-      let reasoningPrompt = `Please explain your reasoning process`;
-      if (conclusion) {
-        reasoningPrompt += ` for reaching this conclusion: "${conclusion}"`;
-      } else {
-        reasoningPrompt += ` for your previous response`;
-      }
-      reasoningPrompt += `.
-
-`;
-      switch (depth) {
-        case "brief":
-          reasoningPrompt += `Provide a concise explanation covering:
-`;
-          reasoningPrompt += `- The main logic behind your thinking
-`;
-          reasoningPrompt += `- Key assumptions made
-`;
-          break;
-        case "comprehensive":
-          reasoningPrompt += `Provide a comprehensive explanation covering:
-`;
-          reasoningPrompt += `- **Initial Analysis:** How you approached the problem
-`;
-          reasoningPrompt += `- **Information Sources:** What knowledge you drew from
-`;
-          reasoningPrompt += `- **Reasoning Steps:** Each step of your logical process
-`;
-          reasoningPrompt += `- **Assumptions:** What assumptions you made and why
-`;
-          reasoningPrompt += `- **Alternative Considerations:** Other options you considered
-`;
-          reasoningPrompt += `- **Confidence Level:** How certain you are about your conclusion
-`;
-          reasoningPrompt += `- **Potential Limitations:** What might affect the validity of your reasoning
-`;
-          break;
-        default:
-          reasoningPrompt += `Provide a detailed explanation covering:
-`;
-          reasoningPrompt += `- **Reasoning Process:** The logical steps you followed
-`;
-          reasoningPrompt += `- **Key Factors:** What information influenced your thinking
-`;
-          reasoningPrompt += `- **Assumptions:** Any assumptions you made
-`;
-          reasoningPrompt += `- **Confidence:** How confident you are in your reasoning
-`;
-          break;
-      }
-      return {
-        description: "Explain the reasoning process behind a conclusion",
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: reasoningPrompt
-            }
-          }
-        ]
-      };
-    } catch (error2) {
-      if (error2 instanceof external_exports.ZodError) {
-        throw new Error(`Invalid arguments: ${error2.errors.map((e) => e.message).join(", ")}`);
-      }
-      throw error2;
-    }
   }
 };
 
@@ -66598,10 +66225,7 @@ var PROMPT_MAP = {
   "update-plan": PlanningPrompt,
   "plan-status": PlanningPrompt,
   "list-plans": PlanningPrompt,
-  "plan-report": PlanningPrompt,
-  // Thinking prompts
-  think_through: ThinkingPrompt,
-  explain_reasoning: ThinkingPrompt
+  "plan-report": PlanningPrompt
 };
 var PromptRegistry = class {
   /**
@@ -66609,7 +66233,6 @@ var PromptRegistry = class {
    */
   static getPrompts() {
     return [
-      ...ThinkingPrompt.getPromptDefinitions(),
       ...PlanningPrompt.getPromptDefinitions()
     ];
   }
@@ -66675,7 +66298,7 @@ var MCPServer = class {
     }
     const logFileName = isDev ? "dev-debug.log" : "debug.log";
     this.logger = new FileLogger({
-      logFilePath: path37.join(resolvedDataDir, logFileName),
+      logFilePath: path40.join(resolvedDataDir, logFileName),
       logLevel,
       enabled: true
     });
@@ -66832,7 +66455,7 @@ var MCPServer = class {
   async initializeRepository() {
     try {
       const cwd = process.cwd();
-      const gitDir = path37.join(cwd, ".git");
+      const gitDir = path40.join(cwd, ".git");
       const { existsSync: existsSync13 } = await import("fs");
       if (!existsSync13(gitDir)) {
         this.logger.debug("Not in a git repository, skipping repo registration");
@@ -66952,7 +66575,7 @@ var MCPServer = class {
       this.logger.debug("CLAUDE_PLUGIN_ROOT not set, skipping bundled personas");
       return;
     }
-    const bundledPersonasDir = path37.join(pluginRoot, "personas");
+    const bundledPersonasDir = path40.join(pluginRoot, "personas");
     if (!existsSync11(bundledPersonasDir)) {
       this.logger.debug("No bundled personas directory found");
       return;
@@ -66962,9 +66585,9 @@ var MCPServer = class {
       const bundledPersonas = readdirSync2(bundledPersonasDir);
       for (const personaName of bundledPersonas) {
         if (personaName.startsWith(".")) continue;
-        const bundledPath = path37.join(bundledPersonasDir, personaName);
+        const bundledPath = path40.join(bundledPersonasDir, personaName);
         const localStorage = this.storage;
-        const localPath = path37.join(localStorage.personasDir, personaName);
+        const localPath = path40.join(localStorage.personasDir, personaName);
         if (existsSync11(bundledPath) && !existsSync11(localPath)) {
           this.logger.info(`Copying bundled persona '${personaName}' to local storage`);
           try {
@@ -67240,7 +66863,7 @@ var MCPServer = class {
     }
     try {
       const basePath = process.cwd();
-      const sessionsPath = path37.join(basePath, ".tiny-brain", "sessions.json");
+      const sessionsPath = path40.join(basePath, ".tiny-brain", "sessions.json");
       let sessions = {};
       try {
         const content = readFileSync3(sessionsPath, "utf-8");
@@ -67255,7 +66878,7 @@ var MCPServer = class {
         activePersona: personaId,
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       };
-      mkdirSync2(path37.dirname(sessionsPath), { recursive: true });
+      mkdirSync2(path40.dirname(sessionsPath), { recursive: true });
       writeFileSync(sessionsPath, JSON.stringify(sessions, null, 2), "utf-8");
       this.logger.debug(`Updated persona session: ${personaId} for TTY ${tty}`);
     } catch (err) {
@@ -67282,9 +66905,9 @@ function startupLog(message, data) {
   try {
     let dataDir = process.env.DATADIR || process.env.TINY_BRAIN_DATA_DIR || "~/.tiny-brain";
     if (dataDir.startsWith("~")) {
-      dataDir = join26(homedir4(), dataDir.slice(1));
+      dataDir = join27(homedir4(), dataDir.slice(1));
     }
-    const logPath = join26(dataDir, "debug.log");
+    const logPath = join27(dataDir, "debug.log");
     if (!existsSync12(dataDir)) {
       mkdirSync3(dataDir, { recursive: true });
     }
@@ -67299,7 +66922,7 @@ async function bootMcpServer() {
   startupLog("bootMcpServer() called");
   const __filename = fileURLToPath8(import.meta.url);
   const __dirname = dirname13(__filename);
-  const envPath = join26(__dirname, "../.env.local");
+  const envPath = join27(__dirname, "../.env.local");
   if (existsSync12(envPath)) {
     try {
       const { config: config2 } = await Promise.resolve().then(() => __toESM(require_main(), 1));
@@ -67315,7 +66938,7 @@ async function bootMcpServer() {
   }
   try {
     startupLog("Fetching package.json version...");
-    const packageJson = JSON.parse(readFileSync4(join26(__dirname, "../package.json"), "utf-8"));
+    const packageJson = JSON.parse(readFileSync4(join27(__dirname, "../package.json"), "utf-8"));
     const VERSION = packageJson.version;
     startupLog("Starting server", {
       pid: process.pid,

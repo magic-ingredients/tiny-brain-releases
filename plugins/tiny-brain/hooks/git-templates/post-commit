@@ -29,7 +29,9 @@ CURRENT_FIX=$(echo "$COMMIT_MSG" | grep '^Fix:' | head -1 | sed 's/^Fix:[[:space
 CURRENT_PRD=$(echo "$COMMIT_MSG" | grep '^PRD:' | head -1 | sed 's/^PRD:[[:space:]]*//')
 CURRENT_FEATURE=$(echo "$COMMIT_MSG" | grep '^Feature:' | head -1 | sed 's/^Feature:[[:space:]]*//')
 
-# Must have tracking headers
+# Tracking headers gate the per-task pipeline loop, not reconcile.
+# Path C must run on every commit to catch reviews that landed outside
+# the current commit's tracked work (different task, prior session, etc.).
 HAS_HEADERS=""
 if [ -n "$CURRENT_FIX" ]; then
   HAS_HEADERS="fix"
@@ -37,65 +39,81 @@ elif [ -n "$CURRENT_PRD" ] && [ -n "$CURRENT_FEATURE" ]; then
   HAS_HEADERS="prd"
 fi
 
-if [ -z "$HAS_HEADERS" ]; then
-  exit 0
+# Skip the per-task loop unless headers AND a tracked commit type are present.
+RUN_PIPELINE=""
+if [ -n "$HAS_HEADERS" ] && echo "$COMMIT_SUBJECT" | grep -qE '^(test|feat|fix|refactor)(\([^)]+\))?:'; then
+  RUN_PIPELINE="1"
 fi
 
-# Must be a tracked commit type (test/feat/fix/refactor)
-if ! echo "$COMMIT_SUBJECT" | grep -qE '^(test|feat|fix|refactor)(\([^)]+\))?:'; then
-  exit 0
-fi
+if [ -n "$RUN_PIPELINE" ]; then
+  # Map commit prefix to pipeline agent name
+  COMMIT_TYPE=$(echo "$COMMIT_SUBJECT" | sed -E 's/^([a-z]+)(\([^)]+\))?.*/\1/')
+  AGENT=""
+  case "$COMMIT_TYPE" in
+    test) AGENT="red" ;;
+    feat|fix) AGENT="green" ;;
+    refactor) AGENT="__derive__" ;; # will be resolved per-task from current phase
+  esac
 
-# Map commit prefix to pipeline agent name
-COMMIT_TYPE=$(echo "$COMMIT_SUBJECT" | sed -E 's/^([a-z]+)(\([^)]+\))?.*/\1/')
-case "$COMMIT_TYPE" in
-  test) AGENT="red" ;;
-  feat|fix) AGENT="green" ;;
-  refactor) AGENT="__derive__" ;; # will be resolved per-task from current phase
-  *) exit 0 ;;
-esac
+  if [ -n "$AGENT" ]; then
+    # For each task, call pipeline to record the step and get next instructions
+    echo "$COMMIT_MSG" | grep '^Task:' | sed 's/^Task:[[:space:]]*//' | while IFS= read -r TASK_LINE; do
+      if [ -n "$TASK_LINE" ]; then
+        # Build tracking args as positional parameters — passes each value
+        # as a separate argv entry. No eval, no re-parsing, so backticks /
+        # $(...) / other shell metacharacters in TASK_LINE, CURRENT_FIX,
+        # CURRENT_PRD etc. are treated as literal data.
+        set -- --task-id "$TASK_LINE"
+        if [ "$HAS_HEADERS" = "fix" ]; then
+          set -- "$@" --fix "$CURRENT_FIX"
+        elif [ "$HAS_HEADERS" = "prd" ]; then
+          set -- "$@" --prd "$CURRENT_PRD" --feature "$CURRENT_FEATURE"
+        fi
 
-# For each task, call pipeline to record the step and get next instructions
-echo "$COMMIT_MSG" | grep '^Task:' | sed 's/^Task:[[:space:]]*//' | while IFS= read -r TASK_LINE; do
-  if [ -n "$TASK_LINE" ]; then
-    # Build tracking args as positional parameters — passes each value
-    # as a separate argv entry. No eval, no re-parsing, so backticks /
-    # $(...) / other shell metacharacters in TASK_LINE, CURRENT_FIX,
-    # CURRENT_PRD etc. are treated as literal data.
-    set -- --task-id "$TASK_LINE"
-    if [ "$HAS_HEADERS" = "fix" ]; then
-      set -- "$@" --fix "$CURRENT_FIX"
-    elif [ "$HAS_HEADERS" = "prd" ]; then
-      set -- "$@" --prd "$CURRENT_PRD" --feature "$CURRENT_FEATURE"
-    fi
+        RESOLVED_AGENT="$AGENT"
 
-    RESOLVED_AGENT="$AGENT"
+        # For refactor commits, derive the review type from current phase.
+        # $EXEC intentionally unquoted — may be a multi-word prefix like
+        # "pnpm exec" — but everything after is quoted argv so headers
+        # reach pipeline verbatim.
+        if [ "$RESOLVED_AGENT" = "__derive__" ]; then
+          # shellcheck disable=SC2086
+          CURRENT_PHASE=$($EXEC tiny-brain pipeline "$@" --quiet 2>/dev/null | tail -1)
+          case "$CURRENT_PHASE" in
+            refactor:*)
+              RESOLVED_AGENT="${CURRENT_PHASE#refactor:}"
+              ;;
+            *)
+              # Not in a refactor phase — skip
+              RESOLVED_AGENT=""
+              ;;
+          esac
+        fi
 
-    # For refactor commits, derive the review type from current phase.
-    # $EXEC intentionally unquoted — may be a multi-word prefix like
-    # "pnpm exec" — but everything after is quoted argv so headers
-    # reach pipeline verbatim.
-    if [ "$RESOLVED_AGENT" = "__derive__" ]; then
-      # shellcheck disable=SC2086
-      CURRENT_PHASE=$($EXEC tiny-brain pipeline "$@" --quiet 2>/dev/null | tail -1)
-      case "$CURRENT_PHASE" in
-        refactor:*)
-          RESOLVED_AGENT="${CURRENT_PHASE#refactor:}"
-          ;;
-        *)
-          # Not in a refactor phase — skip
-          RESOLVED_AGENT=""
-          ;;
-      esac
-    fi
+        if [ -n "$RESOLVED_AGENT" ]; then
+          set -- "$@" --agent "$RESOLVED_AGENT" --sha "$COMMIT_SHA"
+        fi
 
-    if [ -n "$RESOLVED_AGENT" ]; then
-      set -- "$@" --agent "$RESOLVED_AGENT" --sha "$COMMIT_SHA"
-    fi
-
-    # shellcheck disable=SC2086
-    $EXEC tiny-brain pipeline "$@" 2>/dev/null || true
+        # shellcheck disable=SC2086
+        $EXEC tiny-brain pipeline "$@" 2>/dev/null || true
+      fi
+    done
   fi
-done
+fi
+
+# ─── Path C: post-commit reconcile ───
+#
+# Belt-and-braces fallback. Scans .tiny-brain/reviews/ and advances any
+# (gate, sha) whose decision hasn't been recorded — covers the case where
+# the agent or watcher missed its --decision call. Runs on every commit
+# (tracked or not) so a review file landed during a prior session still
+# advances at the next opportunity.
+#
+# Idempotent: anything already advanced is a no-op. Reminder output flows
+# through this hook's stdout into the commit's system-reminder channel.
+#
+# Hook contract: never fail the commit; reconcile swallows its own errors.
+# shellcheck disable=SC2086
+$EXEC tiny-brain reconcile 2>/dev/null || true
 
 exit 0
