@@ -1,8 +1,8 @@
 ---
 name: feature
-version: 1.0.0
+version: 2.0.0
 description: Add a feature to an existing PRD. Use when user wants to add functionality to an existing product plan.
-allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*)
+allowed-tools: Read, Edit, Bash(tiny-brain:*), Bash(tb:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # Feature Creation Skill
@@ -14,15 +14,28 @@ Add a feature when the user wants to:
 - Break down a large capability into trackable tasks
 - Document implementation details for a specific feature
 
+## Identity model: slugs and UUIDs
+
+Every feature and task carries a stable **UUIDv7** as its real identity, which
+`tb work add` generates and stamps into the markdown — you never type one. The
+feature's positional `number:` is assigned by the CLI from the existing siblings;
+you never set it. Humans and commit messages refer to work by its **slug** and
+its task **description**, which the tooling resolves to the UUID internally.
+
+So: **create the feature and every task through `tb work add`.** Do not
+hand-write `id:` / `uuid:` / `number:` frontmatter, and do not invent
+`task-N-M` ids — that was a derivation-from-shape convention that no longer
+exists under UUIDs.
+
 ## Workflow
 
 ### Step 1: Identify Target PRD
 
-Ask the user which PRD to add the feature to, or detect from context.
+Ask the user which PRD to add the feature to, or detect from context. List
+existing PRDs:
 
-List existing PRDs:
 ```bash
-ls docs/prd/
+tb work --kind prd
 ```
 
 ### Step 2: Understand the Feature
@@ -33,56 +46,31 @@ Work with the user to define:
 - **Acceptance criteria**: How do we know it's done?
 - **Tasks**: What implementation steps are required?
 
-### Step 3: Create Feature File
+### Step 3: Create the feature
 
-Use the template at `templates/feature-template.md`.
-
-Save to: `docs/prd/{prd-id}/features/{feature-id}.md`
-
-**YAML Frontmatter:**
-```yaml
----
-id: feature-kebab-case-id
-prd_id: parent-prd-id
-number: N  # Next number after existing features (check docs/prd/{prd-id}/features/)
-title: Feature Title
-status: not_started
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
----
+```bash
+tb work add feature --prd <prd-slug> <feature-slug> "Feature Title"
 ```
 
-**Feature Numbering:** The `number` field determines task ID prefixes (`task-{number}-{n}`) and feature ordering. Check existing features in the PRD to find the next available number.
+This writes `docs/prd/<prd-slug>/features/<feature-slug>.md` with the frontmatter
+filled in — `id`, `uuid`, `prd_id`, the next positional `number`, `status`,
+dates. The CLI owns all of it.
 
-### Step 4: Define Tasks
+### Step 4: Add each task
 
-**Critical:** Use this exact format for task extraction:
+For every implementation task, run:
 
-```markdown
-## Tasks
-
-### 1. First task title
-Description of what needs to be done.
-
-**Files to modify/create:**
-- `path/to/file1.ts`
-- `path/to/file2.ts`
-
-**Expected changes:**
-- Change 1
-- Change 2
-
-### 2. Second task title
-Description...
-
-**Files to modify/create:**
-- `path/to/file.ts`
+```bash
+tb work add task --feature <feature-slug> "Exact task description"
 ```
 
-Each `### N. Title` becomes a trackable task with:
-- Test commit tracking (`test:` prefix)
-- Implementation commit tracking (`feat:` prefix)
-- Refactor commit tracking (`refactor:` prefix)
+`--prd <prd-slug>` is **optional** — add it only to disambiguate when the same
+feature slug exists in more than one PRD (otherwise the CLI finds the feature on
+its own, and errors asking for `--prd` if the slug is ambiguous).
+
+The task **description** is the identity used later in commit `Task:` headers —
+write it as you want to refer to it. Each task block gets its own generated
+`uuid:`.
 
 **Task Granularity Guidance:**
 - Tasks should be granular enough to be independently testable
@@ -93,59 +81,31 @@ Each `### N. Title` becomes a trackable task with:
 - **NEVER create verification-only tasks** like "Verify all tests pass" or "Run integration tests". These produce no commits and always end up superseded. Verification is part of the TDD cycle, not a standalone task.
 
 **Anti-patterns to reject if the user asks for them:**
-```markdown
+```
 # ❌ Splits one cycle across two tasks — DO NOT
-### 1. Write failing tests for hooks display
-### 2. Implement hooks display
+"Write failing tests for hooks display"
+"Implement hooks display"
 
 # ❌ Manual / verification-only — DO NOT
-### 3. User visually verifies in dev dashboard
-### 4. Run integration test suite
+"User visually verifies in dev dashboard"
+"Run integration test suite"
 ```
 
-**Correct shape — one task per behaviour, full TDD cycle inside:**
-```markdown
-### 1. Add hooks display component
-Failing test + implementation + any review-driven refactors land here.
+Correct shape — one task per behaviour, full TDD cycle inside:
+```bash
+tb work add task --feature hooks-display-ui "Add hooks display component"
 ```
 
-Example multi-task commit:
-```
-feat(dashboard): add hooks display components
+### Step 5: Flesh out the prose and test plan
 
-PRD: dashboard-hooks-display
-Feature: hooks-display-ui
-Task: Add hooks state to RepoDetailPage
-Task: Add Hooks tab to repo header
-Task: Create HooksList component
+`tb work add` writes the frontmatter plus a minimal body scaffold (`Description`
++ `Tasks`). Use the **Edit** tool to expand the prose — Description, Acceptance
+Criteria, per-task notes and "Files to modify" lists. The template
+`templates/feature-template.md` is a **body-structure reference** (not a file to
+copy) showing the fuller shape to aim for; the CLI owns the frontmatter, so edit
+prose only and leave the frontmatter / task ids as written.
 
-Implements hooks list and selection...
-```
-
-### Step 5: Identify and Document Test Plan
-
-**IMPORTANT:** Before implementation, analyze the codebase to identify relevant tests.
-
-#### 5a: Identify Relevant Tests
-
-1. **Find existing tests for affected code:**
-   - Look for test files adjacent to source files being modified
-   - Check `__tests__/` directories
-   - Search for tests that import affected modules
-
-2. **Read the test files** to understand:
-   - Which test cases exercise the code paths you'll modify
-   - Which assertions may need to change
-   - What new scenarios need test coverage
-
-3. **Categorize each test:**
-   - **Regression**: Tests that should continue to pass unchanged
-   - **Amended**: Tests whose expectations need updating
-   - **New**: Tests that need to be written
-
-#### 5b: Document in Feature File
-
-Add a Test Plan section using emoji categories:
+Document a Test Plan section using emoji categories:
 
 | Emoji | Category | Description |
 |-------|----------|-------------|
@@ -168,44 +128,70 @@ Add a Test Plan section using emoji categories:
 | src/__tests__/feature.test.ts | handles new feature | ❌ |
 ```
 
-### Step 6: Update Parent PRD
+Identify relevant tests first: look for test files adjacent to the source you'll
+modify, check `__tests__/` directories, and categorise each as regression /
+amended / new.
 
-Add a reference to the new feature in `docs/prd/{prd-id}/prd.md`:
+### Step 6: Link it from the parent PRD (optional)
+
+If the PRD's body keeps a hand-curated Features list, add a reference to the new
+feature with the **Edit** tool:
 
 ```markdown
-### Feature N: {Feature Title}
-**File**: [features/{feature-id}.md](features/{feature-id}.md)
-**Status**: defined
+### {Feature Title}
+**File**: [features/<feature-slug>.md](features/<feature-slug>.md)
 **Description**: Brief description of what this feature does
 ```
 
-### Step 7: Sync Progress
+### Step 7: Commit
 
-After creating the feature file, call:
-```
-plan sync
+```bash
+git add docs/prd/<prd-slug>/
+git commit -m "chore: add feature <feature-slug> to <prd-slug>"
 ```
 
-This updates `progress.json` with the new feature and tasks.
+Progress state is projected from the markdown automatically (the sync-progress
+hook on write, the post-commit hook on commit). For a manual re-sync after
+external edits: `tiny-brain task sync docs/prd/<prd-slug>/features/<feature-slug>.md`.
 
 ### Step 8: Confirm Creation
 
 Tell the user:
-> "I've added feature '{title}' to PRD '{prd-id}' with {N} tasks."
+> "I've added feature '{title}' to PRD '<prd-slug>' with {N} tasks."
+
+## Commit headers (for the implementation work later)
+
+A commit that implements task work carries the task description in its header:
+
+```
+feat(dashboard): add hooks display components
+
+PRD: dashboard-hooks-display
+Feature: hooks-display-ui
+Task: Add hooks state to RepoDetailPage
+Task: Create HooksList component
+
+Implements hooks list and selection...
+```
+
+The `Task:` value is the **task description as it appears in the markdown** — the
+commit-msg hook resolves it to the task's UUID at hook time. Multiple `Task:`
+headers in one commit are all tracked against that SHA. Use the **exact** task
+description — the hook matches by equality (it only trims whitespace and
+tolerates escaped backticks), so a reworded header fails to resolve.
 
 ## Quality Checklist
 
-- [ ] Feature ID is unique within the PRD
-- [ ] prd_id matches parent PRD exactly
+- [ ] Feature and tasks created via `tb work add` (no hand-written `id:` / `uuid:` / `number:`)
+- [ ] Feature slug is unique within the PRD
 - [ ] Acceptance criteria are testable (use checkboxes)
-- [ ] Tasks use `### N. Task Name` format (numbered)
 - [ ] Each task has files to modify listed
 - [ ] Test plan identifies regression/amended/new tests
-- [ ] Feature is linked from parent PRD
+- [ ] No TDD-split or verification-only tasks
 
 ## Template
 
-- Feature: `templates/feature-template.md`
+- Feature body structure: `templates/feature-template.md` (reference, not a file to copy)
 
 ## Example
 
@@ -216,9 +202,8 @@ Claude:
 1. Confirm PRD: "Adding to code-quality-analysis PRD?"
 2. Discuss: "What subcommands? What options?"
 3. Create:
-   - docs/prd/code-quality-analysis/features/quality-cli-command.md
-4. Update:
-   - docs/prd/code-quality-analysis/prd.md (add feature reference)
-5. Call `plan sync`
-6. Confirm: "Added 'Quality CLI Command' with 5 tasks"
+   tb work add feature --prd code-quality-analysis quality-cli-command "Quality CLI Command"
+   tb work add task --feature quality-cli-command "Add the report subcommand"
+4. Flesh out Description / Acceptance Criteria / Test Plan with Edit
+5. Commit; the feature is now visible in the dashboard
 ```

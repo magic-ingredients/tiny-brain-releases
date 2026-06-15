@@ -1,0 +1,24 @@
+#!/bin/sh
+#
+# Workspace tiny-brain CLI shim. Invoked only when resolve-exec.sh has
+# prepended this directory to PATH after seeing __TB_DEV_MODE=1 — the
+# gate also exports __TB_DEV_CLI pointing at the workspace cli.js.
+#
+if [ -z "${__TB_DEV_CLI:-}" ] || [ ! -f "$__TB_DEV_CLI" ]; then
+  echo "[fatal] dev-bin tiny-brain shim invoked without a valid __TB_DEV_CLI — was resolve-exec.sh sourced with __TB_DEV_MODE=1 inside a tiny-brain workspace?" >&2
+  exit 1
+fi
+
+# Prefer live TS source via tsx so workspace src edits are reflected with no
+# rebuild — `dist/cli.js` is an esbuild bundle that only refreshes on build.
+# Derive the source entry and the tsx binary from the __TB_DEV_CLI layout
+# (<root>/packages/tiny-brain/dist/cli.js). Fall back to running the bundle
+# when either is absent: published installs (no src/), deps-not-installed
+# (no tsx), and the resolve-exec test's bundle-only synthetic workspaces.
+_TB_PKG_DIR=$(dirname "$(dirname "$__TB_DEV_CLI")")
+_TB_SRC="$_TB_PKG_DIR/src/cli.ts"
+_TB_TSX="$(dirname "$(dirname "$_TB_PKG_DIR")")/node_modules/.bin/tsx"
+if [ -f "$_TB_SRC" ] && [ -x "$_TB_TSX" ]; then
+  exec "$_TB_TSX" "$_TB_SRC" "$@"
+fi
+exec node "$__TB_DEV_CLI" "$@"

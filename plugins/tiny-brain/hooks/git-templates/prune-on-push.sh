@@ -5,9 +5,9 @@
 # Reads `preferences.repo.prune.onPush` and `preferences.repo.prune.onPr`
 # from the merged tiny-brain config. Each is independent:
 #
-#   - onPush=true  → run `tiny-brain prune --trigger push --quiet`
+#   - onPush=true  → run `tiny-brain _prune --trigger push --quiet`
 #   - onPr=true    → if `gh pr view` reports a PR exists, run
-#                    `tiny-brain prune --trigger pr --quiet` instead.
+#                    `tiny-brain _prune --trigger pr --quiet` instead.
 #                    If `gh` is missing, log a debug line and skip.
 #
 # This script must NEVER block a push. Any error is swallowed and the
@@ -69,7 +69,7 @@ if [ -z "$TRIGGER" ]; then
 fi
 
 # Fire the prune. Errors are logged to stderr but never block the push.
-if ! $EXEC tiny-brain prune --trigger "$TRIGGER" --quiet >/dev/null 2>&1; then
+if ! $EXEC tiny-brain _prune --trigger "$TRIGGER" --quiet >/dev/null 2>&1; then
   echo "[prune-on-push] prune --trigger $TRIGGER failed (non-blocking)" >&2
 fi
 

@@ -59,7 +59,8 @@ Available to add to your pipeline (not enabled by default — wire in via the da
 - **Planning Tools** - PRD creation, feature management, progress tracking
 - **Quality Tools** - Save and retrieve quality analysis results
 - **Rules Management** - Configure golden rules across personas
-- **Work Status** (`work`) - List PRDs and fixes by status; answers "in-prog fixes", "list all open PRDs", "what have I got in progress" in a single call
+
+> Listing PRDs and fixes by status is the `tiny-brain work` CLI subcommand (cross-provider). Answers "in-prog fixes", "list all open PRDs", "what have I got in progress" with the same flag set documented in AGENTS.md "Listing work".
 
 ### Hooks
 
@@ -112,11 +113,8 @@ Progress is automatically tracked in `.tiny-brain/progress/` files.
 ### Preferences
 
 ```bash
-# Enable auto-commit for progress tracking
-npx tiny-brain config preferences set autoCommitProgress true
-
 # Check current preferences
-npx tiny-brain config preferences list
+tiny-brain config preferences list
 ```
 
 ### Managing the Plugin

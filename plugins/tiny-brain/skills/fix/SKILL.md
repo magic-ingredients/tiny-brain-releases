@@ -1,8 +1,8 @@
 ---
 name: fix
-version: 1.0.0
+version: 2.0.0
 description: Create a fix document for bug tracking. Use when user reports a bug or wants to track a fix with full test plan.
-allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Edit, Bash(tiny-brain:*), Bash(tb:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # Fix Creation Skill
@@ -14,6 +14,30 @@ Create a fix document when:
 - You identify an issue that needs tracking
 - A fix requires multiple steps and test validation
 - You want to document root cause analysis
+
+## Identity model: slugs and UUIDs
+
+Every fix and task carries a stable **UUIDv7** as its real identity, which
+`tb work add` generates and stamps into the markdown — you never type one.
+Humans and commit messages refer to a fix by its **slug** and to a task by its
+**description**, which the tooling resolves to the UUID internally.
+
+So: **create the fix and its tasks through `tb work add`.** Do not hand-write
+`id:` / `uuid:` frontmatter or a `reported:` timestamp — the CLI fills them in.
+
+## Fix Doc Location
+
+Fix docs live under `docs/fixes/` by default. Teams can override this via
+the `directories.fixes` key in `.tiny-brain/config.json` — when that key is
+set, use the configured path everywhere the steps below say `docs/fixes`.
+The quick way to read it:
+
+```bash
+tiny-brain config preferences get fixesDirectory
+```
+
+If `fixesDirectory` resolves to anything other than `docs/fixes`, substitute
+that path in every `docs/fixes/...` reference below.
 
 ## Workflow
 
@@ -27,38 +51,25 @@ Before documenting, investigate:
 
 Use exploration tools (grep, read, etc.) to understand the issue.
 
-### Step 2: Create Fix Directory (if needed)
+### Step 2: Create the fix document
 
 ```bash
-mkdir -p .tiny-brain/fixes
+tb work add fix <fix-slug> "Brief Description of the Fix"
 ```
 
-### Step 3: Create Fix Document
+This creates `docs/fixes/<fix-slug>.md` with the frontmatter filled in — `id`,
+`uuid`, `title`, `status: not_started`, `severity`, `reported`, `resolved: null`.
+The CLI owns the frontmatter; the default `severity` can be adjusted with the
+Edit tool if needed (`low | medium | high | critical`).
 
-Use the template at `templates/fix-template.md`.
+**Slug naming:** Use descriptive kebab-case:
+- `dashboard-not-loading-after-upgrade`
+- `progress-json-sync-failing`
+- `missing-test-coverage`
 
-Save to: `.tiny-brain/fixes/{fix-id}.md`
+### Step 3: Document Root Cause
 
-**File naming:** Use descriptive kebab-case:
-- `dashboard-not-loading-after-upgrade.md`
-- `progress-json-sync-failing.md`
-- `missing-test-coverage.md`
-
-**YAML Frontmatter:**
-```yaml
----
-id: fix-kebab-case-id
-title: Brief Description of the Fix
-status: not_started
-severity: low | medium | high | critical
-reported: 2026-01-07T15:30:00.000Z  # Use new Date().toISOString()
-resolved: null  # Set to ISO timestamp when completed
----
-```
-
-### Step 4: Document Root Cause
-
-In the fix document, clearly explain:
+With the Edit tool, fill in the fix document's prose: clearly explain
 1. What the bug is
 2. What causes it (root cause)
 3. What the fix approach is
@@ -66,11 +77,11 @@ In the fix document, clearly explain:
 
 **IMPORTANT:** Do NOT use `### N.` numbered headings (e.g., `### 1. Some heading`) outside the `## Tasks` section. The sync-file parser treats `### N. Title` as task definitions — using them in Root Cause Analysis or elsewhere will create duplicate task IDs. Use **bold text** or unnumbered `###` headings instead.
 
-### Step 5: Identify and Document Test Plan
+### Step 4: Identify and Document Test Plan
 
 **IMPORTANT:** Before documenting the test plan, you must actively analyze the codebase to identify relevant tests. Do NOT guess - read the actual test files.
 
-#### 5a: Identify Relevant Tests
+#### 4a: Identify Relevant Tests
 
 1. **Find test files for affected code:**
    - Look for test files adjacent to modified source files (e.g., `service.test.ts` next to `service.ts`)
@@ -87,7 +98,7 @@ In the fix document, clearly explain:
    - **Amended**: Tests whose expectations need updating (behavior intentionally changed)
    - **New**: Tests that need to be written (new behavior or uncovered edge cases)
 
-#### 5b: Document the Test Plan
+#### 4b: Document the Test Plan
 
 Use the emoji schema for test categorization:
 
@@ -119,7 +130,16 @@ Use the emoji schema for test categorization:
 | src/__tests__/service.test.ts | handles edge case | ❌ |
 ```
 
-### Step 6: Define Tasks
+### Step 5: Add Tasks
+
+For every unit of behaviour change, run:
+
+```bash
+tb work add task --fix <fix-slug> "Exact task description"
+```
+
+Each task block gets its own generated `uuid:`. The task **description** is the
+identity used later in commit `Task:` headers.
 
 Each task MUST describe a complete unit of behaviour change — RED + GREEN + any
 refactors all roll up to the same task. The TDD cycle happens *within* each
@@ -143,60 +163,84 @@ task, not *across* tasks.
   superseded. Manual checks are part of finishing a task, not a task
   themselves.
 
-**Format:**
-
-```markdown
-## Tasks
-
-### 1. Reproduce and fix the SSE reconnection bug
-End-to-end task — failing test, implementation, and any review-driven
-refactors all land under this one task.
-
-**Files to modify:**
-- `src/services/__tests__/SSEClient.test.ts`
-- `src/services/SSEClient.ts`
-```
-
 **Anti-patterns to reject if the user asks for them:**
 
-```markdown
+```
 # ❌ DO NOT DO THIS — splits one cycle across two tasks
-### 1. Write failing test for SSE reconnection
-### 2. Implement SSE reconnection
+"Write failing test for SSE reconnection"
+"Implement SSE reconnection"
 
 # ❌ DO NOT DO THIS — manual task with no commit
-### 3. Visually verify in dev dashboard
-### 4. Run integration tests
+"Visually verify in dev dashboard"
+"Run integration tests"
 ```
 
-### Step 7: Sync Progress
+Correct shape — one task per behaviour, full TDD cycle inside:
+```bash
+tb work add task --fix dashboard-sse-fix "Reproduce and fix the SSE reconnection bug"
+```
 
-After creating the fix document, sync it to progress.json:
+#### Write a per-task detail block under each task heading
+
+`tb work add task` creates a **heading-only** block (`### N. <description>` +
+`id:` + `status:`). The dashboard's per-task detail panel renders the prose
+written **under each `### N.` task heading**, so a heading-only task shows a
+blank panel. After creating the tasks, edit the doc to add a short **per-task
+detail** block under each task heading — what to build, the key files, and the
+acceptance signal:
+
+```markdown
+### 1. Reproduce and fix the SSE reconnection bug
+id: 019e7af9-...
+status: not_started
+
+Add a failing test that the client reconnects after a dropped connection, then
+implement exponential-backoff reconnection.
+
+**Files:** `src/services/SSEClient.ts`, `src/services/__tests__/SSEClient.test.ts`
+**Done when:** the client re-establishes the stream within the backoff window.
+```
+
+Keep it to a few lines per task — the fix-level `## sections` carry the broader
+narrative; this block is the per-task slice the dashboard surfaces. (The parser
+ends the metadata block at the first non-`key:` line, so the prose can follow
+the `status:` line directly; the blank line above is just for readability.)
+
+### Step 6: Commit Fix Document
+
+Progress state is projected from the markdown automatically (the sync-progress
+hook on write). To commit the fix document so it's tracked in git:
 
 ```bash
-npx tiny-brain sync-file .tiny-brain/fixes/{fix-id}.md
+git add docs/fixes/<fix-slug>.md
+git commit -m "chore: add fix document for <fix-slug>"
 ```
 
-This updates `.tiny-brain/fixes/progress.json` with the fix tasks.
+For a manual re-sync after external edits:
+`tiny-brain task sync docs/fixes/<fix-slug>.md`.
 
-### Step 8: Commit Fix Document
-
-After creating and syncing, commit the fix document so it's tracked in git:
-
-```bash
-git add .tiny-brain/fixes/{fix-id}.md .tiny-brain/fixes/progress.json
-git commit -m "chore: add fix document for {fix-id}"
-```
-
-### Step 9: Confirm and Offer Implementation
+### Step 7: Confirm and Offer Implementation
 
 Tell the user:
-> "I've created fix document '{title}' at `.tiny-brain/fixes/{fix-id}.md` with {N} tasks."
+> "I've created fix document '{title}' at `docs/fixes/<fix-slug>.md` with {N} tasks."
 
 Then **always ask**:
 > "Would you like me to implement this fix now?"
 
 If yes, proceed to implement using the TDD workflow below.
+
+## Resuming an Existing Fix
+
+Picking up a fix someone else created (or that you created in a prior session)
+needs **no status edit**. A fix's and a task's status are derived from git —
+its `test:` / `fix:` / `refactor:` / `review:` commits — so the dashboard and
+`tb work` report the right state the moment you land a commit. Just start the
+next task and commit as normal: there is no `not_started → in_progress`
+frontmatter flip to perform, and **no per-commit task-block update** — the
+markdown task `status:` is not read by anything.
+
+A task that turns out to be unnecessary is closed with a `supersede:` terminal
+commit (`tb work task supersede`), not a hand-edited `status: superseded`.
 
 ## Implementation Workflow
 
@@ -208,12 +252,19 @@ When implementing a fix, follow TDD phases with proper commit tracking.
 fix(scope): commit title
 
 Fix: {fix-id}
-Task: {exact-task-description}
+Task: {task description, as it appears in the markdown}
 
 Description of changes...
 
 🤖 Generated with Claude Code
 ```
+
+The `Task:` value is the **task description as it appears in the fix markdown** —
+the commit-msg hook resolves it to the task's UUID at hook time. Use the exact
+description: the hook matches by equality (trimming whitespace and tolerating
+escaped backticks only), so a reworded header fails to resolve. (During the
+migration soak the legacy positional `task-N` form is still accepted, but new
+commits should use the description.)
 
 **Multi-Task Fix Commits:**
 Related fix tasks that are naturally implemented together can be grouped in a single commit. Each task needs its own `Task:` header:
@@ -248,7 +299,7 @@ All tasks in the commit get the same commit SHA in progress tracking.
    test(dashboard): add SSE reconnection test
 
    Fix: dashboard-sse-fix
-   Task: Write failing test for reconnection
+   Task: Implement SSE reconnection
 
    Add test that verifies the SSE client reconnects...
 
@@ -281,40 +332,54 @@ All tasks in the commit get the same commit SHA in progress tracking.
 
 ### Tracking
 
-Commits with `Fix:` and `Task:` headers are automatically tracked in `.tiny-brain/fixes/progress.json`:
-- `test:` commits update `testCommitSha` and set status to `in_progress`
-- `fix:` commits update `commitSha` and set status to `completed`
-- `refactor:` commits update `refactorCommitSha`
+Commits with `Fix:` and `Task:` headers are the SHA signals status is derived
+from:
+- `test:` commits record the RED sha → the task derives `in_progress`
+- `fix:` commits record the GREEN sha → the task derives `completed` once its
+  review pipeline reaches its terminal phase
+- `refactor:` commits record the refactor sha (closing a needs-refactoring gate)
+
+**Note:** status is **git-derived** — it is a pure function of the commits
+above, not of the markdown. The operational `progress.json` cache under
+`.git/tiny-brain/` is projected from git on read; you do **not** hand-edit the
+task `status:` in `docs/fixes/{fix-id}.md` to track progress (nothing reads it).
+The markdown remains the source of truth for the fix's *identity and intent*
+(id, title, tasks, resolution), not its live status.
 
 ### Task Status Values
 
-When updating `.tiny-brain/fixes/progress.json` manually, use these statuses:
+These are the lifecycle states git derives for a task (and for the fix that
+aggregates them) — the vocabulary you'll see in the dashboard and `tb work`:
 
-| Status | When to Use | Requirements |
-|--------|-------------|--------------|
-| `not_started` | Task created but not started | None |
-| `in_progress` | Work has begun (tests written or implementation underway) | None |
-| `completed` | Implementation done (GREEN phase) | `commitSha` required |
-| `superseded` | Task no longer needed (work done elsewhere or obsolete) | No commit required |
+| Status | Meaning | Git signal |
+|--------|---------|------------|
+| `not_started` | No commit yet | no `test:`/`fix:` commit for the task |
+| `in_progress` | Work underway | a `test:` (RED) commit, or a review owed a refactor |
+| `completed` | Done | the pinned review pipeline reached its terminal phase |
+| `superseded` | No longer needed | a `supersede:` terminal commit |
 
 **Important:**
-- `completed` MUST have a `commitSha` - this is how we verify work was done
-- `superseded` is for tasks that were resolved by other work (e.g., a refactoring that fixed multiple issues) or are no longer relevant
-- When marking a fix as `completed`, all tasks should be either `completed` (with commit) or `superseded`
+- A task `completed`s through its TDD commits + review pipeline, not a manual edit.
+- `superseded` is recorded with a `supersede:` commit (`tb work task supersede`),
+  for work resolved elsewhere or no longer relevant.
 
 ## Completing a Fix
 
-When all tasks are complete (either `completed` with commit SHA or `superseded`), mark the fix as completed:
+When all tasks are done (via their TDD commits + review pipeline, or a
+`supersede:` commit), the fix's status is **already** `completed` in git — you
+do not flip it. The completion ceremony records the *resolution audit trail*:
+the `resolved` timestamp and the `resolution:` block.
 
-### Step 1: Update Frontmatter
+### Step 1: Record the resolution in frontmatter
 
-Edit the fix document's YAML frontmatter:
+Add the `resolved` timestamp and `resolution:` block to the fix document's YAML
+frontmatter. Do **not** add or change a `status:` line — status is git-derived.
 
 ```yaml
 ---
 id: dashboard-sse-fix
+uuid: 019e7af9-eb3b-7dbc-a687-29b73f579360
 title: Dashboard SSE connection fails
-status: completed  # Change from in_progress
 severity: medium
 reported: 2026-01-07T15:30:00.000Z
 resolved: 2026-01-21T15:30:00.000Z  # Add ISO timestamp
@@ -330,12 +395,15 @@ resolution:
 ---
 ```
 
+Leave `id` / `uuid` exactly as `tb work add` wrote them; you are only adding the
+`resolved` timestamp and the `resolution:` block.
+
 ### Step 2: Sync Progress
 
-Run sync-file to update progress.json:
+Run sync-file to project the resolution into progress.json:
 
 ```bash
-npx tiny-brain sync-file .tiny-brain/fixes/{fix-id}.md
+tiny-brain task sync docs/fixes/{fix-id}.md
 ```
 
 ### Resolution Fields
@@ -348,16 +416,17 @@ npx tiny-brain sync-file .tiny-brain/fixes/{fix-id}.md
 
 ## Quality Checklist
 
+- [ ] Fix and tasks created via `tb work add` (no hand-written `id:` / `uuid:`)
 - [ ] Root cause is clearly documented
 - [ ] Reproduction steps are included
 - [ ] Test plan has at least one test category
 - [ ] Tasks use TDD approach (test first)
 - [ ] Severity is appropriate
-- [ ] Status reflects current state
+- [ ] On completion: `resolved` timestamp + `resolution:` block recorded (status is git-derived)
 
 ## Template
 
-- Fix: `templates/fix-template.md`
+- Fix body structure: `templates/fix-template.md` (reference, not a file to copy)
 
 ## Example
 
@@ -368,15 +437,14 @@ Claude:
 1. Investigate: Check logs, network requests, SSE endpoint
 2. Identify: "The SSE endpoint path changed in v2.0"
 3. Create:
-   - .tiny-brain/fixes/dashboard-sse-endpoint-changed.md
-   - Document root cause, test plan, fix tasks
-4. Run `npx tiny-brain sync-file .tiny-brain/fixes/dashboard-sse-endpoint-changed.md`
-5. Confirm: "Created fix document with 3 tasks"
+   tb work add fix dashboard-sse-endpoint-changed "Dashboard SSE endpoint changed in v2.0"
+   tb work add task --fix dashboard-sse-endpoint-changed "Point the SSE client at the new endpoint"
+4. Flesh out root cause + test plan with Edit
+5. Commit; confirm: "Created fix document with 1 task"
 6. Ask: "Would you like me to implement this fix now?"
 
 If user says yes:
 7. Write failing test (test: commit with Fix:/Task: headers)
 8. Implement fix (fix: commit with Fix:/Task: headers)
-9. Verify all tests pass
-10. Optional refactor (refactor: commit)
+9. Optional refactor (refactor: commit)
 ```

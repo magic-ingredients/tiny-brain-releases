@@ -34,18 +34,18 @@ Tracks commits for PRD progress:
 
 Automatic (recommended):
 ```bash
-npx tiny-brain analyse
+tiny-brain analyse
 ```
 
 Manual:
 ```bash
-npx tiny-brain hooks install
+tiny-brain hooks install
 ```
 
 ## Uninstallation
 
 ```bash
-npx tiny-brain hooks uninstall
+tiny-brain hooks uninstall
 ```
 
 ## Customization

@@ -17,38 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sed -n 's/.*\"file_path\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p' | head -1 | { read file_path; [ -n \"$file_path\" ] && npx eslint --fix \"$file_path\" 2>/dev/null || true; }"
-          },
-          {
-            "type": "command",
-            "command": "npx tsc --noEmit 2>/dev/null | head -5 || true"
-          },
-          {
-            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/sync-progress.sh"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/run-related-tests.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/adversarial-review.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "git status --short 2>/dev/null | head -10"
           }
         ]
       }

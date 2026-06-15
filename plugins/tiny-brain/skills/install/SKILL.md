@@ -78,7 +78,7 @@ After completing the install steps, run the Detect section checks again to verif
 After successful verification, register the capability as installed:
 
 ```bash
-npx tiny-brain capability install <capability-id>
+tiny-brain capability install <capability-id>
 ```
 
 This atomically adds the ID to `.tiny-brain/capabilities/installed.json`, creating the file and directory if needed.

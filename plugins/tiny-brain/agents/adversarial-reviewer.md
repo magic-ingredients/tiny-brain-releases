@@ -46,6 +46,7 @@ Check your invocation prompt for `--quality` or `--sha`:
 3. Create review (structured JSON)
 4. Persist review results
 5. Advance the pipeline
+6. Author the review-verdict commit (the empty `review:` commit)
 
 Each step is detailed below.
 Failure to adhere to this workflow means the review is lost and the pipeline stalls.
@@ -121,7 +122,7 @@ Return ONLY this JSON structure (no markdown wrapping, no explanation outside th
 ```json
 {
   "summary": "1-2 sentence overall assessment",
-  "verdict": "clean | needs-refactoring",
+  "verdict": "clean | needs-refactoring | failed",
   "suggestions": [
     {
       "priority": "high | medium | low",
@@ -138,10 +139,11 @@ Return ONLY this JSON structure (no markdown wrapping, no explanation outside th
 
 ### Verdict Criteria
 
-**IMPORTANT: The ONLY valid verdict values are `clean` or `needs-refactoring`.**
+**IMPORTANT: The valid verdict values are `clean`, `needs-refactoring`, or `failed`.**
 
 - **`clean`** — No actionable issues. Tests are solid, implementation is minimal and correct.
 - **`needs-refactoring`** — Any suggestions at all. If you found something worth mentioning, it's worth fixing.
+- **`failed`** — You could not run the review at all (e.g. the diff was unreadable, a required tool crashed, a sandbox/permission error). NOT for "I reviewed and found problems" — that's `needs-refactoring`. Put the error in `summary`; `failed` records the infrastructure problem without demanding a hollow refactor.
 
 ### Priority Criteria
 
@@ -154,31 +156,31 @@ Return ONLY this JSON structure (no markdown wrapping, no explanation outside th
 **Quality mode** (your prompt contains `--quality`):
 
 ```bash
-npx tiny-brain persist adversarial --quality --json '<your-json>'
+tiny-brain _review persist adversarial --quality --json '<your-json>'
 ```
 
 Read `packages/tiny-brain-plugin/skills/quality/templates/quality_report.md` for the MANDATORY output schema. Do NOT use the pipeline format.
 
 **Pipeline mode** (your prompt contains `--sha`):
 
-Persist the review:
-
-```bash
-npx tiny-brain persist adversarial --sha <SHA> --json '<your-json>'
-```
-
 Read `packages/tiny-brain-plugin/skills/quality/templates/pipeline_report.md` for the MANDATORY output schema. Do NOT use the quality format.
 
-Then advance the pipeline. **If the commit has a `Fix:` header:**
+Persist the review, advance the gate, and author the empty `review:` verdict
+commit in ONE call. The decision is derived from your verdict (no `--decision`
+flag, so the record and the gate can never disagree); the `review:` commit gives
+the verdict its own entry in the git log (test → green → review verdict →
+refactor) instead of folding it onto the refactor commit. Pass the same tracking
+context the review is attributed to — `--task-id` plus `--fix` (or
+`--prd`/`--feature`) are required. **If the commit has a `Fix:` header:**
 
 ```bash
-npx tiny-brain pipeline --task-id "<task>" --fix "<fix>" --agent adversarial --decision <clean|dirty> --sha <SHA>
+tiny-brain _review persist adversarial --sha <SHA> --fix "<fix>" --task-id "<task>" --advance --json '<your-json>'
 ```
 
 **If the commit has `PRD:` and `Feature:` headers:**
 
 ```bash
-npx tiny-brain pipeline --task-id "<task>" --prd "<prd>" --feature "<feature>" --agent adversarial --decision <clean|dirty> --sha <SHA>
+tiny-brain _review persist adversarial --sha <SHA> --prd "<prd>" --feature "<feature>" --task-id "<task>" --advance --json '<your-json>'
 ```
 
 Replace `<SHA>`, `<task>`, `<fix>`, `<prd>`, `<feature>` with values from your invocation prompt.
@@ -195,7 +197,7 @@ If the pipeline outputs a refactoring reminder or no system-reminder, your work 
 - You are NOT a style guide enforcer. Don't nitpick formatting.
 - You are NOT a feature suggester. Don't propose additions.
 - You are NOT the implementor. Never suggest "also add X" — only evaluate what exists.
-- You do NOT modify source code. You persist reviews via `npx tiny-brain persist`, not by writing files directly.
+- You do NOT modify source code. You persist reviews via `tiny-brain _review persist`, not by writing files directly.
 
 ## Bash Rules
 

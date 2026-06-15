@@ -1,8 +1,8 @@
 ---
 name: plan
-version: 1.0.0
+version: 2.0.0
 description: Create a new PRD (Product Requirements Document). Use when user wants to plan a new feature, product, or initiative.
-allowed-tools: Read, Write, Bash(mkdir:*), Bash(git config:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Edit, Bash(tiny-brain:*), Bash(tb:*), Bash(git config:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # PRD Creation Skill
@@ -14,6 +14,18 @@ Create a PRD when the user describes:
 - A system enhancement or improvement
 - A major technical initiative
 - Multi-step implementation requiring planning
+
+## Identity model: slugs and UUIDs
+
+Every PRD, feature, and task carries a stable **UUIDv7** as its real identity.
+You never type one. The `tb work add` commands generate the UUID, stamp it into
+the markdown frontmatter (`uuid:`), and assign positional ordering. Humans and
+commit messages refer to work by its **slug** (a kebab-case `id:`) and its task
+**description** — the tooling resolves those to the UUID internally.
+
+So: **create every PRD / feature / task through `tb work add`.** Do not hand-write
+`id:`, `uuid:`, or `number:` frontmatter, and do not invent `task-N-M` ids — those
+were a derivation-from-shape convention that no longer exists under UUIDs.
 
 ## Workflow
 
@@ -28,65 +40,42 @@ Work iteratively with the user to understand:
 
 Ask clarifying questions. Don't jump straight to creating files.
 
-### Step 2: Create PRD Directory
+### Step 2: Create the PRD shell
 
 ```bash
-mkdir -p docs/prd/{prd-id}/features
+tb work add prd <prd-slug> "Clear, User-Focused Title"
 ```
 
-### Step 3: Create PRD File
+This creates `docs/prd/<prd-slug>/prd.md` (and the `features/` directory) with
+frontmatter — `id`, `uuid`, `status: not_started`, dates — already filled in.
 
-Use the template at `templates/prd-template.md` and save to `docs/prd/{prd-id}/prd.md`.
+### Step 3: Create each feature
 
-**YAML Frontmatter:**
-```yaml
----
-id: descriptive-kebab-case-id
-title: "Clear, User-Focused Title"
-version: 1.0.0
-status: not_started
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
-author: Claude Code
----
+For every feature you identified, run:
+
+```bash
+tb work add feature --prd <prd-slug> <feature-slug> "Feature Title"
 ```
 
-### Step 4: Create Feature Files
+This writes `docs/prd/<prd-slug>/features/<feature-slug>.md` with frontmatter,
+including the next positional `number` (assigned automatically — never set it by
+hand).
 
-For each feature identified, create a file at `docs/prd/{prd-id}/features/{feature-id}.md`.
+### Step 4: Add each task to its feature
 
-Use the template at `templates/feature-template.md`.
+For every task in a feature, run:
 
-**Feature Numbering (Critical for Sync):**
-Each feature MUST have a unique `number` field in its YAML frontmatter, starting at 1 and incrementing sequentially. This number determines task ID prefixes (`task-{number}-{n}`) and feature ordering in the dashboard.
-
-```yaml
----
-id: feature-kebab-case-id
-prd_id: parent-prd-id
-number: 1  # Increment for each feature: 1, 2, 3...
-title: Feature Title
-status: not_started
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
----
+```bash
+tb work add task --feature <feature-slug> "Exact task description"
 ```
 
-**Task Format (Critical for Sync):**
-Tasks MUST use this format for automatic extraction:
-```markdown
-## Tasks
+This appends a task block (with its own generated `uuid:`) to the feature doc.
+The task **description** is the identity you'll use later in commit `Task:`
+headers — write it as you want to refer to it.
 
-### 1. First task title
-Description of task...
-
-**Files to modify/create:**
-- file1.ts
-- file2.ts
-
-### 2. Second task title
-Description...
-```
+`--prd <prd-slug>` is **optional** — add it only to disambiguate when the same
+feature slug exists in more than one PRD (otherwise the CLI finds the feature on
+its own, and errors asking for `--prd` if the slug is ambiguous).
 
 **Task Granularity Guidance:**
 - Tasks should be granular enough to be independently testable
@@ -99,90 +88,94 @@ Description...
 **Anti-patterns to reject if the user asks for them:**
 ```markdown
 # ❌ Splits one cycle across two tasks — DO NOT
-### 1. Write failing tests for user authentication
-### 2. Implement user authentication
+"Write failing tests for user authentication"
+"Implement user authentication"
 
 # ❌ Manual / verification-only — DO NOT
-### 3. User visually verifies in dev dashboard
-### 4. Run integration test suite
-### 5. Confirm rollout in staging
+"User visually verifies in dev dashboard"
+"Run integration test suite"
+"Confirm rollout in staging"
 ```
 
-**Correct shape — one task per behaviour, full TDD cycle inside:**
-```markdown
-### 1. Add user authentication
-Failing test + implementation + any review-driven refactors land here.
+Correct shape — one task per behaviour, full TDD cycle inside:
+```bash
+tb work add task --feature user-api "Add user authentication"
 ```
 
-Example multi-task commit:
+### Step 5: Flesh out the prose
+
+`tb work add` writes the frontmatter plus a **minimal** body scaffold — the PRD
+gets `Purpose and Goals` + `Features`; a feature gets `Description` + `Tasks`.
+Use the **Edit** tool to expand from there: add the richer sections (User
+Stories, Acceptance Criteria, Release Criteria, Testing Strategy, per-task notes
+and "Files to modify" lists) and fill in the prose.
+
+The templates show the full body structure to aim for — they are the source of
+the sections the scaffold doesn't pre-render:
+- PRD: `templates/prd-template.md`
+- Feature: `templates/feature-template.md`
+
+These are **body-structure references, not files to copy**. The CLI already owns
+the frontmatter — edit the prose sections only, and leave the frontmatter
+(`id` / `uuid` / `number` / dates) and the task block ids exactly as `tb work
+add` wrote them.
+
+### Step 6: Commit the PRD files
+
+```bash
+git add docs/prd/<prd-slug>/
+git commit -m "chore: add PRD <prd-slug>"
+```
+
+Progress state is projected from the markdown automatically (the sync-progress
+hook on write, the post-commit hook on commit) — no manual progress file edits.
+
+### Step 7: Confirm Creation
+
+Tell the user:
+> "I've created PRD '{title}' with {N} features at `docs/prd/<prd-slug>/`"
+
+Offer to add more features using the `/feature` skill.
+
+## Commit headers (for the implementation work later)
+
+When work on a task is committed, the commit carries:
+
 ```
 feat(api): add user endpoints
 
 PRD: user-management
 Feature: user-api
-Task: Create user service
+Task: Add user service
 Task: Add user endpoints
-Task: Add validation middleware
 
 Implements user management API...
 ```
 
-### Step 5: Automatic Progress Syncing
-
-Progress syncing happens **automatically** when you:
-- **Write/Edit markdown files** - The Claude tool hook (`sync-progress.sh`) detects PRD/feature file changes and syncs them
-- **Commit PRD-tracked work** - The git post-commit hook updates progress with commit SHAs
-
-**What auto-sync does:**
-- Reads `prd.md` and all `features/*.md` files
-- Extracts tasks using the `### N. Task` pattern
-- Generates/updates `.tiny-brain/progress/{prd-id}.json`
-- Preserves existing commit SHAs and task status
-- Makes the PRD visible in the dashboard
-
-**No manual action required** - just write your markdown files and the sync happens automatically.
-
-### Step 6: Commit PRD Files
-
-After creating and syncing, commit the PRD files so they're tracked in git:
-
-```bash
-git add docs/prd/{prd-id}/ .tiny-brain/progress/{prd-id}.json
-git commit -m "chore: add PRD {prd-id}"
-```
-
-### Step 7: Confirm Creation
-
-Tell the user:
-> "I've created PRD '{title}' with {N} features at `docs/prd/{prd-id}/`"
-
-Offer to add more features using the `/feature` skill.
+The `Task:` value is the **task description as it appears in the markdown** — the
+commit-msg hook resolves it to the task's UUID at hook time. Multiple `Task:`
+headers in one commit are all tracked against that SHA. Use the **exact** task
+description — the hook matches by equality (it only trims whitespace and
+tolerates escaped backticks), so a reworded header fails to resolve.
 
 ## Quality Checklist
 
 Before finalizing:
-- [ ] All YAML frontmatter fields filled
-- [ ] ID is unique and in kebab-case
+- [ ] PRD, features, and tasks all created via `tb work add` (no hand-written `id:` / `uuid:`)
+- [ ] Slug is unique and in kebab-case
 - [ ] Purpose clearly states the problem
 - [ ] User needs include specific user stories
 - [ ] Each feature has its own markdown file
-- [ ] Features linked from main PRD
 - [ ] Acceptance criteria are testable
-- [ ] Tasks use `### N. Task Name` format
-
-## Templates
-
-- PRD: `templates/prd-template.md`
-- Feature: `templates/feature-template.md`
+- [ ] No TDD-split or verification-only tasks
 
 ## Re-syncing After Changes
 
-If you modify markdown files using Claude's Write or Edit tools, progress.json is **automatically updated** by the sync-progress hook.
-
-For manual re-sync (e.g., after external edits), use the CLI:
+Progress state is projected from the markdown automatically when you write or
+commit. For a manual re-sync after external edits:
 
 ```bash
-npx tiny-brain sync-file docs/prd/your-prd-id/prd.md
+tiny-brain task sync docs/prd/<prd-slug>/prd.md
 ```
 
 This preserves existing commit tracking while updating tasks from markdown.
@@ -195,10 +188,11 @@ User: "We need to add code quality analysis to tiny-brain"
 Claude:
 1. Ask: "What aspects of quality? Linting? Metrics? Reports?"
 2. Ask: "Should it integrate with existing workflows?"
-3. Once clarified, create:
-   - docs/prd/code-quality-analysis/prd.md
-   - docs/prd/code-quality-analysis/features/quality-service.md
-   - docs/prd/code-quality-analysis/features/quality-cli.md
-4. After writing the feature files, progress.json is automatically synced
-5. Confirm creation - PRD now visible in dashboard
+3. Once clarified, create the structure:
+   tb work add prd code-quality-analysis "Code Quality Analysis"
+   tb work add feature --prd code-quality-analysis quality-service "Quality Service"
+   tb work add feature --prd code-quality-analysis quality-cli "Quality CLI"
+   tb work add task --feature quality-service "Add metric collector"
+4. Fill in Description / Acceptance Criteria with Edit
+5. Commit; the PRD is now visible in the dashboard
 ```

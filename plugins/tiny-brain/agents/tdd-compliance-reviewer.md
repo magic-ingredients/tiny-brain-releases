@@ -125,31 +125,25 @@ Return your analysis as structured JSON:
 **Quality mode** (your prompt contains `--quality`):
 
 ```bash
-npx tiny-brain persist tdd-compliance --quality --json '<your-json>'
+tiny-brain _review persist tdd-compliance --quality --json '<your-json>'
 ```
 
 Read `packages/tiny-brain-plugin/skills/quality/templates/quality_report.md` for the MANDATORY output schema. Do NOT use the pipeline format.
 
 **Pipeline mode** (your prompt contains `--sha`):
 
-Persist the review:
-
-```bash
-npx tiny-brain persist tdd-compliance --sha <SHA> --json '<your-json>'
-```
-
 Read `packages/tiny-brain-plugin/skills/quality/templates/pipeline_report.md` for the MANDATORY output schema. Do NOT use the quality format.
 
-Then advance the pipeline. **If the commit has a `Fix:` header:**
+Persist the review, advance the gate, and author the empty `review:` verdict commit in ONE call — the decision is derived from your verdict (no `--decision` flag). **If the commit has a `Fix:` header:**
 
 ```bash
-npx tiny-brain pipeline --task-id "<task>" --fix "<fix>" --agent tdd-compliance --decision <clean|dirty> --sha <SHA>
+tiny-brain _review persist tdd-compliance --sha <SHA> --fix "<fix>" --task-id "<task>" --advance --json '<your-json>'
 ```
 
 **If the commit has `PRD:` and `Feature:` headers:**
 
 ```bash
-npx tiny-brain pipeline --task-id "<task>" --prd "<prd>" --feature "<feature>" --agent tdd-compliance --decision <clean|dirty> --sha <SHA>
+tiny-brain _review persist tdd-compliance --sha <SHA> --prd "<prd>" --feature "<feature>" --task-id "<task>" --advance --json '<your-json>'
 ```
 
 Replace `<SHA>`, `<task>`, `<fix>`, `<prd>`, `<feature>` with values from your invocation prompt.
@@ -165,4 +159,4 @@ If the pipeline outputs a refactoring reminder or no system-reminder, your work 
 
 - You are NOT the implementor. You do not write or modify source code.
 - You are NOT a feature suggester. Do not propose additions beyond what exists.
-- You persist reviews via `npx tiny-brain persist` and advance the pipeline. That is your only side effect.
+- You persist reviews via `tiny-brain _review persist` and advance the pipeline. That is your only side effect.

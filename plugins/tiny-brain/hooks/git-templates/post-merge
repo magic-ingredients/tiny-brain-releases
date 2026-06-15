@@ -1,8 +1,17 @@
 #!/bin/sh
 #
 # Git post-merge hook for progress.json re-synchronization
-# Re-syncs progress.json from markdown sources after a merge
-# to resolve conflicts and ensure consistency.
+#
+# After the team-ready-foundations migration, per-clone progress files
+# live under <git-common-dir>/tiny-brain/ and are not git-tracked. The
+# *team-visible* sources of truth (feature and fix markdown) DO live in
+# the working tree under docs/, so a merge can change them and the
+# per-clone progress mirror needs re-syncing.
+#
+# This hook scans the merged commits for changed feature/fix markdown,
+# re-runs `tb task sync` on each, and exits. No git add / git commit is
+# needed because the resulting progress.json files are operational state
+# (gitignored).
 #
 # Installed by: tiny-brain analyse
 # To reinstall: tiny-brain hooks install
@@ -12,39 +21,25 @@
 HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
 EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
 
-# Check if any progress files were involved in the merge
-CHANGED_PROGRESS=$(git diff-tree -r --name-only ORIG_HEAD HEAD 2>/dev/null | grep -E '\.tiny-brain/(progress/|fixes/progress\.json)')
+# Only react when the merge changed feature/fix markdown (the
+# per-clone progress files are no longer in the working tree).
+CHANGED_SOURCES=$(git diff-tree -r --name-only ORIG_HEAD HEAD 2>/dev/null \
+  | grep -E '^(docs/prd/.+/features/.+\.md|docs/fixes/.+\.md)$')
 
-if [ -z "$CHANGED_PROGRESS" ]; then
+if [ -z "$CHANGED_SOURCES" ]; then
   exit 0
 fi
 
 echo ""
-echo "🧠 Progress files changed during merge — re-syncing from markdown sources..."
+echo "🧠 Feature/fix markdown changed during merge — re-syncing per-clone progress..."
 
-# Re-sync PRD progress from feature markdown files
-for feature_md in docs/prd/*/features/*.md; do
-  [ -f "$feature_md" ] || continue
-  $EXEC tiny-brain task sync "$feature_md" 2>/dev/null || true
+echo "$CHANGED_SOURCES" | while IFS= read -r changed; do
+  [ -n "$changed" ] || continue
+  [ -f "$changed" ] || continue
+  $EXEC tiny-brain task sync "$changed" 2>/dev/null || true
 done
 
-# Re-sync fix progress from fix markdown files
-for fix_md in .tiny-brain/fixes/*.md; do
-  [ -f "$fix_md" ] || continue
-  $EXEC tiny-brain task sync "$fix_md" 2>/dev/null || true
-done
-
-# Stage regenerated progress files
-git add .tiny-brain/progress/*.json .tiny-brain/fixes/progress.json 2>/dev/null || true
-
-# Check if there are staged changes to commit
-if git diff --cached --quiet 2>/dev/null; then
-  exit 0
-fi
-
-git commit -m "chore: re-sync progress after merge" --no-verify 2>/dev/null || true
-
-echo "✅ Progress re-synced and committed"
+echo "✅ Per-clone progress re-synced (operational state, not committed)"
 echo ""
 
 exit 0

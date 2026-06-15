@@ -10,8 +10,19 @@
 # Resolve package manager commands from analysis.json
 HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
 EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
-EXEC_CMD=$(echo $EXEC | cut -d' ' -f1)
-RUN=$("$HOOKS_DIR/tiny-brain-exec" run 2>/dev/null || echo "npm run")
+# Probe tiny-brain availability once and gate the header-validation calls
+# below on the single TB_AVAILABLE flag. Replaces the 6 inline guard
+# sites the pre-migration template carried — broken under the
+# empty-EXEC contract from tiny-brain-exec-prefer-global-binary. When
+# EXEC is empty (global binary short-circuit), probe with --version
+# to catch dangling shims; when EXEC is a PM prefix, assume the binary
+# is reachable.
+TB_AVAILABLE=""
+if [ -z "$EXEC" ]; then
+  tiny-brain --version >/dev/null 2>&1 && TB_AVAILABLE=1
+else
+  TB_AVAILABLE=1
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -21,6 +32,20 @@ NC='\033[0m' # No Color
 
 COMMIT_MSG_FILE="$1"
 COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Resolve the per-clone operational-state dir. The team-ready-foundations
+# migration moved progress and fixes/progress.json from the working tree
+# into <git-common-dir>/tiny-brain/ so worktrees of one clone share state.
+# `git rev-parse --git-common-dir` returns a relative path (`.git`) on a
+# normal checkout and an absolute path on a worktree; both join cleanly.
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || echo ".git")
+# Belt-and-braces: empty stdout on success would otherwise produce a
+# double-slash STATE_DIR like "$PWD//tiny-brain".
+[ -z "$GIT_COMMON_DIR" ] && GIT_COMMON_DIR=".git"
+case "$GIT_COMMON_DIR" in
+  /*) STATE_DIR="$GIT_COMMON_DIR/tiny-brain" ;;
+  *)  STATE_DIR="$PWD/$GIT_COMMON_DIR/tiny-brain" ;;
+esac
 
 # Extract first line for validation
 FIRST_LINE=$(echo "$COMMIT_MSG" | head -n 1)
@@ -36,7 +61,7 @@ if echo "$FIRST_LINE" | grep -qE "^Revert "; then
 fi
 
 # Check for conventional commit prefixes
-if ! echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor|fix|chore|docs|style|ci|build|perf|untracked)(\(.+\))?:"; then
+if ! echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor|review|fix|spike|chore|docs|style|ci|build|perf|untracked|manual|supersede|revert)(\(.+\))?:"; then
   echo ""
   echo "❌ Commit message must use conventional commit format"
   echo ""
@@ -46,7 +71,9 @@ if ! echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor|fix|chore|docs|style|ci
   echo "     test:     Write failing tests (RED phase)"
   echo "     feat:     Implement to pass tests (GREEN phase)"
   echo "     refactor: Improve without changing behavior (REFACTOR phase)"
+  echo "     review:   Review verdict commit (carries the Pipeline: verdict trailer)"
   echo "     fix:      Bug fixes (GREEN phase)"
+  echo "     spike:    Exploratory commits on a spike (Spike: + Task:, or Spike: + Spike-Outcome: for a terminal outcome)"
   echo ""
   echo "   Other types:"
   echo "     chore:    Maintenance tasks"
@@ -57,6 +84,11 @@ if ! echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor|fix|chore|docs|style|ci
   echo "     perf:     Performance improvements"
   echo "     untracked: Work not related to any PRD or Fix"
   echo ""
+  echo "   State-transition types (git-sourced state):"
+  echo "     manual:    Mark a manual task complete"
+  echo "     supersede: Supersede a task (standard or manual)"
+  echo "     revert:    Negate a task's prior commits"
+  echo ""
   echo "   Your message: $FIRST_LINE"
   echo ""
   exit 1
@@ -64,19 +96,20 @@ fi
 
 # For test:/feat:/refactor: commits, validate PRD/Task headers when active PRDs exist
 if echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor)(\(.+\))?:"; then
-  PROGRESS_DIR=".tiny-brain/progress"
+  PROGRESS_DIR="$STATE_DIR/progress"
   if [ -d "$PROGRESS_DIR" ]; then
     # Count active PRDs (status is not_started or in_progress)
     ACTIVE_PRDS=$(find "$PROGRESS_DIR" -name "*.json" -exec grep -l '"status":\s*"\(not_started\|in_progress\)"' {} \; 2>/dev/null | wc -l | tr -d ' ')
 
     if [ "$ACTIVE_PRDS" -gt 0 ]; then
-      # Check for PRD: or Fix: header (either is acceptable for tracking)
+      # Check for PRD:, Fix:, or Spike: header (any is acceptable for tracking)
       HAS_PRD=$(echo "$COMMIT_MSG" | grep -qE "^PRD:\s*.+" && echo "yes" || echo "no")
       HAS_FIX=$(echo "$COMMIT_MSG" | grep -qE "^Fix:\s*.+" && echo "yes" || echo "no")
+      HAS_SPIKE=$(echo "$COMMIT_MSG" | grep -qE "^Spike:\s*.+" && echo "yes" || echo "no")
 
-      if [ "$HAS_PRD" = "no" ] && [ "$HAS_FIX" = "no" ]; then
+      if [ "$HAS_PRD" = "no" ] && [ "$HAS_FIX" = "no" ] && [ "$HAS_SPIKE" = "no" ]; then
         echo ""
-        echo "${RED}❌ Tracked commit requires PRD or Fix headers${NC}"
+        echo "${RED}❌ Tracked commit requires PRD, Fix, or Spike headers${NC}"
         echo ""
         echo "   There are $ACTIVE_PRDS active PRD(s). Add tracking headers:"
         echo ""
@@ -89,10 +122,27 @@ if echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor)(\(.+\))?:"; then
         echo "     Fix: <fix-id>"
         echo "     Task: <exact task description>"
         echo ""
+        echo "   For Spike-tracked work:"
+        echo "     Spike: <spike-id>"
+        echo "     Task: <exact task description>"
+        echo ""
         echo "   Active PRDs:"
         find "$PROGRESS_DIR" -name "*.json" -exec grep -l '"status":\s*"\(not_started\|in_progress\)"' {} \; 2>/dev/null | while read f; do
           basename "$f" .json | sed 's/^/     - /'
         done
+
+        # List open spikes from <git-common-dir>/tiny-brain/spikes/*.json
+        SPIKES_DIR="$STATE_DIR/spikes"
+        if [ -d "$SPIKES_DIR" ]; then
+          OPEN_SPIKES_LIST=$(find "$SPIKES_DIR" -name '*.json' -exec grep -l '"status":[[:space:]]*"\(not_started\|in_progress\)"' {} \; 2>/dev/null)
+          if [ -n "$OPEN_SPIKES_LIST" ]; then
+            echo ""
+            echo "   Open spikes:"
+            echo "$OPEN_SPIKES_LIST" | while read f; do
+              basename "$f" .json | sed 's/^/     - /'
+            done
+          fi
+        fi
         echo ""
         exit 1
       fi
@@ -126,7 +176,7 @@ if echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor)(\(.+\))?:"; then
         fi
 
         # Validate PRD/Feature/Task references using tiny-brain CLI
-        if command -v $EXEC_CMD >/dev/null 2>&1; then
+        if [ -n "$TB_AVAILABLE" ]; then
           if ! $EXEC tiny-brain commit validate "$COMMIT_MSG_FILE"; then
             echo ""
             echo "${RED}❌ PRD/Feature/Task validation failed${NC}"
@@ -152,7 +202,7 @@ if echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor)(\(.+\))?:"; then
         fi
 
         # Validate Fix/Task references using tiny-brain CLI
-        if command -v $EXEC_CMD >/dev/null 2>&1; then
+        if [ -n "$TB_AVAILABLE" ]; then
           if ! $EXEC tiny-brain commit validate "$COMMIT_MSG_FILE"; then
             echo ""
             echo "${RED}❌ Fix/Task validation failed${NC}"
@@ -161,13 +211,153 @@ if echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor)(\(.+\))?:"; then
           fi
         fi
       fi
+
     fi
   fi
 fi
 
+# For test:/feat:/refactor: commits with a Spike: header, validate Spike/Task
+# references — independent of active-PRD count, so a repo whose only tracked
+# work is a spike (no PRDs, no fixes) still gets validation. Mirrors the
+# independent gate the `fix:` commit type has below for Fix headers.
+#
+# NOTE: open-spike listings in the PRD-gate's rejection message use
+# `grep -l '"status":"…"'` against spike JSON files, which match nested
+# task-level statuses too — a spike with top-level status=validated but an
+# in_progress task currently lists as "open". Mirrors the existing PRD
+# listing behaviour, but worth tightening if listings become noisy.
+if echo "$FIRST_LINE" | grep -qE "^(test|feat|refactor)(\(.+\))?:" \
+   && echo "$COMMIT_MSG" | grep -qE "^Spike:\s*.+"; then
+  # Exempt a terminal spike-outcome commit (Spike-Outcome: trailer, spike-level,
+  # no Task:) from the Task: requirement — see the spike: gate below.
+  if ! echo "$COMMIT_MSG" | grep -qE "^Spike-Outcome:\s*.+" \
+     && ! echo "$COMMIT_MSG" | grep -qE "^Task:\s*.+"; then
+    echo ""
+    echo "${RED}❌ Spike-tracked commit requires Task header${NC}"
+    echo ""
+    echo "   Spike: header found, but Task: header is missing."
+    echo "   Add the exact task description from the spike document:"
+    echo ""
+    echo "   Task: <exact task description>"
+    echo ""
+    exit 1
+  fi
+
+  if [ -n "$TB_AVAILABLE" ]; then
+    if ! $EXEC tiny-brain commit validate "$COMMIT_MSG_FILE"; then
+      echo ""
+      echo "${RED}❌ Spike/Task validation failed${NC}"
+      echo ""
+      exit 1
+    fi
+  fi
+fi
+
+# For spike: commits, require Spike: + Task: headers — spike work is tracked by
+# nature, so the prefix is opt-in to the same discipline as test:/feat:/refactor:
+# commits with a Spike: header. The ONE exception is a terminal spike-outcome
+# commit (spike-git-cutover F9): it carries `Spike:` + `Spike-Outcome:` and is
+# spike-LEVEL, so it has no `Task:` — commit validate checks its outcome
+# shape instead. No other opt-out path; use chore:/untracked: for header-free
+# maintenance against a spike worktree.
+if echo "$FIRST_LINE" | grep -qE "^spike(\(.+\))?:"; then
+  if ! echo "$COMMIT_MSG" | grep -qE "^Spike:\s*.+"; then
+    echo ""
+    echo "${RED}❌ spike: commit requires Spike header${NC}"
+    echo ""
+    echo "   Add the spike ID from the spike document:"
+    echo ""
+    echo "   Spike: <spike-id>"
+    echo "   Task: <exact task description>"
+    echo ""
+    exit 1
+  fi
+
+  # A `Spike-Outcome:` trailer marks a spike-level terminal commit, exempt from
+  # the Task: requirement (its outcome is validated by commit validate).
+  if ! echo "$COMMIT_MSG" | grep -qE "^Spike-Outcome:\s*.+" \
+     && ! echo "$COMMIT_MSG" | grep -qE "^Task:\s*.+"; then
+    echo ""
+    echo "${RED}❌ spike: commit requires Task header${NC}"
+    echo ""
+    echo "   Spike: header found, but Task: header is missing."
+    echo "   Add the exact task description from the spike document"
+    echo "   (or a Spike-Outcome: trailer for a terminal outcome commit):"
+    echo ""
+    echo "   Task: <exact task description>"
+    echo ""
+    exit 1
+  fi
+
+  if [ -n "$TB_AVAILABLE" ]; then
+    if ! $EXEC tiny-brain commit validate "$COMMIT_MSG_FILE"; then
+      echo ""
+      echo "${RED}❌ Spike/Task validation failed${NC}"
+      echo ""
+      exit 1
+    fi
+  fi
+fi
+
+# For manual:/supersede:/revert: commits — git-native state-transition
+# commits (Feature: commit-grammar). The projector derives terminal /
+# negation state from them, joining on Task: + PRD:/Fix:. Require those
+# headers so every transition resolves back to a task. Terminal transitions
+# carry no code, so accept and exit before the test-runner block.
+if echo "$FIRST_LINE" | grep -qE "^(manual|supersede|revert)(\(.+\))?:"; then
+  TYPE=$(echo "$FIRST_LINE" | sed 's/[(:].*//')
+  HAS_PRD=$(echo "$COMMIT_MSG" | grep -qE "^PRD:\s*.+" && echo "yes" || echo "no")
+  HAS_FIX=$(echo "$COMMIT_MSG" | grep -qE "^Fix:\s*.+" && echo "yes" || echo "no")
+
+  if [ "$HAS_PRD" = "no" ] && [ "$HAS_FIX" = "no" ]; then
+    echo ""
+    echo "${RED}❌ ${TYPE}: commit requires a PRD or Fix tracking header${NC}"
+    echo ""
+    echo "   State-transition commits are tracked — the projector joins them"
+    echo "   back to a task. Add tracking headers:"
+    echo ""
+    echo "   For PRD-tracked work:"
+    echo "     PRD: <prd-id>"
+    echo "     Feature: <feature-id>"
+    echo "     Task: <exact task description>"
+    echo ""
+    echo "   For Fix-tracked work:"
+    echo "     Fix: <fix-id>"
+    echo "     Task: <exact task description>"
+    echo ""
+    exit 1
+  fi
+
+  if [ "$HAS_PRD" = "yes" ] && ! echo "$COMMIT_MSG" | grep -qE "^Feature:\s*.+"; then
+    echo ""
+    echo "${RED}❌ ${TYPE}: PRD-tracked commit requires Feature header${NC}"
+    echo ""
+    echo "   PRD: header found, but Feature: header is missing."
+    echo "   Add the feature ID from the PRD:"
+    echo ""
+    echo "   Feature: <feature-id>"
+    echo ""
+    exit 1
+  fi
+
+  if ! echo "$COMMIT_MSG" | grep -qE "^Task:\s*.+"; then
+    echo ""
+    echo "${RED}❌ ${TYPE}: commit requires a Task header${NC}"
+    echo ""
+    echo "   Add the exact task description the transition applies to:"
+    echo ""
+    echo "   Task: <exact task description>"
+    echo ""
+    exit 1
+  fi
+
+  # Terminal transition — accepted. No test execution (no code artifact).
+  exit 0
+fi
+
 # For fix: commits, validate Fix/Task headers when open fixes exist
 if echo "$FIRST_LINE" | grep -qE "^fix(\(.+\))?:"; then
-  FIXES_FILE=".tiny-brain/fixes/progress.json"
+  FIXES_FILE="$STATE_DIR/fixes/progress.json"
   if [ -f "$FIXES_FILE" ]; then
     # Count open fixes (not_started or in_progress status)
     OPEN_FIXES=$(grep -E '"status":\s*"(not_started|in_progress)"' "$FIXES_FILE" 2>/dev/null | wc -l | tr -d ' ')
@@ -207,7 +397,7 @@ if echo "$FIRST_LINE" | grep -qE "^fix(\(.+\))?:"; then
       fi
 
       # Validate fix/task references using tiny-brain CLI
-      if command -v $EXEC_CMD >/dev/null 2>&1; then
+      if [ -n "$TB_AVAILABLE" ]; then
         if ! $EXEC tiny-brain commit validate "$COMMIT_MSG_FILE"; then
           echo ""
           echo "${RED}❌ Fix/Task validation failed${NC}"
@@ -223,10 +413,11 @@ fi
 if echo "$FIRST_LINE" | grep -qE "^refactor(\(.+\))?:"; then
   HAS_PRD_HEADER=$(echo "$COMMIT_MSG" | grep -qE "^PRD:\s*.+" && echo "yes" || echo "no")
   HAS_FIX_HEADER=$(echo "$COMMIT_MSG" | grep -qE "^Fix:\s*.+" && echo "yes" || echo "no")
+  HAS_SPIKE_HEADER=$(echo "$COMMIT_MSG" | grep -qE "^Spike:\s*.+" && echo "yes" || echo "no")
 
-  if [ "$HAS_PRD_HEADER" = "yes" ] || [ "$HAS_FIX_HEADER" = "yes" ]; then
+  if [ "$HAS_PRD_HEADER" = "yes" ] || [ "$HAS_FIX_HEADER" = "yes" ] || [ "$HAS_SPIKE_HEADER" = "yes" ]; then
     # Has tracking headers — validate that a review phase is active using derived phase
-    if command -v $EXEC_CMD >/dev/null 2>&1; then
+    if [ -n "$TB_AVAILABLE" ]; then
       TASK_DESC=$(echo "$COMMIT_MSG" | grep '^Task:' | head -1 | sed 's/^Task:[[:space:]]*//')
 
       # Build argv as positional parameters — passes each value as a
@@ -242,13 +433,17 @@ if echo "$FIRST_LINE" | grep -qE "^refactor(\(.+\))?:"; then
         PRD_ID=$(echo "$COMMIT_MSG" | grep '^PRD:' | head -1 | sed 's/^PRD:[[:space:]]*//')
         FEATURE_ID=$(echo "$COMMIT_MSG" | grep '^Feature:' | head -1 | sed 's/^Feature:[[:space:]]*//')
         set -- "$@" --prd "$PRD_ID" --feature "$FEATURE_ID"
+      elif [ "$HAS_SPIKE_HEADER" = "yes" ]; then
+        SPIKE_ID=$(echo "$COMMIT_MSG" | grep '^Spike:' | head -1 | sed 's/^Spike:[[:space:]]*//')
+        set -- "$@" --spike "$SPIKE_ID"
       fi
 
       # $EXEC intentionally unquoted — may be a multi-word prefix like
       # "pnpm exec" — but everything after is quoted argv so headers
-      # reach pipeline verbatim.
+      # reach tb verbatim. `--quiet` is already in $@ (set above), so
+      # `tb next --quiet` prints the bare derived phase for the gate.
       # shellcheck disable=SC2086
-      CURRENT_PHASE=$($EXEC tiny-brain pipeline "$@" 2>/dev/null | tail -1 || echo "")
+      CURRENT_PHASE=$($EXEC tiny-brain next "$@" 2>/dev/null | tail -1 || echo "")
 
       if [ -n "$CURRENT_PHASE" ]; then
         case "$CURRENT_PHASE" in
@@ -274,8 +469,54 @@ if echo "$FIRST_LINE" | grep -qE "^refactor(\(.+\))?:"; then
         echo ""
         exit 1
       fi
+
+      # Stamp the durable Pipeline: verdict trailer onto this refactor commit.
+      # The gate's refactor: commit (real on the needs-refactoring path, empty
+      # on the clean path) is the carrier of the clone-durable review verdict
+      # (fix: pipeline-verdict-trailer-never-appended). The command resolves the
+      # task's recorded verdicts and rewrites $COMMIT_MSG_FILE. Best-effort: it
+      # never blocks the commit (it exits 0 even on its own errors).
+      # shellcheck disable=SC2086
+      $EXEC tiny-brain stamp-verdict-trailer "$COMMIT_MSG_FILE" 2>/dev/null || true
     fi
   fi
+fi
+
+# For review: verdict commits, stamp the durable Pipeline: trailer onto the
+# dedicated verdict commit (fix review-verdict-as-its-own-commit). The review:
+# commit is the verdict's own carrier, distinct from the refactor: commit. The
+# stamp resolves the verdict from the decided-review files, so it fires after the
+# gate advance (the agent's `_review commit-verdict` runs post `--decision`).
+# Best-effort: never blocks the commit. The refactor: stamp above is kept during
+# the soak so flows that have not yet adopted the third call don't lose the
+# trailer; relocating it fully off refactor is part of persistCommitAdvance.
+if echo "$FIRST_LINE" | grep -qE "^review(\(.+\))?:"; then
+  if [ -n "$TB_AVAILABLE" ]; then
+    # shellcheck disable=SC2086
+    $EXEC tiny-brain stamp-verdict-trailer "$COMMIT_MSG_FILE" 2>/dev/null || true
+  fi
+fi
+
+# Pin the task's review gate-set onto its FIRST commit as a durable
+# Pipeline-plan: trailer (feature pure-git-completion-walk). Runs here, before
+# the test: early-exit, so it covers both the test: (red) first commit of a
+# standard task and the feat: (green) first commit of a skip-RED task. The
+# command self-gates: it only stamps when this commit is the task's first
+# (snapshot captured, no commit recorded yet), so it is a safe no-op on later
+# commits and on untracked work. Best-effort: it NEVER blocks the commit.
+if [ -n "$TB_AVAILABLE" ]; then
+  # shellcheck disable=SC2086
+  $EXEC tiny-brain stamp-pipeline-plan "$COMMIT_MSG_FILE" 2>/dev/null || true
+fi
+
+# Stamp order-aligned Task-Uuid: trailers resolving each Task: header to its
+# UUID (fix commit-task-attribution-not-uuid-keyed). Runs on EVERY tracked
+# commit — not just the first — so the git status read-path can join by stable
+# UUID instead of mutable description text. Resolution is all-or-nothing inside
+# the command; best-effort here, it NEVER blocks the commit.
+if [ -n "$TB_AVAILABLE" ]; then
+  # shellcheck disable=SC2086
+  $EXEC tiny-brain stamp-task-uuid "$COMMIT_MSG_FILE" 2>/dev/null || true
 fi
 
 # For test: commits, skip test execution (they should fail - TDD red phase)
@@ -293,7 +534,7 @@ if echo "$FIRST_LINE" | grep -qE "^untracked(\(.+\))?:"; then
   HAS_ACTIVE_WORK="no"
 
   # Check for active PRDs
-  PROGRESS_DIR=".tiny-brain/progress"
+  PROGRESS_DIR="$STATE_DIR/progress"
   if [ -d "$PROGRESS_DIR" ]; then
     ACTIVE_PRDS=$(find "$PROGRESS_DIR" -name "*.json" -exec grep -l '"status":\s*"\(not_started\|in_progress\)"' {} \; 2>/dev/null | wc -l | tr -d ' ')
     if [ "$ACTIVE_PRDS" -gt 0 ]; then
@@ -302,9 +543,9 @@ if echo "$FIRST_LINE" | grep -qE "^untracked(\(.+\))?:"; then
   fi
 
   # Check for open fixes
-  FIXES_FILE=".tiny-brain/fixes/progress.json"
+  FIXES_FILE="$STATE_DIR/fixes/progress.json"
   if [ -f "$FIXES_FILE" ]; then
-    OPEN_FIXES=$(grep -cE '"status":\s*"(not_started|in_progress)"' "$FIXES_FILE" 2>/dev/null || echo "0")
+    OPEN_FIXES=$(grep -E '"status":\s*"(not_started|in_progress)"' "$FIXES_FILE" 2>/dev/null | wc -l | tr -d ' ')
     if [ "$OPEN_FIXES" -gt 0 ]; then
       HAS_ACTIVE_WORK="yes"
     fi
@@ -329,78 +570,23 @@ if echo "$FIRST_LINE" | grep -qE "^untracked(\(.+\))?:"; then
   exit 0
 fi
 
-# For chore/docs/style/ci/build commits, skip test execution
-if echo "$FIRST_LINE" | grep -qE "^(chore|docs|style|ci|build)(\(.+\))?:"; then
+# For chore/docs/style/ci/build/spike/review commits, skip test execution.
+# spike: is exploratory by nature — requiring tests-pass would defeat the
+# purpose of spikes (try the approach, see what breaks, throw it away).
+# review: is the dedicated verdict commit (fix review-verdict-as-its-own-commit)
+# — an empty marker carrying the Pipeline: trailer, with no code to test.
+if echo "$FIRST_LINE" | grep -qE "^(chore|docs|style|ci|build|spike|review)(\(.+\))?:"; then
   exit 0
 fi
 
-# For feat:/fix:/refactor:/perf: commits, run test-dependent hook steps (e.g. coverage)
-# These were skipped in pre-commit (which used --skip-test-runners)
-if command -v $EXEC_CMD >/dev/null 2>&1; then
-  HOOK_OUTPUT_FILE=$(mktemp)
-  if $EXEC tiny-brain hooks run pre-commit --only-test-runners >"$HOOK_OUTPUT_FILE" 2>&1; then
-    if [ -s "$HOOK_OUTPUT_FILE" ]; then
-      cat "$HOOK_OUTPUT_FILE"
-    fi
-  else
-    cat "$HOOK_OUTPUT_FILE"
-    rm -f "$HOOK_OUTPUT_FILE"
-    exit 1
-  fi
-  rm -f "$HOOK_OUTPUT_FILE"
-fi
-
-# For feat:/fix:/refactor:/perf: commits, run tests (they should pass)
-if [ ! -f "package.json" ]; then
-  exit 0
-fi
-
-if grep -q '"test"' package.json 2>/dev/null; then
-  # Check if this is a monorepo with packages/
-  if [ -d "packages" ]; then
-    # Monorepo: scope tests to affected packages
-    CHANGED_PACKAGES=$(git diff --cached --name-only | grep '^packages/' | cut -d'/' -f2 | sort -u)
-
-    if [ -n "$CHANGED_PACKAGES" ]; then
-      FILTER_ARGS=""
-      for pkg in $CHANGED_PACKAGES; do
-        FILTER_ARGS="$FILTER_ARGS --filter=./packages/$pkg"
-      done
-      TEST_OUTPUT_FILE=$(mktemp)
-      if $EXEC turbo run test $FILTER_ARGS >"$TEST_OUTPUT_FILE" 2>&1; then
-        echo "   ✅ Tests"
-      else
-        echo "   ❌ Tests"
-        echo ""
-        grep -E "FAIL|✗|×|AssertionError|Error:|expected|received|FAILED" "$TEST_OUTPUT_FILE" | head -30
-        echo ""
-        echo "   Tests must pass for feat:/fix:/refactor: commits"
-        echo "   Use 'test:' prefix when writing failing tests (TDD red phase)"
-        rm -f "$TEST_OUTPUT_FILE"
-        exit 1
-      fi
-      rm -f "$TEST_OUTPUT_FILE"
-    else
-      # Changes outside packages/ (root config, docs, etc.) - skip tests
-      echo "   ⏭ Tests"
-    fi
-  else
-    # Single-package repo: run all tests
-    TEST_OUTPUT_FILE=$(mktemp)
-    if $RUN test >"$TEST_OUTPUT_FILE" 2>&1; then
-      echo "   ✅ Tests"
-    else
-      echo "   ❌ Tests"
-      echo ""
-      grep -E "FAIL|✗|×|AssertionError|Error:|expected|received|FAILED" "$TEST_OUTPUT_FILE" | head -30
-      echo ""
-      echo "   Tests must pass for feat:/fix:/refactor: commits"
-      echo "   Use 'test:' prefix when writing failing tests (TDD red phase)"
-      rm -f "$TEST_OUTPUT_FILE"
-      exit 1
-    fi
-    rm -f "$TEST_OUTPUT_FILE"
-  fi
-fi
+# For feat:/fix:/refactor:/perf: commits, run test-dependent hook steps
+# via the shared helper. The coverage analyser (declared with
+# `runsTests: true` + `mode: tollgate` in reviewPipeline) physically
+# runs the test suite as part of measuring coverage, so a test failure
+# naturally fails the tollgate — no separate hardcoded test invocation
+# needed. The pre-migration template carried a 52-line $EXEC turbo
+# run test --filter=... block here that duplicated the work and broke
+# nx/rush/lage consumers; deletion is part of this migration.
+"$HOOKS_DIR/tiny-brain-run-hooks" pre-commit --only-test-runners || exit 1
 
 exit 0

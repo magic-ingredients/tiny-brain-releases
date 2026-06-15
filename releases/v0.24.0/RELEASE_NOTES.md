@@ -1,0 +1,36 @@
+# tiny-brain 0.24.0
+
+**Release Date:** June 15, 2026
+
+## Installation Options
+
+### Option 1: Claude Code Plugin (Recommended)
+```bash
+# Add the tiny-brain marketplace (once)
+/plugin marketplace add magic-ingredients/tiny-brain-releases
+
+# Install the plugin (includes all 7 agents)
+/plugin install tiny-brain@magic-ingredients
+```
+
+### Option 2: MCPB Bundle
+```bash
+curl -L -o tiny-brain-0.24.0.mcpb \
+  "https://github.com/magic-ingredients/tiny-brain-releases/releases/download/v0.24.0/tiny-brain-0.24.0.mcpb"
+
+mcpb install tiny-brain-0.24.0.mcpb
+```
+
+## What's Included
+
+- **Skills:** /plan, /feature, /fix, /adr
+- **Agents (7 bundled):** developer, planner, reviewer, architect, tdd-validator, security-reviewer, performance-engineer
+- **MCP Tools:** personas, planning, analysis
+- **TDD Enforcement:** Pre-commit hooks
+- **Dashboard:** Real-time progress tracking
+
+## Version Information
+- **Version:** 0.24.0
+- **Source Repository:** magic-ingredients/tiny-brain-local
+- **Build Date:** 2026-06-15
+- **Commit:** 88654e816f6a4e20b4786788966fea42d7610487

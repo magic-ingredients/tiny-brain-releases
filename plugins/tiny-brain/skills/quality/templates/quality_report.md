@@ -4,7 +4,7 @@
 
 ## JSON Schema
 
-Your `--json` argument to `npx tiny-brain persist` MUST be a single JSON object with this exact shape:
+Your `--json` argument to `tiny-brain _review persist` MUST be a single JSON object with this exact shape:
 
 ```json
 {

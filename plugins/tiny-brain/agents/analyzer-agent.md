@@ -25,12 +25,15 @@ Check your invocation prompt:
 ### Step 1: Run the analyser
 
 ```bash
-npx tiny-brain run-analyser {analyzer} --json --changed {sha}
+tiny-brain _run-analyser {analyzer} --json --changed {sha}
 ```
 
 The `--changed {sha}` flag scopes the analyser to files changed in the commit (uses the pipeline command from analysis.json). If the analyser doesn't support scoping, it falls back to the full command automatically.
 
-If the command fails or the analyser is not found, report `needs-refactoring`.
+If the command fails to run or the analyser is not found, report `failed` (see
+Step 2's "Tool could not run" policy) — NOT `needs-refactoring`. A tool that
+cannot run produced no findings; a `needs-refactoring` verdict here fabricates a
+gate that blocks on a hollow refactor.
 
 ### Step 2: Check thresholds
 
@@ -42,10 +45,17 @@ Read the `threshold` from your prompt (e.g., `{ min: 80 }` or `{ maxSeverity: "h
 
 **No threshold:** Report findings only → `clean`.
 
+**Tool could not run → `failed`.** If your analyser cannot produce real results
+— it crashed, hit a sandbox/permission (EPERM) error, a port conflict, or a
+missing config — do NOT invent a `clean` or `needs-refactoring` verdict. Report
+`failed`, and put the actual tool error in `summary`. `failed` is a non-blocking
+terminal state: it records the infrastructure failure for the user to fix and
+re-run, instead of fabricating a gate that demands a hollow refactor.
+
 ### Step 3: Persist and advance
 
 ```bash
-npx tiny-brain persist {analyzer} --sha {sha} --json '{
+tiny-brain _review persist {analyzer} --sha {sha} --json '{
   "summary": "Coverage at 85% (threshold: 80%)",
   "verdict": "clean",
   "suggestions": []
@@ -54,7 +64,7 @@ npx tiny-brain persist {analyzer} --sha {sha} --json '{
 
 Then advance:
 ```bash
-npx tiny-brain pipeline --task-id "{taskId}" --agent {analyzer} --sha {sha} --prd "{prd}" --feature "{feature}" --decision <clean|needs-refactoring>
+tiny-brain pipeline --task-id "{taskId}" --agent {analyzer} --sha {sha} --prd "{prd}" --feature "{feature}" --decision <clean|needs-refactoring|failed>
 ```
 
 ## Quality Mode

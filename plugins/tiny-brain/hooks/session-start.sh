@@ -19,8 +19,23 @@
 # Resolve package manager exec command from analysis.json
 . "$(dirname "$0")/resolve-exec.sh"
 
-# Start dashboard (no-op if already running)
-DASH_OUTPUT=$($EXEC tiny-brain dashboard start --if-not-running 2>&1) || true
+# Dashboard handling.
+#
+# `claude-tb` (or any caller that sets __TB_DEV_MODE=1) signals dev
+# mode: the user manages a foreground `tiny-brain dashboard dev`
+# themselves so they get HMR + tsx-watch + logs. Do NOT auto-spawn a
+# detached prod daemon here — that would race the dev daemon for port
+# 8765 and serve stale built dist files. Just report whether dev is up.
+if [ "$__TB_DEV_MODE" = "1" ]; then
+  if lsof -ti :8765 >/dev/null 2>&1; then
+    DASH_OUTPUT="__DEV_RUNNING__"
+  else
+    DASH_OUTPUT="__DEV_NOT_RUNNING__"
+  fi
+else
+  # Production mode: spawn detached daemon if needed.
+  DASH_OUTPUT=$($EXEC tiny-brain dashboard start --if-not-running 2>&1) || true
+fi
 
 # Use env var if set, otherwise read from config, fall back to "developer"
 if [ -n "${TINY_BRAIN_DEFAULT_PERSONA+x}" ]; then
@@ -36,7 +51,13 @@ fi
 SUMMARY="🧠 tiny-brain started!"
 
 # Dashboard line
-if echo "$DASH_OUTPUT" | grep -q "started on port"; then
+if [ "$DASH_OUTPUT" = "__DEV_RUNNING__" ]; then
+  SUMMARY="${SUMMARY}
+🔥 Dashboard (dev mode) at [http://localhost:8765](http://localhost:8765)"
+elif [ "$DASH_OUTPUT" = "__DEV_NOT_RUNNING__" ]; then
+  SUMMARY="${SUMMARY}
+🔥 Dev mode — start the dashboard with \`tiny-brain dashboard dev\` in a terminal"
+elif echo "$DASH_OUTPUT" | grep -q "started on port"; then
   DASH_PORT=$(echo "$DASH_OUTPUT" | grep -o 'port [0-9]*' | head -1 | grep -o '[0-9]*')
   SUMMARY="${SUMMARY}
 📊 Dashboard running at [http://localhost:${DASH_PORT:-8765}](http://localhost:${DASH_PORT:-8765})"
@@ -78,7 +99,7 @@ fi
 
 # Add persona line to summary
 SUMMARY="${SUMMARY}
-🎭 Switched to your **${PERSONA}** persona"
+🎭 Using the **${PERSONA}** persona"
 
 # Append display instruction
 CONTEXT="${CONTEXT}

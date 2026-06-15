@@ -7,11 +7,7 @@
 # To reinstall: tiny-brain hooks install
 #
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-NC='\033[0m' # No Color
+HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
 
 # Get staged files
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
@@ -19,33 +15,14 @@ if [ -z "$STAGED_FILES" ]; then
   exit 0
 fi
 
-# Check if we're in a Node.js project
-if [ ! -f "package.json" ]; then
-  exit 0
-fi
-
-# Resolve package manager exec command from analysis.json
-HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
-EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
-EXEC_CMD=$(echo $EXEC | cut -d' ' -f1)
-
 # Run configured hook analysers from pipeline config (static analysis only).
+# The CLI command `tiny-brain hooks run pre-commit` handles non-Node-safe
+# semantics centrally — silent no-op in repos without package.json AND
+# without an explicit reviewPipeline. That lets Rust/Go/Python/etc. repos
+# install hooks and configure their own analysers (dep-audit, security,
+# etc.) without the script-level gate blocking them.
 # Steps with runsTests=true (e.g. coverage) are skipped here and run in
 # commit-msg where the commit prefix is available for RED phase detection.
-if command -v $EXEC_CMD >/dev/null 2>&1; then
-  HOOK_OUTPUT_FILE=$(mktemp)
-  if $EXEC tiny-brain hooks run pre-commit --skip-test-runners >"$HOOK_OUTPUT_FILE" 2>&1; then
-    cat "$HOOK_OUTPUT_FILE"
-  else
-    cat "$HOOK_OUTPUT_FILE"
-    rm -f "$HOOK_OUTPUT_FILE"
-    exit 1
-  fi
-  rm -f "$HOOK_OUTPUT_FILE"
-fi
+"$HOOKS_DIR/tiny-brain-run-hooks" pre-commit --skip-test-runners || exit 1
 
-# Tests and test-running hooks (coverage) are run in commit-msg hook
-# where the commit prefix is available to skip them for test: commits (TDD RED phase)
-
-echo ""
 exit 0

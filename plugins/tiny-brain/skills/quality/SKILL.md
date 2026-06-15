@@ -23,7 +23,7 @@ Main Conversation (thin orchestrator)
 
 The `qualityPipeline` config contains ALL steps. Each step has a `type`, `agent`, and optionally an `analyzer` field:
 
-- **Analyzer steps** (`step.analyzer` is set): Run via `npx tiny-brain run-analyser <id> --quality`. No LLM agent spawned.
+- **Analyzer steps** (`step.analyzer` is set): Run via `tiny-brain _run-analyser <id> --quality`. No LLM agent spawned.
 - **Agent steps** (no `step.analyzer`): Spawn as LLM Task agents.
 
 Do NOT use `mcp quality detect-analysers` or `mcp quality run-analysers`. Do NOT hardcode any step names. The pipeline config is the single source of truth.
@@ -44,7 +44,7 @@ Run a quality analysis when the user wants to:
 Run discovery directly in the main conversation:
 
 1. Read `packages/tiny-brain-plugin/skills/quality/templates/quality_report.md` — you will paste its full content into every agent prompt (Phase 2)
-2. Run `npx tiny-brain config preferences get qualityPipeline` to get the configured quality pipeline steps. The output is a JSON array of step objects:
+2. Run `tiny-brain config preferences get qualityPipeline` to get the configured quality pipeline steps. The output is a JSON array of step objects:
    ```json
    [
      {"type":"coverage","agent":"tiny-brain:analyzer-agent","analyzer":"coverage",...},
@@ -56,7 +56,7 @@ Run discovery directly in the main conversation:
    - **Analyzer steps**: entries where `analyzer` field is present (these have `"agent":"tiny-brain:analyzer-agent"` — ignore the agent field, use the CLI instead)
    - **Agent steps**: entries where `analyzer` field is NOT present (use the `agent` field to spawn the Task agent, use the `type` field as the step type for persist)
 
-   If the config is empty or not set, warn the user: "No qualityPipeline configured. Run `npx tiny-brain analyse` to detect and configure quality steps." and stop.
+   If the config is empty or not set, warn the user: "No qualityPipeline configured. Run `tiny-brain analyse` to detect and configure quality steps." and stop.
 3. Use Bash `find` to list eligible source files (the Glob tool cannot exclude directories):
    ```bash
    find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rb" -o -name "*.go" -o -name "*.rs" -o -name "*.java" \) \
@@ -125,7 +125,7 @@ You already have the partitioned steps from Phase 1 step 2.
 
 For each analyzer step, run:
 ```bash
-npx tiny-brain run-analyser {step.type} --quality
+tiny-brain _run-analyser {step.type} --quality
 ```
 
 This reads the analyzer invocation from `analysis.json`, runs it, and persists the result to `{runDir}/analysers/{step.type}.json`. No LLM agent needed.
@@ -148,7 +148,7 @@ Task tool:
     {quality_report_template_content}
 
     Persist using:
-      npx tiny-brain persist {step.type} --quality --json '<your-json>'
+      tiny-brain _review persist {step.type} --quality --json '<your-json>'
     The --quality flag routes output to the active quality run directory.
     Do NOT use --sha or write to .tiny-brain/reviews/ — that is for the commit pipeline.
 ```
@@ -338,7 +338,7 @@ MCP equivalent:
 mcp__plugin_tiny-brain_mcp__quality({ operation: "implement-plan", planId: "2026-02-09T14-30-plan" })
 ```
 
-After creating fixes, run `npx tiny-brain sync-file .tiny-brain/fixes/<fixId>.md` for each to update progress tracking.
+After creating fixes, run `tiny-brain task sync .tiny-brain/fixes/<fixId>.md` for each to update progress tracking.
 
 ### Compare Quality Runs
 ```
@@ -399,12 +399,12 @@ User: "Run a quality check on this repo"
 Claude:
 1. Read templates/quality_report.md for output schema
 2. Discovery:
-   - Run: npx tiny-brain config preferences get qualityPipeline
+   - Run: tiny-brain config preferences get qualityPipeline
    - Partition steps by step.analyzer field into analyzer steps and agent steps
    - "Found 87 source files, 34 test files"
    - Generate runId, create run directory, write files.txt
 3. Launch ALL in a single message:
-   - For each analyzer step: Bash: npx tiny-brain run-analyser {step.type} --quality
+   - For each analyzer step: Bash: tiny-brain _run-analyser {step.type} --quality
    - For each agent step: Task: {step.agent} (background)
 4. Report progress as each completes:
    - "{analyzer}: complete"

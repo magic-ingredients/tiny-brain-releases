@@ -1,9 +1,9 @@
 {
   "id": "developer",
   "name": "developer",
-  "description": "TDD-focused software developer using tiny-brain workflows",
-  "version": "3.1.1",
+  "description": "Engineering identity for code-writing sessions in a tiny-brain repository",
+  "version": "4.2.0",
   "created": "2025-01-05T00:00:00.000Z",
-  "lastUpdated": "2025-01-05T00:00:00.000Z",
+  "lastUpdated": "2026-06-12T00:00:00.000Z",
   "source": "bundled"
 }
