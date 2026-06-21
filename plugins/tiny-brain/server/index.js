@@ -449,8 +449,8 @@ var init_parseUtil = __esm({
     init_errors();
     init_en();
     makeIssue = (params) => {
-      const { data, path: path100, errorMaps, issueData } = params;
-      const fullPath = [...path100, ...issueData.path || []];
+      const { data, path: path101, errorMaps, issueData } = params;
+      const fullPath = [...path101, ...issueData.path || []];
       const fullIssue = {
         ...issueData,
         path: fullPath
@@ -758,11 +758,11 @@ var init_types = __esm({
     init_parseUtil();
     init_util();
     ParseInputLazyPath = class {
-      constructor(parent, value, path100, key) {
+      constructor(parent, value, path101, key) {
         this._cachedPath = [];
         this.parent = parent;
         this.data = value;
-        this._path = path100;
+        this._path = path101;
         this._key = key;
       }
       get path() {
@@ -7328,8 +7328,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path100) {
-      let input = path100;
+    function removeDotSegments(path101) {
+      let input = path101;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -7528,8 +7528,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path100, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path100 && path100 !== "/" ? path100 : void 0;
+        const [path101, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path101 && path101 !== "/" ? path101 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -16586,12 +16586,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs79, exportName) {
+    function addFormats(ajv, list, fs80, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs79[f]);
+        ajv.addFormat(f, fs80[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -17984,8 +17984,8 @@ var init_storage_path_builder = __esm({
       buildUserBasePath(_userId) {
         return this.basePath;
       }
-      extractPersonaId(path100) {
-        const parts = path100.split(/[/\\]/);
+      extractPersonaId(path101) {
+        const parts = path101.split(/[/\\]/);
         const personasIndex = parts.findIndex((part) => part === "personas");
         return personasIndex !== -1 && personasIndex + 1 < parts.length ? parts[personasIndex + 1] : null;
       }
@@ -20423,12 +20423,282 @@ var init_plan_formatter = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/services/config/pipeline-normalizer.ts
+function emojiToHue(emoji2) {
+  let hash = 0;
+  for (let i = 0; i < emoji2.length; i++) {
+    hash = (hash << 5) - hash + emoji2.charCodeAt(i) | 0;
+  }
+  return (hash % 360 + 360) % 360;
+}
+function hueToHex(hue) {
+  const s = 0.6, l = 0.5;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(hue / 60 % 2 - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (hue < 60) {
+    r = c;
+    g = x;
+  } else if (hue < 120) {
+    r = x;
+    g = c;
+  } else if (hue < 180) {
+    g = c;
+    b = x;
+  } else if (hue < 240) {
+    g = x;
+    b = c;
+  } else if (hue < 300) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+  const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+function canonicalStepType(type2) {
+  return Object.hasOwn(STEP_TYPE_ALIASES, type2) ? STEP_TYPE_ALIASES[type2] : type2;
+}
+function stringToStep(type2) {
+  const canonical = canonicalStepType(type2);
+  if (KNOWN_DEFAULTS[canonical]) {
+    return { ...KNOWN_DEFAULTS[canonical] };
+  }
+  const label = canonical.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  const emoji2 = "\u{1F50D}";
+  return {
+    type: canonical,
+    agent: `tiny-brain:${canonical}-reviewer`,
+    label,
+    emoji: emoji2,
+    color: hueToHex(emojiToHue(emoji2))
+  };
+}
+function isPipelineStep(entry) {
+  return typeof entry === "object" && entry !== null && "type" in entry && "agent" in entry && "label" in entry && "emoji" in entry;
+}
+function isStaticAnalyserStep(step) {
+  return step.analyzer != null || step.agent === "tiny-brain:analyzer-agent";
+}
+function findNonStaticPerCommitStep(steps) {
+  return steps.find((s) => s.hook === "pre-commit" && !isStaticAnalyserStep(s)) ?? null;
+}
+function assertPerCommitStatic(steps) {
+  const offender = findNonStaticPerCommitStep(steps);
+  if (offender) {
+    throw new PerCommitStaticError(
+      `Per-commit step "${offender.label}" is not a static analyser. The per-commit lane runs on every commit and accepts static analysers only (TypeScript, ESLint); move agentic reviewers to the per-task lane.`
+    );
+  }
+}
+function normalizePipeline(input, options) {
+  if (!input) return [];
+  const sourceHook = options?.sourceKey ? SOURCE_KEY_HOOK[options.sourceKey] : void 0;
+  return input.map((entry) => {
+    let step;
+    const userExplicitHook = isPipelineStep(entry) ? entry.hook : void 0;
+    if (isPipelineStep(entry)) {
+      const defaults2 = KNOWN_DEFAULTS[entry.type];
+      step = defaults2 ? { ...defaults2, ...entry } : entry;
+    } else {
+      step = stringToStep(String(entry));
+    }
+    if (sourceHook && userExplicitHook === void 0) {
+      step = { ...step, hook: sourceHook };
+    }
+    if (step.mode === "tollgate" && step.maxAttempts === void 0) {
+      step = { ...step, maxAttempts: 3 };
+    }
+    if (step.weight !== void 0 && step.weight < 0) {
+      step = { ...step, weight: 0 };
+    }
+    if (step.threshold !== void 0) {
+      step = { ...step, threshold: Math.max(0, Math.min(100, step.threshold)) };
+    }
+    if (!step.color) {
+      step = { ...step, color: hueToHex(emojiToHue(step.emoji)) };
+    }
+    return step;
+  });
+}
+function getHookSteps(pipeline, hookName, options) {
+  return pipeline.filter((s) => {
+    if (s.hook !== hookName) return false;
+    if (options?.skipTestRunners && s.runsTests) return false;
+    if (options?.onlyTestRunners && !s.runsTests) return false;
+    return true;
+  });
+}
+var ADVERSARIAL_STEP, SPIKE_REVIEW_STEP, CODE_COVERAGE_STEP, TYPESCRIPT_HOOK_STEP, ESLINT_HOOK_STEP, DEFAULT_QUALITY_TYPES, KNOWN_DEFAULTS, STEP_TYPE_ALIASES, PerCommitStaticError, SOURCE_KEY_HOOK;
+var init_pipeline_normalizer = __esm({
+  "packages/tiny-brain-core/src/services/config/pipeline-normalizer.ts"() {
+    "use strict";
+    ADVERSARIAL_STEP = {
+      type: "adversarial",
+      agent: "tiny-brain:adversarial-reviewer",
+      label: "Adversarial Review",
+      emoji: "\u{1F608}",
+      // 😈
+      color: "#e45858"
+      // red
+    };
+    SPIKE_REVIEW_STEP = {
+      type: "spike-review",
+      agent: "tiny-brain:spike-reviewer",
+      label: "Spike Validity Check",
+      emoji: "\u2697\uFE0F",
+      // ⚗️
+      color: "#ab47bc"
+      // purple — visually distinct from adversarial red
+    };
+    CODE_COVERAGE_STEP = {
+      type: "coverage",
+      agent: "tiny-brain:analyzer-agent",
+      label: "Code Coverage",
+      emoji: "\u{1F4C8}",
+      // 📈
+      color: "#4caf50",
+      // green
+      analyzer: "coverage",
+      analyzerThreshold: { min: 80 },
+      mode: "tollgate",
+      runsTests: true
+    };
+    TYPESCRIPT_HOOK_STEP = {
+      type: "typescript",
+      agent: "tiny-brain:analyzer-agent",
+      label: "TypeScript",
+      emoji: "\u{1F4DD}",
+      // 📝
+      color: "#3178c6",
+      // typescript blue
+      analyzer: "typescript",
+      hook: "pre-commit"
+    };
+    ESLINT_HOOK_STEP = {
+      type: "eslint",
+      agent: "tiny-brain:analyzer-agent",
+      label: "ESLint",
+      emoji: "\u{1F9F9}",
+      // 🧹
+      color: "#4b32c3",
+      // eslint purple
+      analyzer: "eslint",
+      hook: "pre-commit"
+    };
+    DEFAULT_QUALITY_TYPES = ["code-quality", "coverage", "dependency-audit", "performance", "security", "testing"];
+    KNOWN_DEFAULTS = {
+      adversarial: { ...ADVERSARIAL_STEP },
+      "spike-review": { ...SPIKE_REVIEW_STEP },
+      "typescript": { ...TYPESCRIPT_HOOK_STEP },
+      "eslint": { ...ESLINT_HOOK_STEP },
+      "coverage": { ...CODE_COVERAGE_STEP },
+      "code-quality": {
+        type: "code-quality",
+        agent: "tiny-brain:code-quality-reviewer",
+        label: "Code Quality",
+        emoji: "\u{1F50D}",
+        // 🔍
+        color: "#7c4dff"
+        // purple
+      },
+      "mutation": {
+        type: "mutation",
+        agent: "tiny-brain:analyzer-agent",
+        label: "Mutation Testing",
+        emoji: "\u{1F9DF}",
+        // 🧟
+        color: "#8bc34a",
+        // lime
+        analyzer: "mutation-testing",
+        runsTests: true
+      },
+      "performance": {
+        type: "performance",
+        agent: "tiny-brain:performance-reviewer",
+        label: "Performance Review",
+        emoji: "\u26A1",
+        // ⚡
+        color: "#ff9800"
+        // orange
+      },
+      "security": {
+        type: "security",
+        agent: "tiny-brain:security-reviewer",
+        label: "Security Review",
+        emoji: "\u{1F510}",
+        // 🔐
+        color: "#2196f3"
+        // blue
+      },
+      "tdd-compliance": {
+        type: "tdd-compliance",
+        agent: "tiny-brain:tdd-compliance-reviewer",
+        label: "TDD Compliance",
+        emoji: "\u2705",
+        // ✅
+        color: "#009688"
+        // teal
+      },
+      "testing": {
+        type: "testing",
+        agent: "tiny-brain:testing-reviewer",
+        label: "Testing Review",
+        emoji: "\u{1F9EA}",
+        // 🧪
+        color: "#e91e63"
+        // pink
+      },
+      "dependency-audit": {
+        type: "dependency-audit",
+        agent: "tiny-brain:analyzer-agent",
+        label: "Dependency Audit",
+        emoji: "\u{1F4E6}",
+        // 📦
+        color: "#795548",
+        // brown
+        analyzer: "dependency-audit",
+        analyzerThreshold: { maxSeverity: "high" }
+      }
+    };
+    STEP_TYPE_ALIASES = {
+      "mutation-testing": "mutation",
+      "code-coverage": "coverage"
+    };
+    PerCommitStaticError = class extends Error {
+      constructor(message) {
+        super(message);
+        this.name = "PerCommitStaticError";
+      }
+    };
+    SOURCE_KEY_HOOK = {
+      reviewPipeline: "pre-commit",
+      pushPipeline: "pre-push"
+    };
+  }
+});
+
 // packages/tiny-brain-core/src/services/planning/phase-derivation.ts
 function getReviewSteps(pipeline) {
   return pipeline.filter((s) => !s.hook);
 }
 function pipelineGateSet(pipeline) {
   return getReviewSteps(pipeline).map((s) => s.type);
+}
+function taskGateSet(snapshot, reviewPipeline) {
+  const raw = snapshot ?? (reviewPipeline ? pipelineGateSet(reviewPipeline) : []);
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const gate of raw) {
+    const canonical = canonicalStepType(gate);
+    if (seen.has(canonical)) continue;
+    seen.add(canonical);
+    out.push(canonical);
+  }
+  return out;
 }
 function getActivePipeline(config2) {
   const phases = ["red"];
@@ -20448,7 +20718,7 @@ function getActivePipelineForTask(task, config2) {
   if (!config2.combineRedGreenCommits) {
     phases.push("green");
   }
-  const gates = task.pipelineSnapshot ?? (config2.reviewPipeline ? pipelineGateSet(config2.reviewPipeline) : []);
+  const gates = taskGateSet(task.pipelineSnapshot, config2.reviewPipeline);
   for (const gate of gates) {
     phases.push(`review:${gate}`, `refactor:${gate}`);
   }
@@ -20461,7 +20731,7 @@ function derivePhase(task, config2 = { combineRedGreenCommits: false }) {
   if (!task.commitSha) {
     return config2.combineRedGreenCommits ? "red" : "green";
   }
-  const gates = task.pipelineSnapshot ?? (config2.reviewPipeline ? pipelineGateSet(config2.reviewPipeline) : []);
+  const gates = taskGateSet(task.pipelineSnapshot, config2.reviewPipeline);
   for (const gate of gates) {
     const record2 = task.reviews?.[gate] ?? {};
     if (!record2.reviewSha) return `review:${gate}`;
@@ -20474,11 +20744,11 @@ function isPhaseComplete(task, phase) {
   if (phase === "red") return !!task.testCommitSha;
   if (phase === "green") return !!task.commitSha;
   if (phase.startsWith("review:")) {
-    const type2 = phase.slice("review:".length);
+    const type2 = canonicalStepType(phase.slice("review:".length));
     return !!task.reviews?.[type2]?.reviewSha;
   }
   if (phase.startsWith("refactor:")) {
-    const type2 = phase.slice("refactor:".length);
+    const type2 = canonicalStepType(phase.slice("refactor:".length));
     return !!task.reviews?.[type2]?.refactorCommitSha;
   }
   return false;
@@ -20487,16 +20757,16 @@ function isPhaseInProgress(task, phase, config2) {
   if (phase === "red") return !!task.redStartedAt && !task.testCommitSha;
   if (phase === "green") return !!task.testCommitSha && !task.commitSha;
   if (phase.startsWith("refactor:")) {
-    const type2 = phase.slice("refactor:".length);
+    const type2 = canonicalStepType(phase.slice("refactor:".length));
     const record2 = task.reviews?.[type2] ?? {};
     if (record2.verdict === "failed") return false;
     return !!record2.reviewSha && !record2.refactorCommitSha;
   }
   if (phase.startsWith("review:")) {
-    const type2 = phase.slice("review:".length);
+    const type2 = canonicalStepType(phase.slice("review:".length));
     const record2 = task.reviews?.[type2] ?? {};
     if (!task.commitSha || record2.reviewSha) return false;
-    const priorGates = task.pipelineSnapshot ?? (config2?.reviewPipeline ? pipelineGateSet(config2.reviewPipeline) : []);
+    const priorGates = taskGateSet(task.pipelineSnapshot, config2?.reviewPipeline);
     for (const priorType of priorGates) {
       if (priorType === type2) break;
       const priorRecord = task.reviews?.[priorType] ?? {};
@@ -20518,13 +20788,13 @@ function getPhaseDuration(task, phase) {
     return dateDiff(task.greenStartedAt, task.greenCompletedAt);
   }
   if (phase.startsWith("review:")) {
-    const record2 = task.reviews?.[phase.slice("review:".length)];
+    const record2 = task.reviews?.[canonicalStepType(phase.slice("review:".length))];
     if (record2?.startedAt && record2?.completedAt) {
       return dateDiff(record2.startedAt, record2.completedAt);
     }
   }
   if (phase.startsWith("refactor:")) {
-    const record2 = task.reviews?.[phase.slice("refactor:".length)];
+    const record2 = task.reviews?.[canonicalStepType(phase.slice("refactor:".length))];
     if (record2?.refactorStartedAt && record2?.refactorCompletedAt) {
       return dateDiff(record2.refactorStartedAt, record2.refactorCompletedAt);
     }
@@ -20549,6 +20819,7 @@ function phaseProgress(task, config2 = { combineRedGreenCommits: false }) {
 var init_phase_derivation = __esm({
   "packages/tiny-brain-core/src/services/planning/phase-derivation.ts"() {
     "use strict";
+    init_pipeline_normalizer();
   }
 });
 
@@ -21135,241 +21406,6 @@ var init_feature_template = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/services/config/pipeline-normalizer.ts
-function emojiToHue(emoji2) {
-  let hash = 0;
-  for (let i = 0; i < emoji2.length; i++) {
-    hash = (hash << 5) - hash + emoji2.charCodeAt(i) | 0;
-  }
-  return (hash % 360 + 360) % 360;
-}
-function hueToHex(hue) {
-  const s = 0.6, l = 0.5;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(hue / 60 % 2 - 1));
-  const m = l - c / 2;
-  let r = 0, g = 0, b = 0;
-  if (hue < 60) {
-    r = c;
-    g = x;
-  } else if (hue < 120) {
-    r = x;
-    g = c;
-  } else if (hue < 180) {
-    g = c;
-    b = x;
-  } else if (hue < 240) {
-    g = x;
-    b = c;
-  } else if (hue < 300) {
-    r = x;
-    b = c;
-  } else {
-    r = c;
-    b = x;
-  }
-  const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-function stringToStep(type2) {
-  const canonical = STEP_TYPE_ALIASES[type2] ?? type2;
-  if (KNOWN_DEFAULTS[canonical]) {
-    return { ...KNOWN_DEFAULTS[canonical] };
-  }
-  const label = canonical.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-  const emoji2 = "\u{1F50D}";
-  return {
-    type: canonical,
-    agent: `tiny-brain:${canonical}-reviewer`,
-    label,
-    emoji: emoji2,
-    color: hueToHex(emojiToHue(emoji2))
-  };
-}
-function isPipelineStep(entry) {
-  return typeof entry === "object" && entry !== null && "type" in entry && "agent" in entry && "label" in entry && "emoji" in entry;
-}
-function normalizePipeline(input, options) {
-  if (!input) return [];
-  const sourceHook = options?.sourceKey ? SOURCE_KEY_HOOK[options.sourceKey] : void 0;
-  return input.map((entry) => {
-    let step;
-    const userExplicitHook = isPipelineStep(entry) ? entry.hook : void 0;
-    if (isPipelineStep(entry)) {
-      const defaults2 = KNOWN_DEFAULTS[entry.type];
-      step = defaults2 ? { ...defaults2, ...entry } : entry;
-    } else {
-      step = stringToStep(String(entry));
-    }
-    if (sourceHook && userExplicitHook === void 0) {
-      step = { ...step, hook: sourceHook };
-    }
-    if (step.mode === "tollgate" && step.maxAttempts === void 0) {
-      step = { ...step, maxAttempts: 3 };
-    }
-    if (step.weight !== void 0 && step.weight < 0) {
-      step = { ...step, weight: 0 };
-    }
-    if (step.threshold !== void 0) {
-      step = { ...step, threshold: Math.max(0, Math.min(100, step.threshold)) };
-    }
-    if (!step.color) {
-      step = { ...step, color: hueToHex(emojiToHue(step.emoji)) };
-    }
-    return step;
-  });
-}
-function getHookSteps(pipeline, hookName, options) {
-  return pipeline.filter((s) => {
-    if (s.hook !== hookName) return false;
-    if (options?.skipTestRunners && s.runsTests) return false;
-    if (options?.onlyTestRunners && !s.runsTests) return false;
-    return true;
-  });
-}
-var ADVERSARIAL_STEP, SPIKE_REVIEW_STEP, CODE_COVERAGE_STEP, TYPESCRIPT_HOOK_STEP, ESLINT_HOOK_STEP, DEFAULT_QUALITY_TYPES, KNOWN_DEFAULTS, STEP_TYPE_ALIASES, SOURCE_KEY_HOOK;
-var init_pipeline_normalizer = __esm({
-  "packages/tiny-brain-core/src/services/config/pipeline-normalizer.ts"() {
-    "use strict";
-    ADVERSARIAL_STEP = {
-      type: "adversarial",
-      agent: "tiny-brain:adversarial-reviewer",
-      label: "Adversarial Review",
-      emoji: "\u{1F608}",
-      // 😈
-      color: "#e45858"
-      // red
-    };
-    SPIKE_REVIEW_STEP = {
-      type: "spike-review",
-      agent: "tiny-brain:spike-reviewer",
-      label: "Spike Validity Check",
-      emoji: "\u2697\uFE0F",
-      // ⚗️
-      color: "#ab47bc"
-      // purple — visually distinct from adversarial red
-    };
-    CODE_COVERAGE_STEP = {
-      type: "coverage",
-      agent: "tiny-brain:analyzer-agent",
-      label: "Code Coverage",
-      emoji: "\u{1F4C8}",
-      // 📈
-      color: "#4caf50",
-      // green
-      analyzer: "coverage",
-      analyzerThreshold: { min: 80 },
-      mode: "tollgate",
-      runsTests: true
-    };
-    TYPESCRIPT_HOOK_STEP = {
-      type: "typescript",
-      agent: "tiny-brain:analyzer-agent",
-      label: "TypeScript",
-      emoji: "\u{1F4DD}",
-      // 📝
-      color: "#3178c6",
-      // typescript blue
-      analyzer: "typescript",
-      hook: "pre-commit"
-    };
-    ESLINT_HOOK_STEP = {
-      type: "eslint",
-      agent: "tiny-brain:analyzer-agent",
-      label: "ESLint",
-      emoji: "\u{1F9F9}",
-      // 🧹
-      color: "#4b32c3",
-      // eslint purple
-      analyzer: "eslint",
-      hook: "pre-commit"
-    };
-    DEFAULT_QUALITY_TYPES = ["code-quality", "coverage", "dependency-audit", "performance", "security", "testing"];
-    KNOWN_DEFAULTS = {
-      adversarial: { ...ADVERSARIAL_STEP },
-      "spike-review": { ...SPIKE_REVIEW_STEP },
-      "typescript": { ...TYPESCRIPT_HOOK_STEP },
-      "eslint": { ...ESLINT_HOOK_STEP },
-      "coverage": { ...CODE_COVERAGE_STEP },
-      "code-quality": {
-        type: "code-quality",
-        agent: "tiny-brain:code-quality-reviewer",
-        label: "Code Quality",
-        emoji: "\u{1F50D}",
-        // 🔍
-        color: "#7c4dff"
-        // purple
-      },
-      "mutation": {
-        type: "mutation",
-        agent: "tiny-brain:analyzer-agent",
-        label: "Mutation Testing",
-        emoji: "\u{1F9DF}",
-        // 🧟
-        color: "#8bc34a",
-        // lime
-        analyzer: "mutation-testing",
-        runsTests: true
-      },
-      "performance": {
-        type: "performance",
-        agent: "tiny-brain:performance-reviewer",
-        label: "Performance Review",
-        emoji: "\u26A1",
-        // ⚡
-        color: "#ff9800"
-        // orange
-      },
-      "security": {
-        type: "security",
-        agent: "tiny-brain:security-reviewer",
-        label: "Security Review",
-        emoji: "\u{1F510}",
-        // 🔐
-        color: "#2196f3"
-        // blue
-      },
-      "tdd-compliance": {
-        type: "tdd-compliance",
-        agent: "tiny-brain:tdd-compliance-reviewer",
-        label: "TDD Compliance",
-        emoji: "\u2705",
-        // ✅
-        color: "#009688"
-        // teal
-      },
-      "testing": {
-        type: "testing",
-        agent: "tiny-brain:testing-reviewer",
-        label: "Testing Review",
-        emoji: "\u{1F9EA}",
-        // 🧪
-        color: "#e91e63"
-        // pink
-      },
-      "dependency-audit": {
-        type: "dependency-audit",
-        agent: "tiny-brain:analyzer-agent",
-        label: "Dependency Audit",
-        emoji: "\u{1F4E6}",
-        // 📦
-        color: "#795548",
-        // brown
-        analyzer: "dependency-audit",
-        analyzerThreshold: { maxSeverity: "high" }
-      }
-    };
-    STEP_TYPE_ALIASES = {
-      "mutation-testing": "mutation",
-      "code-coverage": "coverage"
-    };
-    SOURCE_KEY_HOOK = {
-      reviewPipeline: "pre-commit",
-      pushPipeline: "pre-push"
-    };
-  }
-});
-
 // packages/tiny-brain-core/src/types/user-preferences.ts
 var DEFAULT_PREFERENCES;
 var init_user_preferences = __esm({
@@ -21411,12 +21447,63 @@ var init_user_preferences = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/services/planning/branch-name.ts
+function assertSlug(value, label) {
+  if (!SLUG_RE.test(value)) {
+    throw new Error(
+      `deriveBranchName: ${label} ${JSON.stringify(value)} is not a ref-safe slug ([A-Za-z0-9_-]+)`
+    );
+  }
+}
+function shortUuid(uuid2) {
+  if (!UUID_RE.test(uuid2)) {
+    throw new Error(`deriveBranchName: malformed task UUID ${JSON.stringify(uuid2)}`);
+  }
+  return uuid2.slice(uuid2.lastIndexOf("-") + 1);
+}
+function deriveBranchName(item, level) {
+  if (level === "off") return null;
+  switch (item.kind) {
+    case "prd": {
+      assertSlug(item.prdSlug, "prdSlug");
+      const root = `tb/${item.prdSlug}`;
+      if (level === "root") return root;
+      assertSlug(item.featureSlug, "featureSlug");
+      const container = `${root}/${item.featureSlug}`;
+      if (level === "container") return container;
+      return `${container}/${shortUuid(item.taskUuid)}`;
+    }
+    case "fix": {
+      assertSlug(item.fixSlug, "fixSlug");
+      const root = `tb/fix/${item.fixSlug}`;
+      if (level === "root" || level === "container") return root;
+      return `${root}/${shortUuid(item.taskUuid)}`;
+    }
+    case "spike": {
+      assertSlug(item.spikeSlug, "spikeSlug");
+      const root = `tb/spike/${item.spikeSlug}`;
+      if (level === "root" || level === "container") return root;
+      return `${root}/${shortUuid(item.taskUuid)}`;
+    }
+  }
+}
+var BRANCH_GRANULARITY_LEVELS, SLUG_RE, UUID_RE;
+var init_branch_name = __esm({
+  "packages/tiny-brain-core/src/services/planning/branch-name.ts"() {
+    "use strict";
+    BRANCH_GRANULARITY_LEVELS = ["off", "task", "container", "root"];
+    SLUG_RE = /^[A-Za-z0-9_-]+$/;
+    UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  }
+});
+
 // packages/tiny-brain-core/src/types/user-preferences.schema.ts
 var AnalyzerThresholdSchema, PipelineEntrySchema, PruneConfigSchema, RepoConfigSchema, WorkflowConfigSchema, UserPreferencesSchema, DeepPartialRepoConfigSchema, DeepPartialWorkflowConfigSchema, PartialUserPreferencesSchema, PreferencesConfigSchema, PartialPreferencesConfigSchema;
 var init_user_preferences_schema = __esm({
   "packages/tiny-brain-core/src/types/user-preferences.schema.ts"() {
     "use strict";
     init_zod();
+    init_branch_name();
     AnalyzerThresholdSchema = external_exports.object({
       min: external_exports.number().optional(),
       maxSeverity: external_exports.enum(["critical", "high", "moderate", "low"]).optional()
@@ -21550,7 +21637,7 @@ var init_user_preferences_schema = __esm({
       }
     });
     WorkflowConfigSchema = external_exports.object({
-      branchGranularity: external_exports.enum(["off", "task", "container", "root"]).default("off")
+      branchGranularity: external_exports.enum(BRANCH_GRANULARITY_LEVELS).default("off")
     }).strict().default({ branchGranularity: "off" });
     UserPreferencesSchema = external_exports.object({
       /**
@@ -21589,7 +21676,7 @@ var init_user_preferences_schema = __esm({
       // Reject unknown fields under prune so typos surface on load
     }).passthrough();
     DeepPartialWorkflowConfigSchema = external_exports.object({
-      branchGranularity: external_exports.enum(["off", "task", "container", "root"]).optional()
+      branchGranularity: external_exports.enum(BRANCH_GRANULARITY_LEVELS).optional()
     }).strict();
     PartialUserPreferencesSchema = external_exports.object({
       repo: DeepPartialRepoConfigSchema.optional(),
@@ -21609,28 +21696,41 @@ var init_user_preferences_schema = __esm({
 // packages/tiny-brain-core/src/services/config/config-service.ts
 import { readFile } from "fs/promises";
 import { join as join7 } from "path";
-var CONFIG_VERSION, PREFERENCES_CONFIG_PATH, REPO_CONFIG_PATH, PIPELINE_KEYS, PREFERENCE_KEYS, PRUNE_KEY_MAP, DECIMAL_INTEGER_RE, ConfigService;
+var CONFIG_VERSION, PREFERENCES_CONFIG_PATH, REPO_CONFIG_PATH, PIPELINE_KEYS, PREFERENCE_KEYS, WORKFLOW_ENUM_VALUES, PRUNE_KEY_MAP, DIR_KEY_MAP, DECIMAL_INTEGER_RE, ConfigService;
 var init_config_service = __esm({
   "packages/tiny-brain-core/src/services/config/config-service.ts"() {
     "use strict";
     init_user_preferences();
     init_user_preferences_schema();
     init_pipeline_normalizer();
+    init_branch_name();
     CONFIG_VERSION = "1.0.0";
     PREFERENCES_CONFIG_PATH = "config/preferences";
     REPO_CONFIG_PATH = ".tiny-brain/config.json";
     PIPELINE_KEYS = ["reviewPipeline", "pushPipeline", "qualityPipeline"];
     PREFERENCE_KEYS = {
-      boolean: ["autoArchive", "enableAgenticCoding", "enableSDD", "enableTDD", "enableADR", "enableQuality", "manageAgentsMd", "pruneOnPush", "pruneOnPr"],
+      boolean: ["autoArchive", "combineRedGreenCommits", "enableAgenticCoding", "enableSDD", "enableTDD", "enableADR", "enableQuality", "manageAgentsMd", "pruneOnPush", "pruneOnPr"],
       string: ["defaultPersona"],
       path: ["docsDirectory", "adrDirectory", "prdDirectory", "fixesDirectory"],
       array: ["testPatterns", ...PIPELINE_KEYS],
-      numericNullable: ["pruneAfterDaysSinceArchive"]
+      numericNullable: ["pruneAfterDaysSinceArchive"],
+      // Enum keys live under preferences.workflow.* (personal workflow knobs),
+      // not preferences.repo.*. Their allowed values come from WORKFLOW_ENUM_VALUES.
+      enum: ["branchGranularity"]
+    };
+    WORKFLOW_ENUM_VALUES = {
+      branchGranularity: BRANCH_GRANULARITY_LEVELS
     };
     PRUNE_KEY_MAP = {
       pruneOnPush: "onPush",
       pruneOnPr: "onPr",
       pruneAfterDaysSinceArchive: "afterDaysSinceArchive"
+    };
+    DIR_KEY_MAP = {
+      docsDirectory: "docs",
+      adrDirectory: "adr",
+      prdDirectory: "prd",
+      fixesDirectory: "fixes"
     };
     DECIMAL_INTEGER_RE = /^(0|[1-9][0-9]*)$/;
     ConfigService = class {
@@ -21799,7 +21899,8 @@ var init_config_service = __esm({
           ...PREFERENCE_KEYS.string,
           ...PREFERENCE_KEYS.path,
           ...PREFERENCE_KEYS.array,
-          ...PREFERENCE_KEYS.numericNullable
+          ...PREFERENCE_KEYS.numericNullable,
+          ...PREFERENCE_KEYS.enum
         ];
       }
       /**
@@ -21820,6 +21921,9 @@ var init_config_service = __esm({
         switch (key) {
           case "autoArchive":
             value = repo.autoArchive;
+            break;
+          case "combineRedGreenCommits":
+            value = repo.combineRedGreenCommits;
             break;
           case "enableAgenticCoding":
             value = repo.enableAgenticCoding;
@@ -21875,6 +21979,9 @@ var init_config_service = __esm({
           case "pruneAfterDaysSinceArchive":
             value = repo.prune.afterDaysSinceArchive;
             break;
+          case "branchGranularity":
+            value = preferences.workflow.branchGranularity;
+            break;
           default:
             return {
               isValid: false,
@@ -21900,6 +22007,7 @@ var init_config_service = __esm({
         const pathKeys = PREFERENCE_KEYS.path;
         const arrayKeys = PREFERENCE_KEYS.array;
         const numericNullableKeys = PREFERENCE_KEYS.numericNullable;
+        const enumKeys = PREFERENCE_KEYS.enum;
         let parsedValue;
         if (booleanKeys.includes(key)) {
           if (value !== "true" && value !== "false") {
@@ -21969,12 +22077,41 @@ var init_config_service = __esm({
           } else {
             parsedValue = Number(trimmed);
           }
+        } else if (enumKeys.includes(key)) {
+          const allowed = WORKFLOW_ENUM_VALUES[key];
+          if (!allowed.includes(value)) {
+            return {
+              success: false,
+              error: `${key} must be one of: ${allowed.join(", ")}`
+            };
+          }
+          parsedValue = value;
         }
         if (scope === "repo" && !this.context.repositoryRoot) {
           return {
             success: false,
             error: "Cannot save to repository config: not in a repository"
           };
+        }
+        if (enumKeys.includes(key)) {
+          const existing = scope === "global" ? await this.loadGlobalConfig() : await this.loadRepoConfig();
+          const updatedWorkflow = {
+            ...existing.workflow ?? {},
+            [key]: parsedValue
+          };
+          try {
+            if (scope === "global") {
+              await this.setPreference("workflow", updatedWorkflow);
+            } else {
+              await this.setPreferenceToRepo("workflow", updatedWorkflow);
+            }
+            return { success: true };
+          } catch (error2) {
+            return {
+              success: false,
+              error: error2 instanceof Error ? error2.message : String(error2)
+            };
+          }
         }
         const currentRepo = await this.getPreference("repo");
         let updatedRepo;
@@ -21992,13 +22129,7 @@ var init_config_service = __esm({
         } else if (stringKeys.includes(key)) {
           updatedRepo = { ...currentRepo, [key]: parsedValue };
         } else if (pathKeys.includes(key)) {
-          const dirMap = {
-            docsDirectory: "docs",
-            adrDirectory: "adr",
-            prdDirectory: "prd",
-            fixesDirectory: "fixes"
-          };
-          const dirKey = dirMap[key];
+          const dirKey = DIR_KEY_MAP[key];
           updatedRepo = {
             ...currentRepo,
             directories: {
@@ -22019,6 +22150,78 @@ var init_config_service = __esm({
             await this.setPreference("repo", updatedRepo);
           } else {
             await this.setPreferenceToRepo("repo", updatedRepo);
+          }
+          return { success: true };
+        } catch (error2) {
+          return {
+            success: false,
+            error: error2 instanceof Error ? error2.message : String(error2)
+          };
+        }
+      }
+      /**
+       * Clear a preference key from the named scope, reverting it to the
+       * global/default value. Unlike setPreferenceByKey this actually removes the
+       * key (no merge), handling the nested directory/prune mappings. A missing
+       * config or absent key is a no-op success.
+       */
+      async clearPreference(key, scope) {
+        const validKeys = this.getValidKeys();
+        if (!validKeys.includes(key)) {
+          return {
+            success: false,
+            error: `Unknown preference key: ${key}. Valid keys: ${validKeys.join(", ")}`
+          };
+        }
+        if (scope === "repo" && !this.context.repositoryRoot) {
+          return { success: false, error: "Cannot clear repository config: not in a repository" };
+        }
+        const isObj = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+        const isWorkflowKey = PREFERENCE_KEYS.enum.includes(key);
+        const removeKey = (repo) => {
+          if (!isObj(repo)) return;
+          if (key in PRUNE_KEY_MAP) {
+            const pruneKey = PRUNE_KEY_MAP[key];
+            if (isObj(repo.prune)) delete repo.prune[pruneKey];
+          } else if (key in DIR_KEY_MAP) {
+            if (isObj(repo.directories)) delete repo.directories[DIR_KEY_MAP[key]];
+          } else {
+            delete repo[key];
+          }
+        };
+        const removeWorkflowKey = (workflow) => {
+          if (isObj(workflow)) delete workflow[key];
+        };
+        try {
+          if (scope === "global") {
+            const config2 = await this.loadConfig();
+            if (isWorkflowKey) {
+              removeWorkflowKey(config2.preferences.workflow);
+            } else {
+              removeKey(config2.preferences.repo);
+            }
+            await this.saveConfig(config2);
+          } else {
+            const repositoryRoot = this.context.repositoryRoot;
+            if (!repositoryRoot) {
+              return { success: false, error: "Cannot clear repository config: not in a repository" };
+            }
+            const { writeFile: writeFile5, mkdir: mkdir3 } = await import("fs/promises");
+            const configPath2 = join7(repositoryRoot, REPO_CONFIG_PATH);
+            let parsed;
+            try {
+              parsed = JSON.parse(await readFile(configPath2, "utf-8"));
+            } catch {
+              return { success: true };
+            }
+            const preferences = isObj(parsed.preferences) ? parsed.preferences : void 0;
+            if (isWorkflowKey) {
+              removeWorkflowKey(preferences?.workflow);
+            } else {
+              removeKey(preferences?.repo);
+            }
+            await mkdir3(join7(repositoryRoot, ".tiny-brain"), { recursive: true });
+            await writeFile5(configPath2, JSON.stringify(parsed, null, 2), "utf-8");
           }
           return { success: true };
         } catch (error2) {
@@ -26648,12 +26851,12 @@ var init_esm6 = __esm({
       /**
        * Get the Path object referenced by the string path, resolved from this Path
        */
-      resolve(path100) {
-        if (!path100) {
+      resolve(path101) {
+        if (!path101) {
           return this;
         }
-        const rootPath = this.getRootString(path100);
-        const dir = path100.substring(rootPath.length);
+        const rootPath = this.getRootString(path101);
+        const dir = path101.substring(rootPath.length);
         const dirParts = dir.split(this.splitSep);
         const result = rootPath ? this.getRoot(rootPath).#resolveParts(dirParts) : this.#resolveParts(dirParts);
         return result;
@@ -27405,8 +27608,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path100) {
-        return win32.parse(path100).root;
+      getRootString(path101) {
+        return win32.parse(path101).root;
       }
       /**
        * @internal
@@ -27452,8 +27655,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      getRootString(path100) {
-        return path100.startsWith("/") ? "/" : "";
+      getRootString(path101) {
+        return path101.startsWith("/") ? "/" : "";
       }
       /**
        * @internal
@@ -27502,8 +27705,8 @@ var init_esm6 = __esm({
        *
        * @internal
        */
-      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs79 = defaultFS } = {}) {
-        this.#fs = fsFromOption(fs79);
+      constructor(cwd = process.cwd(), pathImpl, sep2, { nocase, childrenCacheSize = 16 * 1024, fs: fs80 = defaultFS } = {}) {
+        this.#fs = fsFromOption(fs80);
         if (cwd instanceof URL || cwd.startsWith("file://")) {
           cwd = fileURLToPath2(cwd);
         }
@@ -27542,11 +27745,11 @@ var init_esm6 = __esm({
       /**
        * Get the depth of a provided path, string, or the cwd
        */
-      depth(path100 = this.cwd) {
-        if (typeof path100 === "string") {
-          path100 = this.cwd.resolve(path100);
+      depth(path101 = this.cwd) {
+        if (typeof path101 === "string") {
+          path101 = this.cwd.resolve(path101);
         }
-        return path100.depth();
+        return path101.depth();
       }
       /**
        * Return the cache of child entries.  Exposed so subclasses can create
@@ -28033,9 +28236,9 @@ var init_esm6 = __esm({
         process3();
         return results;
       }
-      chdir(path100 = this.cwd) {
+      chdir(path101 = this.cwd) {
         const oldCwd = this.cwd;
-        this.cwd = typeof path100 === "string" ? this.cwd.resolve(path100) : path100;
+        this.cwd = typeof path101 === "string" ? this.cwd.resolve(path101) : path101;
         this.cwd[setAsCwd](oldCwd);
       }
     };
@@ -28061,8 +28264,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs79) {
-        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs79 });
+      newRoot(fs80) {
+        return new PathWin32(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs80 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -28090,8 +28293,8 @@ var init_esm6 = __esm({
       /**
        * @internal
        */
-      newRoot(fs79) {
-        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs79 });
+      newRoot(fs80) {
+        return new PathPosix(this.rootPath, IFDIR, void 0, this.roots, this.nocase, this.childrenCache(), { fs: fs80 });
       }
       /**
        * Return true if the provided path string is an absolute path
@@ -28410,8 +28613,8 @@ var init_processor = __esm({
       }
       // match, absolute, ifdir
       entries() {
-        return [...this.store.entries()].map(([path100, n]) => [
-          path100,
+        return [...this.store.entries()].map(([path101, n]) => [
+          path101,
           !!(n & 2),
           !!(n & 1)
         ]);
@@ -28624,9 +28827,9 @@ var init_walker = __esm({
       signal;
       maxDepth;
       includeChildMatches;
-      constructor(patterns, path100, opts) {
+      constructor(patterns, path101, opts) {
         this.patterns = patterns;
-        this.path = path100;
+        this.path = path101;
         this.opts = opts;
         this.#sep = !opts.posix && opts.platform === "win32" ? "\\" : "/";
         this.includeChildMatches = opts.includeChildMatches !== false;
@@ -28645,11 +28848,11 @@ var init_walker = __esm({
           });
         }
       }
-      #ignored(path100) {
-        return this.seen.has(path100) || !!this.#ignore?.ignored?.(path100);
+      #ignored(path101) {
+        return this.seen.has(path101) || !!this.#ignore?.ignored?.(path101);
       }
-      #childrenIgnored(path100) {
-        return !!this.#ignore?.childrenIgnored?.(path100);
+      #childrenIgnored(path101) {
+        return !!this.#ignore?.childrenIgnored?.(path101);
       }
       // backpressure mechanism
       pause() {
@@ -28864,8 +29067,8 @@ var init_walker = __esm({
     };
     GlobWalker = class extends GlobUtil {
       matches = /* @__PURE__ */ new Set();
-      constructor(patterns, path100, opts) {
-        super(patterns, path100, opts);
+      constructor(patterns, path101, opts) {
+        super(patterns, path101, opts);
       }
       matchEmit(e) {
         this.matches.add(e);
@@ -28902,8 +29105,8 @@ var init_walker = __esm({
     };
     GlobStream = class extends GlobUtil {
       results;
-      constructor(patterns, path100, opts) {
-        super(patterns, path100, opts);
+      constructor(patterns, path101, opts) {
+        super(patterns, path101, opts);
         this.results = new Minipass({
           signal: this.signal,
           objectMode: true
@@ -32561,6 +32764,7 @@ function isPassiveCheckpoint(kind) {
 var init_derive_task_state = __esm({
   "packages/tiny-brain-core/src/services/telemetry/derive-task-state.ts"() {
     "use strict";
+    init_event_types();
   }
 });
 
@@ -32633,7 +32837,7 @@ function parseRefs(message) {
   const taskUuids = [];
   const spikeOutcomeBySpike = /* @__PURE__ */ new Map();
   let prdId = null;
-  let featureId = null;
+  let featureId2 = null;
   let fixId = null;
   let spikeId = null;
   for (const line of message.split("\n")) {
@@ -32646,7 +32850,7 @@ function parseRefs(message) {
     }
     const featureMatch = line.match(/^Feature:\s*(.+)$/);
     if (featureMatch) {
-      featureId = featureMatch[1].trim();
+      featureId2 = featureMatch[1].trim();
       fixId = null;
       spikeId = null;
       continue;
@@ -32655,7 +32859,7 @@ function parseRefs(message) {
     if (fixMatch) {
       fixId = fixMatch[1].trim();
       prdId = null;
-      featureId = null;
+      featureId2 = null;
       spikeId = null;
       continue;
     }
@@ -32663,7 +32867,7 @@ function parseRefs(message) {
     if (spikeMatch) {
       spikeId = spikeMatch[1].trim();
       prdId = null;
-      featureId = null;
+      featureId2 = null;
       fixId = null;
       continue;
     }
@@ -32693,8 +32897,8 @@ function parseRefs(message) {
       const ref = { fixId, taskDescription };
       fixRefs.push(ref);
       orderedTaskRefs.push(ref);
-    } else if (prdId && featureId) {
-      const ref = { prdId, featureId, taskDescription };
+    } else if (prdId && featureId2) {
+      const ref = { prdId, featureId: featureId2, taskDescription };
       prdRefs.push(ref);
       orderedTaskRefs.push(ref);
     }
@@ -32850,10 +33054,10 @@ function refMatchesTask(ref, taskUuid, taskDescription) {
   if (ref.uuid !== void 0 && taskUuid !== void 0) return ref.uuid === taskUuid;
   return ref.taskDescription === taskDescription;
 }
-function shasForPrdTask(parsed, prdId, featureId, taskDescription, taskUuid) {
+function shasForPrdTask(parsed, prdId, featureId2, taskDescription, taskUuid) {
   const matches = parsed.filter(
     (c) => c.prdRefs?.some(
-      (ref) => ref.prdId === prdId && ref.featureId === featureId && refMatchesTask(ref, taskUuid, taskDescription)
+      (ref) => ref.prdId === prdId && ref.featureId === featureId2 && refMatchesTask(ref, taskUuid, taskDescription)
     )
   );
   return buildShas(matches);
@@ -32884,9 +33088,9 @@ function latticeFromMatching(matching, refsBySha) {
   }
   return lattice;
 }
-function prdTaskMatches(prdId, featureId, taskDescription, taskUuid) {
+function prdTaskMatches(prdId, featureId2, taskDescription, taskUuid) {
   return (c) => c.prdRefs?.some(
-    (ref) => ref.prdId === prdId && ref.featureId === featureId && refMatchesTask(ref, taskUuid, taskDescription)
+    (ref) => ref.prdId === prdId && ref.featureId === featureId2 && refMatchesTask(ref, taskUuid, taskDescription)
   ) ?? false;
 }
 function fixTaskMatches(fixId, taskDescription, taskUuid) {
@@ -32895,14 +33099,14 @@ function fixTaskMatches(fixId, taskDescription, taskUuid) {
 function spikeTaskMatches(spikeId, taskDescription, taskUuid) {
   return (c) => c.spikeRefs?.some((ref) => ref.spikeId === spikeId && refMatchesTask(ref, taskUuid, taskDescription)) ?? false;
 }
-function shasForPrdTaskByRef(parsed, refsBySha, prdId, featureId, taskDescription, taskUuid) {
-  return latticeFromMatching(parsed.filter(prdTaskMatches(prdId, featureId, taskDescription, taskUuid)), refsBySha);
+function shasForPrdTaskByRef(parsed, refsBySha, prdId, featureId2, taskDescription, taskUuid) {
+  return latticeFromMatching(parsed.filter(prdTaskMatches(prdId, featureId2, taskDescription, taskUuid)), refsBySha);
 }
 function shasForFixTaskByRef(parsed, refsBySha, fixId, taskDescription, taskUuid) {
   return latticeFromMatching(parsed.filter(fixTaskMatches(fixId, taskDescription, taskUuid)), refsBySha);
 }
-function prdIndexKey(prdId, featureId, taskDescription) {
-  return `${prdId}\0${featureId}\0${taskDescription}`;
+function prdIndexKey(prdId, featureId2, taskDescription) {
+  return `${prdId}\0${featureId2}\0${taskDescription}`;
 }
 function fixIndexKey(fixId, taskDescription) {
   return `${fixId}\0${taskDescription}`;
@@ -32910,8 +33114,8 @@ function fixIndexKey(fixId, taskDescription) {
 function spikeIndexKey(spikeId, taskDescription) {
   return `${spikeId}\0${taskDescription}`;
 }
-function prdUuidKey(prdId, featureId, uuid2) {
-  return `${prdId}\0${featureId}\0${uuid2}`;
+function prdUuidKey(prdId, featureId2, uuid2) {
+  return `${prdId}\0${featureId2}\0${uuid2}`;
 }
 function fixUuidKey(fixId, uuid2) {
   return `${fixId}\0${uuid2}`;
@@ -32957,10 +33161,10 @@ function unionCandidates(byUuid, byDesc) {
   const seen = new Set(byUuid.map((c) => c.sha));
   return [...byUuid, ...byDesc.filter((c) => !seen.has(c.sha))];
 }
-function shasForPrdTaskByRefIndexed(index, refsBySha, prdId, featureId, taskDescription, taskUuid) {
-  const byDesc = index.prd.get(prdIndexKey(prdId, featureId, taskDescription)) ?? [];
-  const byUuid = taskUuid !== void 0 ? index.prdByUuid.get(prdUuidKey(prdId, featureId, taskUuid)) ?? [] : [];
-  const matching = unionCandidates(byUuid, byDesc).filter(prdTaskMatches(prdId, featureId, taskDescription, taskUuid));
+function shasForPrdTaskByRefIndexed(index, refsBySha, prdId, featureId2, taskDescription, taskUuid) {
+  const byDesc = index.prd.get(prdIndexKey(prdId, featureId2, taskDescription)) ?? [];
+  const byUuid = taskUuid !== void 0 ? index.prdByUuid.get(prdUuidKey(prdId, featureId2, taskUuid)) ?? [] : [];
+  const matching = unionCandidates(byUuid, byDesc).filter(prdTaskMatches(prdId, featureId2, taskDescription, taskUuid));
   return latticeFromMatching(matching, refsBySha);
 }
 function shasForFixTaskByRefIndexed(index, refsBySha, fixId, taskDescription, taskUuid) {
@@ -33103,7 +33307,7 @@ function deriveGitTaskStatus(git2) {
   if (git2.commitSha !== void 0) {
     if (git2.pipelineSnapshot !== void 0) {
       const allGatesSatisfied = git2.pipelineSnapshot.every((gate) => {
-        const verdict = git2.verdicts?.[gate];
+        const verdict = git2.verdicts?.[canonicalStepType(gate)] ?? git2.verdicts?.[gate];
         if (verdict === void 0) return false;
         if (verdict.verdict === "needs-refactoring") {
           return verdict.refactorCommitSha !== void 0;
@@ -33120,6 +33324,7 @@ function deriveGitTaskStatus(git2) {
 var init_status_derivation = __esm({
   "packages/tiny-brain-core/src/services/planning/status-derivation.ts"() {
     "use strict";
+    init_pipeline_normalizer();
   }
 });
 
@@ -33441,6 +33646,25 @@ function buildTerminalTransitionMessage(input) {
   }
   return lines.join("\n") + "\n";
 }
+function buildBulkSupersedeMessage(input) {
+  const { container, descriptions, note } = input;
+  const label = container.kind === "fix" ? `fix ${container.fix}` : `feature ${container.feature}`;
+  const n = descriptions.length;
+  const lines = [`supersede: retire ${n} task${n === 1 ? "" : "s"} in ${label}`, ""];
+  if (container.kind === "fix") {
+    lines.push(`Fix: ${container.fix}`);
+  } else {
+    lines.push(`PRD: ${container.prd}`);
+    lines.push(`Feature: ${container.feature}`);
+  }
+  for (const description of descriptions) {
+    lines.push(`Task: ${description}`);
+  }
+  if (note !== "") {
+    lines.push("", `CompletionNote: ${note}`);
+  }
+  return lines.join("\n") + "\n";
+}
 function buildSpikeTaskProvenanceMessage(input) {
   const type2 = input.terminalStatus === "completed" ? "spike" : "supersede";
   const lines = [
@@ -33685,7 +33909,14 @@ function projectTask(input) {
   const gitShas = shasForFixTask(parsedCommits, fixId, mdTask.description, mdTask.uuid);
   const status = deriveGitTaskStatus(gitShas);
   const task = {
-    id: mdTask.id,
+    // task-detail-blank-positional-id-collision: the task's globally-unique
+    // UUIDv7 is the canonical id; the positional `task-N` slug collides across
+    // containers (number-less features share it with fix tasks) and blanks the
+    // dashboard task detail. Fall back to the slug only for an unstamped block.
+    // Consumers join on this id: the dashboard's resolveTaskLocation and
+    // findMatchingTask (pipeline loaders) both key on it — so a stamped task is
+    // resolved by its uuid or description, never the obsolete positional slug.
+    id: mdTask.uuid ?? mdTask.id,
     description: mdTask.description,
     status
   };
@@ -33795,15 +34026,15 @@ function projectPlanEntry(input) {
 }
 function projectFeature(input) {
   const { events, mdFeature, parsedCommits, prdId } = input;
-  const featureId = mdFeature.frontmatter.id;
+  const featureId2 = mdFeature.frontmatter.id;
   const tasks = [];
   for (const mdTask of mdFeature.tasks) {
-    const projected = projectPrdTask({ events, mdTask, parsedCommits, prdId, featureId });
+    const projected = projectPrdTask({ events, mdTask, parsedCommits, prdId, featureId: featureId2 });
     if (projected !== null) tasks.push(projected);
   }
   const status = deriveContainerStatus(tasks);
   return {
-    id: featureId,
+    id: featureId2,
     number: mdFeature.frontmatter.number ?? 0,
     title: mdFeature.frontmatter.title,
     description: "",
@@ -33813,17 +34044,19 @@ function projectFeature(input) {
   };
 }
 function projectPrdTask(input) {
-  const { events, mdTask, parsedCommits, prdId, featureId } = input;
+  const { events, mdTask, parsedCommits, prdId, featureId: featureId2 } = input;
   const uuid2 = mdTask.uuid;
-  const taskRef = uuid2 === void 0 ? null : { kind: "prd", prd: prdId, feature: featureId, task: uuid2 };
+  const taskRef = uuid2 === void 0 ? null : { kind: "prd", prd: prdId, feature: featureId2, task: uuid2 };
   const taskEvents = taskRef === null ? [] : events.filter((e) => taskRefsMatch(e.taskRef, taskRef));
   const derived = deriveTaskStateFromEvents(taskEvents);
   if (derived.removed === true) return null;
-  const gitShas = shasForPrdTask(parsedCommits, prdId, featureId, mdTask.description, mdTask.uuid);
+  const gitShas = shasForPrdTask(parsedCommits, prdId, featureId2, mdTask.description, mdTask.uuid);
   const status = deriveGitTaskStatus(gitShas);
   const earliestTs = taskEvents.length > 0 ? [...taskEvents].sort((a, b) => a.ts.localeCompare(b.ts))[0].ts : "";
   const task = {
-    id: mdTask.id,
+    // Canonical id is the globally-unique UUIDv7 (task-detail-blank-positional-
+    // id-collision); positional slug only for an unstamped block.
+    id: mdTask.uuid ?? mdTask.id,
     description: mdTask.description,
     status,
     createdAt: earliestTs
@@ -33932,7 +34165,7 @@ function projectSpikeTask(input) {
   if (derived.removed === true) return null;
   const gitShas = shasForSpikeTask(parsedCommits, spikeId, mdTask.description, mdTask.uuid);
   const status = deriveGitTaskStatus(gitShas);
-  const task = { id: mdTask.id, description: mdTask.description, status };
+  const task = { id: mdTask.uuid ?? mdTask.id, description: mdTask.description, status };
   if (mdTask.uuid !== void 0) task.uuid = mdTask.uuid;
   if (mdTask.pipelineType !== void 0) task.pipelineType = mdTask.pipelineType;
   if (derived.redStartedAt !== void 0) task.redStartedAt = derived.redStartedAt;
@@ -34090,7 +34323,7 @@ function parseWorktreePorcelain(porcelainOutput) {
   for (const block of blocks) {
     const lines = block.split("\n").filter((line) => line.length > 0);
     if (lines.length === 0) continue;
-    let path100;
+    let path101;
     let head;
     let branch = null;
     let isBare = false;
@@ -34099,7 +34332,7 @@ function parseWorktreePorcelain(porcelainOutput) {
     let sawBranchOrDetached = false;
     for (const line of lines) {
       if (line.startsWith("worktree ")) {
-        path100 = line.slice("worktree ".length);
+        path101 = line.slice("worktree ".length);
       } else if (line.startsWith("HEAD ")) {
         head = line.slice("HEAD ".length);
       } else if (line.startsWith("branch ")) {
@@ -34119,10 +34352,10 @@ function parseWorktreePorcelain(porcelainOutput) {
       }
     }
     if (isBare) continue;
-    if (!path100 || !head) continue;
+    if (!path101 || !head) continue;
     if (!sawBranchOrDetached) continue;
     worktrees.push({
-      path: path100,
+      path: path101,
       head,
       branch,
       isMain: isFirstNonBare,
@@ -36599,7 +36832,7 @@ var init_planning_service = __esm({
           if (!plan.prdId || !plan.prdDirPath) {
             throw new Error("Plan does not have a PRD reference. This plan may be corrupted.");
           }
-          const featureId = args.featureName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+          const featureId2 = args.featureName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
           const now = (/* @__PURE__ */ new Date()).toISOString();
           const featureNumber = plan.features ? plan.features.length + 1 : 1;
           const parsedTasks = this.parseTasksFromMarkdown(args.featureDetails, featureNumber, now);
@@ -36608,7 +36841,7 @@ var init_planning_service = __esm({
           const featureFilePath2 = await this.createFeatureMarkdown(
             prdPath,
             {
-              id: featureId,
+              id: featureId2,
               prd_id: plan.prdId,
               title: args.featureName,
               status: "not_started",
@@ -36625,7 +36858,7 @@ var init_planning_service = __esm({
           );
           this.log("info", `Created feature markdown at ${featureFilePath2}`);
           const newFeature = {
-            id: featureId,
+            id: featureId2,
             number: featureNumber,
             title: args.featureName,
             description: shortDescription,
@@ -36679,7 +36912,7 @@ var init_planning_service = __esm({
           }
           this.log("info", "Feature added to plan", {
             planId: plan.id,
-            featureId,
+            featureId: featureId2,
             featureNumber
           });
           return { plan, feature: newFeature };
@@ -37154,8 +37387,8 @@ var init_planning_service = __esm({
         }
         const features = featureMarkdowns.map((fm, index) => {
           const featureNumber = fm.number ?? index + 1;
-          const featureId = fm.id || `feature-${featureNumber}`;
-          const existingFeature = existingPlan?.features.find((f) => f.id === featureId);
+          const featureId2 = fm.id || `feature-${featureNumber}`;
+          const existingFeature = existingPlan?.features.find((f) => f.id === featureId2);
           const tasks = fm.tasks.map((t, taskIndex) => {
             const taskId = `task-${featureNumber}-${taskIndex + 1}`;
             const existingTask = existingFeature?.tasks.find(
@@ -37181,7 +37414,7 @@ var init_planning_service = __esm({
           const weightedSum = tasks.reduce((sum, t) => sum + phaseProgress(t, pipelineConfig), 0);
           const weightedProgress = tasks.length > 0 ? weightedSum / tasks.length : 0;
           return {
-            id: featureId,
+            id: featureId2,
             number: featureNumber,
             title: fm.title,
             description: "",
@@ -37355,9 +37588,9 @@ var init_planning_service = __esm({
           }
           for (const abs of found) {
             if (!abs.endsWith(".md") || abs.endsWith("progress.json")) continue;
-            const basename5 = path18.basename(abs);
-            if (!seen.has(basename5)) {
-              seen.set(basename5, abs);
+            const basename6 = path18.basename(abs);
+            if (!seen.has(basename6)) {
+              seen.set(basename6, abs);
             }
           }
         }
@@ -39753,6 +39986,127 @@ var init_create_task = __esm({
   }
 });
 
+// packages/tiny-brain-core/src/services/work-add/bulk-supersede.ts
+function containerKey(container) {
+  return container.kind === "fix" ? `fix:${container.fix}` : `prd:${container.prd}:${container.feature}`;
+}
+async function emitBulkSupersedeForContainer(input, deps) {
+  const tasks = await deps.listTasks(input.repoPath, input.kind, input.slug);
+  const parsed = parseGitLogOutput(await deps.readGitLog(input.repoPath)).map(parseCommit).filter((c) => c !== null);
+  const open = [];
+  const skipped = [];
+  for (const task of tasks) {
+    const shas = task.container.kind === "fix" ? shasForFixTask(parsed, task.container.fix, task.description, task.uuid) : shasForPrdTask(parsed, task.container.prd, task.container.feature, task.description, task.uuid);
+    if (shas.terminalState !== void 0) {
+      skipped.push({ uuid: task.uuid, description: task.description });
+    } else {
+      open.push(task);
+    }
+  }
+  const groupsByKey = /* @__PURE__ */ new Map();
+  for (const task of open) {
+    const key = containerKey(task.container);
+    const group = groupsByKey.get(key) ?? { container: task.container, descriptions: [] };
+    group.descriptions.push(task.description);
+    groupsByKey.set(key, group);
+  }
+  const groups = [];
+  for (const group of groupsByKey.values()) {
+    const message = buildBulkSupersedeMessage({
+      container: group.container,
+      descriptions: group.descriptions,
+      note: input.note
+    });
+    const sha = await deps.commit(input.repoPath, message);
+    groups.push({ sha, container: group.container, descriptions: group.descriptions });
+  }
+  return { groups, skipped };
+}
+var init_bulk_supersede = __esm({
+  "packages/tiny-brain-core/src/services/work-add/bulk-supersede.ts"() {
+    "use strict";
+    init_git_log_reader();
+    init_progress_rebuild();
+    init_build_terminal_transition_commit();
+  }
+});
+
+// packages/tiny-brain-core/src/services/work-add/resolve-container-tasks.ts
+import { promises as fs22 } from "node:fs";
+import * as path24 from "node:path";
+function tasksFromDoc(markdown, container) {
+  return extractStructuralTasks(markdown).filter((t) => typeof t.uuid === "string" && t.uuid !== "").map((t) => ({ container, description: t.description, uuid: t.uuid }));
+}
+async function readFileOrNull(filePath) {
+  try {
+    return await fs22.readFile(filePath, "utf-8");
+  } catch (err) {
+    if (err.code === "ENOENT") return null;
+    throw err;
+  }
+}
+async function subdirsIn(dir) {
+  try {
+    return (await fs22.readdir(dir, { withFileTypes: true })).filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch (err) {
+    if (err.code === "ENOENT") return [];
+    throw err;
+  }
+}
+function featureId(markdown, relPath) {
+  const id = readFrontmatterScalars(markdown)?.id;
+  return typeof id === "string" ? id : path24.basename(relPath, ".md");
+}
+async function resolveContainerTasks(repoPath, kind, slug) {
+  if (kind === "fix") {
+    const markdown = await readFileOrNull(path24.join(repoPath, "docs", "fixes", `${slug}.md`));
+    if (markdown === null) throw new ContainerNotFoundError(kind, slug);
+    return tasksFromDoc(markdown, { kind: "fix", fix: slug });
+  }
+  if (kind === "prd") {
+    const prdDirRel = path24.join("docs", "prd", slug);
+    if (await readFileOrNull(path24.join(repoPath, prdDirRel, "prd.md")) === null) {
+      throw new ContainerNotFoundError(kind, slug);
+    }
+    const out = [];
+    for (const relPath of listFeatureFilesSortedByNumber(repoPath, prdDirRel)) {
+      const markdown = await fs22.readFile(path24.join(repoPath, relPath), "utf-8");
+      out.push(...tasksFromDoc(markdown, { kind: "prd", prd: slug, feature: featureId(markdown, relPath) }));
+    }
+    return out;
+  }
+  const prdRoot = path24.join(repoPath, "docs", "prd");
+  for (const prd of await subdirsIn(prdRoot)) {
+    const prdDirRel = path24.join("docs", "prd", prd);
+    for (const relPath of listFeatureFilesSortedByNumber(repoPath, prdDirRel)) {
+      const markdown = await fs22.readFile(path24.join(repoPath, relPath), "utf-8");
+      const fm = readFrontmatterScalars(markdown);
+      if (fm?.id === slug) {
+        const prdId = typeof fm.prd_id === "string" ? fm.prd_id : prd;
+        return tasksFromDoc(markdown, { kind: "prd", prd: prdId, feature: slug });
+      }
+    }
+  }
+  throw new ContainerNotFoundError(kind, slug);
+}
+var ContainerNotFoundError;
+var init_resolve_container_tasks = __esm({
+  "packages/tiny-brain-core/src/services/work-add/resolve-container-tasks.ts"() {
+    "use strict";
+    init_markdown_extractor();
+    init_composer_fs_deps();
+    init_build_terminal_transition_commit();
+    ContainerNotFoundError = class extends Error {
+      constructor(kind, slug) {
+        super(`tb work supersede: no ${kind} found with id "${slug}"`);
+        this.kind = kind;
+        this.slug = slug;
+        this.name = "ContainerNotFoundError";
+      }
+    };
+  }
+});
+
 // packages/tiny-brain-core/src/services/planning/uuid-stamper.ts
 function fenceFlags2(lines) {
   const flags = [];
@@ -39846,18 +40200,18 @@ var init_uuid_stamper = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/path-resolver.ts
-import { join as join18 } from "path";
+import { join as join19 } from "path";
 function prdDir(repoRoot, prd) {
-  return join18(repoRoot, "docs", "prd", prd);
+  return join19(repoRoot, "docs", "prd", prd);
 }
 function featureFilePath(repoRoot, prd, feature) {
-  return join18(prdDir(repoRoot, prd), "features", `${feature}.md`);
+  return join19(prdDir(repoRoot, prd), "features", `${feature}.md`);
 }
 function fixDocPath(repoRoot, fix) {
-  return join18(repoRoot, "docs", "fixes", `${fix}.md`);
+  return join19(repoRoot, "docs", "fixes", `${fix}.md`);
 }
 function spikeDocPath(repoRoot, spike) {
-  return join18(repoRoot, "docs", "spikes", `${spike}.md`);
+  return join19(repoRoot, "docs", "spikes", `${spike}.md`);
 }
 var init_path_resolver = __esm({
   "packages/tiny-brain-core/src/services/planning/path-resolver.ts"() {
@@ -39866,7 +40220,7 @@ var init_path_resolver = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/resolve-task-uuid.ts
-import { promises as fs22 } from "fs";
+import { promises as fs23 } from "fs";
 function docPathForRef(ref, repoRoot) {
   switch (ref.kind) {
     case "prd":
@@ -39917,7 +40271,7 @@ async function resolveTaskUuid(ref, options) {
   const docPath = docPathForRef(ref, options.repoRoot);
   let content;
   try {
-    content = await fs22.readFile(docPath, "utf8");
+    content = await fs23.readFile(docPath, "utf8");
   } catch (err) {
     if (err?.code === "ENOENT") {
       throw new DocumentNotFoundError(
@@ -39995,7 +40349,7 @@ var init_resolve_task_uuid = __esm({
 function extractTaskRefsInOrder(message) {
   const refs = [];
   let prdId = null;
-  let featureId = null;
+  let featureId2 = null;
   let fixId = null;
   let spikeId = null;
   for (const line of message.split("\n")) {
@@ -40008,7 +40362,7 @@ function extractTaskRefsInOrder(message) {
     }
     const featureMatch = line.match(/^Feature:\s*(.+)$/);
     if (featureMatch) {
-      featureId = featureMatch[1].trim();
+      featureId2 = featureMatch[1].trim();
       fixId = null;
       spikeId = null;
       continue;
@@ -40017,7 +40371,7 @@ function extractTaskRefsInOrder(message) {
     if (fixMatch) {
       fixId = fixMatch[1].trim();
       prdId = null;
-      featureId = null;
+      featureId2 = null;
       spikeId = null;
       continue;
     }
@@ -40025,7 +40379,7 @@ function extractTaskRefsInOrder(message) {
     if (spikeMatch) {
       spikeId = spikeMatch[1].trim();
       prdId = null;
-      featureId = null;
+      featureId2 = null;
       fixId = null;
       continue;
     }
@@ -40037,8 +40391,8 @@ function extractTaskRefsInOrder(message) {
       refs.push({ kind: "spike", spike: spikeId, description });
     } else if (fixId) {
       refs.push({ kind: "fix", fix: fixId, description });
-    } else if (prdId && featureId) {
-      refs.push({ kind: "prd", prd: prdId, feature: featureId, description });
+    } else if (prdId && featureId2) {
+      refs.push({ kind: "prd", prd: prdId, feature: featureId2, description });
     }
   }
   return refs;
@@ -40152,9 +40506,9 @@ function cellsFromLattice(lattice, input) {
     };
   });
 }
-function buildRefStatusCells(input, prdId, featureId, description, uuid2) {
+function buildRefStatusCells(input, prdId, featureId2, description, uuid2) {
   return cellsFromLattice(
-    shasForPrdTaskByRefIndexed(input.index, input.refsBySha, prdId, featureId, description, uuid2),
+    shasForPrdTaskByRefIndexed(input.index, input.refsBySha, prdId, featureId2, description, uuid2),
     input
   );
 }
@@ -40173,21 +40527,24 @@ function findTaskActivity(pulses, taskRef) {
     ...pulse.worktree !== void 0 ? { worktree: pulse.worktree } : {}
   };
 }
-function enrichTask(task, prdId, featureId, input) {
-  const statusByRef = buildRefStatusCells(input, prdId, featureId, task.description, task.uuid);
-  const activity = task.uuid === void 0 ? void 0 : findTaskActivity(input.pulses, { kind: "prd", prd: prdId, feature: featureId, task: task.uuid });
+function enrichTask(task, prdId, featureId2, input) {
+  const statusByRef = buildRefStatusCells(input, prdId, featureId2, task.description, task.uuid);
+  const activity = task.uuid === void 0 ? void 0 : findTaskActivity(input.pulses, { kind: "prd", prd: prdId, feature: featureId2, task: task.uuid });
   const enriched = { ...task, statusByRef };
   if (activity !== void 0) enriched.activity = activity;
   return enriched;
 }
 function enrichPlanTasks(plan, input) {
-  return {
-    ...plan,
-    features: plan.features.map((feature) => ({
-      ...feature,
-      tasks: feature.tasks.map((task) => enrichTask(task, plan.id, feature.id, input))
-    }))
-  };
+  const features = plan.features.map((feature) => {
+    const tasks = feature.tasks.map((task) => enrichTask(task, plan.id, feature.id, input));
+    const status2 = deriveContainerStatus(
+      tasks.map((t) => ({ status: t.status, redStartedAt: t.activity?.since ?? t.redStartedAt }))
+    );
+    return { ...feature, tasks, status: status2 };
+  });
+  const containerStatus = deriveContainerStatus(features);
+  const status = plan.status === "archived" ? "archived" : containerStatus === "superseded" ? "completed" : containerStatus;
+  return { ...plan, features, status };
 }
 var init_ref_lattice_enrichment = __esm({
   "packages/tiny-brain-core/src/services/planning/ref-lattice-enrichment.ts"() {
@@ -41893,7 +42250,7 @@ var init_strategy_service = __esm({
 // packages/tiny-brain-core/src/services/repo-config/repo-config-service.ts
 import { createHash } from "crypto";
 import { readFile as readFile4, readdir as readdir2, access } from "fs/promises";
-import { join as join19 } from "path";
+import { join as join20 } from "path";
 var CONFIG_VERSION2, REPOS_CONFIG_PATH, RepoConfigService;
 var init_repo_config_service = __esm({
   "packages/tiny-brain-core/src/services/repo-config/repo-config-service.ts"() {
@@ -42001,13 +42358,13 @@ var init_repo_config_service = __esm({
           complete: 0
         };
         try {
-          const prdDir2 = join19(repoPath, "docs", "prd");
+          const prdDir2 = join20(repoPath, "docs", "prd");
           await access(prdDir2);
           const entries = await readdir2(prdDir2, { withFileTypes: true });
           const prdDirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith("_"));
           for (const dir of prdDirs) {
             try {
-              const progressPath = join19(prdDir2, dir.name, "progress.json");
+              const progressPath = join20(prdDir2, dir.name, "progress.json");
               const content = await readFile4(progressPath, "utf-8");
               const progress = JSON.parse(content);
               const status = progress.status?.toLowerCase();
@@ -42160,8 +42517,8 @@ var init_repo_config_service = __esm({
       /**
        * Generate a unique repo ID from path
        */
-      generateRepoId(path100) {
-        const hash = createHash("sha256").update(path100).digest("hex");
+      generateRepoId(path101) {
+        const hash = createHash("sha256").update(path101).digest("hex");
         return `repo-${hash.substring(0, 12)}`;
       }
       /**
@@ -42171,7 +42528,7 @@ var init_repo_config_service = __esm({
       async extractContextFileData(repoPath) {
         const result = {};
         try {
-          const analysisPath = join19(repoPath, ".tiny-brain", "analysis.json");
+          const analysisPath = join20(repoPath, ".tiny-brain", "analysis.json");
           const analysisContent = await readFile4(analysisPath, "utf-8");
           const analysisData = JSON.parse(analysisContent);
           if (analysisData.detectedAt) {
@@ -42179,7 +42536,7 @@ var init_repo_config_service = __esm({
           }
         } catch {
           try {
-            const contextFilePath = join19(repoPath, "CLAUDE.md");
+            const contextFilePath = join20(repoPath, "CLAUDE.md");
             const content = await readFile4(contextFilePath, "utf-8");
             const yamlData = this.parseRepositoryContextYAML(content);
             if (yamlData?.analysisDate) {
@@ -42190,7 +42547,7 @@ var init_repo_config_service = __esm({
         }
         try {
           const contextFileName = "CLAUDE.md";
-          const contextFilePath = join19(repoPath, contextFileName);
+          const contextFilePath = join20(repoPath, contextFileName);
           const content = await readFile4(contextFilePath, "utf-8");
           result.contextFile = contextFileName;
           result.installedAgentCount = this.countInstalledAgents(content);
@@ -42238,15 +42595,15 @@ var init_repo_config_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/fix/fix-service.ts
-import { promises as fs23 } from "fs";
-import path24 from "path";
+import { promises as fs24 } from "fs";
+import path25 from "path";
 var LEGACY_FIXES_RELATIVE_DIR, FixService;
 var init_fix_service = __esm({
   "packages/tiny-brain-core/src/services/fix/fix-service.ts"() {
     "use strict";
     init_test_plan_parser();
     init_config_service();
-    LEGACY_FIXES_RELATIVE_DIR = path24.join(".tiny-brain", "fixes");
+    LEGACY_FIXES_RELATIVE_DIR = path25.join(".tiny-brain", "fixes");
     FixService = class {
       constructor(context) {
         this.context = context;
@@ -42260,13 +42617,13 @@ var init_fix_service = __esm({
        */
       async resolveFixesDir() {
         const configured = await this.configService.getFixesDirectory();
-        return path24.join(this.repoRoot, configured);
+        return path25.join(this.repoRoot, configured);
       }
       /**
        * Resolve the legacy fix-doc directory for backward-compat reads.
        */
       resolveLegacyFixesDir() {
-        return path24.join(this.repoRoot, LEGACY_FIXES_RELATIVE_DIR);
+        return path25.join(this.repoRoot, LEGACY_FIXES_RELATIVE_DIR);
       }
       /**
        * Locate an existing fix doc, checking the configured location
@@ -42274,12 +42631,12 @@ var init_fix_service = __esm({
        */
       async locateFix(fixId) {
         const candidates = [
-          path24.join(await this.resolveFixesDir(), `${fixId}.md`),
-          path24.join(this.resolveLegacyFixesDir(), `${fixId}.md`)
+          path25.join(await this.resolveFixesDir(), `${fixId}.md`),
+          path25.join(this.resolveLegacyFixesDir(), `${fixId}.md`)
         ];
         for (const candidate of candidates) {
           try {
-            await fs23.access(candidate);
+            await fs24.access(candidate);
             return candidate;
           } catch {
           }
@@ -42291,12 +42648,12 @@ var init_fix_service = __esm({
        */
       async createFix(fixId, details) {
         const fixesDir = await this.resolveFixesDir();
-        await fs23.mkdir(fixesDir, { recursive: true });
+        await fs24.mkdir(fixesDir, { recursive: true });
         const template = this.getDefaultTemplate();
         const now = (/* @__PURE__ */ new Date()).toISOString();
         const content = template.replace(/\{\{fix-id\}\}/g, fixId).replace(/\{\{title\}\}/g, details.title).replace(/\{\{date\}\}/g, now).replace(/\{\{problem\}\}/g, details.problem);
-        const fixPath = path24.join(fixesDir, `${fixId}.md`);
-        await fs23.writeFile(fixPath, content, "utf-8");
+        const fixPath = path25.join(fixesDir, `${fixId}.md`);
+        await fs24.writeFile(fixPath, content, "utf-8");
         return {
           id: fixId,
           title: details.title,
@@ -42313,7 +42670,7 @@ var init_fix_service = __esm({
         const fixPath = await this.locateFix(fixId);
         if (!fixPath) return null;
         try {
-          const content = await fs23.readFile(fixPath, "utf-8");
+          const content = await fs24.readFile(fixPath, "utf-8");
           return this.parseFix(fixId, content);
         } catch {
           return null;
@@ -42350,7 +42707,7 @@ var init_fix_service = __esm({
         for (const dir of [fixesDir, legacyDir]) {
           let files;
           try {
-            files = await fs23.readdir(dir);
+            files = await fs24.readdir(dir);
           } catch {
             continue;
           }
@@ -42358,7 +42715,7 @@ var init_fix_service = __esm({
             if (!file.endsWith(".md") || file.startsWith(".")) continue;
             const fixId = file.replace(".md", "");
             if (!located.has(fixId)) {
-              located.set(fixId, path24.join(dir, file));
+              located.set(fixId, path25.join(dir, file));
             }
           }
         }
@@ -42378,7 +42735,7 @@ var init_fix_service = __esm({
        */
       async loadFixFromPath(fixId, absPath) {
         try {
-          const content = await fs23.readFile(absPath, "utf-8");
+          const content = await fs24.readFile(absPath, "utf-8");
           return this.parseFix(fixId, content);
         } catch {
           return null;
@@ -42470,11 +42827,11 @@ var init_fix_service = __esm({
        */
       async saveFix(fix) {
         const existingPath = await this.locateFix(fix.id);
-        const fixPath = existingPath ?? path24.join(await this.resolveFixesDir(), `${fix.id}.md`);
-        await fs23.mkdir(path24.dirname(fixPath), { recursive: true });
+        const fixPath = existingPath ?? path25.join(await this.resolveFixesDir(), `${fix.id}.md`);
+        await fs24.mkdir(path25.dirname(fixPath), { recursive: true });
         let existingContent = "";
         try {
-          existingContent = await fs23.readFile(fixPath, "utf-8");
+          existingContent = await fs24.readFile(fixPath, "utf-8");
         } catch {
           existingContent = this.getDefaultTemplate().replace(/\{\{fix-id\}\}/g, fix.id).replace(/\{\{title\}\}/g, fix.title).replace(/\{\{date\}\}/g, fix.created).replace(/\{\{problem\}\}/g, fix.problem || "");
         }
@@ -42507,7 +42864,7 @@ ${commitLines}
 `
           );
         }
-        await fs23.writeFile(fixPath, content, "utf-8");
+        await fs24.writeFile(fixPath, content, "utf-8");
       }
       /**
        * Get default template content
@@ -42767,8 +43124,8 @@ var init_adr_suggestion_generator = __esm({
 });
 
 // packages/tiny-brain-core/src/services/adr/adr-service.ts
-import { promises as fs24 } from "fs";
-import path25 from "path";
+import { promises as fs25 } from "fs";
+import path26 from "path";
 import { exec as exec2 } from "child_process";
 import { promisify as promisify3 } from "util";
 var execAsync2, DEFAULT_ADR_TEMPLATE, ADRService;
@@ -42996,10 +43353,10 @@ decision_makers: []  # People involved in the decision
         if (!this.context.repositoryRoot) {
           throw new Error("Not in a git repository");
         }
-        const adrDir = path25.join(this.context.repositoryRoot, this.adrDirectory);
+        const adrDir = path26.join(this.context.repositoryRoot, this.adrDirectory);
         try {
-          await fs24.access(adrDir);
-          const files = await fs24.readdir(adrDir);
+          await fs25.access(adrDir);
+          const files = await fs25.readdir(adrDir);
           const adrFiles = files.filter(
             (file) => /^\d{3,4}-.*\.md$/.test(file)
           );
@@ -43083,12 +43440,12 @@ ${suggestion.context}`;
         }
         try {
           const adrNumber = await this.getNextADRNumber();
-          const adrDir = path25.join(this.context.repositoryRoot, this.adrDirectory);
-          await fs24.mkdir(adrDir, { recursive: true });
+          const adrDir = path26.join(this.context.repositoryRoot, this.adrDirectory);
+          await fs25.mkdir(adrDir, { recursive: true });
           let template = this.template;
           const paddedNumber = adrNumber.toString().padStart(4, "0");
           const filename = `${paddedNumber}-${suggestion.suggestedFileName}`;
-          const filePath = path25.join(adrDir, filename);
+          const filePath = path26.join(adrDir, filename);
           const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
           template = template.replace(/adr_number: 0/g, `adr_number: ${adrNumber}`);
           template = template.replace(/title: "Decision Title Here"/g, `title: "${suggestion.title}"`);
@@ -43111,10 +43468,10 @@ ${suggestion.context}`;
               techList
             );
           }
-          await fs24.writeFile(filePath, template, "utf-8");
+          await fs25.writeFile(filePath, template, "utf-8");
           return {
             success: true,
-            filePath: path25.relative(this.context.repositoryRoot, filePath),
+            filePath: path26.relative(this.context.repositoryRoot, filePath),
             adrNumber
           };
         } catch (error2) {
@@ -43137,7 +43494,7 @@ var init_types8 = __esm({
 
 // packages/tiny-brain-core/src/services/plugin/plugin-discovery.service.ts
 import { readdir as readdir3, readFile as readFile5 } from "fs/promises";
-import { join as join20 } from "path";
+import { join as join21 } from "path";
 import { homedir as homedir2 } from "os";
 import { existsSync as existsSync6 } from "fs";
 var PluginDiscoveryService;
@@ -43148,7 +43505,7 @@ var init_plugin_discovery_service = __esm({
       claudePluginsDir;
       knownRepos;
       constructor(knownRepos = []) {
-        this.claudePluginsDir = join20(homedir2(), ".claude", "plugins");
+        this.claudePluginsDir = join21(homedir2(), ".claude", "plugins");
         this.knownRepos = knownRepos;
       }
       /**
@@ -43182,7 +43539,7 @@ var init_plugin_discovery_service = __esm({
        * Read installed_plugins.json
        */
       async readInstalledPlugins() {
-        const filePath = join20(this.claudePluginsDir, "installed_plugins.json");
+        const filePath = join21(this.claudePluginsDir, "installed_plugins.json");
         if (!existsSync6(filePath)) {
           return { version: 2, plugins: {} };
         }
@@ -43198,7 +43555,7 @@ var init_plugin_discovery_service = __esm({
        * Discover registered marketplaces
        */
       async discoverMarketplaces() {
-        const filePath = join20(this.claudePluginsDir, "known_marketplaces.json");
+        const filePath = join21(this.claudePluginsDir, "known_marketplaces.json");
         if (!existsSync6(filePath)) {
           return [];
         }
@@ -43227,7 +43584,7 @@ var init_plugin_discovery_service = __esm({
           console.warn(`Plugin path does not exist: ${pluginPath}`);
           return null;
         }
-        const manifestPath = join20(pluginPath, ".claude-plugin", "plugin.json");
+        const manifestPath = join21(pluginPath, ".claude-plugin", "plugin.json");
         if (!existsSync6(manifestPath)) {
           console.warn(`No plugin.json found at: ${manifestPath}`);
           return null;
@@ -43299,7 +43656,7 @@ var init_plugin_discovery_service = __esm({
           const entries = await readdir3(dir, { withFileTypes: true });
           for (const entry of entries) {
             if (!entry.isDirectory()) continue;
-            const pluginPath = join20(dir, entry.name);
+            const pluginPath = join21(dir, entry.name);
             const plugin = await this.parsePlugin(pluginPath, scope, repoPath);
             if (plugin) {
               plugins.push(plugin);
@@ -43314,7 +43671,7 @@ var init_plugin_discovery_service = __esm({
        * Parse a single plugin directory
        */
       async parsePlugin(pluginPath, scope, repoPath) {
-        const manifestPath = join20(pluginPath, ".claude-plugin", "plugin.json");
+        const manifestPath = join21(pluginPath, ".claude-plugin", "plugin.json");
         if (!existsSync6(manifestPath)) {
           return null;
         }
@@ -43345,13 +43702,13 @@ var init_plugin_discovery_service = __esm({
         const agents = [];
         let hasHooks = false;
         let hasMcp = false;
-        const skillsDir = manifest.skills ? join20(pluginPath, manifest.skills) : join20(pluginPath, "skills");
+        const skillsDir = manifest.skills ? join21(pluginPath, manifest.skills) : join21(pluginPath, "skills");
         if (existsSync6(skillsDir)) {
           try {
             const entries = await readdir3(skillsDir, { withFileTypes: true });
             for (const entry of entries) {
               if (entry.isDirectory()) {
-                const skillMd = join20(skillsDir, entry.name, "SKILL.md");
+                const skillMd = join21(skillsDir, entry.name, "SKILL.md");
                 if (existsSync6(skillMd)) {
                   skills.push(entry.name);
                 }
@@ -43362,7 +43719,7 @@ var init_plugin_discovery_service = __esm({
         }
         if (Array.isArray(manifest.agents)) {
           for (const agentPath of manifest.agents) {
-            const fullPath = join20(pluginPath, agentPath);
+            const fullPath = join21(pluginPath, agentPath);
             if (existsSync6(fullPath)) {
               const agentName = agentPath.split("/").pop()?.replace(".md", "") || "";
               if (agentName) {
@@ -43371,7 +43728,7 @@ var init_plugin_discovery_service = __esm({
             }
           }
         } else {
-          const agentsDir = manifest.agents ? join20(pluginPath, manifest.agents) : join20(pluginPath, "agents");
+          const agentsDir = manifest.agents ? join21(pluginPath, manifest.agents) : join21(pluginPath, "agents");
           if (existsSync6(agentsDir)) {
             try {
               const entries = await readdir3(agentsDir, { withFileTypes: true });
@@ -43384,9 +43741,9 @@ var init_plugin_discovery_service = __esm({
             }
           }
         }
-        const hooksPath = manifest.hooks ? join20(pluginPath, manifest.hooks) : join20(pluginPath, "hooks", "hooks.json");
+        const hooksPath = manifest.hooks ? join21(pluginPath, manifest.hooks) : join21(pluginPath, "hooks", "hooks.json");
         hasHooks = existsSync6(hooksPath);
-        const mcpPath = manifest.mcpServers ? join20(pluginPath, manifest.mcpServers) : join20(pluginPath, ".mcp.json");
+        const mcpPath = manifest.mcpServers ? join21(pluginPath, manifest.mcpServers) : join21(pluginPath, ".mcp.json");
         hasMcp = existsSync6(mcpPath);
         return { skills, agents, hasHooks, hasMcp };
       }
@@ -43406,7 +43763,7 @@ var init_plugin_discovery_service = __esm({
         const result = [];
         const seen = /* @__PURE__ */ new Set();
         this.addRepo(repoPath);
-        const localDir = join20(repoPath, ".claude", "local", "plugins");
+        const localDir = join21(repoPath, ".claude", "local", "plugins");
         const localPlugins = await this.scanPluginDirectory(localDir, "local", repoPath);
         for (const plugin of localPlugins) {
           if (!seen.has(plugin.name)) {
@@ -43414,7 +43771,7 @@ var init_plugin_discovery_service = __esm({
             seen.add(plugin.name);
           }
         }
-        const projectDir = join20(repoPath, ".claude", "plugins");
+        const projectDir = join21(repoPath, ".claude", "plugins");
         const projectPlugins = await this.scanPluginDirectory(projectDir, "project", repoPath);
         for (const plugin of projectPlugins) {
           if (!seen.has(plugin.name)) {
@@ -43562,8 +43919,8 @@ var init_fingerprint_matcher_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/quality-service.ts
-import { promises as fs25 } from "fs";
-import path26 from "path";
+import { promises as fs26 } from "fs";
+import path27 from "path";
 function generateQualityRunId(date3) {
   const d = date3 ?? /* @__PURE__ */ new Date();
   const year = d.getUTCFullYear();
@@ -43614,7 +43971,7 @@ var init_quality_service = __esm({
        * Get the runs directory path
        */
       get runsDir() {
-        return path26.join(getOperationalStateDir(this.repoPath), "quality", "runs");
+        return path27.join(getOperationalStateDir(this.repoPath), "quality", "runs");
       }
       /**
        * Delete a quality run and its associated plan.
@@ -43627,29 +43984,29 @@ var init_quality_service = __esm({
       async deleteRun(runId) {
         const isNested = runId.includes("T");
         if (isNested) {
-          const runDir = path26.join(this.runsDir, qualityRunIdToPath(runId));
-          await fs25.rm(runDir, { recursive: true, force: true });
-          const dateDir = path26.dirname(runDir);
+          const runDir = path27.join(this.runsDir, qualityRunIdToPath(runId));
+          await fs26.rm(runDir, { recursive: true, force: true });
+          const dateDir = path27.dirname(runDir);
           try {
-            const remaining = await fs25.readdir(dateDir);
+            const remaining = await fs26.readdir(dateDir);
             if (remaining.length === 0) {
-              await fs25.rmdir(dateDir);
+              await fs26.rmdir(dateDir);
             }
           } catch {
           }
         } else {
           try {
-            const files = await fs25.readdir(this.runsDir);
+            const files = await fs26.readdir(this.runsDir);
             for (const file of files) {
               if (file.startsWith(runId)) {
-                await fs25.rm(path26.join(this.runsDir, file), { force: true });
+                await fs26.rm(path27.join(this.runsDir, file), { force: true });
               }
             }
           } catch {
           }
         }
-        const planPath = path26.join(this.plansDir, `${runId}-plan.md`);
-        await fs25.rm(planPath, { force: true });
+        const planPath = path27.join(this.plansDir, `${runId}-plan.md`);
+        await fs26.rm(planPath, { force: true });
       }
       /**
        * Calculate quality score based on issues found
@@ -43830,8 +44187,8 @@ var init_quality_service = __esm({
         const runId = input.runId ?? generateQualityRunId();
         const date3 = runId.includes("T") ? runId.split("T")[0] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
         const runPath = qualityRunIdToPath(runId);
-        const runDir = path26.join(this.runsDir, runPath);
-        await fs25.mkdir(runDir, { recursive: true });
+        const runDir = path27.join(this.runsDir, runPath);
+        await fs26.mkdir(runDir, { recursive: true });
         const issuesByCategory = _QualityService.getIssuesByCategory(input.issues);
         const content = this.formatRunMarkdown({
           runId,
@@ -43850,8 +44207,8 @@ var init_quality_service = __esm({
           investigationCoverage: input.investigationCoverage,
           agentFindings: input.agentFindings
         });
-        const filePath = path26.join(runDir, "quality.md");
-        await fs25.writeFile(filePath, content, "utf-8");
+        const filePath = path27.join(runDir, "quality.md");
+        await fs26.writeFile(filePath, content, "utf-8");
         return {
           runId,
           success: true,
@@ -44051,17 +44408,17 @@ var init_quality_service = __esm({
       async getPreviousRuns(limit) {
         const runs = [];
         try {
-          const entries = await fs25.readdir(this.runsDir, { withFileTypes: true });
+          const entries = await fs26.readdir(this.runsDir, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)) {
-              const dateDir = path26.join(this.runsDir, entry.name);
+              const dateDir = path27.join(this.runsDir, entry.name);
               try {
-                const timeEntries = await fs25.readdir(dateDir, { withFileTypes: true });
+                const timeEntries = await fs26.readdir(dateDir, { withFileTypes: true });
                 for (const timeEntry of timeEntries) {
                   if (timeEntry.isDirectory() && /^\d{2}-\d{2}$/.test(timeEntry.name)) {
-                    const qualityFile = path26.join(dateDir, timeEntry.name, "quality.md");
+                    const qualityFile = path27.join(dateDir, timeEntry.name, "quality.md");
                     try {
-                      const content = await fs25.readFile(qualityFile, "utf-8");
+                      const content = await fs26.readFile(qualityFile, "utf-8");
                       const runId = qualityPathToRunId(`${entry.name}/${timeEntry.name}`);
                       const summary = this.parseRunSummary(runId, content);
                       if (summary) {
@@ -44074,8 +44431,8 @@ var init_quality_service = __esm({
               } catch {
               }
             } else if (entry.isFile() && entry.name.endsWith("-quality.md")) {
-              const filePath = path26.join(this.runsDir, entry.name);
-              const content = await fs25.readFile(filePath, "utf-8");
+              const filePath = path27.join(this.runsDir, entry.name);
+              const content = await fs26.readFile(filePath, "utf-8");
               const runId = entry.name.replace(".md", "");
               const summary = this.parseRunSummary(runId, content);
               if (summary) {
@@ -44124,8 +44481,8 @@ var init_quality_service = __esm({
        */
       async getRunDetails(runId) {
         try {
-          const filePath = isNestedRunId(runId) ? path26.join(this.runsDir, qualityRunIdToPath(runId), "quality.md") : path26.join(this.runsDir, `${runId}.md`);
-          const content = await fs25.readFile(filePath, "utf-8");
+          const filePath = isNestedRunId(runId) ? path27.join(this.runsDir, qualityRunIdToPath(runId), "quality.md") : path27.join(this.runsDir, `${runId}.md`);
+          const content = await fs26.readFile(filePath, "utf-8");
           const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
           if (!jsonMatch) {
             return null;
@@ -44225,7 +44582,7 @@ var init_quality_service = __esm({
        * Get the plans directory path
        */
       get plansDir() {
-        return path26.join(getOperationalStateDir(this.repoPath), "quality", "plans");
+        return path27.join(getOperationalStateDir(this.repoPath), "quality", "plans");
       }
       /**
        * Group quality issues into themed improvement initiatives.
@@ -44534,10 +44891,10 @@ var init_quality_service = __esm({
        * @returns The parsed QualityImprovementPlan, or null if not found/invalid
        */
       async loadImprovementPlan(planId) {
-        const filePath = path26.join(this.plansDir, `${planId}.md`);
+        const filePath = path27.join(this.plansDir, `${planId}.md`);
         let content;
         try {
-          content = await fs25.readFile(filePath, "utf-8");
+          content = await fs26.readFile(filePath, "utf-8");
         } catch {
           return null;
         }
@@ -44560,10 +44917,10 @@ var init_quality_service = __esm({
        * @returns Result with planId and file path
        */
       async saveImprovementPlan(plan) {
-        await fs25.mkdir(this.plansDir, { recursive: true });
+        await fs26.mkdir(this.plansDir, { recursive: true });
         const markdown = _QualityService.formatPlanMarkdown(plan);
-        const filePath = path26.join(this.plansDir, `${plan.planId}.md`);
-        await fs25.writeFile(filePath, markdown, "utf-8");
+        const filePath = path27.join(this.plansDir, `${plan.planId}.md`);
+        await fs26.writeFile(filePath, markdown, "utf-8");
         return {
           planId: plan.planId,
           filePath
@@ -44678,8 +45035,8 @@ var init_quality_service = __esm({
        * @returns Array of created fix IDs
        */
       async generateFixesFromPlan(plan, issues) {
-        const fixesDir = path26.join(this.repoPath, ".tiny-brain", "fixes");
-        await fs25.mkdir(fixesDir, { recursive: true });
+        const fixesDir = path27.join(this.repoPath, ".tiny-brain", "fixes");
+        await fs26.mkdir(fixesDir, { recursive: true });
         const fixIds = [];
         for (const phase of plan.phases) {
           for (const initiative of phase.initiatives) {
@@ -44687,8 +45044,8 @@ var init_quality_service = __esm({
             const dateMatch = plan.planId.match(/^(\d{4}-\d{2}-\d{2})/);
             const planDate = dateMatch ? dateMatch[1] : plan.planId;
             const fixId = `qip-${planDate}-${initiative.id}`;
-            const filePath = path26.join(fixesDir, `${fixId}.md`);
-            await fs25.writeFile(filePath, markdown, "utf-8");
+            const filePath = path27.join(fixesDir, `${fixId}.md`);
+            await fs26.writeFile(filePath, markdown, "utf-8");
             fixIds.push(fixId);
           }
         }
@@ -44831,7 +45188,7 @@ var init_analyzer_registry = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/analyzer-detection.service.ts
-import path27 from "path";
+import path28 from "path";
 var IGNORE_PATTERNS, AnalyzerDetectionService;
 var init_analyzer_detection_service = __esm({
   "packages/tiny-brain-core/src/services/quality/analyzer-detection.service.ts"() {
@@ -44912,7 +45269,7 @@ var init_analyzer_detection_service = __esm({
         return [...new Set(allMatches)].sort();
       }
       resolveCommand(template, configPath2) {
-        const dir = path27.dirname(configPath2);
+        const dir = path28.dirname(configPath2);
         return template.replace("{config}", configPath2).replace("{dir}", dir);
       }
     };
@@ -45349,7 +45706,7 @@ var init_parsers = __esm({
 
 // packages/tiny-brain-core/src/services/quality/analyzer-executor.service.ts
 import { exec as exec3 } from "child_process";
-import { promises as fs26 } from "fs";
+import { promises as fs27 } from "fs";
 import { promisify as promisify4 } from "util";
 function lookupDefinition(analyzerId) {
   return ANALYZER_REGISTRY.find((d) => d.id === analyzerId);
@@ -45390,7 +45747,7 @@ var init_analyzer_executor_service = __esm({
       }
       async executeAnalyzers(analyzers, outputDir) {
         if (outputDir) {
-          await fs26.mkdir(outputDir, { recursive: true });
+          await fs27.mkdir(outputDir, { recursive: true });
         }
         const startTime = Date.now();
         const allIssues = [];
@@ -45480,9 +45837,9 @@ var init_analyzer_executor_service = __esm({
             }
           }
           try {
-            const fileContent = await fs26.readFile(readPath, "utf-8");
+            const fileContent = await fs27.readFile(readPath, "utf-8");
             if (!fileContent.trim()) {
-              await fs26.unlink(readPath);
+              await fs27.unlink(readPath);
               continue;
             }
             const issues = parser(fileContent, this.repoPath);
@@ -45617,8 +45974,8 @@ var init_analyzer_executor_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/analyzer-cache.ts
-import { promises as fs27 } from "fs";
-import path28 from "path";
+import { promises as fs28 } from "fs";
+import path29 from "path";
 function isValidEntry(entry) {
   if (!entry || typeof entry !== "object") return false;
   const e = entry;
@@ -45628,9 +45985,9 @@ async function readCachedAnalyzers(repoPath, options) {
   if (options?.changed && !/^[0-9a-f]+$/i.test(options.changed)) {
     throw new Error(`Invalid SHA: ${options.changed}`);
   }
-  const analysisPath = path28.join(repoPath, ".tiny-brain", "analysis.json");
+  const analysisPath = path29.join(repoPath, ".tiny-brain", "analysis.json");
   try {
-    const content = await fs27.readFile(analysisPath, "utf-8");
+    const content = await fs28.readFile(analysisPath, "utf-8");
     const parsed = JSON.parse(content);
     if (!parsed.analyzers || !Array.isArray(parsed.analyzers) || parsed.analyzers.length === 0) {
       return null;
@@ -45663,15 +46020,15 @@ var init_analyzer_cache = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/run-single-analyser.ts
-import { promises as fs28 } from "fs";
+import { promises as fs29 } from "fs";
 import { tmpdir } from "os";
-import path29 from "path";
+import path30 from "path";
 async function runSingleAnalyser(repoPath, analyserId, options) {
   const cacheOptions = options?.changed ? { changed: options.changed } : void 0;
   const allAnalysers = await readCachedAnalyzers(repoPath, cacheOptions) ?? await new AnalyzerDetectionService(repoPath).detectAnalyzers(cacheOptions);
   const target = allAnalysers.find((a) => a.analyzerId === analyserId);
   if (!target) return null;
-  const outputDir = options?.outputDir ?? await fs28.mkdtemp(path29.join(tmpdir(), `tiny-brain-analyser-${analyserId}-`));
+  const outputDir = options?.outputDir ?? await fs29.mkdtemp(path30.join(tmpdir(), `tiny-brain-analyser-${analyserId}-`));
   const executor = new AnalyzerExecutorService(repoPath);
   return executor.executeAnalyzers([target], outputDir);
 }
@@ -46265,8 +46622,8 @@ var init_investigation_response_parser = __esm({
 
 // packages/tiny-brain-core/src/services/quality/file-investigator.service.ts
 import { createHash as createHash2 } from "crypto";
-import { promises as fs29 } from "fs";
-import path30 from "path";
+import { promises as fs30 } from "fs";
+import path31 from "path";
 var FileInvestigatorService;
 var init_file_investigator_service = __esm({
   "packages/tiny-brain-core/src/services/quality/file-investigator.service.ts"() {
@@ -46324,7 +46681,7 @@ var init_file_investigator_service = __esm({
         };
       }
       async readFileContent(filePath) {
-        return fs29.readFile(path30.join(this.repoPath, filePath), "utf-8");
+        return fs30.readFile(path31.join(this.repoPath, filePath), "utf-8");
       }
     };
   }
@@ -46443,8 +46800,8 @@ var init_investigation_orchestrator_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/investigation-progress.service.ts
-import { promises as fs30 } from "fs";
-import path31 from "path";
+import { promises as fs31 } from "fs";
+import path32 from "path";
 var init_investigation_progress_service = __esm({
   "packages/tiny-brain-core/src/services/quality/investigation-progress.service.ts"() {
     "use strict";
@@ -46527,8 +46884,8 @@ var init_result_merger_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/assembly.service.ts
-import { promises as fs31 } from "fs";
-import path32 from "path";
+import { promises as fs32 } from "fs";
+import path33 from "path";
 var AssemblyService;
 var init_assembly_service = __esm({
   "packages/tiny-brain-core/src/services/quality/assembly.service.ts"() {
@@ -46542,7 +46899,7 @@ var init_assembly_service = __esm({
         this.repoPath = repoPath;
       }
       get runsDir() {
-        return path32.join(getOperationalStateDir(this.repoPath), "quality", "runs");
+        return path33.join(getOperationalStateDir(this.repoPath), "quality", "runs");
       }
       /**
        * Assemble a quality run from intermediate files.
@@ -46552,7 +46909,7 @@ var init_assembly_service = __esm({
        */
       async assembleRun(runId, _baseRunId) {
         const runDir = this.resolveRunDir(runId);
-        const analysisPath = path32.join(runDir, "analysis.json");
+        const analysisPath = path33.join(runDir, "analysis.json");
         const analyzerData = await this.readAnalyzerData(analysisPath);
         const analyzerCount = analyzerData.totalIssues;
         const analyzersRun = analyzerData.executions;
@@ -46566,8 +46923,8 @@ var init_assembly_service = __esm({
         const score = QualityService.calculateScore(allIssues);
         const grade = QualityService.getGrade(score);
         const categoryBreakdown = QualityService.getIssuesByCategory(allIssues);
-        await fs31.mkdir(runDir, { recursive: true });
-        const reportPath = path32.join(runDir, "quality.md");
+        await fs32.mkdir(runDir, { recursive: true });
+        const reportPath = path33.join(runDir, "quality.md");
         await this.writeSummaryReport(reportPath, runId, totalIssues, analyzerCount, agentFindings, allIssues, analyzersRun);
         return {
           runId,
@@ -46595,7 +46952,7 @@ var init_assembly_service = __esm({
        */
       resolveRunDir(runId) {
         if (runId.includes("T")) {
-          return path32.join(this.runsDir, qualityRunIdToPath(runId));
+          return path33.join(this.runsDir, qualityRunIdToPath(runId));
         }
         return this.runsDir;
       }
@@ -46607,7 +46964,7 @@ var init_assembly_service = __esm({
        */
       async readAnalyzerData(analysisPath) {
         try {
-          const content = await fs31.readFile(analysisPath, "utf-8");
+          const content = await fs32.readFile(analysisPath, "utf-8");
           const parsed = JSON.parse(content);
           const isFlat = Array.isArray(parsed.issues) || Array.isArray(parsed.executions);
           if (isFlat) {
@@ -46652,13 +47009,13 @@ var init_assembly_service = __esm({
        */
       async collectAgentFindings(runDir) {
         const findings = {};
-        const agentsDir = path32.join(runDir, "agents");
+        const agentsDir = path33.join(runDir, "agents");
         try {
-          const files = await fs31.readdir(agentsDir);
+          const files = await fs32.readdir(agentsDir);
           for (const file of files) {
             if (!file.endsWith(".json")) continue;
             const stepType = file.replace(/\.json$/, "");
-            const issues = await this.readIssuesFromFile(path32.join(agentsDir, file));
+            const issues = await this.readIssuesFromFile(path33.join(agentsDir, file));
             findings[stepType] = { issueCount: issues.length, issues };
           }
         } catch {
@@ -46671,7 +47028,7 @@ var init_assembly_service = __esm({
        */
       async readIssuesFromFile(filePath) {
         try {
-          const content = await fs31.readFile(filePath, "utf-8");
+          const content = await fs32.readFile(filePath, "utf-8");
           const parsed = JSON.parse(content);
           if (Array.isArray(parsed)) return this.validateIssues(parsed);
           if (parsed && typeof parsed === "object") {
@@ -46740,7 +47097,7 @@ var init_assembly_service = __esm({
           "```",
           ""
         ];
-        await fs31.writeFile(reportPath, lines.join("\n"), "utf-8");
+        await fs32.writeFile(reportPath, lines.join("\n"), "utf-8");
       }
     };
   }
@@ -46766,36 +47123,36 @@ var init_quality_scoring = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/quality-run-finder.ts
-import { promises as fs32 } from "fs";
-import path33 from "path";
+import { promises as fs33 } from "fs";
+import path34 from "path";
 async function findLatestQualityRunDir(repoRoot) {
-  const runsDir = path33.join(getOperationalStateDir(repoRoot), "quality", "runs");
+  const runsDir = path34.join(getOperationalStateDir(repoRoot), "quality", "runs");
   let dateDirs;
   try {
-    dateDirs = await fs32.readdir(runsDir);
+    dateDirs = await fs33.readdir(runsDir);
   } catch {
     return null;
   }
   dateDirs.sort((a, b) => b.localeCompare(a));
   for (const dateDir of dateDirs) {
-    const datePath = path33.join(runsDir, dateDir);
-    const stat3 = await fs32.stat(datePath).catch(() => null);
+    const datePath = path34.join(runsDir, dateDir);
+    const stat3 = await fs33.stat(datePath).catch(() => null);
     if (!stat3?.isDirectory()) continue;
     let timeDirs;
     try {
-      timeDirs = await fs32.readdir(datePath);
+      timeDirs = await fs33.readdir(datePath);
     } catch {
       continue;
     }
     timeDirs.sort((a, b) => b.localeCompare(a));
     for (const timeDir of timeDirs) {
-      const timePath = path33.join(datePath, timeDir);
-      const timeStat = await fs32.stat(timePath).catch(() => null);
+      const timePath = path34.join(datePath, timeDir);
+      const timeStat = await fs33.stat(timePath).catch(() => null);
       if (!timeStat?.isDirectory()) continue;
-      const qualityMd = path33.join(timePath, "quality.md");
-      const hasQualityMd = await fs32.access(qualityMd).then(() => true, () => false);
+      const qualityMd = path34.join(timePath, "quality.md");
+      const hasQualityMd = await fs33.access(qualityMd).then(() => true, () => false);
       if (!hasQualityMd) continue;
-      return path33.relative(repoRoot, timePath);
+      return path34.relative(repoRoot, timePath);
     }
   }
   return null;
@@ -46851,8 +47208,8 @@ var init_json_repair = __esm({
 });
 
 // packages/tiny-brain-core/src/services/quality/quality-step-scores.ts
-import { promises as fs33 } from "fs";
-import { join as join21 } from "path";
+import { promises as fs34 } from "fs";
+import { join as join22 } from "path";
 function buildQualityScores(steps, findings) {
   const scored = steps.map((s) => {
     const stepFindings = findings[s.type] ?? [];
@@ -46889,9 +47246,9 @@ function buildQualityScores(steps, findings) {
   };
 }
 async function loadFindingsFromQualityRun(repoRoot, runDirRelative, stepType) {
-  const agentsDir = join21(repoRoot, runDirRelative, "agents");
+  const agentsDir = join22(repoRoot, runDirRelative, "agents");
   try {
-    const content = await fs33.readFile(join21(agentsDir, `${stepType}.json`), "utf-8");
+    const content = await fs34.readFile(join22(agentsDir, `${stepType}.json`), "utf-8");
     const parsed = parseJsonWithRepair(content);
     if (Array.isArray(parsed)) return parsed;
     if (parsed !== null && typeof parsed === "object") {
@@ -47076,7 +47433,7 @@ var init_quality2 = __esm({
 // packages/tiny-brain-core/src/services/hooks/hooks-service.ts
 import { existsSync as existsSync7 } from "fs";
 import { readFile as readFile6, readdir as readdir4 } from "fs/promises";
-import { join as join22 } from "path";
+import { join as join23 } from "path";
 var HooksService;
 var init_hooks_service = __esm({
   "packages/tiny-brain-core/src/services/hooks/hooks-service.ts"() {
@@ -47117,7 +47474,7 @@ var init_hooks_service = __esm({
        * Get all git hooks from .git/hooks/
        */
       async getGitHooks() {
-        const gitHooksDir = join22(this.repoRoot, ".git", "hooks");
+        const gitHooksDir = join23(this.repoRoot, ".git", "hooks");
         if (!existsSync7(gitHooksDir)) {
           return [];
         }
@@ -47132,7 +47489,7 @@ var init_hooks_service = __esm({
               name: entry.name,
               event: entry.name,
               type: "git",
-              path: join22(gitHooksDir, entry.name)
+              path: join23(gitHooksDir, entry.name)
             });
           }
           return hooks;
@@ -47144,7 +47501,7 @@ var init_hooks_service = __esm({
        * Get all repo hooks from .claude/hooks/hooks.json
        */
       async getRepoHooks() {
-        const hooksJsonPath = join22(this.repoRoot, ".claude", "hooks", "hooks.json");
+        const hooksJsonPath = join23(this.repoRoot, ".claude", "hooks", "hooks.json");
         if (!existsSync7(hooksJsonPath)) {
           return [];
         }
@@ -47191,7 +47548,7 @@ var init_hooks_service = __esm({
         }
       }
       async getGitHookContent(hookName) {
-        const hookPath = join22(this.repoRoot, ".git", "hooks", hookName);
+        const hookPath = join23(this.repoRoot, ".git", "hooks", hookName);
         if (!existsSync7(hookPath)) {
           return null;
         }
@@ -47235,7 +47592,7 @@ var init_hooks_service = __esm({
         }
       }
       async getRepoHookContent(hookName) {
-        const hooksJsonPath = join22(this.repoRoot, ".claude", "hooks", "hooks.json");
+        const hooksJsonPath = join23(this.repoRoot, ".claude", "hooks", "hooks.json");
         if (!existsSync7(hooksJsonPath)) {
           return null;
         }
@@ -47269,8 +47626,8 @@ var init_hooks_service = __esm({
       }
       getPluginHooksPath() {
         const possiblePaths = [
-          join22(this.repoRoot, ".claude-plugin", "hooks", "hooks.json"),
-          join22(this.repoRoot, "hooks", "hooks.json")
+          join23(this.repoRoot, ".claude-plugin", "hooks", "hooks.json"),
+          join23(this.repoRoot, "hooks", "hooks.json")
         ];
         for (const p of possiblePaths) {
           if (existsSync7(p)) {
@@ -47921,8 +48278,8 @@ var init_target_registry = __esm({
 });
 
 // packages/tiny-brain-core/src/services/runs/run-record-store.ts
-import { promises as fs34 } from "fs";
-import path34 from "path";
+import { promises as fs35 } from "fs";
+import path35 from "path";
 import { randomBytes as randomBytes4 } from "crypto";
 async function withLock2(key, fn) {
   const prev = inProcessLocks.get(key) ?? Promise.resolve();
@@ -47944,11 +48301,11 @@ async function withLock2(key, fn) {
   }
 }
 async function writeFileAtomic(file, contents) {
-  const dir = path34.dirname(file);
-  await fs34.mkdir(dir, { recursive: true });
-  const tmp = path34.join(dir, `.${path34.basename(file)}.${randomBytes4(6).toString("hex")}.tmp`);
-  await fs34.writeFile(tmp, contents, "utf-8");
-  await fs34.rename(tmp, file);
+  const dir = path35.dirname(file);
+  await fs35.mkdir(dir, { recursive: true });
+  const tmp = path35.join(dir, `.${path35.basename(file)}.${randomBytes4(6).toString("hex")}.tmp`);
+  await fs35.writeFile(tmp, contents, "utf-8");
+  await fs35.rename(tmp, file);
 }
 var RESUMABLE_STATUSES, inProcessLocks, RunRecordStore;
 var init_run_record_store = __esm({
@@ -47968,7 +48325,7 @@ var init_run_record_store = __esm({
         if (!mainRepoRoot) {
           throw new Error("RunRecordStore requires a non-empty mainRepoRoot");
         }
-        if (!path34.isAbsolute(mainRepoRoot)) {
+        if (!path35.isAbsolute(mainRepoRoot)) {
           throw new Error(
             `RunRecordStore requires an absolute mainRepoRoot, got: ${JSON.stringify(mainRepoRoot)}`
           );
@@ -47983,16 +48340,16 @@ var init_run_record_store = __esm({
        * own cache keeps repeat calls cheap.
        */
       get runsDir() {
-        return path34.join(getOperationalStateDir(this.mainRepoRoot), "runs");
+        return path35.join(getOperationalStateDir(this.mainRepoRoot), "runs");
       }
       fileFor(runId) {
-        return path34.join(this.runsDir, `${runId}.json`);
+        return path35.join(this.runsDir, `${runId}.json`);
       }
       async create(record2) {
         const file = this.fileFor(record2.runId);
-        await fs34.mkdir(path34.dirname(file), { recursive: true });
+        await fs35.mkdir(path35.dirname(file), { recursive: true });
         try {
-          await fs34.writeFile(file, JSON.stringify(record2, null, 2), { flag: "wx" });
+          await fs35.writeFile(file, JSON.stringify(record2, null, 2), { flag: "wx" });
         } catch (err) {
           if (err.code === "EEXIST") {
             throw new Error(`Run record already exists: ${record2.runId}`);
@@ -48002,7 +48359,7 @@ var init_run_record_store = __esm({
       }
       async get(runId) {
         try {
-          const raw = await fs34.readFile(this.fileFor(runId), "utf-8");
+          const raw = await fs35.readFile(this.fileFor(runId), "utf-8");
           return JSON.parse(raw);
         } catch (err) {
           if (err.code === "ENOENT") return null;
@@ -48015,7 +48372,7 @@ var init_run_record_store = __esm({
         }
         let entries;
         try {
-          entries = await fs34.readdir(this.runsDir);
+          entries = await fs35.readdir(this.runsDir);
         } catch (err) {
           if (err.code === "ENOENT") return [];
           throw err;
@@ -48025,7 +48382,7 @@ var init_run_record_store = __esm({
           if (!entry.endsWith(".json")) continue;
           if (entry.startsWith(".")) continue;
           try {
-            const raw = await fs34.readFile(path34.join(this.runsDir, entry), "utf-8");
+            const raw = await fs35.readFile(path35.join(this.runsDir, entry), "utf-8");
             records.push(JSON.parse(raw));
           } catch (err) {
             console.warn(
@@ -48071,7 +48428,7 @@ var init_run_record_store = __esm({
       async delete(runId) {
         await withLock2(runId, async () => {
           try {
-            await fs34.unlink(this.fileFor(runId));
+            await fs35.unlink(this.fileFor(runId));
           } catch (err) {
             if (err.code === "ENOENT") return;
             throw err;
@@ -48133,9 +48490,9 @@ var init_run_record_store = __esm({
 });
 
 // packages/tiny-brain-core/src/services/runs/run-telemetry-store.ts
-import { promises as fs35 } from "fs";
+import { promises as fs36 } from "fs";
 import { watch as fsWatch } from "fs";
-import path35 from "path";
+import path36 from "path";
 var RunTelemetryStore;
 var init_run_telemetry_store = __esm({
   "packages/tiny-brain-core/src/services/runs/run-telemetry-store.ts"() {
@@ -48147,7 +48504,7 @@ var init_run_telemetry_store = __esm({
         if (!mainRepoRoot) {
           throw new Error("RunTelemetryStore requires a non-empty mainRepoRoot");
         }
-        if (!path35.isAbsolute(mainRepoRoot)) {
+        if (!path36.isAbsolute(mainRepoRoot)) {
           throw new Error(
             `RunTelemetryStore requires an absolute mainRepoRoot, got: ${JSON.stringify(mainRepoRoot)}`
           );
@@ -48159,14 +48516,14 @@ var init_run_telemetry_store = __esm({
        * `.git/tiny-brain/telemetry/runs` rather than each worktree's own tree.
        */
       get telemetryDir() {
-        return path35.join(getOperationalStateDir(this.mainRepoRoot), "telemetry", "runs");
+        return path36.join(getOperationalStateDir(this.mainRepoRoot), "telemetry", "runs");
       }
       fileFor(runId) {
-        return path35.join(this.telemetryDir, `${runId}.jsonl`);
+        return path36.join(this.telemetryDir, `${runId}.jsonl`);
       }
       async appendEvent(runId, event) {
-        await fs35.mkdir(this.telemetryDir, { recursive: true });
-        await fs35.appendFile(this.fileFor(runId), JSON.stringify(event) + "\n", "utf-8");
+        await fs36.mkdir(this.telemetryDir, { recursive: true });
+        await fs36.appendFile(this.fileFor(runId), JSON.stringify(event) + "\n", "utf-8");
       }
       /**
        * Remove the telemetry file for `runId`. Idempotent — a missing
@@ -48177,7 +48534,7 @@ var init_run_telemetry_store = __esm({
        */
       async delete(runId) {
         try {
-          await fs35.unlink(this.fileFor(runId));
+          await fs36.unlink(this.fileFor(runId));
         } catch (err) {
           if (err.code === "ENOENT") return;
           throw err;
@@ -48186,7 +48543,7 @@ var init_run_telemetry_store = __esm({
       async readEvents(runId) {
         let raw;
         try {
-          raw = await fs35.readFile(this.fileFor(runId), "utf-8");
+          raw = await fs36.readFile(this.fileFor(runId), "utf-8");
         } catch (err) {
           if (err.code === "ENOENT") return [];
           throw err;
@@ -48208,11 +48565,11 @@ var init_run_telemetry_store = __esm({
        */
       async *watchEvents(runId) {
         const file = this.fileFor(runId);
-        await fs35.mkdir(this.telemetryDir, { recursive: true });
+        await fs36.mkdir(this.telemetryDir, { recursive: true });
         try {
-          await fs35.access(file);
+          await fs36.access(file);
         } catch {
-          await fs35.writeFile(file, "", "utf-8");
+          await fs36.writeFile(file, "", "utf-8");
         }
         let offset = 0;
         let pendingResolve = null;
@@ -48229,7 +48586,7 @@ var init_run_telemetry_store = __esm({
             const readyP = new Promise((resolve5) => {
               pendingResolve = resolve5;
             });
-            const handle = await fs35.open(file, "r");
+            const handle = await fs36.open(file, "r");
             try {
               const stat3 = await handle.stat();
               if (stat3.size > offset) {
@@ -48567,22 +48924,22 @@ var init_seed_prompt = __esm({
 });
 
 // packages/tiny-brain-core/src/services/worktree/ensure-worktree.ts
-import * as path36 from "path";
+import * as path37 from "path";
 function ensureWorktree(opts) {
   if (!VALID_NAME.test(opts.name)) {
     throw new Error(
       `Invalid worktree name ${JSON.stringify(opts.name)}: use only letters, digits, hyphens, underscores`
     );
   }
-  if (!opts.repositoryRoot || !path36.isAbsolute(opts.repositoryRoot)) {
+  if (!opts.repositoryRoot || !path37.isAbsolute(opts.repositoryRoot)) {
     throw new Error(
       `ensureWorktree requires an absolute repositoryRoot, got: ${JSON.stringify(opts.repositoryRoot)}`
     );
   }
-  const worktreesDir = path36.join(opts.repositoryRoot, ".claude", "worktrees");
-  const worktreePath = path36.join(worktreesDir, opts.name);
+  const worktreesDir = path37.join(opts.repositoryRoot, ".claude", "worktrees");
+  const worktreePath = path37.join(worktreesDir, opts.name);
   const branch = `worktree-${opts.name}`;
-  if (opts.existsSync(worktreePath) && opts.existsSync(path36.join(worktreePath, ".git"))) {
+  if (opts.existsSync(worktreePath) && opts.existsSync(path37.join(worktreePath, ".git"))) {
     return { path: worktreePath, branch, created: false, bootstrapped: false };
   }
   opts.mkdirSync(worktreesDir, { recursive: true });
@@ -48635,7 +48992,7 @@ function bootstrap(worktreePath, opts) {
   installDependencies(worktreePath, opts);
 }
 function installDependencies(worktreePath, opts) {
-  const analysisPath = path36.join(worktreePath, ".tiny-brain", "analysis.json");
+  const analysisPath = path37.join(worktreePath, ".tiny-brain", "analysis.json");
   let raw;
   try {
     raw = opts.readFileSync(analysisPath, "utf-8");
@@ -48676,9 +49033,9 @@ var init_ensure_worktree = __esm({
 });
 
 // packages/tiny-brain-core/src/services/runs/targets/local-worktree-target.ts
-import * as path37 from "path";
+import * as path38 from "path";
 import {
-  promises as fs36,
+  promises as fs37,
   existsSync as nodeExistsSync,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync
@@ -48748,7 +49105,7 @@ var init_local_worktree_target = __esm({
         if (!opts.mainRepoRoot) {
           throw new Error("LocalWorktreeTarget requires a non-empty mainRepoRoot");
         }
-        if (!path37.isAbsolute(opts.mainRepoRoot)) {
+        if (!path38.isAbsolute(opts.mainRepoRoot)) {
           throw new Error(
             `LocalWorktreeTarget requires an absolute mainRepoRoot, got: ${JSON.stringify(opts.mainRepoRoot)}`
           );
@@ -49079,7 +49436,7 @@ Run-Id: ${opts.runId}`;
         const pidPath = this.pidMarkerPath(runId);
         let raw;
         try {
-          raw = await fs36.readFile(pidPath, "utf-8");
+          raw = await fs37.readFile(pidPath, "utf-8");
         } catch (err) {
           if (err.code === "ENOENT") return;
           return;
@@ -49099,13 +49456,13 @@ Run-Id: ${opts.runId}`;
         }
       }
       pidMarkerPath(runId) {
-        return path37.join(getOperationalStateDir(this.mainRepoRoot), "runs", `${runId}.pid`);
+        return path38.join(getOperationalStateDir(this.mainRepoRoot), "runs", `${runId}.pid`);
       }
       async writePidMarkerExclusive(runId) {
         const pidPath = this.pidMarkerPath(runId);
-        await fs36.mkdir(path37.dirname(pidPath), { recursive: true });
+        await fs37.mkdir(path38.dirname(pidPath), { recursive: true });
         try {
-          await fs36.writeFile(pidPath, `${this.pid}
+          await fs37.writeFile(pidPath, `${this.pid}
 `, { flag: "wx" });
         } catch (err) {
           if (err.code === "EEXIST") {
@@ -49116,7 +49473,7 @@ Run-Id: ${opts.runId}`;
       }
       async removePidMarker(runId) {
         try {
-          await fs36.unlink(this.pidMarkerPath(runId));
+          await fs37.unlink(this.pidMarkerPath(runId));
         } catch (err) {
           if (err.code === "ENOENT") return;
           console.warn(
@@ -49163,8 +49520,8 @@ Run-Id: ${opts.runId}`;
 });
 
 // packages/tiny-brain-core/src/services/workers/worker-store.ts
-import { promises as fs37 } from "fs";
-import path38 from "path";
+import { promises as fs38 } from "fs";
+import path39 from "path";
 import { randomBytes as randomBytes5 } from "crypto";
 var UnknownWorkerError, WorkerAlreadyExistsError, CannotDeleteLastWorkerError, WorkerStore;
 var init_worker_store = __esm({
@@ -49197,21 +49554,21 @@ var init_worker_store = __esm({
       repoFile;
       userFile;
       constructor(opts) {
-        if (!opts.repoRoot || !path38.isAbsolute(opts.repoRoot)) {
+        if (!opts.repoRoot || !path39.isAbsolute(opts.repoRoot)) {
           throw new Error("WorkerStore requires an absolute repoRoot");
         }
-        if (!opts.userConfigRoot || !path38.isAbsolute(opts.userConfigRoot)) {
+        if (!opts.userConfigRoot || !path39.isAbsolute(opts.userConfigRoot)) {
           throw new Error("WorkerStore requires an absolute userConfigRoot");
         }
-        this.repoFile = path38.join(opts.repoRoot, ".tiny-brain", "workers.yaml");
-        this.userFile = path38.join(opts.userConfigRoot, "workers.yaml");
+        this.repoFile = path39.join(opts.repoRoot, ".tiny-brain", "workers.yaml");
+        this.userFile = path39.join(opts.userConfigRoot, "workers.yaml");
       }
       fileFor(global2) {
         return global2 ? this.userFile : this.repoFile;
       }
       async readFile(file) {
         try {
-          const raw = await fs37.readFile(file, "utf-8");
+          const raw = await fs38.readFile(file, "utf-8");
           const parsed = jsYaml.load(raw);
           return parsed?.workers ?? {};
         } catch (err) {
@@ -49220,12 +49577,12 @@ var init_worker_store = __esm({
         }
       }
       async writeFile(file, workers) {
-        const dir = path38.dirname(file);
-        await fs37.mkdir(dir, { recursive: true });
+        const dir = path39.dirname(file);
+        await fs38.mkdir(dir, { recursive: true });
         const dump2 = jsYaml.dump({ workers }, { noRefs: true, sortKeys: true });
-        const tmp = path38.join(dir, `.${path38.basename(file)}.${randomBytes5(6).toString("hex")}.tmp`);
-        await fs37.writeFile(tmp, dump2, "utf-8");
-        await fs37.rename(tmp, file);
+        const tmp = path39.join(dir, `.${path39.basename(file)}.${randomBytes5(6).toString("hex")}.tmp`);
+        await fs38.writeFile(tmp, dump2, "utf-8");
+        await fs38.rename(tmp, file);
       }
       async list() {
         const [repo, user] = await Promise.all([
@@ -49296,8 +49653,8 @@ var init_worker_store = __esm({
 });
 
 // packages/tiny-brain-core/src/services/workers/worker-probe.ts
-import { promises as fs38 } from "fs";
-import path39 from "path";
+import { promises as fs39 } from "fs";
+import path40 from "path";
 import { randomBytes as randomBytes6 } from "crypto";
 var CACHE_TTL_MS, WorkerProbe;
 var init_worker_probe = __esm({
@@ -49307,15 +49664,15 @@ var init_worker_probe = __esm({
     WorkerProbe = class {
       constructor(opts) {
         this.opts = opts;
-        if (!opts.repoRoot || !path39.isAbsolute(opts.repoRoot)) {
+        if (!opts.repoRoot || !path40.isAbsolute(opts.repoRoot)) {
           throw new Error("WorkerProbe requires an absolute repoRoot");
         }
-        this.cacheFile = path39.join(opts.repoRoot, ".tiny-brain", "cache", "worker-probes.json");
+        this.cacheFile = path40.join(opts.repoRoot, ".tiny-brain", "cache", "worker-probes.json");
       }
       cacheFile;
       async readCache() {
         try {
-          const raw = await fs38.readFile(this.cacheFile, "utf-8");
+          const raw = await fs39.readFile(this.cacheFile, "utf-8");
           return JSON.parse(raw);
         } catch (err) {
           if (err.code === "ENOENT") return {};
@@ -49323,14 +49680,14 @@ var init_worker_probe = __esm({
         }
       }
       async writeCache(cache2) {
-        const dir = path39.dirname(this.cacheFile);
-        await fs38.mkdir(dir, { recursive: true });
-        const tmp = path39.join(
+        const dir = path40.dirname(this.cacheFile);
+        await fs39.mkdir(dir, { recursive: true });
+        const tmp = path40.join(
           dir,
-          `.${path39.basename(this.cacheFile)}.${randomBytes6(6).toString("hex")}.tmp`
+          `.${path40.basename(this.cacheFile)}.${randomBytes6(6).toString("hex")}.tmp`
         );
-        await fs38.writeFile(tmp, JSON.stringify(cache2, null, 2), "utf-8");
-        await fs38.rename(tmp, this.cacheFile);
+        await fs39.writeFile(tmp, JSON.stringify(cache2, null, 2), "utf-8");
+        await fs39.rename(tmp, this.cacheFile);
       }
       async probe(name) {
         const worker = await this.opts.store.get(name);
@@ -49403,8 +49760,8 @@ var init_local_probe_fn = __esm({
 });
 
 // packages/tiny-brain-core/src/services/auth/credential-storage.service.ts
-import * as fs39 from "fs/promises";
-import * as path40 from "path";
+import * as fs40 from "fs/promises";
+import * as path41 from "path";
 import * as os2 from "os";
 import * as crypto from "crypto";
 var CredentialStorageService;
@@ -49418,7 +49775,7 @@ var init_credential_storage_service = __esm({
       keyLength = 32;
       constructor() {
         const homeDir = os2.homedir();
-        this.credentialsPath = path40.join(homeDir, ".tiny-brain", "config", "credentials.json");
+        this.credentialsPath = path41.join(homeDir, ".tiny-brain", "config", "credentials.json");
       }
       async setCredential(key, value) {
         const validKeys = ["clientId", "clientSecret"];
@@ -49472,7 +49829,7 @@ var init_credential_storage_service = __esm({
       }
       async clearCredentials() {
         try {
-          await fs39.unlink(this.credentialsPath);
+          await fs40.unlink(this.credentialsPath);
         } catch (error2) {
           if (error2.code !== "ENOENT") {
             throw error2;
@@ -49533,7 +49890,7 @@ var init_credential_storage_service = __esm({
       }
       async loadStoredCredentials() {
         try {
-          const data = await fs39.readFile(this.credentialsPath, "utf8");
+          const data = await fs40.readFile(this.credentialsPath, "utf8");
           return JSON.parse(data);
         } catch (error2) {
           if (error2.code === "ENOENT") {
@@ -49543,14 +49900,14 @@ var init_credential_storage_service = __esm({
         }
       }
       async saveStoredCredentials(credentials) {
-        const dir = path40.dirname(this.credentialsPath);
-        await fs39.mkdir(dir, { recursive: true });
-        await fs39.writeFile(
+        const dir = path41.dirname(this.credentialsPath);
+        await fs40.mkdir(dir, { recursive: true });
+        await fs40.writeFile(
           this.credentialsPath,
           JSON.stringify(credentials, null, 2),
           "utf8"
         );
-        await fs39.chmod(this.credentialsPath, 384);
+        await fs40.chmod(this.credentialsPath, 384);
       }
     };
   }
@@ -49725,8 +50082,8 @@ var init_auth_token_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/tech-context-service.ts
-import { promises as fs40 } from "fs";
-import path41 from "path";
+import { promises as fs41 } from "fs";
+import path42 from "path";
 import crypto2 from "crypto";
 var TechContextService;
 var init_tech_context_service = __esm({
@@ -49738,9 +50095,9 @@ var init_tech_context_service = __esm({
       techDir;
       agentsDir;
       constructor(repoPath) {
-        this.tinyBrainDir = path41.join(repoPath, ".tiny-brain");
-        this.techDir = path41.join(this.tinyBrainDir, "tech");
-        this.agentsDir = path41.join(repoPath, ".claude", "agents");
+        this.tinyBrainDir = path42.join(repoPath, ".tiny-brain");
+        this.techDir = path42.join(this.tinyBrainDir, "tech");
+        this.agentsDir = path42.join(repoPath, ".claude", "agents");
       }
       /** Get the .tiny-brain directory path */
       getTinyBrainDir() {
@@ -49756,8 +50113,8 @@ var init_tech_context_service = __esm({
       }
       /** Ensure required directories exist */
       async ensureDirectories() {
-        await fs40.mkdir(this.tinyBrainDir, { recursive: true });
-        await fs40.mkdir(this.techDir, { recursive: true });
+        await fs41.mkdir(this.tinyBrainDir, { recursive: true });
+        await fs41.mkdir(this.techDir, { recursive: true });
       }
       /**
        * Write analysis data to .tiny-brain/analysis.json
@@ -49804,8 +50161,8 @@ var init_tech_context_service = __esm({
         if (analysis.envFiles && analysis.envFiles.length > 0) file.envFiles = analysis.envFiles;
         if (analysis.ci) file.ci = analysis.ci;
         if (analysis.analyzers && analysis.analyzers.length > 0) file.analyzers = analysis.analyzers;
-        const filePath = path41.join(this.tinyBrainDir, "analysis.json");
-        await fs40.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
+        const filePath = path42.join(this.tinyBrainDir, "analysis.json");
+        await fs41.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
       }
       /**
        * Write a tech expertise file with YAML frontmatter
@@ -49825,8 +50182,8 @@ var init_tech_context_service = __esm({
         const fileContent = `${yamlFrontmatter}
 
 ${content}`;
-        const filePath = path41.join(this.techDir, `${name}.md`);
-        await fs40.writeFile(filePath, fileContent, "utf-8");
+        const filePath = path42.join(this.techDir, `${name}.md`);
+        await fs41.writeFile(filePath, fileContent, "utf-8");
       }
       /**
        * Write raw markdown content to a tech file
@@ -49834,16 +50191,16 @@ ${content}`;
        */
       async writeTechFileRaw(name, content) {
         await this.ensureDirectories();
-        const filePath = path41.join(this.techDir, `${name}.md`);
-        await fs40.writeFile(filePath, content, "utf-8");
+        const filePath = path42.join(this.techDir, `${name}.md`);
+        await fs41.writeFile(filePath, content, "utf-8");
       }
       /**
        * Read analysis data from .tiny-brain/analysis.json
        */
       async readAnalysis() {
-        const filePath = path41.join(this.tinyBrainDir, "analysis.json");
+        const filePath = path42.join(this.tinyBrainDir, "analysis.json");
         try {
-          const content = await fs40.readFile(filePath, "utf-8");
+          const content = await fs41.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return null;
@@ -49854,12 +50211,12 @@ ${content}`;
        */
       async readTechFiles() {
         try {
-          const files = await fs40.readdir(this.techDir);
+          const files = await fs41.readdir(this.techDir);
           const techFiles = [];
           for (const file of files) {
             if (!file.endsWith(".md")) continue;
-            const filePath = path41.join(this.techDir, file);
-            const content = await fs40.readFile(filePath, "utf-8");
+            const filePath = path42.join(this.techDir, file);
+            const content = await fs41.readFile(filePath, "utf-8");
             const parsed = this.parseFrontmatter(content);
             if (parsed) {
               techFiles.push({
@@ -49879,10 +50236,10 @@ ${content}`;
       async getTechForFile(filePath) {
         const techFiles = await this.readTechFiles();
         const matches = [];
-        const basename5 = path41.basename(filePath);
+        const basename6 = path42.basename(filePath);
         for (const techFile of techFiles) {
           for (const pattern of techFile.frontmatter.filePatterns) {
-            if (minimatch(filePath, pattern) || minimatch(basename5, pattern) || minimatch(filePath, `**/${pattern}`) || filePath.includes(pattern.replace(/\/$/, ""))) {
+            if (minimatch(filePath, pattern) || minimatch(basename6, pattern) || minimatch(filePath, `**/${pattern}`) || filePath.includes(pattern.replace(/\/$/, ""))) {
               matches.push(techFile);
               break;
             }
@@ -49924,16 +50281,16 @@ ${content}`;
           ...config2,
           lastSynced: (/* @__PURE__ */ new Date()).toISOString()
         };
-        const filePath = path41.join(this.techDir, "config.json");
-        await fs40.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
+        const filePath = path42.join(this.techDir, "config.json");
+        await fs41.writeFile(filePath, JSON.stringify(fullConfig, null, 2), "utf-8");
       }
       /**
        * Read config from .tiny-brain/tech/config.json
        */
       async readConfig() {
-        const filePath = path41.join(this.techDir, "config.json");
+        const filePath = path42.join(this.techDir, "config.json");
         try {
-          const content = await fs40.readFile(filePath, "utf-8");
+          const content = await fs41.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return { useAgents: false };
@@ -49947,12 +50304,12 @@ ${content}`;
        * - Sub-agent invocation context
        */
       async installTechAgents() {
-        await fs40.mkdir(this.agentsDir, { recursive: true });
+        await fs41.mkdir(this.agentsDir, { recursive: true });
         const techFiles = await this.readTechFiles();
         for (const techFile of techFiles) {
           const name = techFile.frontmatter.name;
           const agentFileName = `tech-${name}.md`;
-          const agentPath = path41.join(this.agentsDir, agentFileName);
+          const agentPath = path42.join(this.agentsDir, agentFileName);
           const description = techFile.frontmatter.description || `${name} development specialist. Use for ${techFile.frontmatter.domain} tasks involving ${name}.`;
           const agentContent = `---
 name: tech-${name}
@@ -49968,7 +50325,7 @@ You are a specialized ${name} development agent invoked by the developer agent. 
 ## Tech Expertise
 
 ${techFile.content}`;
-          await fs40.writeFile(agentPath, agentContent, "utf-8");
+          await fs41.writeFile(agentPath, agentContent, "utf-8");
         }
       }
       /**
@@ -49976,10 +50333,10 @@ ${techFile.content}`;
        */
       async removeTechAgents() {
         try {
-          const files = await fs40.readdir(this.agentsDir);
+          const files = await fs41.readdir(this.agentsDir);
           for (const file of files) {
             if (file.startsWith("tech-") && file.endsWith(".md")) {
-              await fs40.unlink(path41.join(this.agentsDir, file));
+              await fs41.unlink(path42.join(this.agentsDir, file));
             }
           }
         } catch {
@@ -50074,8 +50431,8 @@ ${techFile.content}`;
 });
 
 // packages/tiny-brain-core/src/services/analysis/config-health-service.ts
-import { promises as fs41 } from "fs";
-import path42 from "path";
+import { promises as fs42 } from "fs";
+import path43 from "path";
 var HOOK_SIGNATURE, REQUIRED_PERMISSIONS, CONTEXT_START_MARKER, CONTEXT_END_MARKER, ConfigHealthService;
 var init_config_health_service = __esm({
   "packages/tiny-brain-core/src/services/analysis/config-health-service.ts"() {
@@ -50096,10 +50453,10 @@ var init_config_health_service = __esm({
       settingsPath;
       constructor(repoPath) {
         this.repoPath = repoPath;
-        this.gitDir = path42.join(repoPath, ".git");
-        this.hooksDir = path42.join(this.gitDir, "hooks");
-        this.claudeMdPath = path42.join(repoPath, "CLAUDE.md");
-        this.settingsPath = path42.join(repoPath, ".claude", "settings.json");
+        this.gitDir = path43.join(repoPath, ".git");
+        this.hooksDir = path43.join(this.gitDir, "hooks");
+        this.claudeMdPath = path43.join(repoPath, "CLAUDE.md");
+        this.settingsPath = path43.join(repoPath, ".claude", "settings.json");
       }
       _hooksResolved = false;
       /**
@@ -50111,20 +50468,20 @@ var init_config_health_service = __esm({
         if (this._hooksResolved) return;
         this._hooksResolved = true;
         try {
-          const stats = await fs41.stat(this.gitDir);
+          const stats = await fs42.stat(this.gitDir);
           if (stats.isFile()) {
-            const localHooksDir = path42.join(this.repoPath, ".claude", "hooks");
+            const localHooksDir = path43.join(this.repoPath, ".claude", "hooks");
             try {
-              await fs41.stat(localHooksDir);
+              await fs42.stat(localHooksDir);
               this.hooksDir = localHooksDir;
               return;
             } catch {
             }
-            const content = await fs41.readFile(this.gitDir, "utf-8");
+            const content = await fs42.readFile(this.gitDir, "utf-8");
             const match2 = content.match(/^gitdir:\s*(.+)$/m);
             if (match2) {
-              const resolvedGitDir = path42.resolve(this.repoPath, match2[1].trim());
-              this.hooksDir = path42.join(resolvedGitDir, "hooks");
+              const resolvedGitDir = path43.resolve(this.repoPath, match2[1].trim());
+              this.hooksDir = path43.join(resolvedGitDir, "hooks");
             }
           }
         } catch {
@@ -50134,11 +50491,11 @@ var init_config_health_service = __esm({
        * Check status of a single git hook
        */
       async checkHook(hookName) {
-        const hookPath = path42.join(this.hooksDir, hookName);
+        const hookPath = path43.join(this.hooksDir, hookName);
         try {
-          const stats = await fs41.stat(hookPath);
+          const stats = await fs42.stat(hookPath);
           const isExecutable = (stats.mode & 64) !== 0;
-          const content = await fs41.readFile(hookPath, "utf-8");
+          const content = await fs42.readFile(hookPath, "utf-8");
           const isSigned = content.includes(HOOK_SIGNATURE);
           return {
             name: hookName,
@@ -50181,7 +50538,7 @@ var init_config_health_service = __esm({
        */
       async checkContextBlock() {
         try {
-          const content = await fs41.readFile(this.claudeMdPath, "utf-8");
+          const content = await fs42.readFile(this.claudeMdPath, "utf-8");
           const hasStartMarker = content.includes(CONTEXT_START_MARKER);
           const hasEndMarker = content.includes(CONTEXT_END_MARKER);
           const present = hasStartMarker && hasEndMarker;
@@ -50232,7 +50589,7 @@ var init_config_health_service = __esm({
        */
       async checkSkillPermissions() {
         try {
-          const content = await fs41.readFile(this.settingsPath, "utf-8");
+          const content = await fs42.readFile(this.settingsPath, "utf-8");
           const settings = JSON.parse(content);
           const allowedPermissions = settings.permissions?.allow || [];
           const missing = REQUIRED_PERMISSIONS.filter(
@@ -50295,11 +50652,11 @@ var init_config_health_service = __esm({
           }
         }
         const operationalDir = getOperationalStateDir(this.repoPath);
-        const qualityDir = path42.join(operationalDir, "quality");
+        const qualityDir = path43.join(operationalDir, "quality");
         const qualityExists = await this.directoryExists(qualityDir);
         if (!qualityExists) {
-          const commonDir = path42.dirname(operationalDir);
-          const label = `${path42.basename(commonDir)}/${path42.relative(commonDir, qualityDir)}/`;
+          const commonDir = path43.dirname(operationalDir);
+          const label = `${path43.basename(commonDir)}/${path43.relative(commonDir, qualityDir)}/`;
           missing.push(label);
         }
         return { missing };
@@ -50309,8 +50666,8 @@ var init_config_health_service = __esm({
        */
       async directoryExists(targetPath) {
         try {
-          const full = path42.isAbsolute(targetPath) ? targetPath : path42.join(this.repoPath, targetPath);
-          const stats = await fs41.stat(full);
+          const full = path43.isAbsolute(targetPath) ? targetPath : path43.join(this.repoPath, targetPath);
+          const stats = await fs42.stat(full);
           return stats.isDirectory();
         } catch {
           return false;
@@ -50321,7 +50678,7 @@ var init_config_health_service = __esm({
        */
       async checkIsGitRepo() {
         try {
-          const stats = await fs41.stat(this.gitDir);
+          const stats = await fs42.stat(this.gitDir);
           return stats.isDirectory() || stats.isFile();
         } catch {
           return false;
@@ -50343,8 +50700,8 @@ var init_config_health_service = __esm({
           manageAgentsMd: true
         };
         try {
-          const configPath2 = path42.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs41.readFile(configPath2, "utf-8");
+          const configPath2 = path43.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs42.readFile(configPath2, "utf-8");
           const config2 = JSON.parse(content);
           const repo = config2.repo ?? {};
           const flag = (key) => {
@@ -50569,14 +50926,14 @@ var init_script_analyzer = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/claude-md-templates.ts
-import fs42 from "node:fs/promises";
-import * as path43 from "node:path";
+import fs43 from "node:fs/promises";
+import * as path44 from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 async function renderTemplate(dir, name, vars = {}) {
-  const templatePath = path43.join(dir, name);
+  const templatePath = path44.join(dir, name);
   let content;
   try {
-    content = await fs42.readFile(templatePath, "utf-8");
+    content = await fs43.readFile(templatePath, "utf-8");
   } catch (error2) {
     if (error2.code === "ENOENT") {
       throw new Error(
@@ -50601,22 +50958,22 @@ var TEMPLATES_ROOT, AGENTS_MD_TEMPLATES_DIR, UNRESOLVED_PLACEHOLDER_RE;
 var init_claude_md_templates = __esm({
   "packages/tiny-brain-core/src/services/analysis/claude-md-templates.ts"() {
     "use strict";
-    TEMPLATES_ROOT = path43.join(
-      path43.dirname(fileURLToPath4(import.meta.url)),
+    TEMPLATES_ROOT = path44.join(
+      path44.dirname(fileURLToPath4(import.meta.url)),
       "..",
       "..",
       "..",
       "templates"
     );
-    AGENTS_MD_TEMPLATES_DIR = path43.join(TEMPLATES_ROOT, "agents-md");
+    AGENTS_MD_TEMPLATES_DIR = path44.join(TEMPLATES_ROOT, "agents-md");
     UNRESOLVED_PLACEHOLDER_RE = /\{\{[A-Z_][A-Z0-9_]*\}\}/g;
   }
 });
 
 // packages/tiny-brain-core/src/services/analysis/agents-md-service.ts
-import { promises as fs43 } from "fs";
+import { promises as fs44 } from "fs";
 import { createHash as createHash3 } from "crypto";
-import path44 from "path";
+import path45 from "path";
 async function writeAgentInstructionFiles(opts) {
   const { service, analysis, readmeExcerpt, repoPath, io, cliSurfaceMap } = opts;
   const statuses = {};
@@ -50772,10 +51129,10 @@ ${markerEnd}
         };
       }
       async extractReadmeExcerpt() {
-        const readmePath = path44.join(this.repoPath, "README.md");
+        const readmePath = path45.join(this.repoPath, "README.md");
         let content;
         try {
-          content = await fs43.readFile(readmePath, "utf8");
+          content = await fs44.readFile(readmePath, "utf8");
         } catch {
           return void 0;
         }
@@ -50849,12 +51206,12 @@ ${markerEnd}
        */
       async generatePackageContent(packagePath, rootAnalysis, existingContent) {
         const scriptAnalyzer = new ScriptAnalyzer();
-        let pkgName = path44.basename(packagePath);
+        let pkgName = path45.basename(packagePath);
         let pkgDescription;
         let scripts = {};
         try {
-          const pkgJsonPath = path44.join(packagePath, "package.json");
-          const raw = await fs43.readFile(pkgJsonPath, "utf-8");
+          const pkgJsonPath = path45.join(packagePath, "package.json");
+          const raw = await fs44.readFile(pkgJsonPath, "utf-8");
           const pkgJson = JSON.parse(raw);
           pkgName = pkgJson.name || pkgName;
           pkgDescription = pkgJson.description;
@@ -50964,14 +51321,14 @@ ${MARKER_END}
 });
 
 // packages/tiny-brain-core/src/services/analysis/config-setup-service.ts
-import { promises as fs44 } from "node:fs";
+import { promises as fs45 } from "node:fs";
 import { existsSync as existsSync8 } from "node:fs";
-import * as path45 from "node:path";
+import * as path46 from "node:path";
 async function ensureTinyBrainGitignoreEntries(repoPath) {
-  const gitignorePath = path45.join(repoPath, ".gitignore");
+  const gitignorePath = path46.join(repoPath, ".gitignore");
   let content = "";
   try {
-    content = await fs44.readFile(gitignorePath, "utf-8");
+    content = await fs45.readFile(gitignorePath, "utf-8");
   } catch {
   }
   const presentEntries = new Set(
@@ -50984,7 +51341,7 @@ async function ensureTinyBrainGitignoreEntries(repoPath) {
   if (!hasHeader) lines.push(TINY_BRAIN_GITIGNORE_HEADER);
   lines.push(...missing);
   const block = lines.join("\n") + "\n";
-  await fs44.appendFile(gitignorePath, block, "utf-8");
+  await fs45.appendFile(gitignorePath, block, "utf-8");
   return missing.length;
 }
 var TINY_BRAIN_GITIGNORE_ENTRIES, TINY_BRAIN_GITIGNORE_HEADER, HOOK_SIGNATURE2, EXEC_HELPER_CONTENT, RUN_HOOKS_HELPER_CONTENT, HOOK_NAMES, SKILL_PERMISSIONS, SILENT_LOGGER, ConfigSetupService;
@@ -51120,12 +51477,12 @@ fi
        * Creates directories that do not yet exist.
        */
       async initializeDirectories(flags) {
-        const prdInitialized = flags.enableSDD ? await this.createDirectoryIfMissing(path45.join("docs", "prd")) : false;
-        const adrInitialized = flags.enableADR ? await this.createDirectoryIfMissing(path45.join("docs", "adr")) : false;
+        const prdInitialized = flags.enableSDD ? await this.createDirectoryIfMissing(path46.join("docs", "prd")) : false;
+        const adrInitialized = flags.enableADR ? await this.createDirectoryIfMissing(path46.join("docs", "adr")) : false;
         const qualityInitialized = flags.enableQuality ? await this.createDirectoryIfMissing(
-          path45.join(getOperationalStateDir(this.repoPath), "quality")
+          path46.join(getOperationalStateDir(this.repoPath), "quality")
         ) : false;
-        const fixesInitialized = flags.enableSDD ? await this.createDirectoryWithProgress(path45.join(".tiny-brain", "fixes"), "progress.json") : false;
+        const fixesInitialized = flags.enableSDD ? await this.createDirectoryWithProgress(path46.join(".tiny-brain", "fixes"), "progress.json") : false;
         return { prdInitialized, adrInitialized, qualityInitialized, fixesInitialized };
       }
       /**
@@ -51147,7 +51504,7 @@ fi
           this.logger.debug("No hooksSourceDir provided, skipping git hooks installation");
           return false;
         }
-        const gitDir = path45.join(this.repoPath, ".git");
+        const gitDir = path46.join(this.repoPath, ".git");
         if (!existsSync8(gitDir)) {
           this.logger.debug("Not a git repository, skipping git hooks initialization");
           return false;
@@ -51156,24 +51513,24 @@ fi
           this.logger.debug(`Hook templates not found at ${this.hooksSourceDir}, skipping`);
           return false;
         }
-        const gitHooksDir = path45.join(gitDir, "hooks");
-        await fs44.mkdir(gitHooksDir, { recursive: true });
+        const gitHooksDir = path46.join(gitDir, "hooks");
+        await fs45.mkdir(gitHooksDir, { recursive: true });
         let anyInstalled = false;
         for (const hookName of HOOK_NAMES) {
-          const srcHook = path45.join(this.hooksSourceDir, hookName);
-          const destHook = path45.join(gitHooksDir, hookName);
+          const srcHook = path46.join(this.hooksSourceDir, hookName);
+          const destHook = path46.join(gitHooksDir, hookName);
           if (!existsSync8(srcHook)) {
             continue;
           }
           if (existsSync8(destHook)) {
             try {
-              const existingContent = await fs44.readFile(destHook, "utf-8");
+              const existingContent = await fs45.readFile(destHook, "utf-8");
               if (!existingContent.includes(HOOK_SIGNATURE2)) {
                 this.logger.debug(`Skipping ${hookName} - custom hook already exists`);
                 continue;
               }
-              const srcStat = await fs44.stat(srcHook);
-              const destStat = await fs44.stat(destHook);
+              const srcStat = await fs45.stat(srcHook);
+              const destStat = await fs45.stat(destHook);
               if (srcStat.mtime <= destStat.mtime) {
                 continue;
               }
@@ -51181,8 +51538,8 @@ fi
               continue;
             }
           }
-          await fs44.copyFile(srcHook, destHook);
-          await fs44.chmod(destHook, 493);
+          await fs45.copyFile(srcHook, destHook);
+          await fs45.chmod(destHook, 493);
           anyInstalled = true;
           this.logger.info(`Installed git hook: ${hookName}`);
         }
@@ -51199,9 +51556,9 @@ fi
        * and outputs the correct exec command (pnpm exec, npx, yarn exec, bunx).
        */
       async installExecHelper(gitHooksDir) {
-        const helperPath = path45.join(gitHooksDir, "tiny-brain-exec");
-        await fs44.writeFile(helperPath, EXEC_HELPER_CONTENT, "utf-8");
-        await fs44.chmod(helperPath, 493);
+        const helperPath = path46.join(gitHooksDir, "tiny-brain-exec");
+        await fs45.writeFile(helperPath, EXEC_HELPER_CONTENT, "utf-8");
+        await fs45.chmod(helperPath, 493);
         this.logger.debug("Installed tiny-brain-exec helper");
       }
       /**
@@ -51211,9 +51568,9 @@ fi
        * executability probe + output capture + cat-on-fail semantics.
        */
       async installRunHooksHelper(gitHooksDir) {
-        const helperPath = path45.join(gitHooksDir, "tiny-brain-run-hooks");
-        await fs44.writeFile(helperPath, RUN_HOOKS_HELPER_CONTENT, "utf-8");
-        await fs44.chmod(helperPath, 493);
+        const helperPath = path46.join(gitHooksDir, "tiny-brain-run-hooks");
+        await fs45.writeFile(helperPath, RUN_HOOKS_HELPER_CONTENT, "utf-8");
+        await fs45.chmod(helperPath, 493);
         this.logger.debug("Installed tiny-brain-run-hooks helper");
       }
       /**
@@ -51222,13 +51579,13 @@ fi
        */
       async injectSkillPermissions() {
         try {
-          const settingsDir = path45.join(this.repoPath, ".claude");
-          const settingsPath = path45.join(settingsDir, "settings.json");
-          await fs44.mkdir(settingsDir, { recursive: true });
+          const settingsDir = path46.join(this.repoPath, ".claude");
+          const settingsPath = path46.join(settingsDir, "settings.json");
+          await fs45.mkdir(settingsDir, { recursive: true });
           let settings = {};
           if (existsSync8(settingsPath)) {
             try {
-              const content = await fs44.readFile(settingsPath, "utf-8");
+              const content = await fs45.readFile(settingsPath, "utf-8");
               settings = JSON.parse(content);
             } catch {
               this.logger.warn("Failed to parse existing settings.json, will create new one");
@@ -51251,7 +51608,7 @@ fi
             }
           }
           if (addedPermissions.length > 0) {
-            await fs44.writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+            await fs45.writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
             this.logger.info(`Added ${addedPermissions.length} skill permissions to .claude/settings.json`);
           }
           return addedPermissions;
@@ -51267,8 +51624,8 @@ fi
        */
       async readConfigFlags() {
         try {
-          const configPath2 = path45.join(this.repoPath, ".tiny-brain", "config.json");
-          const content = await fs44.readFile(configPath2, "utf-8");
+          const configPath2 = path46.join(this.repoPath, ".tiny-brain", "config.json");
+          const content = await fs45.readFile(configPath2, "utf-8");
           const config2 = JSON.parse(content);
           return {
             enableSDD: config2.preferences?.repo?.enableSDD ?? true,
@@ -51290,13 +51647,13 @@ fi
        * Returns true if the directory was created, false if it already existed.
        */
       async createDirectoryIfMissing(targetPath) {
-        const fullPath = path45.isAbsolute(targetPath) ? targetPath : path45.join(this.repoPath, targetPath);
-        const label = path45.relative(this.repoPath, fullPath) || targetPath;
+        const fullPath = path46.isAbsolute(targetPath) ? targetPath : path46.join(this.repoPath, targetPath);
+        const label = path46.relative(this.repoPath, fullPath) || targetPath;
         if (existsSync8(fullPath)) {
           return false;
         }
         try {
-          await fs44.mkdir(fullPath, { recursive: true });
+          await fs45.mkdir(fullPath, { recursive: true });
           this.logger.info(`Created ${label}/ directory`);
           return true;
         } catch (error2) {
@@ -51311,10 +51668,10 @@ fi
        */
       async createDirectoryWithProgress(relativePath, progressFile) {
         const dirCreated = await this.createDirectoryIfMissing(relativePath);
-        const progressPath = path45.join(this.repoPath, relativePath, progressFile);
+        const progressPath = path46.join(this.repoPath, relativePath, progressFile);
         if (!existsSync8(progressPath)) {
           try {
-            await fs44.writeFile(progressPath, JSON.stringify({ fixes: [], lastSynced: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), "utf-8");
+            await fs45.writeFile(progressPath, JSON.stringify({ fixes: [], lastSynced: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), "utf-8");
             this.logger.info(`Created ${relativePath}/${progressFile}`);
           } catch (error2) {
             this.logger.warn(
@@ -51363,8 +51720,8 @@ var init_capability_engine = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/recommendation-service.ts
-import path46 from "path";
-import fs45 from "fs/promises";
+import path47 from "path";
+import fs46 from "fs/promises";
 import childProcess from "child_process";
 var RecommendationService;
 var init_recommendation_service = __esm({
@@ -51378,11 +51735,11 @@ var init_recommendation_service = __esm({
       capabilityDeps;
       constructor(repoPath, capabilityDeps) {
         this.repoPath = repoPath;
-        this.recommendationsDir = path46.join(getOperationalStateDir(repoPath), "recommendations");
+        this.recommendationsDir = path47.join(getOperationalStateDir(repoPath), "recommendations");
         this.capabilityDeps = capabilityDeps;
       }
       async ensureDirectory() {
-        await fs45.mkdir(this.recommendationsDir, { recursive: true });
+        await fs46.mkdir(this.recommendationsDir, { recursive: true });
       }
       async writeRecommendations(recs, fetchedAt) {
         await this.ensureDirectory();
@@ -51391,13 +51748,13 @@ var init_recommendation_service = __esm({
           lastFetchedAt: fetchedAt,
           recommendations: recs
         };
-        const filePath = path46.join(this.recommendationsDir, "recommendations.json");
-        await fs45.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
+        const filePath = path47.join(this.recommendationsDir, "recommendations.json");
+        await fs46.writeFile(filePath, JSON.stringify(file, null, 2), "utf-8");
       }
       async readRecommendations() {
-        const filePath = path46.join(this.recommendationsDir, "recommendations.json");
+        const filePath = path47.join(this.recommendationsDir, "recommendations.json");
         try {
-          const content = await fs45.readFile(filePath, "utf-8");
+          const content = await fs46.readFile(filePath, "utf-8");
           return JSON.parse(content);
         } catch {
           return null;
@@ -51451,9 +51808,9 @@ var init_recommendation_service = __esm({
         return installed;
       }
       async readInstalledRecommendations() {
-        const filePath = path46.join(this.recommendationsDir, "installed.json");
+        const filePath = path47.join(this.recommendationsDir, "installed.json");
         try {
-          const content = await fs45.readFile(filePath, "utf-8");
+          const content = await fs46.readFile(filePath, "utf-8");
           const file = JSON.parse(content);
           return [...file.installed];
         } catch {
@@ -51491,15 +51848,15 @@ var init_recommendation_service = __esm({
         return `.claude/skills/${skillName}/SKILL.md`;
       }
       async installAgent(rec) {
-        const agentsDir = path46.join(this.repoPath, ".claude", "agents");
-        await fs45.mkdir(agentsDir, { recursive: true });
-        await fs45.writeFile(path46.join(agentsDir, `${rec.id}.md`), rec.source, "utf-8");
+        const agentsDir = path47.join(this.repoPath, ".claude", "agents");
+        await fs46.mkdir(agentsDir, { recursive: true });
+        await fs46.writeFile(path47.join(agentsDir, `${rec.id}.md`), rec.source, "utf-8");
         return `.claude/agents/${rec.id}.md`;
       }
       async installHook(rec) {
-        const hooksDir = path46.join(this.repoPath, ".claude", "hooks");
-        await fs45.mkdir(hooksDir, { recursive: true });
-        await fs45.writeFile(path46.join(hooksDir, `${rec.id}.json`), rec.source, "utf-8");
+        const hooksDir = path47.join(this.repoPath, ".claude", "hooks");
+        await fs46.mkdir(hooksDir, { recursive: true });
+        await fs46.writeFile(path47.join(hooksDir, `${rec.id}.json`), rec.source, "utf-8");
         return `.claude/hooks/${rec.id}.json`;
       }
       async mergeRecommendations(incoming, fetchedAt) {
@@ -51532,8 +51889,8 @@ var init_recommendation_service = __esm({
           version: "1.0",
           dismissed: [...existing, dismissed]
         };
-        const filePath = path46.join(this.recommendationsDir, "dismissed.json");
-        await fs45.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
+        const filePath = path47.join(this.recommendationsDir, "dismissed.json");
+        await fs46.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
       }
       async restoreRecommendation(recommendationId) {
         await this.ensureDirectory();
@@ -51543,13 +51900,13 @@ var init_recommendation_service = __esm({
           version: "1.0",
           dismissed: filtered
         };
-        const filePath = path46.join(this.recommendationsDir, "dismissed.json");
-        await fs45.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
+        const filePath = path47.join(this.recommendationsDir, "dismissed.json");
+        await fs46.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
       }
       async readDismissedRecommendations() {
-        const filePath = path46.join(this.recommendationsDir, "dismissed.json");
+        const filePath = path47.join(this.recommendationsDir, "dismissed.json");
         try {
-          const content = await fs45.readFile(filePath, "utf-8");
+          const content = await fs46.readFile(filePath, "utf-8");
           const file = JSON.parse(content);
           return [...file.dismissed];
         } catch {
@@ -51576,17 +51933,17 @@ var init_recommendation_service = __esm({
           version: "1.0",
           installed: [...existing, installed]
         };
-        const filePath = path46.join(this.recommendationsDir, "installed.json");
-        await fs45.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
+        const filePath = path47.join(this.recommendationsDir, "installed.json");
+        await fs46.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
       }
     };
   }
 });
 
 // packages/tiny-brain-core/src/services/analysis/capability-step-helpers.ts
-import fs46 from "fs/promises";
+import fs47 from "fs/promises";
 import childProcess2 from "child_process";
-import path47 from "path";
+import path48 from "path";
 function execFileAsync2(cmd, args, opts) {
   return new Promise((resolve5, reject) => {
     childProcess2.execFile(cmd, [...args], { ...opts, encoding: "utf-8" }, (err, stdout, stderr) => {
@@ -51598,8 +51955,8 @@ function execFileAsync2(cmd, args, opts) {
 async function npmInstall(packages, opts) {
   const description = `Install npm packages: ${packages.join(", ")}`;
   try {
-    const pkgJsonPath = path47.join(opts.repoPath, "package.json");
-    const pkgJson = JSON.parse(await fs46.readFile(pkgJsonPath, "utf-8"));
+    const pkgJsonPath = path48.join(opts.repoPath, "package.json");
+    const pkgJson = JSON.parse(await fs47.readFile(pkgJsonPath, "utf-8"));
     const allDeps = {
       ...pkgJson.dependencies,
       ...pkgJson.devDependencies
@@ -51618,20 +51975,20 @@ async function npmInstall(packages, opts) {
   }
 }
 async function writeConfigFile(filePath, content, opts) {
-  const relativePath = path47.relative(opts.repoPath, filePath);
+  const relativePath = path48.relative(opts.repoPath, filePath);
   const description = `Write config file: ${relativePath}`;
   try {
     let exists3 = true;
     try {
-      await fs46.access(filePath);
+      await fs47.access(filePath);
     } catch {
       exists3 = false;
     }
     if (exists3 && opts.overwrite !== true) {
       return { stepIndex: 0, description, status: "skipped" };
     }
-    await fs46.mkdir(path47.dirname(filePath), { recursive: true });
-    await fs46.writeFile(filePath, content, "utf-8");
+    await fs47.mkdir(path48.dirname(filePath), { recursive: true });
+    await fs47.writeFile(filePath, content, "utf-8");
     return { stepIndex: 0, description, status: "completed", installedPath: relativePath };
   } catch (err) {
     const error2 = err instanceof Error ? err.message : String(err);
@@ -51639,19 +51996,19 @@ async function writeConfigFile(filePath, content, opts) {
   }
 }
 async function appendToFile2(filePath, content, opts) {
-  const relativePath = path47.relative(opts.repoPath, filePath);
+  const relativePath = path48.relative(opts.repoPath, filePath);
   const description = `Append to file: ${relativePath}`;
   try {
     let existing = "";
     try {
-      existing = await fs46.readFile(filePath, "utf-8");
+      existing = await fs47.readFile(filePath, "utf-8");
     } catch {
     }
     if (existing.includes(content.trim())) {
       return { stepIndex: 0, description, status: "skipped" };
     }
-    await fs46.mkdir(path47.dirname(filePath), { recursive: true });
-    await fs46.appendFile(filePath, content, "utf-8");
+    await fs47.mkdir(path48.dirname(filePath), { recursive: true });
+    await fs47.appendFile(filePath, content, "utf-8");
     return { stepIndex: 0, description, status: "completed", installedPath: relativePath };
   } catch (err) {
     const error2 = err instanceof Error ? err.message : String(err);
@@ -51683,10 +52040,10 @@ var init_capability_step_helpers = __esm({
 
 // packages/tiny-brain-core/src/services/analysis/capabilities/mutation-testing.ts
 import { existsSync as existsSync9 } from "fs";
-import path48 from "path";
+import path49 from "path";
 function detectSourceDirs(packagePath) {
   const candidates = ["src", "server", "lib"];
-  return candidates.filter((dir) => existsSync9(path48.join(packagePath, dir)));
+  return candidates.filter((dir) => existsSync9(path49.join(packagePath, dir)));
 }
 function buildMutatePaths(sourceDirs) {
   const dirs = sourceDirs.length > 0 ? sourceDirs : ["src"];
@@ -51757,11 +52114,11 @@ npx stryker run --mutate "src/path/to/file.ts"
         if (packages.length > 0) {
           for (const pkg of packages) {
             onProgress({ stepIndex, description: `Write stryker config for ${pkg}`, status: "running" });
-            const packagePath = path48.join(repoPath, pkg);
+            const packagePath = path49.join(repoPath, pkg);
             const sourceDirs = detectSourceDirs(packagePath);
             const mutatePaths = buildMutatePaths(sourceDirs);
             const configContent = generateStrykerConfig(testRunner, mutatePaths);
-            const configPath2 = path48.join(packagePath, "stryker.config.mjs");
+            const configPath2 = path49.join(packagePath, "stryker.config.mjs");
             const writeResult = await writeConfigFile(configPath2, configContent, { repoPath });
             results.push({ ...writeResult, stepIndex });
             onProgress({ stepIndex, description: `Write stryker config for ${pkg}`, status: writeResult.status === "failed" ? "failed" : "completed" });
@@ -51772,14 +52129,14 @@ npx stryker run --mutate "src/path/to/file.ts"
           const sourceDirs = detectSourceDirs(repoPath);
           const mutatePaths = buildMutatePaths(sourceDirs);
           const configContent = generateStrykerConfig(testRunner, mutatePaths);
-          const configPath2 = path48.join(repoPath, "stryker.config.mjs");
+          const configPath2 = path49.join(repoPath, "stryker.config.mjs");
           const writeResult = await writeConfigFile(configPath2, configContent, { repoPath });
           results.push({ ...writeResult, stepIndex });
           onProgress({ stepIndex, description: "Write stryker config", status: writeResult.status === "failed" ? "failed" : "completed" });
           stepIndex++;
         }
         onProgress({ stepIndex, description: "Write mutant-tester agent", status: "running" });
-        const agentPath = path48.join(repoPath, ".claude", "agents", "mutant-tester.md");
+        const agentPath = path49.join(repoPath, ".claude", "agents", "mutant-tester.md");
         const agentResult = await writeConfigFile(agentPath, MUTANT_TESTER_AGENT, { repoPath });
         results.push({ ...agentResult, stepIndex });
         onProgress({ stepIndex, description: "Write mutant-tester agent", status: agentResult.status === "failed" ? "failed" : "completed" });
@@ -51790,7 +52147,7 @@ npx stryker run --mutate "src/path/to/file.ts"
         onProgress({ stepIndex, description: "Enable mutation testing", status: configResult.status === "failed" ? "failed" : "completed" });
         stepIndex++;
         onProgress({ stepIndex, description: "Add .stryker-tmp to .gitignore", status: "running" });
-        const gitignorePath = path48.join(repoPath, ".gitignore");
+        const gitignorePath = path49.join(repoPath, ".gitignore");
         const gitignoreContent = "\n# Stryker mutation testing sandbox\n.stryker-tmp/\n";
         const gitignoreResult = await appendToFile2(gitignorePath, gitignoreContent, { repoPath });
         results.push({ ...gitignoreResult, stepIndex });
@@ -51802,7 +52159,7 @@ npx stryker run --mutate "src/path/to/file.ts"
 });
 
 // packages/tiny-brain-core/src/services/analysis/capabilities/security-scanning.ts
-import path49 from "path";
+import path50 from "path";
 var NPM_AUDIT_HOOK, dependencyAuditInstaller;
 var init_security_scanning = __esm({
   "packages/tiny-brain-core/src/services/analysis/capabilities/security-scanning.ts"() {
@@ -51826,7 +52183,7 @@ fi
         const results = [];
         let stepIndex = 0;
         onProgress({ stepIndex, description: "Write npm audit pre-push hook", status: "running" });
-        const hookPath = path49.join(repoPath, ".husky", "pre-push");
+        const hookPath = path50.join(repoPath, ".husky", "pre-push");
         const writeResult = await writeConfigFile(hookPath, NPM_AUDIT_HOOK, { repoPath });
         results.push({ ...writeResult, stepIndex });
         onProgress({ stepIndex, description: "Write npm audit pre-push hook", status: writeResult.status === "failed" ? "failed" : "completed" });
@@ -51859,8 +52216,8 @@ var init_registry = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/skill-validation-service.ts
-import { promises as fs47 } from "node:fs";
-import * as path50 from "node:path";
+import { promises as fs48 } from "node:fs";
+import * as path51 from "node:path";
 function parseFrontmatter(content) {
   if (!content.startsWith("---")) {
     return { metadata: null, body: content };
@@ -51902,10 +52259,10 @@ function hasUsageContext(description) {
 async function countFilesRecursive(dirPath) {
   let count = 0;
   try {
-    const entries = await fs47.readdir(dirPath, { withFileTypes: true });
+    const entries = await fs48.readdir(dirPath, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        count += await countFilesRecursive(path50.join(dirPath, entry.name));
+        count += await countFilesRecursive(path51.join(dirPath, entry.name));
       } else if (entry.isFile()) {
         count += 1;
       }
@@ -51916,16 +52273,16 @@ async function countFilesRecursive(dirPath) {
 }
 async function containsSecrets(dirPath) {
   try {
-    const entries = await fs47.readdir(dirPath, { withFileTypes: true });
+    const entries = await fs48.readdir(dirPath, { withFileTypes: true });
     for (const entry of entries) {
-      const entryPath = path50.join(dirPath, entry.name);
+      const entryPath = path51.join(dirPath, entry.name);
       if (entry.isDirectory()) {
         if (await containsSecrets(entryPath)) {
           return true;
         }
       } else if (entry.isFile()) {
         try {
-          const content = await fs47.readFile(entryPath, "utf-8");
+          const content = await fs48.readFile(entryPath, "utf-8");
           for (const pattern of SECRET_PATTERNS) {
             if (pattern.test(content)) {
               return true;
@@ -52006,7 +52363,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                await fs47.access(path50.join(skillPath, "SKILL.md"));
+                await fs48.access(path51.join(skillPath, "SKILL.md"));
                 return {
                   id: "skill-md-exists",
                   name: "SKILL.md exists",
@@ -52032,7 +52389,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs47.readFile(path50.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs48.readFile(path51.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -52068,7 +52425,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs47.readFile(path50.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs48.readFile(path51.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -52123,7 +52480,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs47.readFile(path50.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs48.readFile(path51.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -52169,7 +52526,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Error,
             validate: async (skillPath) => {
               try {
-                const content = await fs47.readFile(path50.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs48.readFile(path51.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -52213,9 +52570,9 @@ var init_skill_validation_service = __esm({
             description: "Check that the directory name matches the name field and is kebab-case",
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
-              const dirName = path50.basename(skillPath);
+              const dirName = path51.basename(skillPath);
               try {
-                const content = await fs47.readFile(path50.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs48.readFile(path51.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null || typeof metadata["name"] !== "string") {
                   return {
@@ -52263,7 +52620,7 @@ var init_skill_validation_service = __esm({
               const found = [];
               for (const dirName of OPTIONAL_DIRS) {
                 try {
-                  const stat3 = await fs47.stat(path50.join(skillPath, dirName));
+                  const stat3 = await fs48.stat(path51.join(skillPath, dirName));
                   if (stat3.isDirectory()) {
                     found.push(dirName);
                   }
@@ -52304,7 +52661,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
               try {
-                const content = await fs47.readFile(path50.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs48.readFile(path51.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -52359,7 +52716,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
               try {
-                const content = await fs47.readFile(path50.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs48.readFile(path51.join(skillPath, "SKILL.md"), "utf-8");
                 const { metadata } = parseFrontmatter(content);
                 if (metadata === null) {
                   return {
@@ -52424,7 +52781,7 @@ var init_skill_validation_service = __esm({
             severity: SkillValidationSeverity.Warning,
             validate: async (skillPath) => {
               try {
-                const content = await fs47.readFile(path50.join(skillPath, "SKILL.md"), "utf-8");
+                const content = await fs48.readFile(path51.join(skillPath, "SKILL.md"), "utf-8");
                 const { body } = parseFrontmatter(content);
                 if (body.trim() === "") {
                   return {
@@ -52535,7 +52892,7 @@ var init_skill_validation_service = __esm({
        * @returns Validation result with all checks, score, and grade
        */
       async validateSkill(skillPath) {
-        const skillName = path50.basename(skillPath);
+        const skillName = path51.basename(skillPath);
         const structuralRules = this.buildStructuralRules();
         const contentRules = this.buildContentRules();
         const allRules = [...structuralRules, ...contentRules];
@@ -52556,8 +52913,8 @@ var init_skill_validation_service = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/detectors/base-detector.ts
-import * as fs48 from "fs/promises";
-import * as path51 from "path";
+import * as fs49 from "fs/promises";
+import * as path52 from "path";
 var BaseDetector;
 var init_base_detector = __esm({
   "packages/tiny-brain-core/src/analyser/detectors/base-detector.ts"() {
@@ -52568,7 +52925,7 @@ var init_base_detector = __esm({
       }
       async fileExists(filePath) {
         try {
-          await fs48.access(path51.join(this.dirPath, filePath));
+          await fs49.access(path52.join(this.dirPath, filePath));
           return true;
         } catch {
           return false;
@@ -52576,7 +52933,7 @@ var init_base_detector = __esm({
       }
       async readFile(filePath) {
         try {
-          return await fs48.readFile(path51.join(this.dirPath, filePath), "utf8");
+          return await fs49.readFile(path52.join(this.dirPath, filePath), "utf8");
         } catch {
           return "";
         }
@@ -52591,7 +52948,7 @@ var init_base_detector = __esm({
       }
       async findFiles(pattern) {
         try {
-          const files = await fs48.readdir(this.dirPath);
+          const files = await fs49.readdir(this.dirPath);
           return files.filter((file) => {
             if (pattern.includes("*")) {
               const regex = new RegExp(pattern.replace("*", ".*"));
@@ -52844,20 +53201,20 @@ var init_javascript_detector = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/utils.ts
-import * as path52 from "path";
-import * as fs49 from "fs/promises";
+import * as path53 from "path";
+import * as fs50 from "fs/promises";
 async function findProjectRoot(startPath) {
-  let currentPath = path52.resolve(startPath);
+  let currentPath = path53.resolve(startPath);
   while (currentPath !== "/") {
     try {
-      const gitPath = path52.join(currentPath, ".git");
-      const stats = await fs49.stat(gitPath);
+      const gitPath = path53.join(currentPath, ".git");
+      const stats = await fs50.stat(gitPath);
       if (stats.isDirectory()) {
         return currentPath;
       }
     } catch {
     }
-    currentPath = path52.dirname(currentPath);
+    currentPath = path53.dirname(currentPath);
   }
   return startPath;
 }
@@ -52868,8 +53225,8 @@ var init_utils = __esm({
 });
 
 // packages/tiny-brain-core/src/analyser/index.ts
-import * as fs50 from "fs/promises";
-import * as path53 from "path";
+import * as fs51 from "fs/promises";
+import * as path54 from "path";
 async function analyseRepository(rootPath = process.cwd(), options) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const languages = /* @__PURE__ */ new Set();
@@ -52946,7 +53303,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     if (stack.database?.vendor) databases.add(stack.database.vendor);
   }
   function detectFileType(fileName) {
-    const ext2 = path53.extname(fileName).toLowerCase();
+    const ext2 = path54.extname(fileName).toLowerCase();
     if ([".js", ".mjs", ".cjs", ".jsx"].includes(ext2)) {
       languages.add("javascript");
       languageFileCounts.javascript = (languageFileCounts.javascript || 0) + 1;
@@ -52984,7 +53341,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     for (const pattern of TEST_PATTERNS) {
       if (fileName.includes(pattern)) {
         testFiles.push(fileName);
-        const ext2 = path53.extname(fileName);
+        const ext2 = path54.extname(fileName);
         if (ext2) {
           testPatterns.add(pattern + ext2.substring(1));
         }
@@ -52995,10 +53352,10 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   async function detectOtherLanguages(dirPath, files) {
     try {
       for (const file of files) {
-        const filePath = path53.join(dirPath, file);
+        const filePath = path54.join(dirPath, file);
         if (file === "requirements.txt" || file === "setup.py" || file === "pyproject.toml") {
           languages.add("python");
-          const content = await fs50.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs51.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("django")) frameworks.add("django");
           if (content.includes("flask")) frameworks.add("flask");
           if (content.includes("fastapi")) frameworks.add("fastapi");
@@ -53007,14 +53364,14 @@ async function analyseRepository(rootPath = process.cwd(), options) {
         }
         if (file === "go.mod" || file === "go.sum") {
           languages.add("go");
-          const content = await fs50.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs51.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("testify")) testingTools.add("testify");
           if (content.includes("gin-gonic")) frameworks.add("gin");
           if (content.includes("echo")) frameworks.add("echo");
         }
         if (file === "Gemfile" || file === "Rakefile") {
           languages.add("ruby");
-          const content = await fs50.readFile(filePath, "utf8").catch(() => "");
+          const content = await fs51.readFile(filePath, "utf8").catch(() => "");
           if (content.includes("rails")) frameworks.add("rails");
           if (content.includes("sinatra")) frameworks.add("sinatra");
           if (content.includes("rspec")) testingTools.add("rspec");
@@ -53041,7 +53398,7 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   });
   const documentationLocations = [];
   let documentationPattern;
-  const rootFiles = await fs50.readdir(rootPath).catch(() => []);
+  const rootFiles = await fs51.readdir(rootPath).catch(() => []);
   const rootFileNames = rootFiles.map((f) => typeof f === "string" ? f : f.name);
   const hasRootReadme = rootFileNames.some((f) => f.toLowerCase() === "readme.md");
   const hasDocsFolder = rootFileNames.some((f) => f.toLowerCase() === "docs");
@@ -53063,8 +53420,8 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   let scripts;
   let monorepo;
   let runtimeVersion;
-  const rootPkgPath = path53.join(rootPath, "package.json");
-  const rootPkgContent = await fs50.readFile(rootPkgPath, "utf8").catch(() => "");
+  const rootPkgPath = path54.join(rootPath, "package.json");
+  const rootPkgContent = await fs51.readFile(rootPkgPath, "utf8").catch(() => "");
   if (rootPkgContent) {
     try {
       const rootPkg = JSON.parse(rootPkgContent);
@@ -53094,16 +53451,16 @@ async function analyseRepository(rootPath = process.cwd(), options) {
         for (const glob2 of workspaceGlobs) {
           if (glob2.endsWith("*")) {
             const baseDir = glob2.replace(/\/?\*$/, "");
-            const basePath = path53.join(rootPath, baseDir);
-            const entries = await fs50.readdir(basePath, { withFileTypes: true }).catch(() => []);
+            const basePath = path54.join(rootPath, baseDir);
+            const entries = await fs51.readdir(basePath, { withFileTypes: true }).catch(() => []);
             for (const entry of entries) {
               if (entry.isDirectory()) {
-                resolvedPackages.push(path53.join(baseDir, entry.name));
+                resolvedPackages.push(path54.join(baseDir, entry.name));
               }
             }
           } else {
-            const fullPath = path53.join(rootPath, glob2);
-            const stat3 = await fs50.stat(fullPath).catch(() => null);
+            const fullPath = path54.join(rootPath, glob2);
+            const stat3 = await fs51.stat(fullPath).catch(() => null);
             if (stat3?.isDirectory()) {
               resolvedPackages.push(glob2);
             }
@@ -53124,19 +53481,19 @@ async function analyseRepository(rootPath = process.cwd(), options) {
     } catch {
     }
   }
-  const nvmrcPath = path53.join(rootPath, ".nvmrc");
-  const nvmrcContent = await fs50.readFile(nvmrcPath, "utf8").catch(() => "");
+  const nvmrcPath = path54.join(rootPath, ".nvmrc");
+  const nvmrcContent = await fs51.readFile(nvmrcPath, "utf8").catch(() => "");
   if (nvmrcContent.trim()) {
     runtimeVersion = { source: ".nvmrc", version: nvmrcContent.trim() };
   } else {
-    const nodeVersionPath = path53.join(rootPath, ".node-version");
-    const nodeVersionContent = await fs50.readFile(nodeVersionPath, "utf8").catch(() => "");
+    const nodeVersionPath = path54.join(rootPath, ".node-version");
+    const nodeVersionContent = await fs51.readFile(nodeVersionPath, "utf8").catch(() => "");
     if (nodeVersionContent.trim()) {
       runtimeVersion = { source: ".node-version", version: nodeVersionContent.trim() };
     }
   }
   const SOURCE_DIR_CANDIDATES = ["src", "lib", "app", "packages", "server", "client"];
-  const rootEntries = await fs50.readdir(rootPath, { withFileTypes: true }).catch(() => []);
+  const rootEntries = await fs51.readdir(rootPath, { withFileTypes: true }).catch(() => []);
   const sourceDirectories = [];
   for (const entry of rootEntries) {
     if (entry.isDirectory() && SOURCE_DIR_CANDIDATES.includes(entry.name)) {
@@ -53152,8 +53509,8 @@ async function analyseRepository(rootPath = process.cwd(), options) {
   }
   let ci;
   if (rootFileNames.includes(".github") || rootEntries.some((e) => e.isDirectory() && e.name === ".github")) {
-    const githubPath = path53.join(rootPath, ".github", "workflows");
-    const workflowEntries = await fs50.readdir(githubPath).catch(() => []);
+    const githubPath = path54.join(rootPath, ".github", "workflows");
+    const workflowEntries = await fs51.readdir(githubPath).catch(() => []);
     if (workflowEntries.length > 0) {
       ci = { platform: "github-actions", configPath: ".github/workflows/" };
     }
@@ -53226,8 +53583,8 @@ function parseTsconfig(content) {
   }
 }
 async function resolveTsconfigStrict(rootPath) {
-  const tsconfigPath = path53.join(rootPath, "tsconfig.json");
-  const content = await fs50.readFile(tsconfigPath, "utf8").catch(() => "");
+  const tsconfigPath = path54.join(rootPath, "tsconfig.json");
+  const content = await fs51.readFile(tsconfigPath, "utf8").catch(() => "");
   if (!content) return void 0;
   const tsconfig = parseTsconfig(content);
   if (!tsconfig) return void 0;
@@ -53240,8 +53597,8 @@ async function resolveTsconfigStrict(rootPath) {
     }
   }
   if (tsconfig.extends) {
-    const extPath = path53.resolve(rootPath, tsconfig.extends);
-    const extContent = await fs50.readFile(extPath, "utf8").catch(() => "");
+    const extPath = path54.resolve(rootPath, tsconfig.extends);
+    const extContent = await fs51.readFile(extPath, "utf8").catch(() => "");
     if (extContent) {
       const ext2 = parseTsconfig(extContent);
       if (ext2?.compilerOptions) {
@@ -53254,8 +53611,8 @@ async function resolveTsconfigStrict(rootPath) {
   }
   if (tsconfig.references?.length) {
     for (const ref of tsconfig.references) {
-      const refPath = path53.join(rootPath, ref.path, "tsconfig.json");
-      const refContent = await fs50.readFile(refPath, "utf8").catch(() => "");
+      const refPath = path54.join(rootPath, ref.path, "tsconfig.json");
+      const refContent = await fs51.readFile(refPath, "utf8").catch(() => "");
       if (refContent) {
         const refConfig = parseTsconfig(refContent);
         if (refConfig?.compilerOptions?.strict !== void 0) {
@@ -53274,7 +53631,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     return;
   }
   try {
-    const entries = await fs50.readdir(dir, { withFileTypes: true });
+    const entries = await fs51.readdir(dir, { withFileTypes: true });
     const files = [];
     const dirs = [];
     for (const entry of entries) {
@@ -53286,7 +53643,7 @@ async function walkDirectory(dir, callback, options, currentDepth = 0) {
     }
     await callback(dir, files);
     for (const subdir of dirs) {
-      const fullPath = path53.join(dir, subdir);
+      const fullPath = path54.join(dir, subdir);
       await walkDirectory(fullPath, callback, options, currentDepth + 1);
     }
   } catch {
@@ -53708,8 +54065,8 @@ var init_library_client = __esm({
       /**
        * Get agent by path (new agent system)
        */
-      async getAgentByPath(token, path100) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path100}`, {
+      async getAgentByPath(token, path101) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path101}`, {
           method: "GET",
           headers: {
             "Accept": "application/json",
@@ -53725,8 +54082,8 @@ var init_library_client = __esm({
       /**
        * Store agent at specified path (new agent system)
        */
-      async storeAgent(token, path100, agent) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path100}`, {
+      async storeAgent(token, path101, agent) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path101}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -53741,8 +54098,8 @@ var init_library_client = __esm({
       /**
        * Archive agent at specified path (new agent system)
        */
-      async archiveAgent(token, path100) {
-        const response = await fetch(`${this.apiUrl}/api/agents/${path100}`, {
+      async archiveAgent(token, path101) {
+        const response = await fetch(`${this.apiUrl}/api/agents/${path101}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -53832,7 +54189,7 @@ var init_library_client = __esm({
 });
 
 // packages/tiny-brain-core/src/services/analysis/analyse-service.ts
-import { basename as basename3, join as join32 } from "path";
+import { basename as basename4, join as join33 } from "path";
 import { existsSync as existsSync10 } from "fs";
 import { readdir as readdir7 } from "fs/promises";
 var AnalyseService;
@@ -54044,7 +54401,7 @@ var init_analyse_service = __esm({
         try {
           const repoRoot = this.repoPath;
           const repoConfigService = this.deps.createRepoConfigService(this.context);
-          const repoName = basename3(repoRoot) || "unknown";
+          const repoName = basename4(repoRoot) || "unknown";
           const prdCount = await this.countPrdsInRepo(repoRoot);
           await repoConfigService.registerRepo({
             name: repoName,
@@ -54061,7 +54418,7 @@ var init_analyse_service = __esm({
        */
       async countPrdsInRepo(repoPath) {
         try {
-          const prdDir2 = join32(repoPath, "docs", "prd");
+          const prdDir2 = join33(repoPath, "docs", "prd");
           if (!existsSync10(prdDir2)) {
             return 0;
           }
@@ -54697,14 +55054,14 @@ var init_pipeline = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/pipeline-telemetry.ts
-import fs51 from "node:fs";
-import path54 from "node:path";
+import fs52 from "node:fs";
+import path55 from "node:path";
 function writePipelineTelemetry(repoPath, entry) {
   try {
-    const dir = path54.join(getOperationalStateDir(repoPath), "telemetry");
-    const file = path54.join(dir, "pipeline-advancement.jsonl");
-    fs51.mkdirSync(dir, { recursive: true });
-    fs51.appendFileSync(file, JSON.stringify(entry) + "\n");
+    const dir = path55.join(getOperationalStateDir(repoPath), "telemetry");
+    const file = path55.join(dir, "pipeline-advancement.jsonl");
+    fs52.mkdirSync(dir, { recursive: true });
+    fs52.appendFileSync(file, JSON.stringify(entry) + "\n");
   } catch {
   }
 }
@@ -54716,8 +55073,8 @@ var init_pipeline_telemetry = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/atomic-progress-writer.ts
-import { promises as fs52 } from "fs";
-import path55 from "path";
+import { promises as fs53 } from "fs";
+import path56 from "path";
 import { randomBytes as randomBytes8 } from "crypto";
 function resolveProgressPath(repoPath, scope) {
   if (scope.kind === "prd") {
@@ -54727,19 +55084,19 @@ function resolveProgressPath(repoPath, scope) {
 }
 async function writeProgressJson(repoPath, scope, payload) {
   const finalPath = resolveProgressPath(repoPath, scope);
-  const dir = path55.dirname(finalPath);
-  await fs52.mkdir(dir, { recursive: true });
+  const dir = path56.dirname(finalPath);
+  await fs53.mkdir(dir, { recursive: true });
   const data = JSON.stringify(payload, null, 2);
-  const tmpPath = path55.join(
+  const tmpPath = path56.join(
     dir,
-    `${path55.basename(finalPath)}.${process.pid}.${randomBytes8(6).toString("hex")}.tmp`
+    `${path56.basename(finalPath)}.${process.pid}.${randomBytes8(6).toString("hex")}.tmp`
   );
-  await fs52.writeFile(tmpPath, data, "utf-8");
+  await fs53.writeFile(tmpPath, data, "utf-8");
   try {
-    await fs52.rename(tmpPath, finalPath);
+    await fs53.rename(tmpPath, finalPath);
   } catch (err) {
     try {
-      await fs52.unlink(tmpPath);
+      await fs53.unlink(tmpPath);
     } catch {
     }
     throw err;
@@ -54841,13 +55198,13 @@ var init_event_log = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/fix-task-updater.ts
-import { promises as fs53 } from "fs";
-import * as path56 from "path";
+import { promises as fs54 } from "fs";
+import * as path57 from "path";
 async function projectFixFromMarkdown(repoPath, fixId) {
   const docPath = fixDocPath(repoPath, fixId);
   let content;
   try {
-    content = await fs53.readFile(docPath, "utf-8");
+    content = await fs54.readFile(docPath, "utf-8");
   } catch (err) {
     if (err.code === "ENOENT") return null;
     throw err;
@@ -54871,7 +55228,7 @@ async function projectFixFromMarkdown(repoPath, fixId) {
     events: fixEvents,
     mdFix,
     parsedCommits: [],
-    filePath: path56.relative(repoPath, docPath)
+    filePath: path57.relative(repoPath, docPath)
   });
 }
 async function applyFixTaskUpdate(repoPath, fixId, taskId, delta) {
@@ -54884,7 +55241,7 @@ async function applyFixTaskUpdate(repoPath, fixId, taskId, delta) {
   const progressPath = resolveProgressPath(repoPath, { kind: "fixes" });
   let progress;
   try {
-    const raw = await fs53.readFile(progressPath, "utf-8");
+    const raw = await fs54.readFile(progressPath, "utf-8");
     progress = JSON.parse(raw);
   } catch (err) {
     if (err.code !== "ENOENT") throw err;
@@ -54925,7 +55282,7 @@ async function rollbackOrphanSHAs(repoPath, fixId, orphanShas, reason = "run-rej
   const progressPath = resolveProgressPath(repoPath, { kind: "fixes" });
   let raw;
   try {
-    raw = await fs53.readFile(progressPath, "utf-8");
+    raw = await fs54.readFile(progressPath, "utf-8");
   } catch (err) {
     if (err.code === "ENOENT") return;
     throw err;
@@ -55019,9 +55376,9 @@ var init_fix_task_updater = __esm({
 });
 
 // packages/tiny-brain-core/src/services/spike/spike-progress-store.ts
-import * as path57 from "node:path";
+import * as path58 from "node:path";
 function makeSpikeProgressStore(operationalStateDir) {
-  return new FileStore(path57.join(operationalStateDir, SPIKE_PROGRESS_DIR));
+  return new FileStore(path58.join(operationalStateDir, SPIKE_PROGRESS_DIR));
 }
 var SPIKE_PROGRESS_DIR;
 var init_spike_progress_store = __esm({
@@ -55033,13 +55390,13 @@ var init_spike_progress_store = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/spike-task-updater.ts
-import { promises as fs54 } from "fs";
-import * as path58 from "path";
+import { promises as fs55 } from "fs";
+import * as path59 from "path";
 async function projectSpikeFromMarkdown(repoPath, spikeId) {
   const docPath = spikeDocPath(repoPath, spikeId);
   let content;
   try {
-    content = await fs54.readFile(docPath, "utf-8");
+    content = await fs55.readFile(docPath, "utf-8");
   } catch (err) {
     if (err.code === "ENOENT") return null;
     throw err;
@@ -55057,7 +55414,7 @@ async function projectSpikeFromMarkdown(repoPath, spikeId) {
     events: [],
     mdSpike,
     parsedCommits: [],
-    filePath: path58.relative(repoPath, docPath)
+    filePath: path59.relative(repoPath, docPath)
   });
 }
 async function applySpikeTaskUpdate(repoPath, spikeId, taskId, delta) {
@@ -55107,27 +55464,27 @@ var init_spike_task_updater = __esm({
 });
 
 // packages/tiny-brain-core/src/services/reviews/pending-review.ts
-import * as path59 from "node:path";
+import * as path60 from "node:path";
 function makePendingReviewTable(operationalStateDir) {
-  return new FileTable(path59.join(operationalStateDir, PENDING_REVIEWS_RELATIVE_PATH));
+  return new FileTable(path60.join(operationalStateDir, PENDING_REVIEWS_RELATIVE_PATH));
 }
 var PENDING_REVIEWS_RELATIVE_PATH;
 var init_pending_review = __esm({
   "packages/tiny-brain-core/src/services/reviews/pending-review.ts"() {
     "use strict";
     init_file_table();
-    PENDING_REVIEWS_RELATIVE_PATH = path59.join("reviews", "pending.json");
+    PENDING_REVIEWS_RELATIVE_PATH = path60.join("reviews", "pending.json");
   }
 });
 
 // packages/tiny-brain-core/src/services/reviews/decide-pending-review.ts
-import { promises as fs55 } from "node:fs";
-import * as path60 from "node:path";
+import { promises as fs56 } from "node:fs";
+import * as path61 from "node:path";
 function decidedReviewPath(operationalStateDir, gate, sha) {
-  return path60.join(operationalStateDir, "reviews", "decided", gate, `${sha}.json`);
+  return path61.join(operationalStateDir, "reviews", "decided", gate, `${sha}.json`);
 }
 function flatTreeReviewPath(operationalStateDir, gate, sha) {
-  return path60.join(operationalStateDir, "reviews", gate, `${sha}.json`);
+  return path61.join(operationalStateDir, "reviews", gate, `${sha}.json`);
 }
 async function hasPersistedReview(operationalStateDir, gate, sha) {
   const candidates = [
@@ -55136,7 +55493,7 @@ async function hasPersistedReview(operationalStateDir, gate, sha) {
   ];
   for (const candidate of candidates) {
     try {
-      await fs55.stat(candidate);
+      await fs56.stat(candidate);
       return true;
     } catch (err) {
       if (err.code !== "ENOENT") throw err;
@@ -55153,7 +55510,7 @@ async function hasCleanReviewForSha(operationalStateDir, gate, sha) {
   ];
   for (const candidate of candidates) {
     try {
-      const raw = await fs55.readFile(candidate, "utf-8");
+      const raw = await fs56.readFile(candidate, "utf-8");
       const record2 = JSON.parse(raw);
       if (record2.verdict === "clean") return true;
     } catch {
@@ -55172,10 +55529,10 @@ async function moveDecidedReview(opts) {
   }
   const flatPath = flatTreeReviewPath(operationalStateDir, gate, sha);
   const decidedPath = decidedReviewPath(operationalStateDir, gate, sha);
-  await fs55.mkdir(path60.dirname(decidedPath), { recursive: true });
+  await fs56.mkdir(path61.dirname(decidedPath), { recursive: true });
   let renamed2 = false;
   try {
-    await fs55.rename(flatPath, decidedPath);
+    await fs56.rename(flatPath, decidedPath);
     renamed2 = true;
   } catch (err) {
     if (err.code !== "ENOENT") throw err;
@@ -55183,7 +55540,7 @@ async function moveDecidedReview(opts) {
   if (!renamed2) {
     let decidedExists = false;
     try {
-      await fs55.stat(decidedPath);
+      await fs56.stat(decidedPath);
       decidedExists = true;
     } catch (err) {
       if (err.code !== "ENOENT") throw err;
@@ -55210,55 +55567,6 @@ var init_decide_pending_review = __esm({
   }
 });
 
-// packages/tiny-brain-core/src/services/planning/branch-name.ts
-function assertSlug(value, label) {
-  if (!SLUG_RE.test(value)) {
-    throw new Error(
-      `deriveBranchName: ${label} ${JSON.stringify(value)} is not a ref-safe slug ([A-Za-z0-9_-]+)`
-    );
-  }
-}
-function shortUuid(uuid2) {
-  if (!UUID_RE.test(uuid2)) {
-    throw new Error(`deriveBranchName: malformed task UUID ${JSON.stringify(uuid2)}`);
-  }
-  return uuid2.slice(uuid2.lastIndexOf("-") + 1);
-}
-function deriveBranchName(item, level) {
-  if (level === "off") return null;
-  switch (item.kind) {
-    case "prd": {
-      assertSlug(item.prdSlug, "prdSlug");
-      const root = `tb/${item.prdSlug}`;
-      if (level === "root") return root;
-      assertSlug(item.featureSlug, "featureSlug");
-      const container = `${root}/${item.featureSlug}`;
-      if (level === "container") return container;
-      return `${container}/${shortUuid(item.taskUuid)}`;
-    }
-    case "fix": {
-      assertSlug(item.fixSlug, "fixSlug");
-      const root = `tb/fix/${item.fixSlug}`;
-      if (level === "root" || level === "container") return root;
-      return `${root}/${shortUuid(item.taskUuid)}`;
-    }
-    case "spike": {
-      assertSlug(item.spikeSlug, "spikeSlug");
-      const root = `tb/spike/${item.spikeSlug}`;
-      if (level === "root" || level === "container") return root;
-      return `${root}/${shortUuid(item.taskUuid)}`;
-    }
-  }
-}
-var SLUG_RE, UUID_RE;
-var init_branch_name = __esm({
-  "packages/tiny-brain-core/src/services/planning/branch-name.ts"() {
-    "use strict";
-    SLUG_RE = /^[A-Za-z0-9_-]+$/;
-    UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-  }
-});
-
 // packages/tiny-brain-core/src/services/planning/branch-decision.ts
 function decideBranchAction(input) {
   const { targetBranch, currentBranch, defaultBranch, branchExists, isWorktree } = input;
@@ -55279,16 +55587,16 @@ var init_branch_decision = __esm({
 
 // packages/tiny-brain-core/src/utils/git.ts
 import { exec as exec4, execSync as execSync4 } from "child_process";
-import path61 from "path";
+import path62 from "path";
 import { promisify as promisify5 } from "util";
 function buildWorktreeInfo(commonDirOut, toplevelOut, branchOut) {
   const worktreePath = String(toplevelOut).trim();
   const branch = String(branchOut).trim();
   const commonDirTrimmed = String(commonDirOut).trim();
-  const resolvedCommonDir = path61.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path61.resolve(worktreePath, commonDirTrimmed);
-  const mainRepoPath = path61.dirname(resolvedCommonDir);
+  const resolvedCommonDir = path62.isAbsolute(commonDirTrimmed) ? commonDirTrimmed : path62.resolve(worktreePath, commonDirTrimmed);
+  const mainRepoPath = path62.dirname(resolvedCommonDir);
   const isWorktree = mainRepoPath !== worktreePath;
-  const worktreeName = isWorktree ? path61.basename(worktreePath) : "";
+  const worktreeName = isWorktree ? path62.basename(worktreePath) : "";
   return { isWorktree, worktreePath, mainRepoPath, branch, worktreeName };
 }
 async function detectRepositoryRoot() {
@@ -55762,24 +56070,24 @@ var init_pipeline_service = __esm({
           uuid: readUuid(rawTask)
         };
       }
-      async loadPrdTask(prdId, featureId, taskId) {
+      async loadPrdTask(prdId, featureId2, taskId) {
         const plan = await this.planningService.projectPlan(prdId);
         if (!plan) throw new Error(`PRD not found: ${prdId}`);
-        const feature = plan.features?.find((f) => f.id === featureId);
-        if (!feature) throw new Error(`Feature not found: ${featureId} in PRD ${prdId}`);
+        const feature = plan.features?.find((f) => f.id === featureId2);
+        if (!feature) throw new Error(`Feature not found: ${featureId2} in PRD ${prdId}`);
         const task = findMatchingTask(
           feature.tasks ?? [],
           taskId
         );
-        if (!task) throw new Error(`Task not found: ${taskId} in feature ${featureId}`);
+        if (!task) throw new Error(`Task not found: ${taskId} in feature ${featureId2}`);
         const featureNumber = typeof feature.number === "number" ? feature.number : Number(feature.number);
         const resolvedTaskId = typeof task.id === "string" ? task.id : String(task.id);
-        if (Number.isNaN(featureNumber)) throw new Error(`Invalid feature number for ${featureId}`);
+        if (Number.isNaN(featureNumber)) throw new Error(`Invalid feature number for ${featureId2}`);
         return {
           kind: "prd",
           input: toPhaseDeriveInput(task),
           planId: prdId,
-          featureId,
+          featureId: featureId2,
           featureNumber,
           taskId: resolvedTaskId,
           uuid: readUuid(task)
@@ -56088,8 +56396,8 @@ var init_review_watcher = __esm({
 });
 
 // packages/tiny-brain-core/src/services/planning/reminder-inbox.ts
-import * as fs56 from "fs";
-import * as path62 from "path";
+import * as fs57 from "fs";
+import * as path63 from "path";
 import { randomBytes as randomBytes9 } from "crypto";
 var DEFAULT_MAX_FILES, ReminderInbox;
 var init_reminder_inbox = __esm({
@@ -56114,25 +56422,25 @@ var init_reminder_inbox = __esm({
         return raw;
       }
       async write(reminder) {
-        await fs56.promises.mkdir(this.inboxDir, { recursive: true });
+        await fs57.promises.mkdir(this.inboxDir, { recursive: true });
         await this.evictOldestIfAtOrOverCap();
         const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
         const random = randomBytes9(4).toString("hex");
-        const basename5 = `${timestamp2}-${random}`;
-        const tmpPath = path62.join(this.inboxDir, `${basename5}.tmp`);
-        const finalPath = path62.join(this.inboxDir, `${basename5}.reminder`);
-        await fs56.promises.writeFile(tmpPath, reminder, "utf-8");
-        await fs56.promises.rename(tmpPath, finalPath);
+        const basename6 = `${timestamp2}-${random}`;
+        const tmpPath = path63.join(this.inboxDir, `${basename6}.tmp`);
+        const finalPath = path63.join(this.inboxDir, `${basename6}.reminder`);
+        await fs57.promises.writeFile(tmpPath, reminder, "utf-8");
+        await fs57.promises.rename(tmpPath, finalPath);
         try {
-          await Promise.resolve(this.telemetry.onReminderWritten?.({ reminderId: basename5 }));
+          await Promise.resolve(this.telemetry.onReminderWritten?.({ reminderId: basename6 }));
         } catch {
         }
-        return basename5;
+        return basename6;
       }
       async evictOldestIfAtOrOverCap() {
         let entries;
         try {
-          entries = await fs56.promises.readdir(this.inboxDir);
+          entries = await fs57.promises.readdir(this.inboxDir);
         } catch (err) {
           if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
             return;
@@ -56144,7 +56452,7 @@ var init_reminder_inbox = __esm({
         const stats = await Promise.all(
           reminderFiles.map(async (name) => {
             try {
-              const stat3 = await fs56.promises.stat(path62.join(this.inboxDir, name));
+              const stat3 = await fs57.promises.stat(path63.join(this.inboxDir, name));
               return { name, mtimeMs: stat3.mtimeMs };
             } catch {
               return null;
@@ -56160,7 +56468,7 @@ var init_reminder_inbox = __esm({
         const victims = live.slice(0, evictCount);
         for (const victim of victims) {
           try {
-            await fs56.promises.unlink(path62.join(this.inboxDir, victim.name));
+            await fs57.promises.unlink(path63.join(this.inboxDir, victim.name));
           } catch {
           }
         }
@@ -56168,7 +56476,7 @@ var init_reminder_inbox = __esm({
       async drain() {
         let entries;
         try {
-          entries = await fs56.promises.readdir(this.inboxDir);
+          entries = await fs57.promises.readdir(this.inboxDir);
         } catch (err) {
           if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
             return [];
@@ -56178,10 +56486,10 @@ var init_reminder_inbox = __esm({
         const reminderFiles = entries.filter((f) => f.endsWith(".reminder")).sort();
         const results = [];
         for (const file of reminderFiles) {
-          const filePath = path62.join(this.inboxDir, file);
+          const filePath = path63.join(this.inboxDir, file);
           try {
-            const content = await fs56.promises.readFile(filePath, "utf-8");
-            await fs56.promises.unlink(filePath);
+            const content = await fs57.promises.readFile(filePath, "utf-8");
+            await fs57.promises.unlink(filePath);
             results.push(content);
             try {
               const reminderId = file.slice(0, -".reminder".length);
@@ -56207,56 +56515,56 @@ function diffProgress(projected, onDisk) {
   walk(projected, onDisk, "", out);
   return out;
 }
-function walk(a, b, path100, out) {
+function walk(a, b, path101, out) {
   if (a === b) return;
   if (a === void 0 && b === void 0) return;
   if (isPlainObject4(a) && isPlainObject4(b)) {
-    diffObjects(a, b, path100, out);
+    diffObjects(a, b, path101, out);
     return;
   }
   if (Array.isArray(a) && Array.isArray(b)) {
-    diffArrays(a, b, path100, out);
+    diffArrays(a, b, path101, out);
     return;
   }
-  out.push({ path: path100, projected: a, onDisk: b });
+  out.push({ path: path101, projected: a, onDisk: b });
 }
-function diffObjects(a, b, path100, out) {
+function diffObjects(a, b, path101, out) {
   const keys = /* @__PURE__ */ new Set([...Object.keys(a), ...Object.keys(b)]);
   for (const key of keys) {
     const ap = a[key];
     const bp = b[key];
     if (ap === void 0 && bp === void 0) continue;
-    walk(ap, bp, path100 === "" ? key : `${path100}.${key}`, out);
+    walk(ap, bp, path101 === "" ? key : `${path101}.${key}`, out);
   }
 }
-function diffArrays(a, b, path100, out) {
+function diffArrays(a, b, path101, out) {
   const aKeyed = isIdKeyed(a);
   const bKeyed = isIdKeyed(b);
   if (aKeyed && bKeyed) {
-    diffIdKeyedArrays(a, b, path100, out);
+    diffIdKeyedArrays(a, b, path101, out);
     return;
   }
   if (aKeyed && b.length === 0) {
-    diffIdKeyedArrays(a, [], path100, out);
+    diffIdKeyedArrays(a, [], path101, out);
     return;
   }
   if (bKeyed && a.length === 0) {
-    diffIdKeyedArrays([], b, path100, out);
+    diffIdKeyedArrays([], b, path101, out);
     return;
   }
   const max = Math.max(a.length, b.length);
   for (let i = 0; i < max; i += 1) {
-    walk(a[i], b[i], `${path100}[${i}]`, out);
+    walk(a[i], b[i], `${path101}[${i}]`, out);
   }
 }
-function diffIdKeyedArrays(a, b, path100, out) {
+function diffIdKeyedArrays(a, b, path101, out) {
   const aById = indexById(a);
   const bById = indexById(b);
   const ids = /* @__PURE__ */ new Set([...aById.keys(), ...bById.keys()]);
   for (const id of ids) {
     const av = aById.get(id);
     const bv = bById.get(id);
-    const childPath = `${path100}[id=${id}]`;
+    const childPath = `${path101}[id=${id}]`;
     if (av === void 0 || bv === void 0) {
       out.push({ path: childPath, projected: av, onDisk: bv });
       continue;
@@ -56362,16 +56670,16 @@ var init_progress_diff_compose = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/state.ts
-import { promises as fs57 } from "fs";
-import path63 from "path";
+import { promises as fs58 } from "fs";
+import path64 from "path";
 function getMigrationsJsonPath(repoPath) {
-  return path63.join(getOperationalStateDir(repoPath), "migrations.json");
+  return path64.join(getOperationalStateDir(repoPath), "migrations.json");
 }
 async function readMigrationsJson(repoPath) {
   const file = getMigrationsJsonPath(repoPath);
   let content;
   try {
-    content = await fs57.readFile(file, "utf-8");
+    content = await fs58.readFile(file, "utf-8");
   } catch {
     return { ...EMPTY_STATE };
   }
@@ -56408,8 +56716,8 @@ async function readMigrationsJson(repoPath) {
 }
 async function writeMigrationsJson(repoPath, state) {
   const file = getMigrationsJsonPath(repoPath);
-  await fs57.mkdir(path63.dirname(file), { recursive: true });
-  await fs57.writeFile(file, JSON.stringify(state, null, 2) + "\n", "utf-8");
+  await fs58.mkdir(path64.dirname(file), { recursive: true });
+  await fs58.writeFile(file, JSON.stringify(state, null, 2) + "\n", "utf-8");
 }
 var EMPTY_STATE;
 var init_state = __esm({
@@ -56482,11 +56790,11 @@ var init_registry2 = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/verify.ts
-import { promises as fs58 } from "fs";
-import path64 from "path";
+import { promises as fs59 } from "fs";
+import path65 from "path";
 async function pathExists2(p) {
   try {
-    await fs58.access(p);
+    await fs59.access(p);
     return true;
   } catch {
     return false;
@@ -56495,12 +56803,12 @@ async function pathExists2(p) {
 async function* walkFiles(root) {
   let entries;
   try {
-    entries = await fs58.readdir(root, { withFileTypes: true });
+    entries = await fs59.readdir(root, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const abs = path64.join(root, entry.name);
+    const abs = path65.join(root, entry.name);
     if (entry.isDirectory()) {
       yield* walkFiles(abs);
     } else if (entry.isFile()) {
@@ -56510,14 +56818,14 @@ async function* walkFiles(root) {
 }
 async function verifyMigration(repoPath) {
   const failures = [];
-  const oldRoot = path64.join(repoPath, ".tiny-brain");
+  const oldRoot = path65.join(repoPath, ".tiny-brain");
   const newRoot = getOperationalStateDir(repoPath);
   const lingeringMessage = (label) => `verifyMigration: lingering ${label} file at the legacy working-tree path. Move it to the operational-state dir or remove it before the next CLI write recreates the leak.`;
   for (const cat of CATEGORIES) {
-    const oldAbs = path64.join(oldRoot, cat.oldPath);
+    const oldAbs = path65.join(oldRoot, cat.oldPath);
     if (cat.isDir) {
       for await (const file of walkFiles(oldAbs)) {
-        const rel = path64.relative(oldAbs, file);
+        const rel = path65.relative(oldAbs, file);
         if (cat.excludeOldPath?.(rel)) continue;
         failures.push({ message: lingeringMessage(cat.label), path: file });
       }
@@ -56525,19 +56833,19 @@ async function verifyMigration(repoPath) {
       failures.push({ message: lingeringMessage(cat.label), path: oldAbs });
     }
   }
-  const progressDir = path64.join(newRoot, "progress");
+  const progressDir = path65.join(newRoot, "progress");
   let progressEntries;
   try {
-    progressEntries = await fs58.readdir(progressDir, { withFileTypes: true });
+    progressEntries = await fs59.readdir(progressDir, { withFileTypes: true });
   } catch {
     progressEntries = [];
   }
   for (const entry of progressEntries) {
     if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    const file = path64.join(progressDir, entry.name);
+    const file = path65.join(progressDir, entry.name);
     let content;
     try {
-      content = await fs58.readFile(file, "utf-8");
+      content = await fs59.readFile(file, "utf-8");
     } catch {
       continue;
     }
@@ -56558,10 +56866,10 @@ async function verifyMigration(repoPath) {
       });
     }
   }
-  const fixesProgressPath = path64.join(newRoot, "fixes", "progress.json");
+  const fixesProgressPath = path65.join(newRoot, "fixes", "progress.json");
   if (await pathExists2(fixesProgressPath)) {
     try {
-      const parsed = JSON.parse(await fs58.readFile(fixesProgressPath, "utf-8"));
+      const parsed = JSON.parse(await fs59.readFile(fixesProgressPath, "utf-8"));
       if (typeof parsed !== "object" || parsed === null || !Array.isArray(parsed.fixes)) {
         failures.push({
           message: `verifyMigration: stub-only fixes ledger at ${fixesProgressPath} (no \`fixes\` array).`,
@@ -56592,7 +56900,7 @@ var init_verify = __esm({
         label: "fixes/*.md (legacy fix-doc fallback)",
         oldPath: "fixes",
         isDir: true,
-        excludeOldPath: (rel) => !rel.endsWith(".md") || path64.basename(rel).startsWith("qip-") || rel === "progress.json"
+        excludeOldPath: (rel) => !rel.endsWith(".md") || path65.basename(rel).startsWith("qip-") || rel === "progress.json"
       },
       { label: "sessions", oldPath: "sessions.json", isDir: false },
       { label: "reviews", oldPath: "reviews", isDir: true },
@@ -56607,8 +56915,8 @@ var init_verify = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocation-helper.ts
-import { promises as fs59 } from "fs";
-import path65 from "path";
+import { promises as fs60 } from "fs";
+import path66 from "path";
 function isErrno(value) {
   return value instanceof Error && typeof value.code === "string";
 }
@@ -56622,21 +56930,21 @@ async function hasAnyFile(root) {
     if (dir === void 0) break;
     let entries;
     try {
-      entries = await fs59.readdir(dir, { withFileTypes: true });
+      entries = await fs60.readdir(dir, { withFileTypes: true });
     } catch (err) {
       if (isMissingEntryError(err)) continue;
       throw err;
     }
     for (const entry of entries) {
       if (entry.isFile()) return true;
-      if (entry.isDirectory()) stack.push(path65.join(dir, entry.name));
+      if (entry.isDirectory()) stack.push(path66.join(dir, entry.name));
     }
   }
   return false;
 }
 async function fileExists(file) {
   try {
-    await fs59.access(file);
+    await fs60.access(file);
     return true;
   } catch (err) {
     if (isMissingEntryError(err)) return false;
@@ -56654,8 +56962,8 @@ async function relocateFile(options) {
   }
   if (destExists) {
     const [sourceBytes, destBytes] = await Promise.all([
-      fs59.readFile(source),
-      fs59.readFile(dest)
+      fs60.readFile(source),
+      fs60.readFile(dest)
     ]);
     if (!sourceBytes.equals(destBytes)) {
       throw new RelocateDivergenceError(source, dest);
@@ -56663,21 +56971,21 @@ async function relocateFile(options) {
     if (dryRun) {
       return "would-dedup";
     }
-    await fs59.unlink(source);
+    await fs60.unlink(source);
     return "dedup-source-removed";
   }
   if (dryRun) {
     return "would-move";
   }
-  await fs59.mkdir(path65.dirname(dest), { recursive: true });
+  await fs60.mkdir(path66.dirname(dest), { recursive: true });
   try {
-    await fs59.rename(source, dest);
+    await fs60.rename(source, dest);
   } catch (err) {
     if (!isErrno(err) || err.code !== "EXDEV") {
       throw err;
     }
-    await fs59.copyFile(source, dest);
-    await fs59.unlink(source);
+    await fs60.copyFile(source, dest);
+    await fs60.unlink(source);
   }
   return "moved";
 }
@@ -56686,7 +56994,7 @@ async function relocateTree(options) {
   const outcomesByPath = /* @__PURE__ */ new Map();
   let entries;
   try {
-    entries = await fs59.readdir(source, { recursive: true, withFileTypes: true });
+    entries = await fs60.readdir(source, { recursive: true, withFileTypes: true });
   } catch (err) {
     if (isMissingEntryError(err)) return { outcomesByPath };
     throw err;
@@ -56694,9 +57002,9 @@ async function relocateTree(options) {
   let firstError;
   for (const entry of entries) {
     if (!entry.isFile()) continue;
-    const absSrc = path65.join(entry.parentPath, entry.name);
-    const rel = path65.relative(source, absSrc);
-    const absDest = path65.join(dest, rel);
+    const absSrc = path66.join(entry.parentPath, entry.name);
+    const rel = path66.relative(source, absSrc);
+    const absDest = path66.join(dest, rel);
     try {
       const outcome = await relocateFile({
         source: absSrc,
@@ -56731,13 +57039,13 @@ var init_relocation_helper = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-fix-docs.ts
-import { promises as fs60 } from "fs";
-import path66 from "path";
+import { promises as fs61 } from "fs";
+import path67 from "path";
 async function listFixMarkdown(repoPath) {
-  const src = path66.join(repoPath, SOURCE_DIR);
+  const src = path67.join(repoPath, SOURCE_DIR);
   let entries;
   try {
-    entries = await fs60.readdir(src, { withFileTypes: true });
+    entries = await fs61.readdir(src, { withFileTypes: true });
   } catch (err) {
     if (isMissingEntryError(err)) return [];
     throw err;
@@ -56749,8 +57057,8 @@ var init_relocate_fix_docs = __esm({
   "packages/tiny-brain-core/src/migrations/relocate-fix-docs.ts"() {
     "use strict";
     init_relocation_helper();
-    SOURCE_DIR = path66.join(".tiny-brain", "fixes");
-    DEST_DIR = path66.join("docs", "fixes");
+    SOURCE_DIR = path67.join(".tiny-brain", "fixes");
+    DEST_DIR = path67.join("docs", "fixes");
     relocateFixDocs = {
       id: "relocate-fix-docs",
       targetVersion: "v0.23",
@@ -56761,8 +57069,8 @@ var init_relocate_fix_docs = __esm({
       async apply(ctx) {
         const names = await listFixMarkdown(ctx.repoPath);
         for (const name of names) {
-          const source = path66.join(ctx.repoPath, SOURCE_DIR, name);
-          const dest = path66.join(ctx.repoPath, DEST_DIR, name);
+          const source = path67.join(ctx.repoPath, SOURCE_DIR, name);
+          const dest = path67.join(ctx.repoPath, DEST_DIR, name);
           await relocateFile({
             source,
             dest,
@@ -56775,13 +57083,13 @@ var init_relocate_fix_docs = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-progress.ts
-import { promises as fs61 } from "fs";
-import path67 from "path";
+import { promises as fs62 } from "fs";
+import path68 from "path";
 async function listProgressJson(repoPath) {
-  const dir = path67.join(repoPath, PROGRESS_SUBDIR);
+  const dir = path68.join(repoPath, PROGRESS_SUBDIR);
   let entries;
   try {
-    entries = await fs61.readdir(dir, { withFileTypes: true });
+    entries = await fs62.readdir(dir, { withFileTypes: true });
   } catch (err) {
     if (isMissingEntryError(err)) return [];
     throw err;
@@ -56790,7 +57098,7 @@ async function listProgressJson(repoPath) {
 }
 async function fixesProgressExists(repoPath) {
   try {
-    await fs61.access(path67.join(repoPath, FIXES_PROGRESS_FILE));
+    await fs62.access(path68.join(repoPath, FIXES_PROGRESS_FILE));
     return true;
   } catch (err) {
     if (isMissingEntryError(err)) return false;
@@ -56803,8 +57111,8 @@ var init_relocate_progress = __esm({
     "use strict";
     init_relocation_helper();
     init_paths();
-    PROGRESS_SUBDIR = path67.join(".tiny-brain", "progress");
-    FIXES_PROGRESS_FILE = path67.join(".tiny-brain", "fixes", "progress.json");
+    PROGRESS_SUBDIR = path68.join(".tiny-brain", "progress");
+    FIXES_PROGRESS_FILE = path68.join(".tiny-brain", "fixes", "progress.json");
     relocateProgress = {
       id: "relocate-progress",
       targetVersion: "v0.23",
@@ -56820,14 +57128,14 @@ var init_relocate_progress = __esm({
         const progressFiles = await listProgressJson(ctx.repoPath);
         for (const name of progressFiles) {
           await relocateFile({
-            source: path67.join(ctx.repoPath, PROGRESS_SUBDIR, name),
-            dest: path67.join(stateDir, "progress", name),
+            source: path68.join(ctx.repoPath, PROGRESS_SUBDIR, name),
+            dest: path68.join(stateDir, "progress", name),
             dryRun: ctx.dryRun
           });
         }
         await relocateFile({
-          source: path67.join(ctx.repoPath, FIXES_PROGRESS_FILE),
-          dest: path67.join(stateDir, "fixes", "progress.json"),
+          source: path68.join(ctx.repoPath, FIXES_PROGRESS_FILE),
+          dest: path68.join(stateDir, "fixes", "progress.json"),
           dryRun: ctx.dryRun
         });
       }
@@ -56836,25 +57144,25 @@ var init_relocate_progress = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-reviews.ts
-import path68 from "path";
+import path69 from "path";
 var SOURCE_DIR2, relocateReviews;
 var init_relocate_reviews = __esm({
   "packages/tiny-brain-core/src/migrations/relocate-reviews.ts"() {
     "use strict";
     init_relocation_helper();
     init_paths();
-    SOURCE_DIR2 = path68.join(".tiny-brain", "reviews");
+    SOURCE_DIR2 = path69.join(".tiny-brain", "reviews");
     relocateReviews = {
       id: "relocate-reviews",
       targetVersion: "v0.23",
       async isApplicable(ctx) {
-        return hasAnyFile(path68.join(ctx.repoPath, SOURCE_DIR2));
+        return hasAnyFile(path69.join(ctx.repoPath, SOURCE_DIR2));
       },
       async apply(ctx) {
         const stateDir = getOperationalStateDir(ctx.repoPath);
         await relocateTree({
-          source: path68.join(ctx.repoPath, SOURCE_DIR2),
-          dest: path68.join(stateDir, "reviews"),
+          source: path69.join(ctx.repoPath, SOURCE_DIR2),
+          dest: path69.join(stateDir, "reviews"),
           dryRun: ctx.dryRun
         });
       }
@@ -56863,24 +57171,24 @@ var init_relocate_reviews = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-sessions.ts
-import path69 from "path";
+import path70 from "path";
 var SOURCE_REL, relocateSessions;
 var init_relocate_sessions = __esm({
   "packages/tiny-brain-core/src/migrations/relocate-sessions.ts"() {
     "use strict";
     init_relocation_helper();
     init_paths();
-    SOURCE_REL = path69.join(".tiny-brain", "sessions.json");
+    SOURCE_REL = path70.join(".tiny-brain", "sessions.json");
     relocateSessions = {
       id: "relocate-sessions",
       targetVersion: "v0.23",
       async isApplicable(ctx) {
-        return fileExists(path69.join(ctx.repoPath, SOURCE_REL));
+        return fileExists(path70.join(ctx.repoPath, SOURCE_REL));
       },
       async apply(ctx) {
         await relocateFile({
-          source: path69.join(ctx.repoPath, SOURCE_REL),
-          dest: path69.join(getOperationalStateDir(ctx.repoPath), "sessions.json"),
+          source: path70.join(ctx.repoPath, SOURCE_REL),
+          dest: path70.join(getOperationalStateDir(ctx.repoPath), "sessions.json"),
           dryRun: ctx.dryRun
         });
       }
@@ -56889,24 +57197,24 @@ var init_relocate_sessions = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-telemetry.ts
-import path70 from "path";
+import path71 from "path";
 var SOURCE_DIR3, relocateTelemetry;
 var init_relocate_telemetry = __esm({
   "packages/tiny-brain-core/src/migrations/relocate-telemetry.ts"() {
     "use strict";
     init_relocation_helper();
     init_paths();
-    SOURCE_DIR3 = path70.join(".tiny-brain", "telemetry");
+    SOURCE_DIR3 = path71.join(".tiny-brain", "telemetry");
     relocateTelemetry = {
       id: "relocate-telemetry",
       targetVersion: "v0.23",
       async isApplicable(ctx) {
-        return hasAnyFile(path70.join(ctx.repoPath, SOURCE_DIR3));
+        return hasAnyFile(path71.join(ctx.repoPath, SOURCE_DIR3));
       },
       async apply(ctx) {
         await relocateTree({
-          source: path70.join(ctx.repoPath, SOURCE_DIR3),
-          dest: path70.join(getOperationalStateDir(ctx.repoPath), "telemetry"),
+          source: path71.join(ctx.repoPath, SOURCE_DIR3),
+          dest: path71.join(getOperationalStateDir(ctx.repoPath), "telemetry"),
           dryRun: ctx.dryRun
         });
       }
@@ -56915,24 +57223,24 @@ var init_relocate_telemetry = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-quality-runs.ts
-import path71 from "path";
+import path72 from "path";
 var SOURCE_DIR4, relocateQualityRuns;
 var init_relocate_quality_runs = __esm({
   "packages/tiny-brain-core/src/migrations/relocate-quality-runs.ts"() {
     "use strict";
     init_relocation_helper();
     init_paths();
-    SOURCE_DIR4 = path71.join(".tiny-brain", "quality", "runs");
+    SOURCE_DIR4 = path72.join(".tiny-brain", "quality", "runs");
     relocateQualityRuns = {
       id: "relocate-quality-runs",
       targetVersion: "v0.23",
       async isApplicable(ctx) {
-        return hasAnyFile(path71.join(ctx.repoPath, SOURCE_DIR4));
+        return hasAnyFile(path72.join(ctx.repoPath, SOURCE_DIR4));
       },
       async apply(ctx) {
         await relocateTree({
-          source: path71.join(ctx.repoPath, SOURCE_DIR4),
-          dest: path71.join(getOperationalStateDir(ctx.repoPath), "quality", "runs"),
+          source: path72.join(ctx.repoPath, SOURCE_DIR4),
+          dest: path72.join(getOperationalStateDir(ctx.repoPath), "quality", "runs"),
           dryRun: ctx.dryRun
         });
       }
@@ -56941,24 +57249,24 @@ var init_relocate_quality_runs = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-reports.ts
-import path72 from "path";
+import path73 from "path";
 var SOURCE_DIR5, relocateReports;
 var init_relocate_reports = __esm({
   "packages/tiny-brain-core/src/migrations/relocate-reports.ts"() {
     "use strict";
     init_relocation_helper();
     init_paths();
-    SOURCE_DIR5 = path72.join(".tiny-brain", "reports");
+    SOURCE_DIR5 = path73.join(".tiny-brain", "reports");
     relocateReports = {
       id: "relocate-reports",
       targetVersion: "v0.23",
       async isApplicable(ctx) {
-        return hasAnyFile(path72.join(ctx.repoPath, SOURCE_DIR5));
+        return hasAnyFile(path73.join(ctx.repoPath, SOURCE_DIR5));
       },
       async apply(ctx) {
         await relocateTree({
-          source: path72.join(ctx.repoPath, SOURCE_DIR5),
-          dest: path72.join(getOperationalStateDir(ctx.repoPath), "reports"),
+          source: path73.join(ctx.repoPath, SOURCE_DIR5),
+          dest: path73.join(getOperationalStateDir(ctx.repoPath), "reports"),
           dryRun: ctx.dryRun
         });
       }
@@ -56967,24 +57275,24 @@ var init_relocate_reports = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-capabilities.ts
-import path73 from "path";
+import path74 from "path";
 var SOURCE_REL2, relocateCapabilities;
 var init_relocate_capabilities = __esm({
   "packages/tiny-brain-core/src/migrations/relocate-capabilities.ts"() {
     "use strict";
     init_relocation_helper();
     init_paths();
-    SOURCE_REL2 = path73.join(".tiny-brain", "capabilities", "installed.json");
+    SOURCE_REL2 = path74.join(".tiny-brain", "capabilities", "installed.json");
     relocateCapabilities = {
       id: "relocate-capabilities",
       targetVersion: "v0.23",
       async isApplicable(ctx) {
-        return fileExists(path73.join(ctx.repoPath, SOURCE_REL2));
+        return fileExists(path74.join(ctx.repoPath, SOURCE_REL2));
       },
       async apply(ctx) {
         await relocateFile({
-          source: path73.join(ctx.repoPath, SOURCE_REL2),
-          dest: path73.join(
+          source: path74.join(ctx.repoPath, SOURCE_REL2),
+          dest: path74.join(
             getOperationalStateDir(ctx.repoPath),
             "capabilities",
             "installed.json"
@@ -56997,24 +57305,24 @@ var init_relocate_capabilities = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-recommendations.ts
-import path74 from "path";
+import path75 from "path";
 var SOURCE_DIR6, relocateRecommendations;
 var init_relocate_recommendations = __esm({
   "packages/tiny-brain-core/src/migrations/relocate-recommendations.ts"() {
     "use strict";
     init_relocation_helper();
     init_paths();
-    SOURCE_DIR6 = path74.join(".tiny-brain", "recommendations");
+    SOURCE_DIR6 = path75.join(".tiny-brain", "recommendations");
     relocateRecommendations = {
       id: "relocate-recommendations",
       targetVersion: "v0.23",
       async isApplicable(ctx) {
-        return hasAnyFile(path74.join(ctx.repoPath, SOURCE_DIR6));
+        return hasAnyFile(path75.join(ctx.repoPath, SOURCE_DIR6));
       },
       async apply(ctx) {
         await relocateTree({
-          source: path74.join(ctx.repoPath, SOURCE_DIR6),
-          dest: path74.join(getOperationalStateDir(ctx.repoPath), "recommendations"),
+          source: path75.join(ctx.repoPath, SOURCE_DIR6),
+          dest: path75.join(getOperationalStateDir(ctx.repoPath), "recommendations"),
           dryRun: ctx.dryRun
         });
       }
@@ -57023,24 +57331,24 @@ var init_relocate_recommendations = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/relocate-prune-log.ts
-import path75 from "path";
+import path76 from "path";
 var SOURCE_REL3, relocatePruneLog;
 var init_relocate_prune_log = __esm({
   "packages/tiny-brain-core/src/migrations/relocate-prune-log.ts"() {
     "use strict";
     init_relocation_helper();
     init_paths();
-    SOURCE_REL3 = path75.join(".tiny-brain", "prune.log");
+    SOURCE_REL3 = path76.join(".tiny-brain", "prune.log");
     relocatePruneLog = {
       id: "relocate-prune-log",
       targetVersion: "v0.23",
       async isApplicable(ctx) {
-        return fileExists(path75.join(ctx.repoPath, SOURCE_REL3));
+        return fileExists(path76.join(ctx.repoPath, SOURCE_REL3));
       },
       async apply(ctx) {
         await relocateFile({
-          source: path75.join(ctx.repoPath, SOURCE_REL3),
-          dest: path75.join(getOperationalStateDir(ctx.repoPath), "prune.log"),
+          source: path76.join(ctx.repoPath, SOURCE_REL3),
+          dest: path76.join(getOperationalStateDir(ctx.repoPath), "prune.log"),
           dryRun: ctx.dryRun
         });
       }
@@ -57066,14 +57374,14 @@ var init_relocate_pipeline_state = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/cleanup-gitignore.ts
-import { promises as fs62 } from "fs";
-import path76 from "path";
+import { promises as fs63 } from "fs";
+import path77 from "path";
 function isStaleLine(line) {
   return STALE_LINE_SET.has(line.trim());
 }
 async function readGitignoreOrNull(repoPath) {
   try {
-    return await fs62.readFile(path76.join(repoPath, GITIGNORE_REL), "utf-8");
+    return await fs63.readFile(path77.join(repoPath, GITIGNORE_REL), "utf-8");
   } catch (err) {
     if (isMissingEntryError(err)) return null;
     throw err;
@@ -57118,7 +57426,7 @@ var init_cleanup_gitignore = __esm({
         const next = kept.join("\n") + (hadTrailingNewline ? "\n" : "");
         if (next === content) return;
         if (ctx.dryRun) return;
-        await fs62.writeFile(path76.join(ctx.repoPath, GITIGNORE_REL), next, "utf-8");
+        await fs63.writeFile(path77.join(ctx.repoPath, GITIGNORE_REL), next, "utf-8");
       }
     };
   }
@@ -57152,9 +57460,9 @@ var init_tty_prompt = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/remove-autocommit-config.ts
-import { promises as fs63 } from "fs";
+import { promises as fs64 } from "fs";
 import os3 from "os";
-import path77 from "path";
+import path78 from "path";
 function decideAutocommitAction(args) {
   if (!args.hasKey) return "no-op";
   if (!args.valueWasTrue) return "remove-silent";
@@ -57165,7 +57473,7 @@ function decideAutocommitAction(args) {
 async function readConfig(filePath) {
   let raw;
   try {
-    raw = await fs63.readFile(filePath, "utf-8");
+    raw = await fs64.readFile(filePath, "utf-8");
   } catch (err) {
     if (isMissingEntryError(err)) {
       return { filePath, parsed: void 0, hasKey: false, valueWasTrue: false };
@@ -57200,20 +57508,20 @@ function stripKey(parsed) {
   return true;
 }
 async function writeConfig(filePath, parsed) {
-  await fs63.writeFile(filePath, JSON.stringify(parsed, null, 2) + "\n", "utf-8");
+  await fs64.writeFile(filePath, JSON.stringify(parsed, null, 2) + "\n", "utf-8");
 }
 function createRemoveAutocommitConfigStep(deps = realDeps) {
   return {
     id: "remove-autocommit-config",
     targetVersion: "v0.23",
     async isApplicable(ctx) {
-      const local = await readConfig(path77.join(ctx.repoPath, LOCAL_CONFIG_REL));
+      const local = await readConfig(path78.join(ctx.repoPath, LOCAL_CONFIG_REL));
       if (local.hasKey) return true;
       const global2 = await readConfig(deps.globalConfigPath());
       return global2.hasKey;
     },
     async apply(ctx) {
-      const local = await readConfig(path77.join(ctx.repoPath, LOCAL_CONFIG_REL));
+      const local = await readConfig(path78.join(ctx.repoPath, LOCAL_CONFIG_REL));
       const global2 = await readConfig(deps.globalConfigPath());
       const hasKey = local.hasKey || global2.hasKey;
       const valueWasTrue = local.valueWasTrue || global2.valueWasTrue;
@@ -57264,13 +57572,13 @@ var init_remove_autocommit_config = __esm({
     "use strict";
     init_relocation_helper();
     init_tty_prompt();
-    LOCAL_CONFIG_REL = path77.join(".tiny-brain", "config.json");
-    GLOBAL_CONFIG_REL = path77.join(".tiny-brain", "config", "preferences.json");
+    LOCAL_CONFIG_REL = path78.join(".tiny-brain", "config.json");
+    GLOBAL_CONFIG_REL = path78.join(".tiny-brain", "config", "preferences.json");
     KEY = "autoCommitProgress";
     realDeps = {
       prompter: stdinPrompter,
       isInteractive: isStdinTTY,
-      globalConfigPath: () => path77.join(os3.homedir(), GLOBAL_CONFIG_REL)
+      globalConfigPath: () => path78.join(os3.homedir(), GLOBAL_CONFIG_REL)
     };
     BREAKING_CHANGE_EXPLAINER = [
       "tiny-brain progress storage has moved out of the working tree.",
@@ -57286,8 +57594,8 @@ var init_remove_autocommit_config = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/stamp-corpus-uuids.ts
-import { promises as fs64 } from "node:fs";
-import path78 from "node:path";
+import { promises as fs65 } from "node:fs";
+import path79 from "node:path";
 function isMissingEntryError2(err) {
   return typeof err === "object" && err !== null && "code" in err && err.code === "ENOENT";
 }
@@ -57295,7 +57603,7 @@ async function resolveDirs(repoPath) {
   const { docs, prd, fixes } = DEFAULT_PREFERENCES.repo.directories;
   let dirs = { docs, prd, fixes };
   try {
-    const raw = await fs64.readFile(path78.join(repoPath, ".tiny-brain", "config.json"), "utf-8");
+    const raw = await fs65.readFile(path79.join(repoPath, ".tiny-brain", "config.json"), "utf-8");
     const parsed = JSON.parse(raw);
     const override = parsed.preferences?.repo?.directories ?? {};
     dirs = {
@@ -57306,22 +57614,22 @@ async function resolveDirs(repoPath) {
   } catch {
   }
   return {
-    prd: path78.join(repoPath, dirs.prd),
-    fixes: path78.join(repoPath, dirs.fixes),
-    spikes: path78.join(repoPath, dirs.docs, "spikes")
+    prd: path79.join(repoPath, dirs.prd),
+    fixes: path79.join(repoPath, dirs.fixes),
+    spikes: path79.join(repoPath, dirs.docs, "spikes")
   };
 }
 async function listMarkdown(dir, recursive) {
   let entries;
   try {
-    entries = await fs64.readdir(dir, { withFileTypes: true });
+    entries = await fs65.readdir(dir, { withFileTypes: true });
   } catch (err) {
     if (isMissingEntryError2(err)) return [];
     throw err;
   }
   const files = [];
   for (const entry of entries) {
-    const full = path78.join(dir, entry.name);
+    const full = path79.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (recursive) files.push(...await listMarkdown(full, true));
     } else if (entry.isFile() && entry.name.endsWith(".md")) {
@@ -57354,7 +57662,7 @@ var init_stamp_corpus_uuids = __esm({
       async isApplicable(ctx) {
         const files = await corpusFiles(ctx.repoPath);
         for (const file of files) {
-          const markdown = await fs64.readFile(file, "utf-8");
+          const markdown = await fs65.readFile(file, "utf-8");
           if (stampMissingUuids({ markdown }).stamped.length > 0) return true;
         }
         return false;
@@ -57364,12 +57672,12 @@ var init_stamp_corpus_uuids = __esm({
         let stampedBlocks = 0;
         let filesChanged = 0;
         for (const file of files) {
-          const markdown = await fs64.readFile(file, "utf-8");
+          const markdown = await fs65.readFile(file, "utf-8");
           const result = stampMissingUuids({ markdown });
           for (const warning of result.warnings) {
             const where = warning.kind === "task" ? `task ${warning.number}` : "frontmatter";
             ctx.logger?.warn(
-              `${path78.relative(ctx.repoPath, file)}: malformed uuid on ${where} (${warning.value}) \u2014 left as-is, not restamped`
+              `${path79.relative(ctx.repoPath, file)}: malformed uuid on ${where} (${warning.value}) \u2014 left as-is, not restamped`
             );
           }
           if (result.stamped.length === 0) continue;
@@ -57386,8 +57694,8 @@ var init_stamp_corpus_uuids = __esm({
 });
 
 // packages/tiny-brain-core/src/migrations/markdown-structure-only.ts
-import { promises as fs65 } from "node:fs";
-import path79 from "node:path";
+import { promises as fs66 } from "node:fs";
+import path80 from "node:path";
 import { execFileSync as execFileSync5 } from "node:child_process";
 function stripStatusToStructureOnly(markdown) {
   const eol = markdown.includes("\r\n") ? "\r\n" : "\n";
@@ -57539,29 +57847,29 @@ async function resolveCorpusDirs(repoPath) {
   const { docs, prd, fixes } = DEFAULT_PREFERENCES.repo.directories;
   let dirs = { docs, prd, fixes };
   try {
-    const raw = await fs65.readFile(path79.join(repoPath, ".tiny-brain", "config.json"), "utf-8");
+    const raw = await fs66.readFile(path80.join(repoPath, ".tiny-brain", "config.json"), "utf-8");
     const parsed = JSON.parse(raw);
     const override = parsed.preferences?.repo?.directories ?? {};
     dirs = { docs: override.docs ?? docs, prd: override.prd ?? prd, fixes: override.fixes ?? fixes };
   } catch {
   }
   return {
-    prd: path79.join(repoPath, dirs.prd),
-    fixes: path79.join(repoPath, dirs.fixes),
-    spikes: path79.join(repoPath, dirs.docs, "spikes")
+    prd: path80.join(repoPath, dirs.prd),
+    fixes: path80.join(repoPath, dirs.fixes),
+    spikes: path80.join(repoPath, dirs.docs, "spikes")
   };
 }
 async function listMarkdown2(dir, recursive) {
   let entries;
   try {
-    entries = await fs65.readdir(dir, { withFileTypes: true });
+    entries = await fs66.readdir(dir, { withFileTypes: true });
   } catch (err) {
     if (isMissingEntryError(err)) return [];
     throw err;
   }
   const files = [];
   for (const entry of entries) {
-    const full = path79.join(dir, entry.name);
+    const full = path80.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (recursive && entry.name !== "_template") {
         files.push(...await listMarkdown2(full, true));
@@ -57612,7 +57920,7 @@ var init_markdown_structure_only = __esm({
       targetVersion: "v0.23",
       async isApplicable(ctx) {
         for (const file of await corpusFiles2(ctx.repoPath)) {
-          const markdown = await fs65.readFile(file, "utf-8");
+          const markdown = await fs66.readFile(file, "utf-8");
           if (stripStatusToStructureOnly(markdown) !== markdown) return true;
         }
         return false;
@@ -57620,7 +57928,7 @@ var init_markdown_structure_only = __esm({
       async apply(ctx) {
         const files = await corpusFiles2(ctx.repoPath);
         const docs = await Promise.all(
-          files.map(async (file) => ({ path: file, markdown: await fs65.readFile(file, "utf-8") }))
+          files.map(async (file) => ({ path: file, markdown: await fs66.readFile(file, "utf-8") }))
         );
         const parsedCommits = readParsedCommits(ctx.repoPath);
         const plan = planCorpusUplift({ docs, parsedCommits });
@@ -57997,8 +58305,8 @@ var init_spike_worktree_status = __esm({
 });
 
 // packages/tiny-brain-core/src/services/spike/list-spikes.ts
-import * as fs66 from "node:fs/promises";
-import * as path80 from "node:path";
+import * as fs67 from "node:fs/promises";
+import * as path81 from "node:path";
 function isENOENT3(err) {
   return typeof err === "object" && err !== null && err.code === "ENOENT";
 }
@@ -58010,18 +58318,18 @@ function extractFrontmatterBlock(content) {
   if (close === -1) return null;
   return lines.slice(1, close).join("\n");
 }
-async function loadSpike(docsRoot, basename5) {
-  const docPath = path80.join(docsRoot, `${basename5}.md`);
+async function loadSpike(docsRoot, basename6) {
+  const docPath = path81.join(docsRoot, `${basename6}.md`);
   let content;
   try {
-    content = await fs66.readFile(docPath, "utf-8");
+    content = await fs67.readFile(docPath, "utf-8");
   } catch (err) {
     if (isENOENT3(err)) return null;
     throw err;
   }
   const yamlBlock = extractFrontmatterBlock(content);
   if (yamlBlock === null) {
-    console.warn(`[listSpikes] skipping ${basename5}.md: no parseable frontmatter`);
+    console.warn(`[listSpikes] skipping ${basename6}.md: no parseable frontmatter`);
     return null;
   }
   let raw;
@@ -58029,22 +58337,22 @@ async function loadSpike(docsRoot, basename5) {
     raw = load(yamlBlock);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`[listSpikes] skipping ${basename5}.md: YAML parse error: ${msg}`);
+    console.warn(`[listSpikes] skipping ${basename6}.md: YAML parse error: ${msg}`);
     return null;
   }
   const validation = validateSpikeFrontmatter(raw);
   if (!validation.ok) {
     const issues = validation.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join("; ");
-    console.warn(`[listSpikes] skipping ${basename5}.md: schema validation failed: ${issues}`);
+    console.warn(`[listSpikes] skipping ${basename6}.md: schema validation failed: ${issues}`);
     return null;
   }
-  if (validation.value.id !== basename5) {
+  if (validation.value.id !== basename6) {
     console.warn(
-      `[listSpikes] skipping ${basename5}.md: frontmatter id "${validation.value.id}" does not match filename`
+      `[listSpikes] skipping ${basename6}.md: frontmatter id "${validation.value.id}" does not match filename`
     );
     return null;
   }
-  return { id: basename5, frontmatter: validation.value, content };
+  return { id: basename6, frontmatter: validation.value, content };
 }
 function toSummary({ id, frontmatter, content }, parsedCommits) {
   const taskDescriptions = extractStructuralTasks(content).map((t) => t.description);
@@ -58071,10 +58379,10 @@ function compareSummaries(a, b) {
   return 0;
 }
 async function listSpikes(repoPath) {
-  const docsRoot = path80.join(repoPath, SPIKE_DIRECTORY3);
+  const docsRoot = path81.join(repoPath, SPIKE_DIRECTORY3);
   let entries;
   try {
-    entries = await fs66.readdir(docsRoot, { withFileTypes: true });
+    entries = await fs67.readdir(docsRoot, { withFileTypes: true });
   } catch (err) {
     if (isENOENT3(err)) return [];
     throw err;
@@ -58108,8 +58416,8 @@ var init_list_spikes = __esm({
 });
 
 // packages/tiny-brain-core/src/services/spike/get-spike-detail.ts
-import * as fs67 from "node:fs/promises";
-import * as path81 from "node:path";
+import * as fs68 from "node:fs/promises";
+import * as path82 from "node:path";
 function assertValidSpikeId3(spikeId) {
   if (!SPIKE_ID_PATTERN3.test(spikeId)) {
     throw new Error(`Invalid spike id "${spikeId}" \u2014 must be a slug of [a-z0-9-]`);
@@ -58165,10 +58473,10 @@ function extractOutcomeBody(content) {
   return raw.length > 0 ? raw : void 0;
 }
 async function loadFrontmatterAndBody(repoPath, spikeId) {
-  const docPath = path81.join(repoPath, SPIKE_DIRECTORY4, `${spikeId}.md`);
+  const docPath = path82.join(repoPath, SPIKE_DIRECTORY4, `${spikeId}.md`);
   let content;
   try {
-    content = await fs67.readFile(docPath, "utf-8");
+    content = await fs68.readFile(docPath, "utf-8");
   } catch (err) {
     if (isENOENT4(err)) throw new SpikeNotFoundError(spikeId);
     throw err;
@@ -58304,15 +58612,15 @@ var init_sha_helpers = __esm({
 });
 
 // packages/tiny-brain-core/src/services/prune/handlers/fix-handler.ts
-import { promises as fs68 } from "fs";
-import path82 from "path";
+import { promises as fs69 } from "fs";
+import path83 from "path";
 function createFixHandler() {
-  const docsRoot = (repoPath) => path82.join(repoPath, ".tiny-brain", "fixes");
+  const docsRoot = (repoPath) => path83.join(repoPath, ".tiny-brain", "fixes");
   return {
     kind: "fix",
     docsRoot,
     progressPath: (repoPath) => getFixProgressFilePath(repoPath),
-    reviewsPattern: (repoPath) => path82.join(getOperationalStateDir(repoPath), "reviews"),
+    reviewsPattern: (repoPath) => path83.join(getOperationalStateDir(repoPath), "reviews"),
     isArchived: (item) => item.archived === true,
     enumerate: async (repoPath) => {
       const progress = await loadFixesProgress(repoPath);
@@ -58324,7 +58632,7 @@ function createFixHandler() {
       return shas;
     },
     itemId: (item) => item.id,
-    itemDocPath: (repoPath, item) => path82.join(docsRoot(repoPath), `${item.id}.md`),
+    itemDocPath: (repoPath, item) => path83.join(docsRoot(repoPath), `${item.id}.md`),
     hasNonTerminalTasks: (item) => {
       const tasks = item.tasks ?? [];
       return tasks.some((t) => !TERMINAL_TASK_STATUSES.has(t.status ?? ""));
@@ -58370,7 +58678,7 @@ function createFixHandler() {
 async function loadFixesProgress(repoPath) {
   const progressPath = getFixProgressFilePath(repoPath);
   try {
-    const raw = await fs68.readFile(progressPath, "utf-8");
+    const raw = await fs69.readFile(progressPath, "utf-8");
     return JSON.parse(raw);
   } catch (err) {
     if (isENOENT5(err)) return { fixes: [] };
@@ -58388,11 +58696,11 @@ var init_fix_handler = __esm({
 });
 
 // packages/tiny-brain-core/src/services/prune/handlers/prd-handler.ts
-import { promises as fs69 } from "fs";
-import path83 from "path";
+import { promises as fs70 } from "fs";
+import path84 from "path";
 function createPrdHandler(prdDirectory) {
   validatePrdDirectory(prdDirectory);
-  const docsRoot = (repoPath) => path83.join(repoPath, prdDirectory);
+  const docsRoot = (repoPath) => path84.join(repoPath, prdDirectory);
   return {
     kind: "prd",
     docsRoot,
@@ -58400,14 +58708,14 @@ function createPrdHandler(prdDirectory) {
     // The contract method returns the parent directory; the orchestrator
     // never dereferences it, and per-PRD writes go through
     // removePrunedFromProgress and the operational-state helper.
-    progressPath: (repoPath) => path83.join(getOperationalStateDir(repoPath), "progress"),
-    reviewsPattern: (repoPath) => path83.join(getOperationalStateDir(repoPath), "reviews"),
+    progressPath: (repoPath) => path84.join(getOperationalStateDir(repoPath), "progress"),
+    reviewsPattern: (repoPath) => path84.join(getOperationalStateDir(repoPath), "reviews"),
     isArchived: (item) => item.archived === true,
     enumerate: async (repoPath) => {
       const root = docsRoot(repoPath);
       let dirEntries;
       try {
-        dirEntries = await fs69.readdir(root);
+        dirEntries = await fs70.readdir(root);
       } catch (err) {
         if (isENOENT5(err)) return [];
         throw err;
@@ -58425,7 +58733,7 @@ function createPrdHandler(prdDirectory) {
       return shas;
     },
     itemId: (item) => item.id,
-    itemDocPath: (repoPath, item) => path83.join(docsRoot(repoPath), item.id, "prd.md"),
+    itemDocPath: (repoPath, item) => path84.join(docsRoot(repoPath), item.id, "prd.md"),
     hasNonTerminalTasks: (item) => {
       for (const feature of item.features) {
         for (const task of feature.tasks ?? []) {
@@ -58449,7 +58757,7 @@ function createPrdHandler(prdDirectory) {
       await Promise.all(
         [...prunedIds].map(async (id) => {
           try {
-            await fs69.unlink(getProgressFilePath(id, repoPath));
+            await fs70.unlink(getProgressFilePath(id, repoPath));
           } catch (err) {
             if (!isENOENT5(err)) throw err;
           }
@@ -58459,7 +58767,7 @@ function createPrdHandler(prdDirectory) {
   };
 }
 function validatePrdDirectory(prdDirectory) {
-  if (path83.isAbsolute(prdDirectory)) {
+  if (path84.isAbsolute(prdDirectory)) {
     throw new Error(`createPrdHandler: prdDirectory must be repo-relative, got "${prdDirectory}"`);
   }
   if (prdDirectory.split(/[/\\]/).includes("..")) {
@@ -58469,10 +58777,10 @@ function validatePrdDirectory(prdDirectory) {
   }
 }
 async function readPrd(root, dirName, repoPath) {
-  const docPath = path83.join(root, dirName, "prd.md");
+  const docPath = path84.join(root, dirName, "prd.md");
   let docContent;
   try {
-    docContent = await fs69.readFile(docPath, "utf-8");
+    docContent = await fs70.readFile(docPath, "utf-8");
   } catch (err) {
     if (isENOENT5(err)) return null;
     throw err;
@@ -58489,7 +58797,7 @@ async function readPrd(root, dirName, repoPath) {
 }
 async function loadPrdFeatures(repoPath, prdId) {
   try {
-    const raw = await fs69.readFile(getProgressFilePath(prdId, repoPath), "utf-8");
+    const raw = await fs70.readFile(getProgressFilePath(prdId, repoPath), "utf-8");
     const parsed = JSON.parse(raw);
     return parsed.features ?? [];
   } catch (err) {
@@ -58515,11 +58823,11 @@ var init_prd_handler = __esm({
 });
 
 // packages/tiny-brain-core/src/services/prune/handlers/spike-handler.ts
-import { promises as fs70 } from "fs";
-import path84 from "path";
+import { promises as fs71 } from "fs";
+import path85 from "path";
 function createSpikeHandler(spikeDirectory) {
   validateSpikeDirectory(spikeDirectory);
-  const docsRoot = (repoPath) => path84.join(repoPath, spikeDirectory);
+  const docsRoot = (repoPath) => path85.join(repoPath, spikeDirectory);
   return {
     kind: "spike",
     docsRoot,
@@ -58527,14 +58835,14 @@ function createSpikeHandler(spikeDirectory) {
     // The contract returns the parent directory; the orchestrator
     // never dereferences it, and per-spike writes go through
     // removePrunedFromProgress and the operational-state helper.
-    progressPath: (repoPath) => path84.join(getOperationalStateDir(repoPath), "spikes"),
-    reviewsPattern: (repoPath) => path84.join(getOperationalStateDir(repoPath), "reviews"),
+    progressPath: (repoPath) => path85.join(getOperationalStateDir(repoPath), "spikes"),
+    reviewsPattern: (repoPath) => path85.join(getOperationalStateDir(repoPath), "reviews"),
     isArchived: (item) => item.archived === true,
     enumerate: async (repoPath) => {
       const root = docsRoot(repoPath);
       let entries;
       try {
-        entries = await fs70.readdir(root, { withFileTypes: true });
+        entries = await fs71.readdir(root, { withFileTypes: true });
       } catch (err) {
         if (isENOENT5(err)) return [];
         throw err;
@@ -58550,7 +58858,7 @@ function createSpikeHandler(spikeDirectory) {
       return shas;
     },
     itemId: (item) => item.id,
-    itemDocPath: (repoPath, item) => path84.join(docsRoot(repoPath), `${item.id}.md`),
+    itemDocPath: (repoPath, item) => path85.join(docsRoot(repoPath), `${item.id}.md`),
     hasNonTerminalTasks: (item) => {
       return item.tasks.some((t) => !TERMINAL_TASK_STATUSES.has(t.status ?? ""));
     },
@@ -58571,7 +58879,7 @@ function createSpikeHandler(spikeDirectory) {
   };
 }
 function validateSpikeDirectory(spikeDirectory) {
-  if (path84.isAbsolute(spikeDirectory)) {
+  if (path85.isAbsolute(spikeDirectory)) {
     throw new Error(`createSpikeHandler: spikeDirectory must be repo-relative, got "${spikeDirectory}"`);
   }
   if (spikeDirectory.split(/[/\\]/).includes("..")) {
@@ -58580,21 +58888,21 @@ function validateSpikeDirectory(spikeDirectory) {
     );
   }
 }
-async function readSpike(root, basename5, repoPath) {
-  const docPath = path84.join(root, `${basename5}.md`);
+async function readSpike(root, basename6, repoPath) {
+  const docPath = path85.join(root, `${basename6}.md`);
   let docContent;
   try {
-    docContent = await fs70.readFile(docPath, "utf-8");
+    docContent = await fs71.readFile(docPath, "utf-8");
   } catch (err) {
     if (isENOENT5(err)) return null;
     throw err;
   }
   const frontmatter = parseSpikeFrontmatter2(docContent);
   if (!frontmatter) return null;
-  if (frontmatter.id !== void 0 && frontmatter.id !== basename5) return null;
-  const tasks = await loadSpikeTasks(repoPath, basename5);
+  if (frontmatter.id !== void 0 && frontmatter.id !== basename6) return null;
+  const tasks = await loadSpikeTasks(repoPath, basename6);
   return {
-    id: basename5,
+    id: basename6,
     archived: frontmatter.archived,
     tasks
   };
@@ -58633,8 +58941,8 @@ var init_spike_handler = __esm({
 });
 
 // packages/tiny-brain-core/src/services/prune/prune.service.ts
-import { promises as fs71 } from "fs";
-import path85 from "path";
+import { promises as fs72 } from "fs";
+import path86 from "path";
 async function pruneRepo(repoPath, opts) {
   const registry2 = await defaultRegistry(repoPath);
   return pruneRepoWithRegistry(repoPath, opts, registry2);
@@ -58723,10 +59031,10 @@ async function defaultRegistry(repoPath) {
   return registry2;
 }
 async function loadPrdDirectory(repoPath) {
-  const configPath2 = path85.join(repoPath, ".tiny-brain", "config.json");
+  const configPath2 = path86.join(repoPath, ".tiny-brain", "config.json");
   let raw;
   try {
-    raw = await fs71.readFile(configPath2, "utf-8");
+    raw = await fs72.readFile(configPath2, "utf-8");
   } catch (err) {
     if (isENOENT5(err)) return DEFAULT_PRD_DIRECTORY;
     throw err;
@@ -58780,10 +59088,10 @@ async function pruneOneItem(repoPath, handler, kindLabel, item, survivingShas, s
   for (const { gate, sha } of deletablePairs) {
     const fileKey = `${gate}|${sha}`;
     if (sweptFileKeys.has(fileKey)) continue;
-    const filePath = path85.join(reviewsRoot, gate, `${sha}.json`);
+    const filePath = path86.join(reviewsRoot, gate, `${sha}.json`);
     if (dryRun) {
       try {
-        await fs71.access(filePath);
+        await fs72.access(filePath);
         sweptFileKeys.add(fileKey);
         reviewFilesDeleted += 1;
         deletedShas.add(sha);
@@ -58791,7 +59099,7 @@ async function pruneOneItem(repoPath, handler, kindLabel, item, survivingShas, s
       }
     } else {
       try {
-        await fs71.unlink(filePath);
+        await fs72.unlink(filePath);
         sweptFileKeys.add(fileKey);
         reviewFilesDeleted += 1;
         deletedShas.add(sha);
@@ -58805,14 +59113,14 @@ async function pruneOneItem(repoPath, handler, kindLabel, item, survivingShas, s
   const docPath = handler.itemDocPath(repoPath, item);
   if (dryRun) {
     try {
-      await fs71.access(docPath);
+      await fs72.access(docPath);
       docDeleted = true;
     } catch {
       docDeleted = false;
     }
   } else {
     try {
-      await fs71.unlink(docPath);
+      await fs72.unlink(docPath);
       docDeleted = true;
     } catch (err) {
       if (!isENOENT5(err)) throw err;
@@ -58829,9 +59137,9 @@ async function pruneOneItem(repoPath, handler, kindLabel, item, survivingShas, s
   };
 }
 async function appendAuditLog(repoPath, entry) {
-  const logPath = path85.join(getOperationalStateDir(repoPath), "prune.log");
-  await fs71.mkdir(path85.dirname(logPath), { recursive: true });
-  await fs71.appendFile(logPath, `${JSON.stringify(entry)}
+  const logPath = path86.join(getOperationalStateDir(repoPath), "prune.log");
+  await fs72.mkdir(path86.dirname(logPath), { recursive: true });
+  await fs72.appendFile(logPath, `${JSON.stringify(entry)}
 `, "utf-8");
 }
 var DEFAULT_PRD_DIRECTORY, DEFAULT_SPIKE_DIRECTORY;
@@ -58850,8 +59158,8 @@ var init_prune_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/prune/prune-log.ts
-import { promises as fs72 } from "node:fs";
-import * as path86 from "node:path";
+import { promises as fs73 } from "node:fs";
+import * as path87 from "node:path";
 function isPruneAuditEntry(value) {
   if (typeof value !== "object" || value === null) return false;
   const v = value;
@@ -58861,7 +59169,7 @@ function isPruneAuditEntry(value) {
   typeof v.kind === "string" && v.kind.length > 0 && typeof v.id === "string" && Array.isArray(v.shas) && typeof v.reviewFilesDeleted === "number" && typeof v.docDeleted === "boolean";
 }
 async function readPruneLog(repoPath, options = {}) {
-  const logPath = path86.join(getOperationalStateDir(repoPath), "prune.log");
+  const logPath = path87.join(getOperationalStateDir(repoPath), "prune.log");
   let content;
   try {
     content = await readTail(logPath, MAX_BYTES_TO_READ);
@@ -58900,7 +59208,7 @@ async function readPruneLog(repoPath, options = {}) {
   return entries.slice(0, limit);
 }
 async function readTail(filePath, cap) {
-  const handle = await fs72.open(filePath, "r");
+  const handle = await fs73.open(filePath, "r");
   try {
     const stat3 = await handle.stat();
     const size = stat3.size;
@@ -58979,8 +59287,8 @@ var init_repo_config = __esm({
 });
 
 // packages/tiny-brain-core/src/services/api/skill-loader.ts
-import * as fs73 from "fs/promises";
-import * as path87 from "path";
+import * as fs74 from "fs/promises";
+import * as path88 from "path";
 var SkillLoader;
 var init_skill_loader = __esm({
   "packages/tiny-brain-core/src/services/api/skill-loader.ts"() {
@@ -58997,9 +59305,9 @@ var init_skill_loader = __esm({
         if (cached2) {
           return cached2;
         }
-        const skillPath = path87.join(this.skillsPath, skillName);
-        const skillFile = path87.join(skillPath, "SKILL.md");
-        const content = await fs73.readFile(skillFile, "utf-8");
+        const skillPath = path88.join(this.skillsPath, skillName);
+        const skillFile = path88.join(skillPath, "SKILL.md");
+        const content = await fs74.readFile(skillFile, "utf-8");
         const { metadata, body } = this.parseFrontmatter(content);
         const templates = await this.loadTemplates(skillPath);
         const skill = {
@@ -59039,14 +59347,14 @@ var init_skill_loader = __esm({
         return { metadata, body };
       }
       async loadTemplates(skillPath) {
-        const templatesPath = path87.join(skillPath, "templates");
+        const templatesPath = path88.join(skillPath, "templates");
         const templates = {};
         try {
-          const entries = await fs73.readdir(templatesPath, { withFileTypes: true });
+          const entries = await fs74.readdir(templatesPath, { withFileTypes: true });
           for (const entry of entries) {
             if (entry.isFile() && entry.name.endsWith(".md")) {
-              const templatePath = path87.join(templatesPath, entry.name);
-              const content = await fs73.readFile(templatePath, "utf-8");
+              const templatePath = path88.join(templatesPath, entry.name);
+              const content = await fs74.readFile(templatePath, "utf-8");
               templates[entry.name] = content;
             }
           }
@@ -60636,8 +60944,8 @@ var init_quality_types = __esm({
 });
 
 // packages/tiny-brain-core/src/handlers/quality.handlers.ts
-import { promises as fs74 } from "fs";
-import path88 from "path";
+import { promises as fs75 } from "fs";
+import path89 from "path";
 function requireRepoRoot2(ctx) {
   if (!ctx.repositoryRoot) {
     return failure4(
@@ -60739,11 +61047,11 @@ async function qualityPlanDetails(input, ctx) {
   if (!input.planId) return failure4("planId is required for plan-details operation");
   const root = requireRepoRoot2(ctx);
   if (typeof root !== "string") return root;
-  const plansDir = path88.join(getOperationalStateDir(root), "quality", "plans");
-  const filePath = path88.join(plansDir, `${input.planId}.md`);
+  const plansDir = path89.join(getOperationalStateDir(root), "quality", "plans");
+  const filePath = path89.join(plansDir, `${input.planId}.md`);
   let content;
   try {
-    content = await fs74.readFile(filePath, "utf-8");
+    content = await fs75.readFile(filePath, "utf-8");
   } catch {
     return failure4(`Improvement plan not found: ${input.planId}`);
   }
@@ -60800,9 +61108,9 @@ async function qualityRunAnalyzers(input, ctx) {
   if (typeof root !== "string") return root;
   try {
     const runId = input.runId ?? generateQualityRunId();
-    const runDir = path88.join(getOperationalStateDir(root), "quality", "runs", qualityRunIdToPath(runId));
-    const outputPath = path88.join(runDir, "analysis.json");
-    const outputDir = path88.join(runDir, "analysers");
+    const runDir = path89.join(getOperationalStateDir(root), "quality", "runs", qualityRunIdToPath(runId));
+    const outputPath = path89.join(runDir, "analysis.json");
+    const outputDir = path89.join(runDir, "analysers");
     const cached2 = await readCachedAnalyzers(root);
     const analyzers = cached2 ?? await new AnalyzerDetectionService(root).detectAnalyzers();
     const results = analyzers.length === 0 ? {
@@ -60811,8 +61119,8 @@ async function qualityRunAnalyzers(input, ctx) {
       totalDurationMs: 0,
       summary: { total: 0, succeeded: 0, failed: 0, timedOut: 0, skipped: 0 }
     } : await new AnalyzerExecutorService(root).executeAnalyzers(analyzers, outputDir);
-    await fs74.mkdir(runDir, { recursive: true });
-    await fs74.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
+    await fs75.mkdir(runDir, { recursive: true });
+    await fs75.writeFile(outputPath, JSON.stringify(results, null, 2), "utf-8");
     return {
       ok: true,
       data: {
@@ -62014,8 +62322,8 @@ var init_formatter_factory = __esm({
 });
 
 // packages/tiny-brain-core/src/services/agent/agent-installation-service.ts
-import * as fs75 from "fs/promises";
-import * as path89 from "path";
+import * as fs76 from "fs/promises";
+import * as path90 from "path";
 import * as crypto3 from "crypto";
 var AgentInstallationService;
 var init_agent_installation_service = __esm({
@@ -62084,15 +62392,15 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       async installAgent(agentInfo) {
         try {
           const repoRoot = getRepoRoot();
-          const agentsDir = path89.join(repoRoot, ".claude", "agents");
-          await fs75.mkdir(agentsDir, { recursive: true });
+          const agentsDir = path90.join(repoRoot, ".claude", "agents");
+          await fs76.mkdir(agentsDir, { recursive: true });
           let content = agentInfo.content;
           if (!content) {
             const downloaded = await this.downloadAgentContent(agentInfo.name, agentInfo.version);
             content = downloaded.content;
           }
-          const filePath = path89.join(agentsDir, `${agentInfo.name}.md`);
-          await fs75.writeFile(filePath, content, "utf-8");
+          const filePath = path90.join(agentsDir, `${agentInfo.name}.md`);
+          await fs76.writeFile(filePath, content, "utf-8");
           this.context.logger.info(`Successfully installed agent: ${agentInfo.name}`);
           return { success: true };
         } catch (error2) {
@@ -62117,13 +62425,13 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       async updateAgent(agentInfo) {
         try {
           const repoRoot = getRepoRoot();
-          const filePath = path89.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
-          const existingContent = await fs75.readFile(filePath, "utf-8");
+          const filePath = path90.join(repoRoot, ".claude", "agents", `${agentInfo.name}.md`);
+          const existingContent = await fs76.readFile(filePath, "utf-8");
           const hasCustomizations = this.detectCustomizations(existingContent);
           let backupCreated = false;
           if (hasCustomizations) {
             const backupPath = `${filePath}.backup.${Date.now()}`;
-            await fs75.writeFile(backupPath, existingContent, "utf-8");
+            await fs76.writeFile(backupPath, existingContent, "utf-8");
             backupCreated = true;
             this.context.logger.info(`Created backup of customized agent: ${backupPath}`);
           }
@@ -62133,7 +62441,7 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
             newContent = downloaded.content;
           }
           const updatedContent = this.updateAgentMetadata(newContent, agentInfo.version);
-          await fs75.writeFile(filePath, updatedContent, "utf-8");
+          await fs76.writeFile(filePath, updatedContent, "utf-8");
           this.context.logger.info(`Successfully updated agent: ${agentInfo.name} to v${agentInfo.version}`);
           return {
             updated: true,
@@ -62151,9 +62459,9 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       async removeAgent(agentName) {
         try {
           const repoRoot = getRepoRoot();
-          const filePath = path89.join(repoRoot, ".claude", "agents", `${agentName}.md`);
-          await fs75.access(filePath);
-          await fs75.unlink(filePath);
+          const filePath = path90.join(repoRoot, ".claude", "agents", `${agentName}.md`);
+          await fs76.access(filePath);
+          await fs76.unlink(filePath);
           this.context.logger.info(`Successfully removed agent: ${agentName}`);
         } catch (error2) {
           if (error2.code === "ENOENT") {
@@ -62173,8 +62481,8 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
           failed: []
         };
         const repoRoot = getRepoRoot();
-        const agentsDir = path89.join(repoRoot, ".claude", "agents");
-        await fs75.mkdir(agentsDir, { recursive: true });
+        const agentsDir = path90.join(repoRoot, ".claude", "agents");
+        await fs76.mkdir(agentsDir, { recursive: true });
         for (const agent of agentsToInstall) {
           try {
             const result = await this.installAgent(agent);
@@ -62224,14 +62532,14 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
       async getInstalledAgents() {
         try {
           const repoRoot = getRepoRoot();
-          const agentsDir = path89.join(repoRoot, ".claude", "agents");
-          const files = await fs75.readdir(agentsDir);
+          const agentsDir = path90.join(repoRoot, ".claude", "agents");
+          const files = await fs76.readdir(agentsDir);
           const agentFiles = files.filter((file) => file.endsWith(".md"));
           const installedAgents = [];
           for (const file of agentFiles) {
             try {
-              const filePath = path89.join(agentsDir, file);
-              const content = await fs75.readFile(filePath, "utf-8");
+              const filePath = path90.join(agentsDir, file);
+              const content = await fs76.readFile(filePath, "utf-8");
               const agentName = file.replace(".md", "");
               const metadata = this.extractAgentMetadata(content);
               installedAgents.push({
@@ -62301,9 +62609,9 @@ Specialized ${agentName.replace(/-/g, " ")} functionality
 });
 
 // packages/tiny-brain-core/src/services/repo/repo-service.ts
-import * as fs76 from "fs/promises";
+import * as fs77 from "fs/promises";
 import { existsSync as existsSync11, readFileSync as readFileSync3 } from "fs";
-import * as path90 from "path";
+import * as path91 from "path";
 import { fileURLToPath as fileURLToPath5 } from "url";
 var RepoService;
 var init_repo_service = __esm({
@@ -62322,8 +62630,8 @@ var init_repo_service = __esm({
       async readRepoBlockFromContextFile(contextFilePath = "CLAUDE.md") {
         try {
           const repoRoot = getRepoRoot();
-          const fullPath = path90.join(repoRoot, contextFilePath);
-          const content = await fs76.readFile(fullPath, "utf-8");
+          const fullPath = path91.join(repoRoot, contextFilePath);
+          const content = await fs77.readFile(fullPath, "utf-8");
           const startMarker = _RepoService.REPO_BLOCK_START;
           const endMarker = _RepoService.REPO_BLOCK_END;
           const startIndex = content.indexOf(startMarker);
@@ -62377,7 +62685,7 @@ var init_repo_service = __esm({
         }
         try {
           const repoRoot = getRepoRoot();
-          const analysisPath = path90.join(repoRoot, ".tiny-brain", "analysis.json");
+          const analysisPath = path91.join(repoRoot, ".tiny-brain", "analysis.json");
           return existsSync11(analysisPath);
         } catch {
           return false;
@@ -62389,7 +62697,7 @@ var init_repo_service = __esm({
       getAnalysisVersion() {
         try {
           const currentFilePath = fileURLToPath5(import.meta.url);
-          const packageJsonPath = path90.join(path90.dirname(currentFilePath), "../../../package.json");
+          const packageJsonPath = path91.join(path91.dirname(currentFilePath), "../../../package.json");
           const packageJson = JSON.parse(readFileSync3(packageJsonPath, "utf-8"));
           return packageJson.version || "0.0.0";
         } catch (error2) {
@@ -62427,12 +62735,12 @@ var init_repo_registration = __esm({
 
 // packages/tiny-brain-core/src/utils/package-version.ts
 import { readFileSync as readFileSync4 } from "fs";
-import { join as join43, dirname as dirname14 } from "path";
+import { join as join44, dirname as dirname14 } from "path";
 import { fileURLToPath as fileURLToPath6 } from "url";
 function getPackageVersion() {
   const __filename = fileURLToPath6(import.meta.url);
   const __dirname = dirname14(__filename);
-  const packagePath = join43(__dirname, "..", "..", "package.json");
+  const packagePath = join44(__dirname, "..", "..", "package.json");
   try {
     const packageJson = JSON.parse(readFileSync4(packagePath, "utf-8"));
     return packageJson.version;
@@ -64416,20 +64724,20 @@ var init_agent_service = __esm({
        * Install formatted agents to the filesystem
        */
       async installAgents(formattedAgents, formatter) {
-        const fs79 = await import("fs/promises");
-        const path100 = await import("path");
+        const fs80 = await import("fs/promises");
+        const path101 = await import("path");
         const activeFormatter = formatter || FormatterFactory.getFormatter(FormatterFactory.detectFormat());
         const repoRoot = getRepoRoot();
-        const agentsPath = path100.join(repoRoot, activeFormatter.getAgentInstallPath());
+        const agentsPath = path101.join(repoRoot, activeFormatter.getAgentInstallPath());
         this.context.logger.debug("[AgentService] Installing agents:", {
           repoRoot,
           agentsPath,
           agentCount: formattedAgents.length
         });
-        await fs79.mkdir(agentsPath, { recursive: true });
+        await fs80.mkdir(agentsPath, { recursive: true });
         for (const agent of formattedAgents) {
-          const agentPath = path100.join(agentsPath, agent.filename);
-          await fs79.writeFile(agentPath, agent.content, "utf-8");
+          const agentPath = path101.join(agentsPath, agent.filename);
+          await fs80.writeFile(agentPath, agent.content, "utf-8");
           this.context.logger.info(`Agent '${agent.filename}' installed to ${agentPath}`);
         }
         this.context.logger.info(`Installed ${formattedAgents.length} agents to ${agentsPath}`);
@@ -64438,28 +64746,28 @@ var init_agent_service = __esm({
        * Install agents with version checking and overwrite strategy
        */
       async installAgentsWithVersionCheck(agents, options = {}) {
-        const fs79 = await import("fs/promises");
-        const path100 = await import("path");
+        const fs80 = await import("fs/promises");
+        const path101 = await import("path");
         const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
         const formattedAgents = this.formatAgents(agents, formatter);
         const repoRoot = getRepoRoot();
-        const agentsPath = path100.join(repoRoot, formatter.getAgentInstallPath());
+        const agentsPath = path101.join(repoRoot, formatter.getAgentInstallPath());
         const result = {
           installed: [],
           skipped: [],
           updated: [],
           errors: []
         };
-        await fs79.mkdir(agentsPath, { recursive: true });
+        await fs80.mkdir(agentsPath, { recursive: true });
         const installedAgents = await this.getInstalledAgents();
         const installedMap = new Map(installedAgents.map((a) => [a.name, a]));
         for (const agent of formattedAgents) {
-          const agentPath = path100.join(agentsPath, agent.filename);
+          const agentPath = path101.join(agentsPath, agent.filename);
           const agentName = agent.filename.replace(".md", "");
           try {
-            const fileExists2 = await fs79.access(agentPath).then(() => true).catch(() => false);
+            const fileExists2 = await fs80.access(agentPath).then(() => true).catch(() => false);
             if (!fileExists2) {
-              await fs79.writeFile(agentPath, agent.content, "utf-8");
+              await fs80.writeFile(agentPath, agent.content, "utf-8");
               result.installed.push(agentName);
               this.context.logger.info(`Installed new agent: ${agentName}`);
             } else {
@@ -64470,9 +64778,9 @@ var init_agent_service = __esm({
               } else if (strategy === "always") {
                 if (options.backupExisting) {
                   const backupPath = `${agentPath}.backup.${Date.now()}`;
-                  await fs79.copyFile(agentPath, backupPath);
+                  await fs80.copyFile(agentPath, backupPath);
                 }
-                await fs79.writeFile(agentPath, agent.content, "utf-8");
+                await fs80.writeFile(agentPath, agent.content, "utf-8");
                 result.updated.push(agentName);
                 this.context.logger.info(`Updated agent (forced): ${agentName}`);
               } else {
@@ -64482,9 +64790,9 @@ var init_agent_service = __esm({
                 if (semver.gt(newVersion, installedVersion)) {
                   if (options.backupExisting) {
                     const backupPath = `${agentPath}.backup.${Date.now()}`;
-                    await fs79.copyFile(agentPath, backupPath);
+                    await fs80.copyFile(agentPath, backupPath);
                   }
-                  await fs79.writeFile(agentPath, agent.content, "utf-8");
+                  await fs80.writeFile(agentPath, agent.content, "utf-8");
                   result.updated.push(agentName);
                   this.context.logger.info(`Updated agent: ${agentName} (${installedVersion} -> ${newVersion})`);
                 } else {
@@ -64506,21 +64814,21 @@ var init_agent_service = __esm({
        */
       async removeAgents(agentNames) {
         const result = { removed: [], errors: [] };
-        const fs79 = await import("fs/promises");
-        const path100 = await import("path");
+        const fs80 = await import("fs/promises");
+        const path101 = await import("path");
         const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
         const repoRoot = getRepoRoot();
-        const agentsPath = path100.join(repoRoot, formatter.getAgentInstallPath());
+        const agentsPath = path101.join(repoRoot, formatter.getAgentInstallPath());
         for (const agentName of agentNames) {
           try {
-            const agentFile = path100.join(agentsPath, `${agentName}.md`);
+            const agentFile = path101.join(agentsPath, `${agentName}.md`);
             try {
-              await fs79.access(agentFile);
+              await fs80.access(agentFile);
             } catch {
               result.errors.push(`Agent ${agentName} not found`);
               continue;
             }
-            await fs79.unlink(agentFile);
+            await fs80.unlink(agentFile);
             result.removed.push(agentName);
             this.context.logger.info(`Removed agent: ${agentName}`);
           } catch (error2) {
@@ -64541,17 +64849,17 @@ var init_agent_service = __esm({
         if (this.installationService) {
           return await this.installationService.getInstalledAgents();
         }
-        const fs79 = await import("fs/promises");
-        const path100 = await import("path");
+        const fs80 = await import("fs/promises");
+        const path101 = await import("path");
         const formatter = FormatterFactory.getFormatter(FormatterFactory.detectFormat());
         const repoRoot = getRepoRoot();
-        const agentsPath = path100.join(repoRoot, formatter.getAgentInstallPath());
+        const agentsPath = path101.join(repoRoot, formatter.getAgentInstallPath());
         try {
-          const files = await fs79.readdir(agentsPath);
+          const files = await fs80.readdir(agentsPath);
           const agentFiles = files.filter((f) => f.endsWith(".md"));
           const agents = [];
           for (const file of agentFiles) {
-            const content = await fs79.readFile(path100.join(agentsPath, file), "utf-8");
+            const content = await fs80.readFile(path101.join(agentsPath, file), "utf-8");
             const name = file.replace(".md", "");
             const version2 = this.extractVersion(content);
             agents.push({ name, version: version2, lastUpdated: (/* @__PURE__ */ new Date()).toISOString() });
@@ -65430,7 +65738,7 @@ var init_persona_sync_service = __esm({
 });
 
 // packages/tiny-brain-core/src/services/sessions/sessions-store.ts
-import { promises as fs77 } from "node:fs";
+import { promises as fs78 } from "node:fs";
 function isLegacyShape(parsed) {
   return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed);
 }
@@ -65475,7 +65783,7 @@ var init_sessions_store = __esm({
         if (this.migrationChecked) return;
         let content;
         try {
-          content = await fs77.readFile(this.filePath, "utf-8");
+          content = await fs78.readFile(this.filePath, "utf-8");
         } catch (err) {
           if (err.code === "ENOENT") {
             this.migrationChecked = true;
@@ -65501,7 +65809,7 @@ var init_sessions_store = __esm({
         await withLock(this.filePath, async () => {
           let fresh;
           try {
-            fresh = await fs77.readFile(this.filePath, "utf-8");
+            fresh = await fs78.readFile(this.filePath, "utf-8");
           } catch (err) {
             if (err.code === "ENOENT") return;
             throw err;
@@ -65538,8 +65846,8 @@ var init_verdict_trailer_stamp = __esm({
 });
 
 // packages/tiny-brain-core/src/services/reviews/decided-review-reviews.ts
-import { promises as fs78 } from "node:fs";
-import * as path91 from "node:path";
+import { promises as fs79 } from "node:fs";
+import * as path92 from "node:path";
 function reviewsForTaskFromDecided(decided, taskUuid) {
   if (!taskUuid) return void 0;
   const mine = decided.filter((d) => !!d.gate && !!d.verdict && d.taskRef?.task === taskUuid).slice().sort((a, b) => (a.persistedAt ?? "").localeCompare(b.persistedAt ?? ""));
@@ -65557,21 +65865,21 @@ function resolveTaskReviews(input) {
   return input.projectionReviews;
 }
 async function collectDecidedReviews(operationalStateDir) {
-  const decidedRoot = path91.join(operationalStateDir, "reviews", "decided");
+  const decidedRoot = path92.join(operationalStateDir, "reviews", "decided");
   let gateDirs;
   try {
-    gateDirs = (await fs78.readdir(decidedRoot, { withFileTypes: true })).filter((e) => e.isDirectory()).map((e) => e.name);
+    gateDirs = (await fs79.readdir(decidedRoot, { withFileTypes: true })).filter((e) => e.isDirectory()).map((e) => e.name);
   } catch (err) {
     if (err.code === "ENOENT") return [];
     throw err;
   }
   const reviews = [];
   for (const gate of gateDirs) {
-    const gateDir = path91.join(decidedRoot, gate);
-    const files = (await fs78.readdir(gateDir)).filter((f) => f.endsWith(".json"));
+    const gateDir = path92.join(decidedRoot, gate);
+    const files = (await fs79.readdir(gateDir)).filter((f) => f.endsWith(".json"));
     for (const file of files) {
       try {
-        const raw = await fs78.readFile(path91.join(gateDir, file), "utf-8");
+        const raw = await fs79.readFile(path92.join(gateDir, file), "utf-8");
         reviews.push(JSON.parse(raw));
       } catch {
       }
@@ -65670,7 +65978,7 @@ var init_git_initialiser = __esm({
 });
 
 // packages/tiny-brain-core/src/services/bootstrap/repo-register.ts
-import * as path92 from "node:path";
+import * as path93 from "node:path";
 import { createHash as createHash5 } from "node:crypto";
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -65713,7 +66021,7 @@ async function registerRepo(deps, opts) {
   } else {
     const entry = {
       id,
-      name: path92.basename(opts.repoPath),
+      name: path93.basename(opts.repoPath),
       path: opts.repoPath,
       type: opts.type,
       createdAt: timestamp2,
@@ -65721,7 +66029,7 @@ async function registerRepo(deps, opts) {
     };
     registry2.repos.push(entry);
   }
-  await deps.fs.mkdir(path92.dirname(registryPath), { recursive: true });
+  await deps.fs.mkdir(path93.dirname(registryPath), { recursive: true });
   await deps.fs.writeFile(registryPath, JSON.stringify(registry2, null, 2) + "\n");
   return { step: "repo-register", status: "changed", changes: [id] };
 }
@@ -65741,25 +66049,25 @@ var init_repo_register = __esm({
 });
 
 // packages/tiny-brain-core/src/services/bootstrap/directory-creator.ts
-import * as path93 from "node:path";
+import * as path94 from "node:path";
 function canonicalDirs(type2) {
   return [...COMMON_DIRS, ...type2 === "code" ? CODE_DIRS : PROSE_DIRS];
 }
-async function exists(fs79, p) {
+async function exists(fs80, p) {
   try {
-    await fs79.access(p);
+    await fs80.access(p);
     return true;
   } catch {
     return false;
   }
 }
 async function createDirectories(deps, opts) {
-  const { fs: fs79 } = deps;
+  const { fs: fs80 } = deps;
   const changes = [];
   for (const rel of canonicalDirs(opts.type)) {
-    const absDir = path93.join(opts.repoPath, rel);
-    if (await exists(fs79, absDir)) continue;
-    await fs79.mkdir(absDir, { recursive: true });
+    const absDir = path94.join(opts.repoPath, rel);
+    if (await exists(fs80, absDir)) continue;
+    await fs80.mkdir(absDir, { recursive: true });
     changes.push(rel);
   }
   return {
@@ -65779,14 +66087,14 @@ var init_directory_creator = __esm({
 });
 
 // packages/tiny-brain-core/src/services/bootstrap/perms-injector.ts
-import * as path94 from "node:path";
+import * as path95 from "node:path";
 async function injectPerms(deps, opts) {
-  const { fs: fs79 } = deps;
-  const settingsDir = path94.join(opts.repoPath, ".claude");
-  const settingsPath = path94.join(settingsDir, "settings.json");
+  const { fs: fs80 } = deps;
+  const settingsDir = path95.join(opts.repoPath, ".claude");
+  const settingsPath = path95.join(settingsDir, "settings.json");
   let raw = null;
   try {
-    raw = await fs79.readFile(settingsPath);
+    raw = await fs80.readFile(settingsPath);
   } catch {
     raw = null;
   }
@@ -65821,8 +66129,8 @@ async function injectPerms(deps, opts) {
   if (added.length === 0) {
     return { step: "perms-injector", status: "no-op", changes: [] };
   }
-  await fs79.mkdir(settingsDir, { recursive: true });
-  await fs79.writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+  await fs80.mkdir(settingsDir, { recursive: true });
+  await fs80.writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
   return { step: "perms-injector", status: "changed", changes: added };
 }
 var SKILL_PERMISSIONS2;
@@ -65842,7 +66150,7 @@ var init_perms_injector = __esm({
 });
 
 // packages/tiny-brain-core/src/services/bootstrap/hook-installer.ts
-import * as path95 from "node:path";
+import * as path96 from "node:path";
 import { createHash as createHash6 } from "node:crypto";
 function signature(template) {
   return createHash6("sha256").update(template).digest("hex").slice(0, 12);
@@ -65868,7 +66176,7 @@ async function installHooks(deps, opts) {
   for (const name of HOOK_NAMES2) {
     const template = await deps.readTemplate(name);
     const desired = managedHookContent(template);
-    const hookPath = path95.join(hooksDir, name);
+    const hookPath = path96.join(hooksDir, name);
     let existing = null;
     try {
       existing = await deps.fs.readFile(hookPath);
@@ -65942,9 +66250,9 @@ var init_context_block_writer = __esm({
 });
 
 // packages/tiny-brain-core/src/services/bootstrap/repo-config.ts
-import * as path96 from "node:path";
+import * as path97 from "node:path";
 function configPath(repoPath) {
-  return path96.join(repoPath, ".tiny-brain", "config.json");
+  return path97.join(repoPath, ".tiny-brain", "config.json");
 }
 function isRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -65957,10 +66265,10 @@ function isWellFormed(parsed) {
   }
   return true;
 }
-async function readRepoConfig(fs79, repoPath) {
+async function readRepoConfig(fs80, repoPath) {
   let raw = null;
   try {
-    raw = await fs79.readFile(configPath(repoPath));
+    raw = await fs80.readFile(configPath(repoPath));
   } catch {
     raw = null;
   }
@@ -65974,12 +66282,12 @@ async function readRepoConfig(fs79, repoPath) {
   if (!isWellFormed(parsed)) return { ok: false, reason: "corrupt" };
   return { ok: true, config: parsed };
 }
-async function writeRepoConfig(fs79, repoPath, config2) {
+async function writeRepoConfig(fs80, repoPath, config2) {
   if (typeof config2.version !== "string") {
     config2.version = CONFIG_VERSION;
   }
-  await fs79.mkdir(path96.join(repoPath, ".tiny-brain"), { recursive: true });
-  await fs79.writeFile(configPath(repoPath), JSON.stringify(config2, null, 2) + "\n");
+  await fs80.mkdir(path97.join(repoPath, ".tiny-brain"), { recursive: true });
+  await fs80.writeFile(configPath(repoPath), JSON.stringify(config2, null, 2) + "\n");
 }
 function repoSection(config2) {
   if (config2.preferences === void 0) {
@@ -66145,7 +66453,7 @@ var init_repo_bootstrap = __esm({
 import { promises as fsp2 } from "node:fs";
 import { spawn as nodeSpawn, execFile as execFile2 } from "node:child_process";
 import { promisify as promisify6 } from "node:util";
-import * as path97 from "node:path";
+import * as path98 from "node:path";
 import * as os4 from "node:os";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
 function defaultBuildPipeline(opts) {
@@ -66165,7 +66473,7 @@ async function gitEffectiveHooksDir(repoPath) {
     const { stdout } = await execFileP("git", ["rev-parse", "--git-path", "hooks"], { cwd: repoPath });
     const v = stdout.trim();
     if (!v) return null;
-    return path97.isAbsolute(v) ? v : path97.resolve(repoPath, v);
+    return path98.isAbsolute(v) ? v : path98.resolve(repoPath, v);
   } catch {
     return null;
   }
@@ -66178,10 +66486,10 @@ function runGitSpawn(args, cwd) {
   });
 }
 async function readHookTemplate(name) {
-  const here = path97.dirname(fileURLToPath7(import.meta.url));
+  const here = path98.dirname(fileURLToPath7(import.meta.url));
   const candidates = [
-    path97.join(here, "..", "..", "..", "templates", "hooks", name),
-    path97.join(here, "..", "..", "templates", "hooks", name)
+    path98.join(here, "..", "..", "..", "templates", "hooks", name),
+    path98.join(here, "..", "..", "templates", "hooks", name)
   ];
   for (const candidate of candidates) {
     try {
@@ -66202,13 +66510,13 @@ function createNodeRepoBootstrapDeps(repoPath, cliSurfaceMap) {
       return template;
     },
     runGit: (args, cwd) => runGitSpawn(args, cwd),
-    reposRegistryPath: () => path97.join(os4.homedir(), ".tiny-brain", "repos", "repos.json"),
+    reposRegistryPath: () => path98.join(os4.homedir(), ".tiny-brain", "repos", "repos.json"),
     now: () => /* @__PURE__ */ new Date(),
     writeInstructionFiles: (opts) => writeAgentInstructionFiles({ ...opts, service: new AgentsMdService(opts.repoPath), cliSurfaceMap }),
     io: {
       readFile: (p, enc) => fsp2.readFile(p, enc),
       writeFile: (p, content, enc) => fsp2.writeFile(p, content, enc),
-      join: (...parts) => path97.join(...parts)
+      join: (...parts) => path98.join(...parts)
     },
     buildPipeline: defaultBuildPipeline,
     stdout: (line) => console.log(line)
@@ -66326,20 +66634,20 @@ function makeCheck(key, scope, impl) {
     scope
   });
 }
-async function exists2(fs79, p) {
+async function exists2(fs80, p) {
   try {
-    await fs79.access(p);
+    await fs80.access(p);
     return true;
   } catch {
     return false;
   }
 }
-async function packageDirForBin(binTarget, fs79) {
+async function packageDirForBin(binTarget, fs80) {
   const sep2 = binTarget.includes("\\") ? "\\" : "/";
   const parts = binTarget.split(sep2);
   for (let i = parts.length - 1; i > 0 && parts.length - i <= 6; i--) {
     const dir = parts.slice(0, i).join(sep2);
-    if (await exists2(fs79, `${dir}${sep2}package.json`)) return dir;
+    if (await exists2(fs80, `${dir}${sep2}package.json`)) return dir;
   }
   return parts.slice(0, -1).join(sep2);
 }
@@ -66630,9 +66938,9 @@ async function checkHookExecImpl(deps) {
     message: "Installed resolver matches in-process"
   };
 }
-async function readHookContent(fs79, p) {
+async function readHookContent(fs80, p) {
   try {
-    return await fs79.readFile(p);
+    return await fs80.readFile(p);
   } catch {
     return null;
   }
@@ -66941,7 +67249,7 @@ var init_hook_wiring_repair = __esm({
 import { promises as nodeFs, existsSync as existsSync12 } from "node:fs";
 import { spawn as nodeSpawn2, execFile as execFile3 } from "node:child_process";
 import { promisify as promisify7 } from "node:util";
-import * as path98 from "node:path";
+import * as path99 from "node:path";
 import * as os5 from "node:os";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 function makeFs() {
@@ -66976,7 +67284,7 @@ async function findGitCommonDir(cwd) {
     const { stdout } = await execFileP2("git", ["rev-parse", "--git-common-dir"], { cwd });
     const v = stdout.trim();
     if (!v) return null;
-    return path98.isAbsolute(v) ? v : path98.resolve(cwd, v);
+    return path99.isAbsolute(v) ? v : path99.resolve(cwd, v);
   } catch {
     return null;
   }
@@ -66986,7 +67294,7 @@ async function findEffectiveHooksDir(cwd) {
     const { stdout } = await execFileP2("git", ["rev-parse", "--git-path", "hooks"], { cwd });
     const v = stdout.trim();
     if (!v) return null;
-    return path98.isAbsolute(v) ? v : path98.resolve(cwd, v);
+    return path99.isAbsolute(v) ? v : path99.resolve(cwd, v);
   } catch {
     return null;
   }
@@ -66994,21 +67302,21 @@ async function findEffectiveHooksDir(cwd) {
 async function findHookInstallTarget(cwd) {
   const repoRoot = await findRepoRoot2(cwd);
   if (repoRoot === null) return null;
-  const gitPath = path98.join(repoRoot, ".git");
+  const gitPath = path99.join(repoRoot, ".git");
   try {
     if ((await nodeFs.stat(gitPath)).isFile()) {
-      return path98.join(repoRoot, ".claude", "hooks");
+      return path99.join(repoRoot, ".claude", "hooks");
     }
   } catch {
   }
   const common2 = await findGitCommonDir(cwd) ?? gitPath;
-  return path98.join(common2, "hooks");
+  return path99.join(common2, "hooks");
 }
 async function readHookTemplate2(name) {
-  const here = path98.dirname(fileURLToPath8(import.meta.url));
+  const here = path99.dirname(fileURLToPath8(import.meta.url));
   const candidates = [
-    path98.join(here, "..", "..", "..", "templates", "hooks", name),
-    path98.join(here, "..", "..", "templates", "hooks", name)
+    path99.join(here, "..", "..", "..", "templates", "hooks", name),
+    path99.join(here, "..", "..", "templates", "hooks", name)
   ];
   for (const candidate of candidates) {
     try {
@@ -67036,10 +67344,10 @@ async function listGlobalScope() {
 }
 async function readSelfPackage() {
   try {
-    const here = path98.dirname(fileURLToPath8(import.meta.url));
+    const here = path99.dirname(fileURLToPath8(import.meta.url));
     let dir = here;
     for (let i = 0; i < 6; i++) {
-      const pkg = path98.join(dir, "package.json");
+      const pkg = path99.join(dir, "package.json");
       if (existsSync12(pkg)) {
         const parsed = JSON.parse(await nodeFs.readFile(pkg, "utf-8"));
         return {
@@ -67047,7 +67355,7 @@ async function readSelfPackage() {
           enginesNode: parsed.engines?.node
         };
       }
-      dir = path98.dirname(dir);
+      dir = path99.dirname(dir);
     }
   } catch {
   }
@@ -67060,7 +67368,7 @@ async function resolveExecInProcess(cwd) {
   } catch {
   }
   try {
-    const raw = await nodeFs.readFile(path98.join(cwd, ".tiny-brain", "analysis.json"), "utf-8");
+    const raw = await nodeFs.readFile(path99.join(cwd, ".tiny-brain", "analysis.json"), "utf-8");
     const parsed = JSON.parse(raw);
     const pm = parsed.packageManager ?? "npm";
     switch (pm) {
@@ -67403,6 +67711,7 @@ __export(src_exports, {
   ConfigService: () => ConfigService,
   ConfigSetupService: () => ConfigSetupService,
   ConsoleLogger: () => ConsoleLogger,
+  ContainerNotFoundError: () => ContainerNotFoundError,
   CredentialStorageService: () => CredentialStorageService,
   DECIDED_STUB_KIND: () => DECIDED_STUB_KIND,
   DEFAULT_CODE_PIPELINE: () => DEFAULT_CODE_PIPELINE,
@@ -67465,6 +67774,7 @@ __export(src_exports, {
   PLACEHOLDER_SPIKE_QUESTION: () => PLACEHOLDER_SPIKE_QUESTION,
   PROGRESS_SCHEMA_VERSION: () => PROGRESS_SCHEMA_VERSION,
   ParentNotFoundError: () => ParentNotFoundError,
+  PerCommitStaticError: () => PerCommitStaticError,
   PersonaEnhancer: () => PersonaEnhancer,
   PersonaLearningService: () => PersonaLearningService,
   PersonaService: () => PersonaService,
@@ -67551,6 +67861,7 @@ __export(src_exports, {
   asImportLibraryPersona: () => asImportLibraryPersona,
   asShowCurrent: () => asShowCurrent,
   asSwitchPersona: () => asSwitchPersona,
+  assertPerCommitStatic: () => assertPerCommitStatic,
   assertStagedSetIsSubsetOf: () => assertStagedSetIsSubsetOf,
   atomicWriteText: () => atomicWriteText,
   attributeCommitsAcrossRefs: () => attributeCommitsAcrossRefs,
@@ -67566,6 +67877,7 @@ __export(src_exports, {
   buildTerminalTransitionMessage: () => buildTerminalTransitionMessage,
   calculateComplexityScore: () => calculateComplexityScore,
   calculateStructuralComplexity: () => calculateStructuralComplexity,
+  canonicalStepType: () => canonicalStepType,
   checkDevBinShim: () => checkDevBinShim,
   checkHookExec: () => checkHookExec,
   checkHookWiring: () => checkHookWiring,
@@ -67641,6 +67953,7 @@ __export(src_exports, {
   detectWorktreeInfoSync: () => detectWorktreeInfoSync,
   diagnoseHookWiring: () => diagnoseHookWiring,
   diffProgress: () => diffProgress,
+  emitBulkSupersedeForContainer: () => emitBulkSupersedeForContainer,
   emitTerminalTransitionCommit: () => emitTerminalTransitionCommit,
   enrichPlanTasks: () => enrichPlanTasks,
   ensureTinyBrainGitignoreEntries: () => ensureTinyBrainGitignoreEntries,
@@ -67668,6 +67981,7 @@ __export(src_exports, {
   extractTechnicalIndicators: () => extractTechnicalIndicators,
   extractTechnicalTerms: () => extractTechnicalTerms,
   findLatestQualityRunDir: () => findLatestQualityRunDir,
+  findNonStaticPerCommitStep: () => findNonStaticPerCommitStep,
   findProjectRoot: () => findProjectRoot,
   findRepoRoot: () => findRepoRoot,
   findWorktreeByBranch: () => findWorktreeByBranch,
@@ -67767,6 +68081,7 @@ __export(src_exports, {
   isPhaseComplete: () => isPhaseComplete,
   isPhaseInProgress: () => isPhaseInProgress,
   isPipelineStep: () => isPipelineStep,
+  isStaticAnalyserStep: () => isStaticAnalyserStep,
   isString: () => isString,
   isSyntheticEvent: () => isSyntheticEvent,
   isTaskComplete: () => isTaskComplete,
@@ -67878,6 +68193,7 @@ __export(src_exports, {
   repairHookWiring: () => repairHookWiring,
   repairJsonEscapes: () => repairJsonEscapes,
   repairUnrecordedCleanReviews: () => repairUnrecordedCleanReviews,
+  resolveContainerTasks: () => resolveContainerTasks,
   resolveFeatureFlags: () => resolveFeatureFlags,
   resolveLaunchRef: () => resolveLaunchRef,
   resolvePersistPath: () => resolvePersistPath,
@@ -67980,8 +68296,11 @@ var init_src = __esm({
     init_task_appender();
     init_set_manual_task_status();
     init_build_terminal_transition_commit();
+    init_bulk_supersede();
+    init_resolve_container_tasks();
     init_frontmatter_tasks();
     init_uuid_stamper();
+    init_uuidv7();
     init_resolve_task_uuid();
     init_commit_task_refs();
     init_task_slug_path();
@@ -68193,8 +68512,8 @@ var require_package = __commonJS({
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs79 = __require("fs");
-    var path100 = __require("path");
+    var fs80 = __require("fs");
+    var path101 = __require("path");
     var os6 = __require("os");
     var crypto4 = __require("crypto");
     var packageJson = require_package();
@@ -68332,7 +68651,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs79.existsSync(filepath)) {
+            if (fs80.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -68340,15 +68659,15 @@ var require_main = __commonJS({
           possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
         }
       } else {
-        possibleVaultPath = path100.resolve(process.cwd(), ".env.vault");
+        possibleVaultPath = path101.resolve(process.cwd(), ".env.vault");
       }
-      if (fs79.existsSync(possibleVaultPath)) {
+      if (fs80.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path100.join(os6.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path101.join(os6.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -68365,7 +68684,7 @@ var require_main = __commonJS({
       return { parsed };
     }
     function configDotenv(options) {
-      const dotenvPath = path100.resolve(process.cwd(), ".env");
+      const dotenvPath = path101.resolve(process.cwd(), ".env");
       let encoding = "utf8";
       let processEnv = process.env;
       if (options && options.processEnv != null) {
@@ -68393,13 +68712,13 @@ var require_main = __commonJS({
       }
       let lastError;
       const parsedAll = {};
-      for (const path101 of optionPaths) {
+      for (const path102 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs79.readFileSync(path101, { encoding }));
+          const parsed = DotenvModule.parse(fs80.readFileSync(path102, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
-            _debug(`Failed to load ${path101} ${e.message}`);
+            _debug(`Failed to load ${path102} ${e.message}`);
           }
           lastError = e;
         }
@@ -68412,7 +68731,7 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative4 = path100.relative(process.cwd(), filePath);
+            const relative4 = path101.relative(process.cwd(), filePath);
             shortPaths.push(relative4);
           } catch (e) {
             if (debug) {
@@ -68717,10 +69036,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path100) {
-  if (!path100)
+function getElementAtPath(obj, path101) {
+  if (!path101)
     return obj;
-  return path100.reduce((acc, key) => acc?.[key], obj);
+  return path101.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -69040,11 +69359,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path100, issues) {
+function prefixIssues(path101, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path100);
+    iss.path.unshift(path101);
     return iss;
   });
 }
@@ -73849,11 +74168,11 @@ var StdioServerTransport = class {
 // packages/tiny-brain-mcp/src/server.ts
 import { readFileSync as readFileSync6, appendFileSync, existsSync as existsSync14, mkdirSync as mkdirSync3 } from "fs";
 import { fileURLToPath as fileURLToPath9 } from "url";
-import { dirname as dirname19, join as join52 } from "path";
+import { dirname as dirname19, join as join53 } from "path";
 import { homedir as homedir6 } from "os";
 
 // packages/tiny-brain-mcp/src/core/mcp-server.ts
-import * as path99 from "path";
+import * as path100 from "path";
 import { existsSync as existsSync13, cpSync, readdirSync as readdirSync4, readFileSync as readFileSync5, writeFileSync, mkdirSync as mkdirSync2 } from "fs";
 import { execSync as execSync5 } from "child_process";
 
@@ -77363,7 +77682,7 @@ var MCPServer = class {
     }
     const logFileName = isDev ? "dev-debug.log" : "debug.log";
     this.logger = new FileLogger({
-      logFilePath: path99.join(resolvedDataDir, logFileName),
+      logFilePath: path100.join(resolvedDataDir, logFileName),
       logLevel,
       enabled: true
     });
@@ -77520,7 +77839,7 @@ var MCPServer = class {
   async initializeRepository() {
     try {
       const cwd = process.cwd();
-      const gitDir = path99.join(cwd, ".git");
+      const gitDir = path100.join(cwd, ".git");
       const { existsSync: existsSync15 } = await import("fs");
       if (!existsSync15(gitDir)) {
         this.logger.debug("Not in a git repository, skipping repo registration");
@@ -77640,7 +77959,7 @@ var MCPServer = class {
       this.logger.debug("CLAUDE_PLUGIN_ROOT not set, skipping bundled personas");
       return;
     }
-    const bundledPersonasDir = path99.join(pluginRoot, "personas");
+    const bundledPersonasDir = path100.join(pluginRoot, "personas");
     if (!existsSync13(bundledPersonasDir)) {
       this.logger.debug("No bundled personas directory found");
       return;
@@ -77650,9 +77969,9 @@ var MCPServer = class {
       const bundledPersonas = readdirSync4(bundledPersonasDir);
       for (const personaName of bundledPersonas) {
         if (personaName.startsWith(".")) continue;
-        const bundledPath = path99.join(bundledPersonasDir, personaName);
+        const bundledPath = path100.join(bundledPersonasDir, personaName);
         const localStorage = this.storage;
-        const localPath = path99.join(localStorage.personasDir, personaName);
+        const localPath = path100.join(localStorage.personasDir, personaName);
         if (existsSync13(bundledPath) && !existsSync13(localPath)) {
           this.logger.info(`Copying bundled persona '${personaName}' to local storage`);
           try {
@@ -77928,7 +78247,7 @@ var MCPServer = class {
     }
     try {
       const basePath = process.cwd();
-      const sessionsPath = path99.join(basePath, ".tiny-brain", "sessions.json");
+      const sessionsPath = path100.join(basePath, ".tiny-brain", "sessions.json");
       let sessions = {};
       try {
         const content = readFileSync5(sessionsPath, "utf-8");
@@ -77943,7 +78262,7 @@ var MCPServer = class {
         activePersona: personaId,
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       };
-      mkdirSync2(path99.dirname(sessionsPath), { recursive: true });
+      mkdirSync2(path100.dirname(sessionsPath), { recursive: true });
       writeFileSync(sessionsPath, JSON.stringify(sessions, null, 2), "utf-8");
       this.logger.debug(`Updated persona session: ${personaId} for TTY ${tty}`);
     } catch (err) {
@@ -77970,9 +78289,9 @@ function startupLog(message, data) {
   try {
     let dataDir = process.env.DATADIR || process.env.TINY_BRAIN_DATA_DIR || "~/.tiny-brain";
     if (dataDir.startsWith("~")) {
-      dataDir = join52(homedir6(), dataDir.slice(1));
+      dataDir = join53(homedir6(), dataDir.slice(1));
     }
-    const logPath = join52(dataDir, "debug.log");
+    const logPath = join53(dataDir, "debug.log");
     if (!existsSync14(dataDir)) {
       mkdirSync3(dataDir, { recursive: true });
     }
@@ -77987,7 +78306,7 @@ async function bootMcpServer() {
   startupLog("bootMcpServer() called");
   const __filename = fileURLToPath9(import.meta.url);
   const __dirname = dirname19(__filename);
-  const envPath = join52(__dirname, "../.env.local");
+  const envPath = join53(__dirname, "../.env.local");
   if (existsSync14(envPath)) {
     try {
       const { config: config2 } = await Promise.resolve().then(() => __toESM(require_main(), 1));
@@ -78003,7 +78322,7 @@ async function bootMcpServer() {
   }
   try {
     startupLog("Fetching package.json version...");
-    const packageJson = JSON.parse(readFileSync6(join52(__dirname, "../package.json"), "utf-8"));
+    const packageJson = JSON.parse(readFileSync6(join53(__dirname, "../package.json"), "utf-8"));
     const VERSION = packageJson.version;
     startupLog("Starting server", {
       pid: process.pid,
