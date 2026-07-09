@@ -32,7 +32,8 @@ expand it toward the shape below. Delete any section that doesn't apply.
 ## Features and Functionality
 
 [Each feature is created with `tb work add feature --prd <slug> <feature-slug> "<title>"`,
-which writes its own file under features/. Summarise them here.]
+which writes its own file under features/. Summarise them here. Keep each feature to **one
+worker run** and declare any ordering between them — see `docs/deliverability-rubric.md`.]
 
 ### [Feature Name]
 **File**: [features/feature-slug.md](features/feature-slug.md)

@@ -2,7 +2,7 @@
 name: spike
 version: 2.0.0
 description: Create a time-boxed spike — throwaway exploration to answer a concrete question. Use when the user wants to try an approach quickly to see if it's viable, before committing to a PRD or fix. Triggers on phrases like "spike", "let me try", "is X viable", "can we do Y", "prototype this".
-allowed-tools: Read, Edit, Bash(tiny-brain:*), Bash(tb:*), Bash(git checkout:*), Bash(git worktree:*), Bash(git rev-parse:*), Bash(basename:*), Bash(dirname:*), AskUserQuestion
+allowed-tools: Read, Edit, Bash(tiny-brain:*), Bash(tb:*), Bash(git add:*), Bash(git commit:*), Bash(git rev-parse:*), Bash(basename:*), Bash(dirname:*), AskUserQuestion
 ---
 
 # Spike Creation Skill
@@ -15,7 +15,7 @@ type one. Humans refer to a spike by its **slug** and to a task by its
 **description**, which the tooling resolves to the UUID internally. So **create
 the spike doc and its tasks through `tb work add`**, then Edit in the
 spike-specific details the CLI can't know (the real question, criteria, timebox,
-worktree link, and `pipelineType: spike`).
+and `pipelineType: spike`).
 
 ## When to Use
 
@@ -37,11 +37,11 @@ A spike's value is the **answer**, not the code. The code is throwaway. A spike 
 Spike docs live under `docs/spikes/` (one file per spike, flat layout — no enclosing directory):
 
 ```
-docs/spikes/multi-provider-connectivity.md         # the spec, versioned
-.git/tiny-brain/spikes/multi-provider-connectivity.json  # progress, per-clone
+docs/spikes/multi-provider-connectivity.md         # the spec + source of truth, versioned
+.git/tiny-brain/spikes/multi-provider-connectivity.json  # write-only output of pipeline advances; never read (progress is projected on read from the .md)
 ```
 
-The skill creates ONLY the markdown doc (via `tb work add spike`). Progress JSON is materialised by `tb task sync` in the final step.
+The skill creates ONLY the markdown doc (via `tb work add spike`). The markdown is the source of truth; the per-spike progress snapshot is **projected on read** (by the projector / dashboard re-reading the markdown), not written to disk by the skill.
 
 ## Workflow
 
@@ -93,76 +93,36 @@ Default: `2h` for narrow questions, `4h` for broader ones, `1d` for spikes that 
 
 Use `AskUserQuestion` with three options (e.g. "2h", "4h", "1d") plus "Other" for custom values. The timebox is a hard cap — when it elapses, the spike transitions to a terminal status regardless of completeness. `abandoned` is a valid and honourable outcome.
 
-### Step 5: Worktree or Branch-Only? (AskUserQuestion)
-
-Use `AskUserQuestion` with two options:
-
-- **"Worktree (Recommended)"** — Creates a sibling checkout at `../<repo-basename>-spike-<id>`. Lets the user keep their main checkout untouched while the spike runs in parallel. Best for spikes that touch many files or run a dev server.
-- **"Branch only"** — Just creates the spike branch. Best for one-file probes or when the user explicitly prefers single-tree workflow.
-
-Default recommendation: worktree. The launch snippet (Step 9) makes worktree mode one-click.
-
-### Step 6: Slug the Spike ID
+### Step 5: Slug the Spike ID
 
 Derive a kebab-case id from the question. Strip articles, stopwords, and punctuation:
 
 - "Can we drive Codex CLI through the worker abstraction?" → `codex-cli-worker-abstraction`
 - "Does the SSE client recover from network drops?" → `sse-client-network-drop-recovery`
 
-Then check three things in order:
+Then check two things in order:
 
 1. **Doc collision:** if `docs/spikes/{id}.md` already exists, append today's ISO date (`{id}-YYYY-MM-DD`). If THAT also collides, append a numeric suffix (`{id}-YYYY-MM-DD-2`, `-3`, …) until you find a free slot.
 2. **Branch collision:** if the branch `spike/{id}` already exists locally (`git rev-parse --verify spike/{id}` succeeds), STOP. Do not auto-suffix — a pre-existing branch likely means a prior aborted spike. Surface the situation to the user and let them decide: delete the old branch, reuse it, or pick a different id.
-3. **Worktree path collision:** if the computed worktree path (Step 8) already exists on disk, STOP for the same reason — the prior spike's worktree is still around.
 
 Confirm the chosen id with the user before writing.
 
-### Step 7: Create the Branch (and Worktree)
+### Step 6: Write the Doc + Tasks (no worktree)
 
-The branch — and, in worktree mode, the worktree — must exist **before** the doc is written, so that the doc lands in the working tree the user will actually `cd` into. Writing the doc first and then trying to `git worktree add` the same branch fails (the branch would already be checked out in the current tree), and even if it didn't, the doc would be stranded in the original tree, invisible to the worktree.
+Filing a spike creates its durable artifacts — the doc and the `spike/{id}`
+branch — and **nothing else**. No worktree, no `npm install`, no bootstrap cost:
+filing-for-later is the supported flow, not a heavy commitment. The transient
+working surface is provisioned **later, on demand**, by `tb spike launch {id}`
+(or the dashboard **Launch** button).
 
-**Branch-only mode:**
-
-```bash
-git checkout -b spike/{id}
-```
-
-Capture the target dir for Step 8:
+Author the doc in your **current working tree** (no branch switch, no worktree):
 
 ```bash
-TARGET_DIR=$(git rev-parse --show-toplevel)
+tb work add spike {id} "Spike Title"
 ```
 
-**Worktree mode:** create the branch and the worktree in one shot from the current branch, *without* switching the current tree. Place the worktree next to the **main repo**, not next to the current working directory — the skill may be invoked from inside another worktree, and a naive `git rev-parse --show-toplevel` would return that nested worktree's path instead of the canonical repo root. Use `--git-common-dir` to find the shared `.git` and derive the main repo from its parent:
-
-```bash
-# Resolve the canonical main-repo location regardless of which worktree
-# the skill is invoked from. --git-common-dir returns the shared .git
-# directory (the same one for every worktree of this clone); its parent
-# is the main checkout.
-MAIN_REPO=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-REPO_BASENAME=$(basename "$MAIN_REPO")
-WORKTREE_PATH="${MAIN_REPO}/../${REPO_BASENAME}-spike-{id}"
-git worktree add -b spike/{id} "${WORKTREE_PATH}"
-TARGET_DIR="${WORKTREE_PATH}"
-```
-
-`git worktree add -b` creates the branch AND the worktree atomically — no second checkout, no chance of the branch being claimed by two trees. The resulting worktree is always a sibling of the main repo, whether the skill was invoked from main or from another worktree.
-
-If either command fails because the branch already exists, surface the git error verbatim — do not auto-rename. Step 6's branch-collision check should have caught this; if it didn't, the user has just decided to ignore the warning. Either way, ask the user how to proceed.
-
-### Step 8: Create the Spike Doc and Tasks
-
-Create the doc inside `$TARGET_DIR` from Step 7 — the working tree that will host
-the spike work — so it lands in the tree the user will `cd` into. Run `tb work
-add` from there so the repo root resolves to that tree:
-
-```bash
-cd "${TARGET_DIR}" && tb work add spike {id} "Spike Title"
-```
-
-This writes `docs/spikes/{id}.md` with the frontmatter filled in — `id`, the
-generated `uuid`, `title`, `status: not_started`, `created` (ISO timestamp),
+`tb work add` writes `docs/spikes/{id}.md` with the frontmatter filled in — `id`,
+the generated `uuid`, `title`, `status: not_started`, `created` (ISO timestamp),
 `outcome: null`, and **placeholder** `question` / `acceptanceCriteria` / `timebox`
 values. The CLI owns `id` / `uuid` / `created`; never type them.
 
@@ -172,16 +132,19 @@ gathered in Steps 1–4:
 - `question` — the one-sentence question from Step 1
 - `acceptanceCriteria` — the list from Step 2
 - `timebox` — the value from Step 4
-- `worktree: { name, branch }` — add this block ONLY if Step 5 was "Worktree"
 
-Leave `status: not_started` as written — `tb task sync` (Step 9) derives the
+**Do NOT add a `worktree:` block.** Filing provisions no worktree; the doc points
+at none. `tb spike launch` stamps the worktree frontmatter (its name + branch)
+when it later creates one, and `tb spike park` clears it again.
+
+Leave `status: not_started` as written — `tb task sync` (Step 8) derives the
 container status from the child tasks; setting `in_progress` when no tasks have
 started would diverge from what sync writes back.
 
 Add each task from Step 3 with `tb work add task --spike`:
 
 ```bash
-cd "${TARGET_DIR}" && tb work add task --spike {id} "Probe the approach"
+tb work add task --spike {id} "Probe the approach"
 ```
 
 Each task block gets its own generated `uuid:`. The first `tb work add task`
@@ -204,37 +167,56 @@ pipelineType: spike
 Without it the task runs the full TDD pipeline (red phase and all) instead of the
 minimal spike pipeline.
 
-### Step 9: Sync Progress
+### Step 7: Commit the Doc
 
-Run `task sync` from inside `$TARGET_DIR` so that git context resolves to the spike's worktree (the progress JSON lives under the shared `.git/tiny-brain/`, so it's visible from any worktree of this clone, but `task sync` reads the doc by relative path):
+The doc must be **committed and present in the working tree** so the dashboard and
+`tb work` — which enumerate `docs/spikes/` from the checkout, not from branches —
+can see the filed spike immediately.
+
+Use a `chore(spike):` prefix (the same prefix graduation uses): it requires **no**
+`Spike:`/`Task:` tracking headers and does **not** trigger the spike pipeline —
+filing the doc is scaffolding, not a spike task's green phase. Scope the commit to
+the doc path so any unrelated staged work the operator has is left untouched:
 
 ```bash
-cd "${TARGET_DIR}" && tiny-brain task sync docs/spikes/{id}.md
+git add docs/spikes/{id}.md
+git commit docs/spikes/{id}.md -m "chore(spike): file {id}"
 ```
 
-This materialises the per-spike progress JSON at `.git/tiny-brain/spikes/{id}.json`. The dashboard picks it up immediately via its file watcher.
+**Create no branch and no worktree.** Filing is doc-only. `tb spike launch {id}`
+creates the `spike/{id}` branch AND its worktree on demand when work actually
+starts (from the doc commit on your current branch); `tb spike park {id}` removes
+the worktree again. Nothing but the committed doc exists until then.
 
-### Step 10: Output Summary
+### Step 8: Validate the doc
 
-Print this summary to the user (substitute `{id}`, dashboard URL, and worktree-path):
+Validate the doc against the schema. It is in your working tree, so pass its plain
+path:
+
+```bash
+tiny-brain task sync docs/spikes/{id}.md
+```
+
+For a spike doc, `task sync` is **read-only** (the `progress-json-as-event-projection` F6 invariant): it validates the spike frontmatter against the schema and, on a terminal status, emits the graduate-required nudge — it does **not** write `.git/tiny-brain/spikes/{id}.json`. The per-spike progress is **projected on read** by the projector / dashboard, which re-reads the markdown. A valid sync prints a confirmation naming the spike; **no JSON file appearing is correct, not a failure.** (If the frontmatter is invalid, `task sync` exits non-zero with a structured error.)
+
+### Step 9: Output Summary
+
+Print this summary to the user (substitute `{id}` and the dashboard URL):
 
 ```
-🧪 Spike created: {id}
+🧪 Spike filed (doc-only): {id}
 📊 Dashboard: http://localhost:8765/spikes/{id}
 ```
 
-If the user chose worktree, append the launch snippet on a separate line so it's one-click copyable:
+The spike has a branch + doc but **no worktree yet**. Tell the operator how to
+provision one when they're ready to work — the dashboard **Launch** button, or:
 
 ```
-🚀 Launch in worktree:
-    cd ../{repo-basename}-spike-{id} && claude
+🚀 Launch when ready:  tb spike launch {id}
 ```
 
-If `package.json` exists in the repo root, also append:
-
-```
-💡 First run in the worktree: npm install
-```
+`tb spike launch` creates the worktree from the existing branch and prints its
+own `cd … && claude` snippet. Park it again anytime with `tb spike park {id}`.
 
 ## Spike Pipeline (Reference)
 
@@ -286,7 +268,7 @@ When the user reaches a conclusion (answer to the question), they MUST:
    - `status: validated` (or `invalidated` / `abandoned`)
    - `outcome: true` (the flag declares the Outcome section is filled)
 
-   ⚠️ **Cross-field rule:** a terminal status (`validated`/`invalidated`/`abandoned`) requires `outcome: true`; a non-terminal status (`not_started`/`in_progress`) requires `outcome: null`. The schema enforces this; flipping only one of the two causes `task sync` to refuse the write. The first user of this surface (the `headless-claude-worker-probe` spike) hit a silent skip because they flipped `status` without `outcome`; the CLI now exits non-zero with a structured error.
+   ⚠️ **Cross-field rule:** a terminal status (`validated`/`invalidated`/`abandoned`) requires `outcome: true`; a non-terminal status (`not_started`/`in_progress`) requires `outcome: null`. The schema enforces this; flipping only one of the two makes `task sync` reject the doc with a structured error (sync validates spike frontmatter; it never writes a spike progress JSON). The first user of this surface (the `headless-claude-worker-probe` spike) hit a silent skip because they flipped `status` without `outcome`; the CLI now exits non-zero with a structured error.
 
 3. Run `tiny-brain task sync docs/spikes/{id}.md`. The schema rejects a terminal status without `outcome: true` (and vice versa — open status with `outcome: true`). The Outcome MARKDOWN SECTION is a convention the schema does NOT enforce — the flag is the only contract. Discipline around actually filling the section is on the author; reviewers should spot-check during the spike-review gate.
 
@@ -305,7 +287,7 @@ When the user reaches a conclusion (answer to the question), they MUST:
 
 `validated` and `invalidated` are equally successful outcomes — a "no, this approach doesn't work" answer is exactly what spikes are for. Only `abandoned` (ran out of timebox without a clear answer) is the ambiguous case.
 
-**Don't auto-remove the spike worktree.** The `spike-evidence/` directory and the spike branch's intermediate commits are the audit trail for the outcome — keep them rescue-able. If the user explicitly asks to clean up later, `git worktree remove ../{repo-basename}-spike-{id}` from the main repo does it; the branch + history remain in the clone.
+**Don't auto-remove the spike worktree.** The `spike-evidence/` directory and the spike branch's intermediate commits are the audit trail for the outcome — keep them rescue-able. If the user explicitly asks to clean up later, `tb worktree remove spike/{id}` (or `git worktree remove .claude/worktrees/spike/{id}`) does it; the branch + history remain in the clone.
 
 ## Quality Checklist
 
@@ -314,12 +296,11 @@ Before declaring a spike fully scaffolded, verify:
 - [ ] The question fits in one sentence and is answerable yes/no.
 - [ ] At least one acceptance criterion is observable (not vague).
 - [ ] All tasks have `pipelineType: spike` Edited in (on the line after `status: not_started` in each `### N.` task block).
-- [ ] The branch `spike/{id}` exists.
-- [ ] If worktree mode: the worktree path exists and `git worktree list` shows it.
-- [ ] `docs/spikes/{id}.md` exists and validates against the spike schema (auto-checked by `tb task sync`).
-- [ ] `.git/tiny-brain/spikes/{id}.json` exists after `tb task sync` (confirms progress was materialised).
-- [ ] Doc `status` and synced JSON `status` agree (both `not_started` at creation time).
-- [ ] The output summary names the spike id, dashboard URL, and (if worktree) the launch snippet.
+- [ ] `docs/spikes/{id}.md` is committed and present in the working tree (so the dashboard / `tb work` see it).
+- [ ] **No branch and no worktree** were created — filing is doc-only. `git rev-parse --verify spike/{id}` fails and `git worktree list` shows no `spike/{id}` entry. (`tb spike launch` creates both later.)
+- [ ] The doc validates against the spike schema (`tb task sync docs/spikes/{id}.md` exits 0 and prints the validated-spike confirmation).
+- [ ] No `.git/tiny-brain/spikes/{id}.json` is expected from `tb task sync` — sync is read-only. (The file may later appear as a write-only output of pipeline advances, but nothing reads it; progress is projected on read from the markdown.)
+- [ ] The output summary names the spike id, dashboard URL, and the `tb spike launch {id}` pointer (no cd-into-worktree snippet — there is no worktree yet).
 
 ## Template
 
@@ -342,22 +323,17 @@ Claude:
    - Wire Codex into worker dispatch
    - Compare event streams across providers
 4. Propose timebox (AskUserQuestion): "4h"
-5. Worktree? (AskUserQuestion): "Worktree (Recommended)"
-6. Slug id: codex-cli-worker-abstraction
-7. MAIN_REPO=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-   REPO_BASENAME=$(basename "$MAIN_REPO")
-   WORKTREE_PATH="${MAIN_REPO}/../${REPO_BASENAME}-spike-codex-cli-worker-abstraction"
-   git worktree add -b spike/codex-cli-worker-abstraction "${WORKTREE_PATH}"
-   TARGET_DIR="${WORKTREE_PATH}"
-8. cd "${TARGET_DIR}" && tb work add spike codex-cli-worker-abstraction "Codex CLI worker abstraction"
-   Edit the doc: real question + acceptanceCriteria + timebox + worktree block
-   cd "${TARGET_DIR}" && tb work add task --spike codex-cli-worker-abstraction "Stub provider trait"
+5. Slug id: codex-cli-worker-abstraction
+6. tb work add spike codex-cli-worker-abstraction "Codex CLI worker abstraction"
+   Edit the doc: real question + acceptanceCriteria + timebox (NO worktree block)
+   tb work add task --spike codex-cli-worker-abstraction "Stub provider trait"
    Edit each task block to add pipelineType: spike
-9. cd "${TARGET_DIR}" && tiny-brain task sync docs/spikes/codex-cli-worker-abstraction.md
-10. Output:
-    🧪 Spike created: codex-cli-worker-abstraction
+7. git add docs/spikes/codex-cli-worker-abstraction.md
+   git commit docs/spikes/codex-cli-worker-abstraction.md -m "chore(spike): file codex-cli-worker-abstraction"
+   # no branch, no worktree — tb spike launch creates them later
+8. tiny-brain task sync docs/spikes/codex-cli-worker-abstraction.md
+9. Output:
+    🧪 Spike filed (doc-only): codex-cli-worker-abstraction
     📊 Dashboard: http://localhost:8765/spikes/codex-cli-worker-abstraction
-    🚀 Launch in worktree:
-        cd ../tiny-brain-local-spike-codex-cli-worker-abstraction && claude
-    💡 First run in the worktree: npm install
+    🚀 Launch when ready:  tb spike launch codex-cli-worker-abstraction
 ```

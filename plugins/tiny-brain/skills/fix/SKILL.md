@@ -414,8 +414,23 @@ tiny-brain task sync docs/fixes/{fix-id}.md
 | `fix` | Array of actions taken to fix the issue |
 | `filesModified` | Array of file paths that were changed |
 
+## Deliverability
+
+A fix is a single deliverable unit — one worker should carry it in one run. Apply the
+canonical rubric in `docs/deliverability-rubric.md`; read that file rather than a summary
+here (it is the single source of truth). A fix most often trips on scope — if it needs
+several independent slices it's a PRD, not a fix — or on an undeclared new dependency /
+environment requirement; check those areas against the rubric.
+
+### Closing self-check
+
+Before you finish, re-read the fix against every rule in `docs/deliverability-rubric.md`
+and confirm it satisfies each. The `deliverability-reviewer` agent can review a fix at
+design altitude (`--fix <slug>`).
+
 ## Quality Checklist
 
+- [ ] Fix passes the deliverability rubric (`docs/deliverability-rubric.md`) — see the Deliverability self-check
 - [ ] Fix and tasks created via `tb work add` (no hand-written `id:` / `uuid:`)
 - [ ] Root cause is clearly documented
 - [ ] Reproduction steps are included

@@ -2,7 +2,7 @@
 name: feature
 version: 2.0.0
 description: Add a feature to an existing PRD. Use when user wants to add functionality to an existing product plan.
-allowed-tools: Read, Edit, Bash(tiny-brain:*), Bash(tb:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Edit, Task, Bash(tiny-brain:*), Bash(tb:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # Feature Creation Skill
@@ -159,6 +159,27 @@ external edits: `tiny-brain task sync docs/prd/<prd-slug>/features/<feature-slug
 Tell the user:
 > "I've added feature '{title}' to PRD '<prd-slug>' with {N} tasks."
 
+### Step 9: Run the deliverability review (enforcement)
+
+After the feature is created and committed, **always** dispatch the
+`deliverability-reviewer` agent — this is the enforcement pass for the Deliverability
+section below, and it runs every time.
+
+Use the Task tool with `subagent_type: deliverability-reviewer`, naming the PRD and
+scoping to the new feature:
+
+```
+Review the deliverability of:
+- PRD: <prd-slug>
+- Feature: <feature-slug>
+```
+
+Surface the result to the user: report the `verdict` and, when it is `needs-rework`, the
+findings and scorecard so the feature can be reshaped before a worker picks it up. The
+`Feature:` scope focuses the emphasis on the new feature while the agent still reads the
+surrounding PRD for cross-feature seams and collisions. The agent is report-only — it
+never edits the feature.
+
 ## Commit headers (for the implementation work later)
 
 A commit that implements task work carries the task description in its header:
@@ -180,8 +201,24 @@ headers in one commit are all tracked against that SHA. Use the **exact** task
 description — the hook matches by equality (it only trims whitespace and
 tolerates escaped backticks), so a reworded header fails to resolve.
 
+## Deliverability
+
+Shape this feature so a **single worker can deliver it in one run**, and apply the
+canonical rubric in `docs/deliverability-rubric.md`. Read that file — it is the single
+source of truth, so this skill points at it rather than restating its rules. A single
+feature most often trips on sizing, an undeclared seam to a sibling feature, an
+undeclared environment requirement, or missing acceptance — check those areas against the
+rubric specifically.
+
+### Closing self-check
+
+Before you finish, re-read the feature against every rule in
+`docs/deliverability-rubric.md` and confirm it satisfies each. The
+`deliverability-reviewer` agent enforces the same rubric at design altitude.
+
 ## Quality Checklist
 
+- [ ] Feature passes the deliverability rubric (`docs/deliverability-rubric.md`) — see the Deliverability self-check
 - [ ] Feature and tasks created via `tb work add` (no hand-written `id:` / `uuid:` / `number:`)
 - [ ] Feature slug is unique within the PRD
 - [ ] Acceptance criteria are testable (use checkboxes)

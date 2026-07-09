@@ -46,6 +46,14 @@ shows the target shape. Delete any section that doesn't apply.
 - `path/to/affected/file.ts`
 - `path/to/another/file.ts`
 
+## Deliverability
+
+[This fix should be **one worker run**. Declare what affects delivery — full rules in
+`docs/deliverability-rubric.md`.]
+
+- **Single-run fit:** [one bounded fix? If it needs several independent slices, it's a PRD, not a fix.]
+- **Environment requirements:** [new dependencies, network, external services, Docker, global tools — blank if none.]
+
 ## Test Plan
 
 ### 🔒 Regression Tests (must pass unchanged)

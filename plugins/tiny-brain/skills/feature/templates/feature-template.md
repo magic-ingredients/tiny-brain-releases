@@ -27,6 +27,16 @@ file exists. Delete any section that doesn't apply.
 - [ ] Criterion 1: [Specific requirement]
 - [ ] Criterion 2: [Specific requirement]
 
+## Deliverability
+
+[This feature should be **one worker run**. Declare what affects delivery — full rules in
+`docs/deliverability-rubric.md`.]
+
+- **Single-run fit:** [one worker run? If not, how it splits — see `docs/deliverability-rubric.md` for sizing.]
+- **Environment requirements:** [new dependencies, network, external services, Docker, global tools — blank if none.]
+
+[Cross-feature seams and ordering go under **Dependencies** below.]
+
 ## Tasks
 
 [Tasks are created via `tb work add task` — one per behaviour, full TDD cycle

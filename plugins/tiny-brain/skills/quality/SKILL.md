@@ -73,13 +73,20 @@ Run discovery directly in the main conversation:
    ```
 4. Separate test files (matching `*.{test,spec}.{ts,tsx,js,jsx}` or `__tests__/` in the path) from source files
 5. Read `.tiny-brain/analysis.json` for tech context (languages, frameworks)
-6. Generate runId: `YYYY-MM-DDTHH-mm` format (e.g., `2026-02-10T18-03`)
-7. Create run directory: `.tiny-brain/quality/runs/YYYY-MM-DD/HH-mm/`
-8. Write `{runDir}/files.txt` using `&&` chaining (zsh does not support `{ }` command groups):
+6. Start the quality run — this creates the run directory under the
+   operational-state root (`<git-common-dir>/tiny-brain/quality/runs/`) **and**
+   marks it the active run, so the analyzer and agent producers write into this
+   run rather than the last completed one. Do NOT `mkdir` the run dir by hand:
+   ```bash
+   tiny-brain _quality-start-run
+   ```
+   It prints `{"runId":"YYYY-MM-DDTHH-mm","runDir":"<path>"}`. Use that `runId`
+   and `runDir` for every step below. (Pass `--run-id <id>` to choose the id.)
+7. Write `{runDir}/files.txt` using `&&` chaining (zsh does not support `{ }` command groups):
    ```bash
    find . -type f ... | grep -v test_pattern > {runDir}/files.txt && echo "---TESTS---" >> {runDir}/files.txt && find . -type f ... | grep test_pattern >> {runDir}/files.txt
    ```
-9. Write `{runDir}/metadata.json` with the current commit SHA (anchor for future incremental runs):
+8. Write `{runDir}/metadata.json` with the current commit SHA (anchor for future incremental runs):
    ```bash
    echo '{"commitSha":"'$(git rev-parse HEAD)'","timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'","baseRunId":null,"filesAnalyzed":'${N}',"totalFiles":'${TOTAL}'}' > {runDir}/metadata.json
    ```
@@ -89,7 +96,7 @@ Run discovery directly in the main conversation:
 Analyzing repository...
   Found {N} source files, {M} test files
   Pipeline: {K} analyzer steps, {J} agent steps
-  Run directory: .tiny-brain/quality/runs/YYYY-MM-DD/HH-mm/
+  Run directory: {runDir}
 ```
 
 ### Phase 1.5: Incremental Detection (optional)
@@ -378,7 +385,7 @@ Compares two quality runs to show improvement or regression.
 
 ## Persistence
 
-Run directory: `.tiny-brain/quality/runs/YYYY-MM-DD/HH-mm/`
+Run directory (operational-state root): `<git-common-dir>/tiny-brain/quality/runs/YYYY-MM-DD/HH-mm/` — in a normal checkout that is `.git/tiny-brain/quality/runs/...`. Created and marked active by `tiny-brain _quality-start-run`; producers and the dashboard all resolve this same root.
 
 Intermediate files (in run directory):
 - `analysers/` - Raw per-analyzer output files (e.g., `{analyser-id}.json`)
@@ -402,7 +409,7 @@ Claude:
    - Run: tiny-brain config preferences get qualityPipeline
    - Partition steps by step.analyzer field into analyzer steps and agent steps
    - "Found 87 source files, 34 test files"
-   - Generate runId, create run directory, write files.txt
+   - Run `tiny-brain _quality-start-run` to create + activate the run, then write files.txt into its runDir
 3. Launch ALL in a single message:
    - For each analyzer step: Bash: tiny-brain _run-analyser {step.type} --quality
    - For each agent step: Task: {step.agent} (background)

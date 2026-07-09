@@ -14,18 +14,19 @@ AI-powered development workflows with TDD enforcement, planning, and quality tra
 
 ## What's Included
 
-### Skills (6)
+### Skills (7)
 
 | Skill | Command | Description |
 |-------|---------|-------------|
 | Plan | `/plan` | Create Product Requirements Documents with features and tasks |
 | Feature | `/feature` | Add features to an existing PRD |
 | Fix | `/fix` | Document and track bug fixes with TDD workflow |
+| Plan Review | `/plan-review` | Review a PRD or fix for worker-deliverability against the rubric |
 | ADR | `/adr` | Create Architecture Decision Records |
 | Quality | `/quality` | Run comprehensive code quality analysis |
 | Install | `/install` | Install a review capability into the repo's pipeline |
 
-### Agents (10)
+### Agents (11)
 
 Wired into the default review pipeline:
 
@@ -51,6 +52,12 @@ Available to add to your pipeline (not enabled by default — wire in via the da
 |-------|-------------|
 | `tiny-brain:dependency-audit-reviewer` | Runs the project's audit tool, reports vulnerabilities + remediation |
 | `tiny-brain:mutation-reviewer` | Mutation testing via Stryker; reports surviving mutants and test gaps |
+
+Invoked by the planning skills (design-altitude, report-only — not a commit-pipeline step):
+
+| Agent | Description |
+|-------|-------------|
+| `tiny-brain:deliverability-reviewer` | Judges a PRD/fix for worker-deliverability against `docs/deliverability-rubric.md` |
 
 ### MCP Tools
 

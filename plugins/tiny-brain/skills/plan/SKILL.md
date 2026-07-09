@@ -2,7 +2,7 @@
 name: plan
 version: 2.0.0
 description: Create a new PRD (Product Requirements Document). Use when user wants to plan a new feature, product, or initiative.
-allowed-tools: Read, Edit, Bash(tiny-brain:*), Bash(tb:*), Bash(git config:*), Bash(git add:*), Bash(git commit:*)
+allowed-tools: Read, Edit, Task, Bash(tiny-brain:*), Bash(tb:*), Bash(git config:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # PRD Creation Skill
@@ -137,6 +137,25 @@ Tell the user:
 
 Offer to add more features using the `/feature` skill.
 
+### Step 8: Run the deliverability review (enforcement)
+
+After the PRD is created and committed, **always** dispatch the `deliverability-reviewer`
+agent to check the breakdown against the rubric — this is the enforcement pass for the
+Deliverability section below, and it runs every time, not only when you remember.
+
+Use the Task tool with `subagent_type: deliverability-reviewer` and a prompt naming the
+PRD:
+
+```
+Review the deliverability of:
+- PRD: <prd-slug>
+```
+
+Surface the result to the user: report the `verdict` (`deliverable` / `needs-rework` /
+`not-reviewable`) and, when it is `needs-rework`, the findings and per-feature scorecard so
+the author can reshape features before any worker is dispatched. The agent is report-only —
+it never edits the PRD; you and the user decide what to change.
+
 ## Commit headers (for the implementation work later)
 
 When work on a task is committed, the commit carries:
@@ -158,9 +177,25 @@ headers in one commit are all tracked against that SHA. Use the **exact** task
 description — the hook matches by equality (it only trims whitespace and
 tolerates escaped backticks), so a reworded header fails to resolve.
 
+## Deliverability
+
+A PRD is only as good as its workers can deliver. As you break the initiative into
+features and tasks, shape each so a **single worker can carry it in one run**, and apply
+the canonical rubric in `docs/deliverability-rubric.md`. Read that file — it is the single
+source of truth for what "deliverable" means, so this skill points at it rather than
+restating its rules (a copy here would drift).
+
+### Closing self-check
+
+Before you finalize the PRD, re-read your feature breakdown against every rule in
+`docs/deliverability-rubric.md` and confirm each feature satisfies it. The
+`deliverability-reviewer` agent enforces the same rubric at design altitude — authoring to
+it up front means fewer round-trips.
+
 ## Quality Checklist
 
 Before finalizing:
+- [ ] Feature breakdown passes the deliverability rubric (`docs/deliverability-rubric.md`) — see the Deliverability self-check above
 - [ ] PRD, features, and tasks all created via `tb work add` (no hand-written `id:` / `uuid:`)
 - [ ] Slug is unique and in kebab-case
 - [ ] Purpose clearly states the problem

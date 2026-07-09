@@ -111,7 +111,23 @@ Look at the implementation through the lens of the tests:
 - Did the implementation stay within the bounds of what the tests specify?
 - Are there any "bonus features" that no test exercises?
 
-### Step 6: Structure Your Output
+### Step 6: Check Architectural Principles
+
+Read `ARCHITECTURE.md` at the repo root (use the `Read` tool). If it is absent, look
+for architectural statements in `CLAUDE.md`. **If NEITHER exists, skip this step
+entirely — do NOT invent principles.**
+
+When principles ARE stated, evaluate the changed files against the principles that
+document names (they vary per project — e.g. separation of concerns, purity /
+immutability, dependency direction, single responsibility). For each violation, add a
+suggestion with `category: "architecture"`, naming the specific breached principle and
+why it matters in `rationale`, the remediation in `suggestion`, and the proving snippet
+in `description`.
+
+This lens is **additive**: it never relaxes the TDD-discipline checks above, and when
+no principles source exists it changes nothing about your review.
+
+### Step 7: Structure Your Output
 
 Return your analysis as structured JSON. Be specific — include file paths, line numbers, and code evidence.
 
@@ -126,7 +142,7 @@ Return ONLY this JSON structure (no markdown wrapping, no explanation outside th
   "suggestions": [
     {
       "priority": "high | medium | low",
-      "category": "test-quality | over-engineering | naming | error-handling | type-safety | simplification | dead-code | missing-edge-case",
+      "category": "test-quality | over-engineering | naming | error-handling | type-safety | simplification | dead-code | missing-edge-case | architecture",
       "file": "relative/path/to/file.ts",
       "line": 42,
       "description": "Clear description of the issue",

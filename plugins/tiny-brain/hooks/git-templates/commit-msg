@@ -519,6 +519,15 @@ if [ -n "$TB_AVAILABLE" ]; then
   $EXEC tiny-brain stamp-task-uuid "$COMMIT_MSG_FILE" 2>/dev/null || true
 fi
 
+# Stamp Worker:/Worker-Type:/Worker-Run: provenance trailers (ADR-0026) on a
+# run's commits, keyed on TB_RUN_ID → the run record (worker name + adapter +
+# runId). Only runs when TB_RUN_ID is set (a worker run), so ordinary human
+# commits are untouched. Best-effort: it NEVER blocks the commit.
+if [ -n "$TB_AVAILABLE" ] && [ -n "$TB_RUN_ID" ]; then
+  # shellcheck disable=SC2086
+  $EXEC tiny-brain stamp-worker-trailer "$COMMIT_MSG_FILE" 2>/dev/null || true
+fi
+
 # For test: commits, skip test execution (they should fail - TDD red phase)
 if echo "$FIRST_LINE" | grep -qE "^test(\(.+\))?:"; then
   echo "   ⏭ Tests (TDD RED phase)"

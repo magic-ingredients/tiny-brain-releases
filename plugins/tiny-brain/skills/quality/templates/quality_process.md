@@ -43,7 +43,7 @@ Files within a run directory:
 |------|--------|---------|
 | `files.txt` | Phase 1 (Discovery) | File list for agents (source + test files) |
 | `metadata.json` | Phase 1 (Discovery) | Run metadata (commitSha, baseRunId, file counts) |
-| `analysers/` | MCP run-analysers | Raw per-analyzer output files (e.g., `eslint-0.json`, `typescript-0.txt`) |
+| `analysers/` | MCP run-analysers | Raw per-analyzer output, each in a `<id>-<n>/` readback subdir (e.g., `eslint-0/eslint.json`, `typescript-0/tsc.txt`, `dependency-audit-0/audit.json`) |
 | `analysis.json` | MCP run-analysers | Merged/normalized analyzer issues |
 | `agents/` | Specialist agents | Agent findings subdirectory |
 | `agents/security-quality-reviewer.json` | security-quality-reviewer agent | Security findings |

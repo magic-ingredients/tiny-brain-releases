@@ -191,6 +191,13 @@ If the pipeline outputs a refactoring reminder or no system-reminder, your work 
 
 ## Enhanced Finding Requirements
 
+> **Worth-doing recommendations (required in `--quality` mode):** beyond per-issue
+> findings, your output MUST include a top-level `structuredRecommendations` array
+> — actionable, higher-level units of work that group related issues, which the
+> dashboard's "Worth-doing" column ranks by risk reduced. See the "Worth-doing
+> Recommendations" section of `quality_report.md` for the schema. Emit `[]` when
+> there is nothing worth recommending; never omit the key.
+
 Each issue MUST include:
 
 | Field | Type | Description |
