@@ -10,7 +10,7 @@
 
 # Resolve package manager exec command from analysis.json
 HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
-EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
+EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx -y -p @magic-ingredients/tiny-brain")
 
 # Get the commit SHA
 COMMIT_SHA=$(git rev-parse HEAD 2>/dev/null)

@@ -19,7 +19,7 @@
 
 # Resolve package manager exec command from analysis.json
 HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
-EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
+EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx -y -p @magic-ingredients/tiny-brain")
 
 # Only react when the merge changed feature/fix markdown (the
 # per-clone progress files are no longer in the working tree).

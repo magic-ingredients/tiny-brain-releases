@@ -83,6 +83,10 @@ case "${_PM:-npm}" in
   pnpm) EXEC="pnpm exec" ;;
   yarn) EXEC="yarn exec" ;;
   bun)  EXEC="bunx" ;;
-  *)    EXEC="npx" ;;
+  # Bare npx would resolve the unscoped `tiny-brain` registry name — the
+  # anti-squat placeholder stub. -y -p pins the real scoped package; a
+  # local node_modules install still wins resolution. Mirrors
+  # EXEC_HELPER_CONTENT's npm case.
+  *)    EXEC="npx -y -p @magic-ingredients/tiny-brain" ;;
 esac
 unset _PM

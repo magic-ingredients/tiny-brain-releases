@@ -18,7 +18,7 @@
 
 # Resolve package manager exec command (same convention as pre-push).
 HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
-EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
+EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx -y -p @magic-ingredients/tiny-brain")
 
 EXEC_CMD=$(echo "$EXEC" | cut -d' ' -f1)
 if ! command -v "$EXEC_CMD" >/dev/null 2>&1; then

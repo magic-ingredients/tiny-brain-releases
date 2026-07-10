@@ -9,7 +9,7 @@
 
 # Resolve package manager commands from analysis.json
 HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
-EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx")
+EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx -y -p @magic-ingredients/tiny-brain")
 # Probe tiny-brain availability once and gate the header-validation calls
 # below on the single TB_AVAILABLE flag. Replaces the 6 inline guard
 # sites the pre-migration template carried — broken under the

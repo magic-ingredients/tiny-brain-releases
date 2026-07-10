@@ -9,10 +9,10 @@ This repository contains public releases of tiny-brain for Claude Code.
 /plugin marketplace add magic-ingredients/tiny-brain-releases
 
 # Install tiny-brain (includes all 7 agents)
-/plugin install tiny-brain@magic-ingredients
+/plugin install tiny-brain@tiny-brain-marketplace
 ```
 
-## tiny-brain (v0.26.0)
+## tiny-brain (v0.26.1)
 
 AI-powered development workflows with TDD enforcement, planning, and quality tracking.
 
