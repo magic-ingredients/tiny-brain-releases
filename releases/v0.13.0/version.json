@@ -1,9 +1,0 @@
-{
-  "version": "0.13.0",
-  "tag": "v0.13.0",
-  "releaseDate": "2025-10-24T14:16:19Z",
-  "downloadUrl": "https://github.com/magic-ingredients/tiny-brain-releases/releases/download/v0.13.0/tiny-brain-0.13.0.dxt",
-  "sourceRepository": "magic-ingredients/tiny-brain-local",
-  "commit": "fed424ce99c9d096c4c3c6f97f8916b65270cdb0",
-  "buildWorkflow": "18782420133"
-}

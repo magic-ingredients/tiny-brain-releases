@@ -27,7 +27,7 @@ AI-powered development workflows with TDD enforcement, planning, and quality tra
 
 ### MCPB Bundle
 - **Latest:** [Download MCPB](./latest/tiny-brain-latest.mcpb)
-- **All Versions:** [Browse Releases](./releases/)
+- **All Versions:** [Browse Releases](https://github.com/magic-ingredients/tiny-brain-releases/releases)
 
 ```bash
 curl -L -o tiny-brain.mcpb \
