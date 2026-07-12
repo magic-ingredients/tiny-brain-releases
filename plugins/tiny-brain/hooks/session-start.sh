@@ -19,6 +19,32 @@
 # Resolve package manager exec command from analysis.json
 . "$(dirname "$0")/resolve-exec.sh"
 
+# CLI-install offer (install-dx F4 plugin-bootstrap-door). resolve-exec sets
+# EXEC="" when a global (or dev-mode) tiny-brain binary resolves, and a
+# non-empty package-runner string (npx / pnpm exec / yarn exec / bunx) ONLY
+# on the fallback where no binary was found. So a non-empty EXEC means this
+# session is resolving the CLI on the fly through a package runner — the
+# zero-terminal door. Offer the user a global install so future sessions
+# resolve `tiny-brain` directly. Empty when a CLI is present, keeping those
+# sessions byte-identical to before this hook learned to offer.
+#
+# The block carries no surrounding newlines; each insertion site adds its own
+# paragraph separators, and both place it as a standalone agent instruction —
+# never inside a "display this verbatim to the user" block.
+INSTALL_OFFER=""
+if [ -n "$EXEC" ]; then
+  INSTALL_OFFER="CLI INSTALL OFFER
+
+The tiny-brain CLI is not installed globally on this machine — this session is resolving it on the fly through a package runner, which pays a cold-start each run and leaves no \`tiny-brain\` command in the user's terminal.
+
+Offer to install it globally for the user. A global install puts \`tiny-brain\` on their PATH so future sessions start instantly and the full terminal workflow works.
+
+If the user agrees, run this one-shot:
+  npx -y @magic-ingredients/tiny-brain install cli
+
+Then surface the engine's end-state report verbatim — including any PATH-repair line — exactly as it prints; do not paraphrase or summarise it, because the repair line is a copy-pasteable command the user needs unchanged. No restart needed: once installed, a fresh \`tiny-brain\` invocation resolves the new binary for the rest of this session."
+fi
+
 # Dashboard handling.
 #
 # `claude-tb` (or any caller that sets __TB_DEV_MODE=1) signals dev
@@ -74,6 +100,13 @@ if [ -z "$PERSONA" ]; then
   CONTEXT="IMPORTANT: Display the following startup summary to the user exactly as written (preserve markdown and emoji):
 
 ${SUMMARY}"
+  # Prepend the offer as a standalone agent instruction — it must NOT sit
+  # inside the "display exactly as written" block above.
+  if [ -n "$INSTALL_OFFER" ]; then
+    CONTEXT="${INSTALL_OFFER}
+
+${CONTEXT}"
+  fi
   jq -n --arg ctx "$CONTEXT" '{
     hookSpecificOutput: {
       hookEventName: "SessionStart",
@@ -101,7 +134,14 @@ fi
 SUMMARY="${SUMMARY}
 🎭 Using the **${PERSONA}** persona"
 
-# Append display instruction
+# Append the install offer (if any) as its own agent instruction, then the
+# display instruction. The offer is empty when a CLI is already present, so
+# CLI-present sessions stay byte-identical.
+if [ -n "$INSTALL_OFFER" ]; then
+  CONTEXT="${CONTEXT}
+
+${INSTALL_OFFER}"
+fi
 CONTEXT="${CONTEXT}
 
 IMPORTANT: Display the following startup summary to the user exactly as written (preserve markdown and emoji):

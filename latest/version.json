@@ -1,10 +1,10 @@
 {
-  "version": "0.26.1",
-  "tag": "v0.26.1",
-  "releaseDate": "2026-07-10T23:07:15Z",
-  "mcpbDownloadUrl": "https://github.com/magic-ingredients/tiny-brain-releases/releases/download/v0.26.1/tiny-brain-0.26.1.mcpb",
+  "version": "0.27.2",
+  "tag": "v0.27.2",
+  "releaseDate": "2026-07-12T22:42:30Z",
+  "mcpbDownloadUrl": "https://github.com/magic-ingredients/tiny-brain-releases/releases/download/v0.27.2/tiny-brain-0.27.2.mcpb",
   "pluginMarketplace": "https://github.com/magic-ingredients/tiny-brain-releases",
   "sourceRepository": "magic-ingredients/tiny-brain-local",
-  "commit": "296bf54f55e45e7f8bf0815d05ab69cb92ca3181",
-  "buildWorkflow": "29129451275"
+  "commit": "a1d42be36331cfffcd848aea96bf4463319f0147",
+  "buildWorkflow": "29211969271"
 }
