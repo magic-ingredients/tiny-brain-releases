@@ -4,6 +4,12 @@ AI-powered development workflows with TDD enforcement, planning, and quality tra
 
 ## Installation
 
+Install the Tiny Brain CLI first, then use `tiny-brain configure` to detect and
+set up Claude Code and/or Codex. Configuration is user-scoped; run
+`tiny-brain init` separately inside every repository you want to opt in.
+`init` is never automatic. If an upgrade or interrupted setup needs repair,
+run `tiny-brain configure --status` for the targeted next command.
+
 ```bash
 # 1. Add the marketplace (once)
 /plugin marketplace add magic-ingredients/tiny-brain-releases

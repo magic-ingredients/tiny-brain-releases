@@ -12,6 +12,25 @@
 HOOKS_DIR=$(cd "$(dirname "$0")" && pwd)
 EXEC=$("$HOOKS_DIR/tiny-brain-exec" 2>/dev/null || echo "npx -y -p @magic-ingredients/tiny-brain")
 
+# ─── Release the per-checkout commit serialisation lock ───
+# (fix concurrent-commits-swap-messages)
+#
+# pre-commit acquired this lock before git wrote COMMIT_EDITMSG; by the time
+# post-commit runs, git has read the message back and created the commit, so
+# the protected span is over. Release now — first thing, before the slower
+# bookkeeping below — to unblock any waiting sibling commit promptly. Only
+# remove a lock THIS commit's git process owns, so a --no-verify commit (which
+# ran no pre-commit and holds no lock of ours) can never delete a concurrent
+# normal commit's lock.
+TB_LOCK_DIR=${TB_COMMIT_LOCK_DIR:-$(git rev-parse --git-dir 2>/dev/null)}
+if [ -n "$TB_LOCK_DIR" ]; then
+  TB_LOCK="$TB_LOCK_DIR/tiny-brain-commit.lock"
+  TB_LOCK_OWNER=${TB_COMMIT_LOCK_PID:-$PPID}
+  if [ "$(cat "$TB_LOCK" 2>/dev/null)" = "$TB_LOCK_OWNER" ]; then
+    rm -f "$TB_LOCK" 2>/dev/null
+  fi
+fi
+
 # Get the commit SHA
 COMMIT_SHA=$(git rev-parse HEAD 2>/dev/null)
 if [ -z "$COMMIT_SHA" ]; then
@@ -237,5 +256,20 @@ case "$COMMIT_TYPE" in
     $EXEC tiny-brain _reconcile --quiet 2>/dev/null || true
     ;;
 esac
+
+# ─── Path D: authoring-commit planning dispatch ───
+#
+# plan-readiness-indicators. `/plan` and `/fix` commit the docs they author as
+# `chore:` commits, so this cannot gate on COMMIT_TYPE. But spawning the CLI on
+# EVERY commit is wasteful in a hook with known latency cost, and the
+# discriminating input — did this commit touch a plan/fix doc? — is cheap in
+# bash. Pre-filter on the touched paths (default docs layout, hardcoded like
+# path-resolver.ts) and only then spawn `_planning-dispatch`, which re-derives
+# the work item + configured planningPipeline gates precisely and prints the
+# owed dispatch. Report-only; nothing is written; swallows its own errors.
+if git diff-tree --no-commit-id --name-only --diff-filter=ACMR -r "$COMMIT_SHA" 2>/dev/null | grep -qE '^docs/(prd|fixes)/'; then
+  # shellcheck disable=SC2086
+  $EXEC tiny-brain _planning-dispatch --sha "$COMMIT_SHA" 2>/dev/null || true
+fi
 
 exit 0

@@ -17,12 +17,12 @@ Add a feature when the user wants to:
 ## Identity model: slugs and UUIDs
 
 Every feature and task carries a stable **UUIDv7** as its real identity, which
-`tb work add` generates and stamps into the markdown — you never type one. The
+`tiny-brain work add` generates and stamps into the markdown — you never type one. The
 feature's positional `number:` is assigned by the CLI from the existing siblings;
 you never set it. Humans and commit messages refer to work by its **slug** and
 its task **description**, which the tooling resolves to the UUID internally.
 
-So: **create the feature and every task through `tb work add`.** Do not
+So: **create the feature and every task through `tiny-brain work add`.** Do not
 hand-write `id:` / `uuid:` / `number:` frontmatter, and do not invent
 `task-N-M` ids — that was a derivation-from-shape convention that no longer
 exists under UUIDs.
@@ -35,7 +35,7 @@ Ask the user which PRD to add the feature to, or detect from context. List
 existing PRDs:
 
 ```bash
-tb work --kind prd
+tiny-brain work --kind prd
 ```
 
 ### Step 2: Understand the Feature
@@ -49,7 +49,7 @@ Work with the user to define:
 ### Step 3: Create the feature
 
 ```bash
-tb work add feature --prd <prd-slug> <feature-slug> "Feature Title"
+tiny-brain work add feature --prd <prd-slug> <feature-slug> "Feature Title"
 ```
 
 This writes `docs/prd/<prd-slug>/features/<feature-slug>.md` with the frontmatter
@@ -61,7 +61,7 @@ dates. The CLI owns all of it.
 For every implementation task, run:
 
 ```bash
-tb work add task --feature <feature-slug> "Exact task description"
+tiny-brain work add task --feature <feature-slug> "Exact task description"
 ```
 
 `--prd <prd-slug>` is **optional** — add it only to disambiguate when the same
@@ -93,12 +93,12 @@ write it as you want to refer to it. Each task block gets its own generated
 
 Correct shape — one task per behaviour, full TDD cycle inside:
 ```bash
-tb work add task --feature hooks-display-ui "Add hooks display component"
+tiny-brain work add task --feature hooks-display-ui "Add hooks display component"
 ```
 
 ### Step 5: Flesh out the prose and test plan
 
-`tb work add` writes the frontmatter plus a minimal body scaffold (`Description`
+`tiny-brain work add` writes the frontmatter plus a minimal body scaffold (`Description`
 + `Tasks`). Use the **Edit** tool to expand the prose — Description, Acceptance
 Criteria, per-task notes and "Files to modify" lists. The template
 `templates/feature-template.md` is a **body-structure reference** (not a file to
@@ -219,7 +219,7 @@ Before you finish, re-read the feature against every rule in
 ## Quality Checklist
 
 - [ ] Feature passes the deliverability rubric (`docs/deliverability-rubric.md`) — see the Deliverability self-check
-- [ ] Feature and tasks created via `tb work add` (no hand-written `id:` / `uuid:` / `number:`)
+- [ ] Feature and tasks created via `tiny-brain work add` (no hand-written `id:` / `uuid:` / `number:`)
 - [ ] Feature slug is unique within the PRD
 - [ ] Acceptance criteria are testable (use checkboxes)
 - [ ] Each task has files to modify listed
@@ -239,8 +239,8 @@ Claude:
 1. Confirm PRD: "Adding to code-quality-analysis PRD?"
 2. Discuss: "What subcommands? What options?"
 3. Create:
-   tb work add feature --prd code-quality-analysis quality-cli-command "Quality CLI Command"
-   tb work add task --feature quality-cli-command "Add the report subcommand"
+   tiny-brain work add feature --prd code-quality-analysis quality-cli-command "Quality CLI Command"
+   tiny-brain work add task --feature quality-cli-command "Add the report subcommand"
 4. Flesh out Description / Acceptance Criteria / Test Plan with Edit
 5. Commit; the feature is now visible in the dashboard
 ```

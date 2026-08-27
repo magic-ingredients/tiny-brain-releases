@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tiny Brain">
+  <rect width="64" height="64" rx="14" fill="#4F46E5"/>
+  <path d="M19 37c-4-8 2-18 10-18 2-6 12-6 15 0 8 0 14 10 10 18-1 7-7 11-13 10H31c-6 1-11-3-12-10Z" fill="#fff"/>
+  <path d="M27 26v14m10-16v18m-5-19v20m12-13v8" stroke="#4F46E5" stroke-width="3" stroke-linecap="round"/>
+</svg>

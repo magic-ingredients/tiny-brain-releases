@@ -528,6 +528,17 @@ if [ -n "$TB_AVAILABLE" ] && [ -n "$TB_RUN_ID" ]; then
   $EXEC tiny-brain stamp-worker-trailer "$COMMIT_MSG_FILE" 2>/dev/null || true
 fi
 
+# Stamp Agent:/Agent-Model:/Agent-Effort: interactive provenance trailers
+# (interactive-agent-provenance F8) from the live worktree lease. Runs on
+# interactive (non-run) commits only — a worker run stamps Worker:* above — AFTER
+# the worker stamp so worker precedence holds (stampAgentTrailers leaves a
+# Worker: message untouched). Best-effort: no live lease is a silent no-op and it
+# NEVER blocks the commit.
+if [ -n "$TB_AVAILABLE" ] && [ -z "$TB_RUN_ID" ]; then
+  # shellcheck disable=SC2086
+  $EXEC tiny-brain stamp-agent-trailer "$COMMIT_MSG_FILE" 2>/dev/null || true
+fi
+
 # For test: commits, skip test execution (they should fail - TDD red phase)
 if echo "$FIRST_LINE" | grep -qE "^test(\(.+\))?:"; then
   echo "   ⏭ Tests (TDD RED phase)"

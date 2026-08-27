@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tiny-brain": {
+      "command": "tiny-brain",
+      "args": ["mcp"]
+    }
+  }
+}

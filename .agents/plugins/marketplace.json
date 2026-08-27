@@ -1,0 +1,20 @@
+{
+  "name": "tiny-brain-marketplace",
+  "interface": {
+    "displayName": "Tiny Brain"
+  },
+  "plugins": [
+    {
+      "name": "tiny-brain",
+      "source": {
+        "source": "local",
+        "path": "./codex-plugins/tiny-brain"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

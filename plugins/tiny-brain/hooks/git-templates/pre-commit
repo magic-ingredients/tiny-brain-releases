@@ -25,4 +25,80 @@ fi
 # commit-msg where the commit prefix is available for RED phase detection.
 "$HOOKS_DIR/tiny-brain-run-hooks" pre-commit --skip-test-runners || exit 1
 
+# ─── Serialise concurrent commits in this checkout ───
+# (fix concurrent-commits-swap-messages)
+#
+# git keeps ONE COMMIT_EDITMSG per checkout and re-reads it AFTER the
+# commit-msg hook returns. When two sessions commit in the same checkout at
+# once, the second session's git overwrites that shared file mid-hook, so one
+# commit lands carrying the OTHER's subject, body and — load-bearingly — its
+# Fix:/Task: tracking headers, which the git-derived status model rides on.
+# The slow commit-msg stamp chain widens the race to seconds.
+#
+# Hold a per-checkout lock from HERE — before git writes COMMIT_EDITMSG — until
+# post-commit releases it, after git has read the message back and created the
+# commit. That serialises the whole write → stamp → read → commit span, so a
+# sibling commit can't overwrite COMMIT_EDITMSG while this one is in flight.
+# The lock lives in the per-worktree git dir (where COMMIT_EDITMSG lives), so
+# distinct worktrees never block each other. Env-overridable dir/owner/tries/
+# wait keep the hook testable without real concurrency.
+#
+# Known residual: `git commit --no-verify` fires no hooks, so it neither takes
+# nor consults this lock and can still clobber a concurrent normal commit —
+# unavoidable, git offers no hook a --no-verify commit still runs.
+TB_LOCK_DIR=${TB_COMMIT_LOCK_DIR:-$(git rev-parse --git-dir 2>/dev/null)}
+if [ -n "$TB_LOCK_DIR" ]; then
+  TB_LOCK="$TB_LOCK_DIR/tiny-brain-commit.lock"
+  TB_LOCK_OWNER=${TB_COMMIT_LOCK_PID:-$PPID}
+  TB_LOCK_TRIES=${TB_COMMIT_LOCK_TRIES:-150}   # ~30s at the wait cadence below
+  TB_LOCK_WAIT=${TB_COMMIT_LOCK_WAIT:-0.2}
+  TB_LOCK_TMP="$TB_LOCK.$$.tmp"
+  TB_LOCK_ACQUIRED=""
+  TB_LOCK_HELD_BY=""
+  while [ "$TB_LOCK_TRIES" -gt 0 ]; do
+    # Publish our owner id into a private temp file FIRST, then hard-link it
+    # into place. `ln` is atomic and fails (EEXIST) if the lock already exists,
+    # so exactly one racer wins — and because the linked file ALREADY holds the
+    # owner id, a losing racer can never read an empty "just-created" lock and
+    # mistake the winner for a dead owner. (A create-then-write-pid sequence
+    # leaves exactly that window open, breaking mutual exclusion.)
+    echo "$TB_LOCK_OWNER" > "$TB_LOCK_TMP" 2>/dev/null
+    if ln "$TB_LOCK_TMP" "$TB_LOCK" 2>/dev/null; then
+      rm -f "$TB_LOCK_TMP" 2>/dev/null
+      TB_LOCK_ACQUIRED=1
+      break
+    fi
+    rm -f "$TB_LOCK_TMP" 2>/dev/null
+    # Held. Steal only if the owner is gone — a crash mid-commit, or a
+    # commit-msg rejection that skipped post-commit's release, leaks the lock;
+    # an empty/corrupt owner reads as dead too. A `kill -0` that fails with
+    # "not permitted" (EPERM) means the owner is a LIVE process of another
+    # user, so treat that as held, not dead. Otherwise wait for it.
+    TB_LOCK_HELD_BY=$(cat "$TB_LOCK" 2>/dev/null)
+    TB_LOCK_ALIVE=""
+    if [ -n "$TB_LOCK_HELD_BY" ]; then
+      if TB_LOCK_KILL_ERR=$(kill -0 "$TB_LOCK_HELD_BY" 2>&1); then
+        TB_LOCK_ALIVE=1
+      else
+        case "$TB_LOCK_KILL_ERR" in
+          *ermit*) TB_LOCK_ALIVE=1 ;;   # EPERM — live process, different user
+        esac
+      fi
+    fi
+    if [ -n "$TB_LOCK_ALIVE" ]; then
+      # Fractional sleep is a coreutils/BSD extension; fall back to 1s where the
+      # shell's sleep only takes integers.
+      sleep "$TB_LOCK_WAIT" 2>/dev/null || sleep 1
+    else
+      rm -f "$TB_LOCK" 2>/dev/null
+    fi
+    TB_LOCK_TRIES=$((TB_LOCK_TRIES - 1))
+  done
+  if [ -z "$TB_LOCK_ACQUIRED" ]; then
+    # Fail OPEN: a rare message race is far less harmful than a hook that could
+    # permanently wedge every commit in this checkout.
+    echo "tiny-brain: commit lock still held by ${TB_LOCK_HELD_BY:-?}; proceeding without it" >&2
+  fi
+fi
+
 exit 0

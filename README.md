@@ -1,6 +1,6 @@
 # tiny-brain Releases
 
-This repository contains public releases of tiny-brain for Claude Code.
+This repository contains public releases of tiny-brain for Claude Code and Codex.
 
 ## Quick Install (Claude Code Plugin)
 
@@ -10,6 +10,16 @@ This repository contains public releases of tiny-brain for Claude Code.
 
 # Install tiny-brain
 /plugin install tiny-brain@tiny-brain-marketplace
+```
+
+## Quick Install (Codex Plugin)
+
+```bash
+# Add the marketplace (once)
+codex plugin marketplace add magic-ingredients/tiny-brain-releases --sparse .agents/plugins --sparse codex-plugins
+
+# Install tiny-brain
+codex plugin add tiny-brain@tiny-brain-marketplace
 ```
 
 ## Quick Install (CLI, non-brew)
@@ -24,7 +34,7 @@ Preflights Node >= 18, then runs the tiny-brain install engine
 script is served directly at
 `https://raw.githubusercontent.com/magic-ingredients/tiny-brain-releases/main/install.sh`.
 
-## tiny-brain (v0.27.2)
+## tiny-brain (v0.29.1)
 
 AI-powered development workflows with TDD enforcement, planning, and quality tracking.
 

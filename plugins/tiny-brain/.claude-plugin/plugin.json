@@ -1,6 +1,6 @@
 {
   "name": "tiny-brain",
-  "version": "0.27.2",
+  "version": "0.29.1",
   "description": "AI-powered development workflows with TDD enforcement, planning, and quality tracking",
   "author": {
     "name": "Magic Ingredients",
@@ -30,7 +30,8 @@
     "./agents/mutation-reviewer.md",
     "./agents/analyzer-agent.md",
     "./agents/adversarial-reviewer.md",
-    "./agents/deliverability-reviewer.md"
+    "./agents/deliverability-reviewer.md",
+    "./agents/architecture-reviewer.md"
   ],
   "mcpServers": "./.mcp.json"
 }

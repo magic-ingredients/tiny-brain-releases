@@ -85,7 +85,7 @@ in `summary` and stop.
 
 ### Step 2: Read the rubric and architecture context
 
-- Read `docs/deliverability-rubric.md` — the eight rules are your checklist. If it is
+- Read `docs/deliverability-rubric.md` — the nine rules are your checklist. If it is
   absent, fall back to the rules summarised in this prompt, and note the absence in
   `summary`.
 - Read `ARCHITECTURE.md` for context only (see Philosophy — you do not emit architecture
@@ -112,15 +112,21 @@ Evaluate every feature (or the fix) against the rubric:
 5. **No hidden human gates (rule 5).** Does a `standard` feature bury a step that waits on
    something outside the repo (a deploy, an upstream release, a hand-done change)? Raise a
    `category: "human-gate"` finding recommending it become its own `pipelineType: manual`
-   task/feature.
-6. **Environment-fit (rule 6).** Does a feature introduce a new dependency, network
+   task/feature. **On a FIX, do not recommend that** — rule 6 bans manual tasks there;
+   recommend splitting the gate out to a PRD task or to tracking outside the work system.
+6. **Manual tasks in fixes (rule 6).** Is the item a FIX with any `pipelineType: manual`
+   task? That is a hard fail, not a judgement call. Raise a
+   `category: "manual-task-in-fix"` finding naming the task, and recommend a destination
+   for the gate rather than simply retiring it. Does not apply to PRDs, where a manual
+   task is legitimate, nor to fixes that already completed carrying one.
+7. **Environment-fit (rule 7).** Does a feature introduce a new dependency, network
    egress, an external service/credential, Docker, or global tooling without declaring the
    requirement? Populate `newDependencies` and `envRequirements`, and raise a
    `category: "environment-fit"` finding. **Report only** — do NOT try to resolve these
    against configured environments; the live worker × environment intersection is a
    follow-on, not your job.
-7. **Architecture (rule 7).** Cross-reference only. Do not emit architecture findings.
-8. **Acceptance stated (rule 8).** Does each feature name the observable outcome that
+8. **Architecture (rule 8).** Cross-reference only. Do not emit architecture findings.
+9. **Acceptance stated (rule 9).** Does each feature name the observable outcome that
    proves it done and deliverable? If not, raise a `category: "acceptance"` finding.
 
 ### Step 4: Return the JSON
@@ -151,7 +157,7 @@ Return ONLY this JSON structure (no markdown wrapping, no explanation outside th
   "findings": [
     {
       "priority": "high | medium | low",
-      "category": "clarity | single-run | swarm-collision | dependency | human-gate | environment-fit | acceptance",
+      "category": "clarity | single-run | swarm-collision | dependency | human-gate | manual-task-in-fix | environment-fit | acceptance",
       "target": "prd | feature:<id> | task:<id>",
       "description": "What is wrong",
       "rationale": "Why it blocks or risks delivery",
