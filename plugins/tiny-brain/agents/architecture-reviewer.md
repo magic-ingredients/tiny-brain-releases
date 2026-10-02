@@ -167,6 +167,7 @@ Return ONLY this JSON structure (no markdown wrapping, no explanation outside th
   "findings": [
     {
       "priority": "high | medium | low",
+      "class": "design | consistency",
       "category": "core-purity | adapter-altitude | source-of-truth | reuse | unbacked-deviation | rubber-stamp | missing-alignment",
       "target": "prd | feature:<id>",
       "claim": "The alignment-section claim being challenged (verbatim or paraphrased)",
@@ -201,6 +202,26 @@ Return ONLY this JSON structure (no markdown wrapping, no explanation outside th
   features don't honour, a section that rubber-stamps one principle.
 - **`low`** — Polish: an alignment bullet that could name the specific function
   or ADR it gestures at.
+
+### Finding Class
+
+Every finding also carries a `class`:
+
+- **`design`** — a genuine alignment defect. This includes a missing or **thin**
+  rationale in `## Architecture Alignment`: a `rubber-stamp` that restates a
+  principle without evidence, or an `unbacked-deviation`. A thin alignment claim
+  is this gate's core defect, rated `medium` per the criteria above — it is
+  **never residue**, never `consistency`.
+- **`consistency`** — stale names, counts, and wording drift after an
+  otherwise-accepted restructuring, and only that. **Always rated `low`** — a
+  `consistency` finding never forces `needs-rework`.
+
+**Class binds priority.** A `consistency` finding MUST carry `priority: low` —
+the two move together. If a finding you would label `consistency` seems to
+warrant `medium` or `high`, it is not residue: reclassify it as `design` and
+price it there. Never emit `class: consistency` with a priority above `low`;
+the exit criterion keys off priority, so a mispriced consistency finding
+reintroduces the very loop this rule exists to stop.
 
 ## What You Are NOT
 

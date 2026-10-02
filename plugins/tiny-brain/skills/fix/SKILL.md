@@ -505,6 +505,10 @@ A fix gets **only** the deliverability review — architecture-alignment is a PR
 fix carries no `## Architecture Alignment` section), so `/plan` runs that gate, not `/fix`.
 Surface the verdict to the user; the review is report-only and never edits the fix.
 
+**Bounding the review loop.** This first run is mandatory. Subsequent rounds follow
+`/plan-review`'s cap and exit criterion — read the value there rather than restating it, so
+the cap lives in one place; don't loop past the cap without the user.
+
 ## Quality Checklist
 
 - [ ] Fix passes the deliverability rubric (`docs/deliverability-rubric.md`) — see the Deliverability self-check

@@ -34,7 +34,7 @@ Preflights Node >= 18, then runs the tiny-brain install engine
 script is served directly at
 `https://raw.githubusercontent.com/magic-ingredients/tiny-brain-releases/main/install.sh`.
 
-## tiny-brain (v0.29.1)
+## tiny-brain (v0.30.3)
 
 AI-powered development workflows with TDD enforcement, planning, and quality tracking.
 

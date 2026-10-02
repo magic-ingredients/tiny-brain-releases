@@ -259,6 +259,15 @@ per-feature scorecard, so the author can reshape before any worker is dispatched
 the user decide what to change; the persisted verdicts drive the plan card's
 planning-checks row.
 
+**Bounding the review loop.** The first run above is mandatory. Subsequent rounds follow
+`/plan-review`'s cap and exit criterion — read the value there rather than restating it, so
+the cap lives in one place; don't loop past the cap without the user.
+
+**Splitting.** Act on a scorecard `suggestedSplit` only when it accompanies a
+`high`-priority `single-run` finding;
+from round two onward, do not split at all without checking in with the user;
+never re-split an already-split feature.
+
 ## Commit headers (for the implementation work later)
 
 When work on a task is committed, the commit carries:

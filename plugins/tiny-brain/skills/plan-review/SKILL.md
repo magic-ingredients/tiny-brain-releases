@@ -87,6 +87,39 @@ For a fix target, use `--fix <slug>` and persist deliverability only.
 > are not valid `ReviewVerdict`s, and `parsePersistedReview` silently coerces any unknown
 > to `clean` — so a `needs-rework` review would fold as **passed**. Map first.
 
+## Rounds and exit criteria
+
+A review round is one dispatch-and-persist pass. Rounds exist to reshape a plan,
+not to polish it — so the loop is bounded.
+
+- **Default cap: three rounds** per target. Rounds 1–3 are where real design
+  defects surface and get fixed. A **fourth** round needs a stated reason in the
+  commit message that opens it (what design defect, not residue, justifies
+  another pass); anything past the fourth needs the user.
+
+- **One exit criterion: a round with no finding above `low`.** Both reviewers
+  cap every `consistency` (residue) finding at `low`, so a round whose findings
+  are all `low` is residue-only — the plan is deliverable. When you reach it: fix the residue,
+  commit it, **acknowledge the hook's `planning reviews owed` line without
+  running another round**, and stop. The `owed` message is correct (a review is
+  owed at the new sha) but the skill, not the hook, decides whether to run one —
+  and the exit criterion says not to.
+
+- **Verdicts are persisted at the sha the reviewer read** (step 3), never at a
+  later commit. A residue-only commit made after the exit round therefore shows
+  "not assessed" on the plan card's planning-checks row — a known, accepted
+  consequence until verdict carry-forward exists.
+
+- **Re-run only the dirty gate.** When one gate is already clean at the current
+  authoring sha (e.g. architecture returned `aligned` while deliverability still
+  has design findings), the next round re-runs only the dirty gate. Do not
+  re-dispatch a gate that already passed at this sha.
+
+- **At the cap, stop and ask the user.** If three rounds have not reached the
+  exit criterion, do not open a fourth on your own judgement — stop and ask the
+  user how to proceed (accept the known findings and dispatch, reshape further,
+  or split the work).
+
 ## Reporting the result
 
 Surface each agent's result to the user:

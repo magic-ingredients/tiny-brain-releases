@@ -179,6 +179,15 @@ findings and scorecard so the feature can be reshaped before a worker picks it u
 surrounding PRD for cross-feature seams and collisions. The agent is report-only — it
 never edits the feature.
 
+**Bounding the review loop.** This first run is mandatory. Subsequent rounds follow
+`/plan-review`'s cap and exit criterion — read the value there rather than restating it, so
+the cap lives in one place; don't loop past the cap without the user.
+
+**Splitting.** Act on a scorecard `suggestedSplit` only when it accompanies a
+`high`-priority `single-run` finding;
+from round two onward, do not split at all without checking in with the user;
+never re-split an already-split feature.
+
 ## Commit headers (for the implementation work later)
 
 A commit that implements task work carries the task description in its header:

@@ -267,7 +267,7 @@ esac
 # path-resolver.ts) and only then spawn `_planning-dispatch`, which re-derives
 # the work item + configured planningPipeline gates precisely and prints the
 # owed dispatch. Report-only; nothing is written; swallows its own errors.
-if git diff-tree --no-commit-id --name-only --diff-filter=ACMR -r "$COMMIT_SHA" 2>/dev/null | grep -qE '^docs/(prd|fixes)/'; then
+if git diff-tree --no-commit-id --name-only --diff-filter=ACMR -r "$COMMIT_SHA" 2>/dev/null | grep -qE '^docs/(prd|fixes|spikes)/'; then
   # shellcheck disable=SC2086
   $EXEC tiny-brain _planning-dispatch --sha "$COMMIT_SHA" 2>/dev/null || true
 fi

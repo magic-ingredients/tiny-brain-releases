@@ -166,6 +166,12 @@ pipelineType: spike
 Without it the task runs the full TDD pipeline (red phase and all) instead of the
 minimal spike pipeline.
 
+> **At least one task is required — a taskless spike doc is rejected at commit.**
+> A spike with no tasks can never reach `in_progress`, can never be graduated,
+> and every `spike:` commit against it is rejected — so the pre-commit hook refuses
+> to commit a `docs/spikes/*.md` that has no tasks. Do not skip this step; add the
+> task(s) here, before filing the doc in Step 7.
+
 ### Step 7: Commit the Doc
 
 The doc must be **committed and present in the working tree** so the dashboard and
@@ -181,6 +187,10 @@ the doc path so any unrelated staged work the operator has is left untouched:
 git add docs/spikes/{id}.md
 git commit docs/spikes/{id}.md -m "chore(spike): file {id}"
 ```
+
+This commit is gated: the pre-commit hook rejects a `docs/spikes/*.md` with no
+tasks. If it fails with "Spike document has no tasks", you skipped Step 6 — add
+at least one `pipelineType: spike` task and re-commit.
 
 **Create no branch and no worktree.** Filing is doc-only. `tiny-brain spike launch {id}`
 creates the `spike/{id}` branch AND its worktree on demand when work actually
@@ -198,7 +208,52 @@ tiny-brain task sync docs/spikes/{id}.md
 
 For a spike doc, `task sync` is **read-only** (the `progress-json-as-event-projection` F6 invariant): it validates the spike frontmatter against the schema and, on a terminal status, emits the graduate-required nudge — it does **not** write `.git/tiny-brain/spikes/{id}.json`. The per-spike progress is **projected on read** by the projector / dashboard, which re-reads the markdown. A valid sync prints a confirmation naming the spike; **no JSON file appearing is correct, not a failure.** (If the frontmatter is invalid, `task sync` exits non-zero with a structured error.)
 
-### Step 9: Output Summary
+### Step 9: Run the deliverability planning review
+
+The Step 7 commit is the spike's **authoring commit**. The post-commit hook detects
+it (a `docs/spikes/` path) and prints the owed planning gate — for a spike that is
+**deliverability only** (never architecture-alignment; a spike has no `## Architecture
+Alignment` section). Respond to that dispatch here, mirroring `/fix`.
+
+1. **Resolve the authoring sha** — the Step 7 commit:
+
+   ```bash
+   git log -1 --format=%H -- docs/spikes/{id}.md
+   ```
+
+2. **Dispatch the reviewer** with the Codex agent delegation (`Codex role: matching specialist reviewer`,
+   report-only — it never edits the spike):
+
+   ```
+   Review the deliverability of:
+   - Spike: {id}
+   ```
+
+   It judges the spike on the **spike lens** (one answerable question, green-first
+   tasks that fit the timebox, stated acceptance — see `docs/deliverability-rubric.md`).
+
+3. **Persist the verdict** in the decided store at the authoring sha. Map the agent's
+   verdict to a pipeline `ReviewVerdict` before persisting (`deliverable` → `clean`,
+   `needs-rework` → `needs-refactoring`, `not-reviewable` → do **not** persist). Build
+   the payload from the agent's JSON with its `verdict` replaced by the mapped value
+   (keep `summary`):
+
+   ```bash
+   tiny-brain _review persist deliverability --planning --sha <authoring-sha> --spike <spike-id> --json-file <deliverability.json>
+   ```
+
+   > ⚠️ **Never persist the agent's raw verdict.** `parsePersistedReview` coerces an
+   > unknown verdict to `clean`, so a raw `needs-rework` would fold as **passed**. Map first.
+
+4. **Surface the verdict** to the user — and for a rework, the findings — so the author
+   can reshape the spike (sharpen the question, trim tasks to the timebox, state
+   acceptance) before any worker is dispatched.
+
+**Bounding the review loop.** This first run is mandatory. Subsequent rounds follow
+`/plan-review`'s cap and exit criterion — read the value there rather than restating it, so
+the cap lives in one place; don't loop past the cap without the user.
+
+### Step 10: Output Summary
 
 Print this summary to the user (substitute `{id}` and the dashboard URL):
 
@@ -294,6 +349,7 @@ Before declaring a spike fully scaffolded, verify:
 
 - [ ] The question fits in one sentence and is answerable yes/no.
 - [ ] At least one acceptance criterion is observable (not vague).
+- [ ] **At least one task exists** — a taskless spike doc is rejected at commit by the pre-commit hook, and cannot be worked or graduated.
 - [ ] All tasks have `pipelineType: spike` Edited in (on the line after `status: not_started` in each `### N.` task block).
 - [ ] `docs/spikes/{id}.md` is committed and present in the working tree (so the dashboard / `tiny-brain work` see it).
 - [ ] **No branch and no worktree** were created — filing is doc-only. `git rev-parse --verify spike/{id}` fails and `git worktree list` shows no `spike/{id}` entry. (`tiny-brain spike launch` creates both later.)
